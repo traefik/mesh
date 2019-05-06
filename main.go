@@ -21,6 +21,21 @@ const (
 	meshPodPrefix string = "traefik"
 )
 
+var demo bool
+var kubeconfig string
+
+func init() {
+	flag.BoolVar(&demo, "demo", false, "install demo data")
+	if home := homedir.HomeDir(); home != "" {
+		flag.StringVar(&kubeconfig, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		flag.StringVar(&kubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
+	}
+
+	flag.Parse()
+
+}
+
 func main() {
 	fmt.Println("Connecting to kubernetes...")
 	clientset, err := buildClient()
@@ -31,6 +46,13 @@ func main() {
 	fmt.Println("Verifying mesh namespace exists...")
 	if err := verifyNamespaceExists(clientset, meshNamespace); err != nil {
 		panic(err)
+	}
+
+	fmt.Println("Creating demo data...")
+	if demo {
+		if err := createDemoData(clientset); err != nil {
+			panic(err)
+		}
 	}
 
 	fmt.Println("Listing services in all namespaces:")
@@ -67,15 +89,7 @@ func main() {
 }
 
 func buildClient() (*kubernetes.Clientset, error) {
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-	flag.Parse()
-
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -224,3 +238,232 @@ func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Dep
 
 	return false, nil
 }
+
+func createDemoData(client *kubernetes.Clientset) error {
+	deploymentList := &appsv1.DeploymentList{
+		Items: []appsv1.Deployment{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "whoami",
+					Namespace: "foo",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: int32Ptr(2),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "whoami",
+						},
+					},
+					Template: apiv1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app": "whoami",
+							},
+						},
+						Spec: apiv1.PodSpec{
+							Containers: []apiv1.Container{
+								{
+									Name:  "whoami",
+									Image: "containous/whoami:v1.0.1",
+									Ports: []apiv1.ContainerPort{
+										{
+											Name:          "http",
+											Protocol:      apiv1.ProtocolTCP,
+											ContainerPort: 80,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "whoami",
+					Namespace: "bar",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: int32Ptr(2),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "whoami",
+						},
+					},
+					Template: apiv1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app": "whoami",
+							},
+						},
+						Spec: apiv1.PodSpec{
+							Containers: []apiv1.Container{
+								{
+									Name:  "whoami",
+									Image: "containous/whoami:v1.0.1",
+									Ports: []apiv1.ContainerPort{
+										{
+											Name:          "http",
+											Protocol:      apiv1.ProtocolTCP,
+											ContainerPort: 80,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "demo",
+					Namespace: "default",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: int32Ptr(2),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "demo",
+						},
+					},
+					Template: apiv1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app": "demo",
+							},
+						},
+						Spec: apiv1.PodSpec{
+							Containers: []apiv1.Container{
+								{
+									Name:  "demo",
+									Image: "traefik:alpine",
+									Ports: []apiv1.ContainerPort{
+										{
+											Name:          "http",
+											Protocol:      apiv1.ProtocolTCP,
+											ContainerPort: 80,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	namespaceList := &apiv1.NamespaceList{
+		Items: []apiv1.Namespace{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: apiv1.NamespaceSpec{},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bar",
+				},
+				Spec: apiv1.NamespaceSpec{},
+			},
+		},
+	}
+
+	serviceList := &apiv1.ServiceList{
+		Items: []apiv1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zip",
+					Namespace: "foo",
+				},
+				Spec: apiv1.ServiceSpec{
+					Ports: []apiv1.ServicePort{
+						{
+							Port: 80,
+						},
+					},
+					Selector: map[string]string{
+						"mesh": "traefik-mesh",
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dee",
+					Namespace: "foo",
+				},
+				Spec: apiv1.ServiceSpec{
+					Ports: []apiv1.ServicePort{
+						{
+							Port: 80,
+						},
+					},
+					Selector: map[string]string{
+						"mesh": "traefik-mesh",
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "doo",
+					Namespace: "bar",
+				},
+				Spec: apiv1.ServiceSpec{
+					Ports: []apiv1.ServicePort{
+						{
+							Port: 80,
+						},
+					},
+					Selector: map[string]string{
+						"mesh": "traefik-mesh",
+					},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dah",
+					Namespace: "bar",
+				},
+				Spec: apiv1.ServiceSpec{
+					Ports: []apiv1.ServicePort{
+						{
+							Port: 80,
+						},
+					},
+					Selector: map[string]string{
+						"mesh": "traefik-mesh",
+					},
+				},
+			},
+		},
+	}
+
+	fmt.Println("Creating Demo Namespaces...")
+	for _, n := range namespaceList.Items {
+		_, err := client.CoreV1().Namespaces().Create(&n)
+		if err != nil {
+			fmt.Printf("Namespace %s already exists...\n", n.Name)
+		}
+	}
+
+	fmt.Println("Creating Demo Services...")
+	for _, s := range serviceList.Items {
+		_, err := client.CoreV1().Services(s.Namespace).Create(&s)
+		if err != nil {
+			fmt.Printf("Service %s already exists...\n", s.Name)
+		}
+	}
+
+	fmt.Println("Creating Demo Deployments...")
+	for _, d := range deploymentList.Items {
+		_, err := client.AppsV1().Deployments(d.Namespace).Create(&d)
+		if err != nil {
+			fmt.Printf("Deployment %s already exists...\n", d.Name)
+		}
+	}
+
+	return nil
+}
+
+func int32Ptr(i int32) *int32 { return &i }
