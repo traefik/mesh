@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -69,7 +71,7 @@ func main() {
 		fmt.Printf(" * %s/%s \n", s.Namespace, s.Name)
 	}
 
-	fmt.Println("Patching CoreDNS pods...")
+	fmt.Println("Patching CoreDNS...")
 	if err := patchCoreDNS(clientset, "coredns", "kube-system"); err != nil {
 		panic(err)
 	}
@@ -129,9 +131,23 @@ func patchCoreDNS(client *kubernetes.Clientset, deploymentName, deploymentNamesp
 		return err
 	}
 
-	coreLabelSelector := labels.Set(coreDeployment.Spec.Selector.MatchLabels).String()
+	fmt.Println("Patching CoreDNS configmap...")
+	if err := patchCoreConfigmap(client, coreDeployment); err != nil {
+		return err
+	}
 
-	fmt.Printf("CoreDNS Selector: %v\n", coreLabelSelector)
+	fmt.Println("Restarting CoreDNS pods...")
+	if err := restartCorePods(client, coreDeployment); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func restartCorePods(client *kubernetes.Clientset, coreDeployment *appsv1.Deployment) error {
+	coreLabelSelector := labels.Set(coreDeployment.Spec.Selector.MatchLabels).String()
+	deploymentNamespace := coreDeployment.Namespace
+	deploymentName := coreDeployment.Name
 
 	corePods, err := client.CoreV1().Pods(deploymentNamespace).List(metav1.ListOptions{LabelSelector: coreLabelSelector})
 	if err != nil {
@@ -154,5 +170,44 @@ func patchCoreDNS(client *kubernetes.Clientset, deploymentName, deploymentNamesp
 			time.Sleep(5 * time.Second)
 		}
 	}
+	return nil
+}
+
+func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Deployment) error {
+	coreConfigmapName := coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+	//JESUS
+
+	coreConfigmap, err := client.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigmapName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if len(coreConfigmap.ObjectMeta.Labels) > 0 {
+		if _, ok := coreConfigmap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
+			fmt.Println("Configmap already patched...")
+			return nil
+		}
+	}
+
+	patchString := `loadbalance
+    rewrite {
+        name regex ([a-z]*)\.([a-z]*)\.traefik\.mesh traefik-{1}-{2}.traefik-mesh.svc.cluster.local
+        answer name traefik-([a-z]*)-([a-z]*)\.traefik-mesh\.svc\.cluster\.local {1}.{2}.traefik.mesh
+    }
+`
+	newCoreConfigmap := coreConfigmap
+	oldData := newCoreConfigmap.Data["Corefile"]
+	newData := strings.Replace(oldData, "loadbalance", patchString, 1)
+	newCoreConfigmap.Data["Corefile"] = newData
+	if len(newCoreConfigmap.ObjectMeta.Labels) == 0 {
+		newCoreConfigmap.ObjectMeta.Labels = make(map[string]string)
+	}
+	newCoreConfigmap.ObjectMeta.Labels["traefik-mesh-patched"] = "true"
+
+	_, err = client.CoreV1().ConfigMaps(coreDeployment.Namespace).Update(newCoreConfigmap)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
