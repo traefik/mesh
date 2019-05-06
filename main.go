@@ -132,13 +132,16 @@ func patchCoreDNS(client *kubernetes.Clientset, deploymentName, deploymentNamesp
 	}
 
 	fmt.Println("Patching CoreDNS configmap...")
-	if err := patchCoreConfigmap(client, coreDeployment); err != nil {
+	patched, err := patchCoreConfigmap(client, coreDeployment)
+	if err != nil {
 		return err
 	}
 
-	fmt.Println("Restarting CoreDNS pods...")
-	if err := restartCorePods(client, coreDeployment); err != nil {
-		return err
+	if !patched {
+		fmt.Println("Restarting CoreDNS pods...")
+		if err := restartCorePods(client, coreDeployment); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -173,19 +176,19 @@ func restartCorePods(client *kubernetes.Clientset, coreDeployment *appsv1.Deploy
 	return nil
 }
 
-func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Deployment) error {
+func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Deployment) (bool, error) {
 	coreConfigmapName := coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
 	//JESUS
 
 	coreConfigmap, err := client.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigmapName, metav1.GetOptions{})
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if len(coreConfigmap.ObjectMeta.Labels) > 0 {
 		if _, ok := coreConfigmap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
 			fmt.Println("Configmap already patched...")
-			return nil
+			return true, nil
 		}
 	}
 
@@ -206,8 +209,8 @@ func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Dep
 
 	_, err = client.CoreV1().ConfigMaps(coreDeployment.Namespace).Update(newCoreConfigmap)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	return false, nil
 }
