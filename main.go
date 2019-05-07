@@ -316,11 +316,11 @@ func createDemoData(client *kubernetes.Clientset) error {
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "demo",
+					Name:      "demo-shell",
 					Namespace: "default",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: int32Ptr(2),
+					Replicas: int32Ptr(1),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "demo",
