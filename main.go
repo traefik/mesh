@@ -75,75 +75,14 @@ func main() {
 		}
 	}
 
-	fmt.Println("Listing services in all namespaces:")
-	serviceListAll, err := clientset.CoreV1().Services(apiv1.NamespaceAll).List(metav1.ListOptions{})
-	if err != nil {
+	fmt.Println("Creating mesh structures for config...")
+	var meshConfig *traefikMeshConfig
+	if meshConfig, err = createMeshConfig(clientset); err != nil {
 		panic(err)
 	}
 
-	var serviceListNonMesh []apiv1.Service
-	var meshServices []traefikMeshService
-
-	for _, s := range serviceListAll.Items {
-		if s.Namespace == meshNamespace {
-			continue
-		}
-
-		serviceListNonMesh = append(serviceListNonMesh, s)
-
-		fmt.Printf(" * %s/%s \n", s.Namespace, s.Name)
-
-		if err := verifyMeshServiceExists(clientset, s.Namespace, s.Name); err != nil {
-			panic(err)
-		}
-
-		var endpoints *apiv1.EndpointsList
-		for {
-			endpoints, err = clientset.CoreV1().Endpoints(s.Namespace).List(metav1.ListOptions{
-				FieldSelector: fmt.Sprintf("metadata.name=%s", s.Name),
-			})
-			if err != nil {
-				time.Sleep(time.Second * 5)
-			} else if len(endpoints.Items[0].Subsets) == 0 {
-				time.Sleep(time.Second * 5)
-			} else {
-				break
-			}
-		}
-
-		// Verify that the expected amount of control nodes are listed in the endpoint list.
-
-		var svr []traefikMeshBackendServer
-
-		for _, e := range endpoints.Items[0].Subsets[0].Addresses {
-			ip := e.IP
-			port := endpoints.Items[0].Subsets[0].Ports[0].Port
-
-			svr = append(svr, traefikMeshBackendServer{
-				Address: ip,
-				Port:    port,
-			})
-			fmt.Printf(" - Adding server %s:%d to routing config\n", ip, port)
-		}
-
-		meshService := traefikMeshService{
-			ServiceName:      s.Name,
-			ServiceNamespace: s.Namespace,
-			ServicePort:      s.Spec.Ports[0].Port,
-			Servers:          svr,
-		}
-
-		meshServices = append(meshServices, meshService)
-	}
-
-	meshConfig := traefikMeshConfig{
-		Services: meshServices,
-	}
-
-	fmt.Printf("Generated Config: %+v\n", meshConfig)
-
-	fmt.Println("Creating routing config for services...")
-	if err := createRoutingConfig(clientset, meshConfig); err != nil {
+	fmt.Println("Creating routing configmap...")
+	if err := createRoutingConfigmap(clientset, meshConfig); err != nil {
 		panic(err)
 	}
 
@@ -313,11 +252,11 @@ func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Dep
 	return false, nil
 }
 
-func createRoutingConfig(client *kubernetes.Clientset, config traefikMeshConfig) error {
+func createRoutingConfigmap(client *kubernetes.Clientset, config *traefikMeshConfig) error {
 	t, _ := template.ParseFiles("templates/traefik-routing.tpl") // Parse template file.
 
 	var tpl bytes.Buffer
-	if err := t.Execute(&tpl, config); err != nil {
+	if err := t.Execute(&tpl, &config); err != nil {
 		return err
 	}
 
@@ -333,6 +272,73 @@ func createRoutingConfig(client *kubernetes.Clientset, config traefikMeshConfig)
 	return nil
 }
 
+func createMeshConfig(client *kubernetes.Clientset) (meshConfig *traefikMeshConfig, err error) {
+	fmt.Println("Listing services in all namespaces:")
+	serviceListAll, err := client.CoreV1().Services(apiv1.NamespaceAll).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var serviceListNonMesh []apiv1.Service
+	var meshServices []traefikMeshService
+
+	for _, s := range serviceListAll.Items {
+		if s.Namespace == meshNamespace {
+			continue
+		}
+
+		serviceListNonMesh = append(serviceListNonMesh, s)
+
+		fmt.Printf(" * %s/%s \n", s.Namespace, s.Name)
+
+		if err := verifyMeshServiceExists(client, s.Namespace, s.Name); err != nil {
+			panic(err)
+		}
+
+		var endpoints *apiv1.EndpointsList
+		for {
+			endpoints, err = client.CoreV1().Endpoints(s.Namespace).List(metav1.ListOptions{
+				FieldSelector: fmt.Sprintf("metadata.name=%s", s.Name),
+			})
+			if err != nil {
+				time.Sleep(time.Second * 5)
+			} else if len(endpoints.Items[0].Subsets) == 0 {
+				time.Sleep(time.Second * 5)
+			} else {
+				break
+			}
+		}
+
+		// Verify that the expected amount of control nodes are listed in the endpoint list.
+
+		var svr []traefikMeshBackendServer
+
+		for _, e := range endpoints.Items[0].Subsets[0].Addresses {
+			ip := e.IP
+			port := endpoints.Items[0].Subsets[0].Ports[0].Port
+
+			svr = append(svr, traefikMeshBackendServer{
+				Address: ip,
+				Port:    port,
+			})
+			fmt.Printf(" - Adding server %s:%d to routing config\n", ip, port)
+		}
+
+		meshService := traefikMeshService{
+			ServiceName:      s.Name,
+			ServiceNamespace: s.Namespace,
+			ServicePort:      s.Spec.Ports[0].Port,
+			Servers:          svr,
+		}
+
+		meshServices = append(meshServices, meshService)
+	}
+
+	return &traefikMeshConfig{
+		Services: meshServices,
+	}, nil
+
+}
 func createDemoData(client *kubernetes.Clientset) error {
 	deploymentList := &appsv1.DeploymentList{
 		Items: []appsv1.Deployment{

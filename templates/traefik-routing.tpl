@@ -13,18 +13,18 @@ level = "DEBUG"
    [providers.file]
 
 [http.routers]
-{{ range $key, $service := .Services }}
+{{- range $key, $service := .Services }}
   [http.routers.{{ $service.ServiceName}}_{{ $service.ServiceNamespace }}]
     rule = "Host(`{{ $service.ServiceName }}.{{ $service.ServiceNamespace }}.traefik.mesh`)"
     service = "{{ $service.ServiceName}}_{{ $service.ServiceNamespace }}"
-{{ end }}
+{{- end }}
 
 [http.services]
-{{ range $key, $service := .Services }}
+{{- range $key, $service := .Services }}
   [http.services.{{ $service.ServiceName}}_{{ $service.ServiceNamespace }}.loadbalancer]
-    {{ range $subkey, $server := $service.Servers }}
+    {{- range $subkey, $server := $service.Servers }}
     [[http.services.service1.loadbalancer.servers]]
       url = "http://{{ $server.Address }}:{{ $server.Port }}"
       weight = 1
-    {{ end }}
-{{ end }}
+    {{- end -}}
+{{- end -}}
