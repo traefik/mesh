@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"html/template"
 	"path/filepath"
 	"strings"
 	"time"
@@ -17,15 +19,33 @@ import (
 )
 
 const (
-	meshNamespace string = "traefik-mesh"
-	meshPodPrefix string = "traefik"
+	meshNamespace     string = "traefik-mesh"
+	meshPodPrefix     string = "traefik"
+	meshConfigmapName string = "traefik-mesh-config"
 )
+
+type traefikMeshConfig struct {
+	Services []traefikMeshService
+}
+
+type traefikMeshService struct {
+	ServicePort      int32
+	ServiceName      string
+	ServiceNamespace string
+	Servers          []traefikMeshBackendServer
+}
+
+type traefikMeshBackendServer struct {
+	Address string
+	Port    int32
+}
 
 var demo bool
 var kubeconfig string
 
 func init() {
 	flag.BoolVar(&demo, "demo", false, "install demo data")
+
 	if home := homedir.HomeDir(); home != "" {
 		flag.StringVar(&kubeconfig, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	} else {
@@ -61,16 +81,70 @@ func main() {
 		panic(err)
 	}
 
+	var serviceListNonMesh []apiv1.Service
+	var meshServices []traefikMeshService
+
 	for _, s := range serviceListAll.Items {
 		if s.Namespace == meshNamespace {
 			continue
 		}
 
+		serviceListNonMesh = append(serviceListNonMesh, s)
+
 		fmt.Printf(" * %s/%s \n", s.Namespace, s.Name)
 
-		if err := verifyServiceExists(clientset, s.Namespace, s.Name); err != nil {
+		if err := verifyMeshServiceExists(clientset, s.Namespace, s.Name); err != nil {
 			panic(err)
 		}
+
+		var endpoints *apiv1.EndpointsList
+		for {
+			endpoints, err = clientset.CoreV1().Endpoints(s.Namespace).List(metav1.ListOptions{
+				FieldSelector: fmt.Sprintf("metadata.name=%s", s.Name),
+			})
+			if err != nil {
+				time.Sleep(time.Second * 5)
+			} else if len(endpoints.Items[0].Subsets) == 0 {
+				time.Sleep(time.Second * 5)
+			} else {
+				break
+			}
+		}
+
+		// Verify that the expected amount of control nodes are listed in the endpoint list.
+
+		var svr []traefikMeshBackendServer
+
+		for _, e := range endpoints.Items[0].Subsets[0].Addresses {
+			ip := e.IP
+			port := endpoints.Items[0].Subsets[0].Ports[0].Port
+
+			svr = append(svr, traefikMeshBackendServer{
+				Address: ip,
+				Port:    port,
+			})
+			fmt.Printf(" - Adding server %s:%d to routing config\n", ip, port)
+		}
+
+		meshService := traefikMeshService{
+			ServiceName:      s.Name,
+			ServiceNamespace: s.Namespace,
+			ServicePort:      s.Spec.Ports[0].Port,
+			Servers:          svr,
+		}
+
+		meshServices = append(meshServices, meshService)
+	}
+
+	meshConfig := traefikMeshConfig{
+		Services: meshServices,
+	}
+
+	fmt.Printf("Generated Config: %+v\n", meshConfig)
+
+	fmt.Println("Creating routing config for services...")
+	if err := createRoutingConfig(clientset, meshConfig); err != nil {
+		panic(err)
 	}
 
 	fmt.Printf("Listing services in mesh namespace %q:\n", meshNamespace)
@@ -120,7 +194,7 @@ func verifyNamespaceExists(client *kubernetes.Clientset, namespace string) error
 	return nil
 }
 
-func verifyServiceExists(client *kubernetes.Clientset, name, namespace string) error {
+func verifyMeshServiceExists(client *kubernetes.Clientset, name, namespace string) error {
 	meshServiceName := fmt.Sprintf("%s-%s-%s", meshPodPrefix, namespace, name)
 	meshServiceInstance, err := client.CoreV1().Services(meshNamespace).Get(meshServiceName, metav1.GetOptions{})
 	if meshServiceInstance == nil || err != nil {
@@ -237,6 +311,26 @@ func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Dep
 	}
 
 	return false, nil
+}
+
+func createRoutingConfig(client *kubernetes.Clientset, config traefikMeshConfig) error {
+	t, _ := template.ParseFiles("templates/traefik-routing.tpl") // Parse template file.
+
+	var tpl bytes.Buffer
+	if err := t.Execute(&tpl, config); err != nil {
+		return err
+	}
+
+	output := tpl.String()
+
+	fmt.Printf("Templated config: %s", output)
+
+	m, _ := client.CoreV1().ConfigMaps(meshNamespace).Get(meshConfigmapName, metav1.GetOptions{})
+	if m != nil {
+		// Config exists, update
+	}
+
+	return nil
 }
 
 func createDemoData(client *kubernetes.Clientset) error {
@@ -384,7 +478,7 @@ func createDemoData(client *kubernetes.Clientset) error {
 						},
 					},
 					Selector: map[string]string{
-						"mesh": "traefik-mesh",
+						"app": "whoami",
 					},
 				},
 			},
@@ -400,7 +494,7 @@ func createDemoData(client *kubernetes.Clientset) error {
 						},
 					},
 					Selector: map[string]string{
-						"mesh": "traefik-mesh",
+						"app": "whoami",
 					},
 				},
 			},
@@ -416,7 +510,7 @@ func createDemoData(client *kubernetes.Clientset) error {
 						},
 					},
 					Selector: map[string]string{
-						"mesh": "traefik-mesh",
+						"app": "whoami",
 					},
 				},
 			},
@@ -432,7 +526,7 @@ func createDemoData(client *kubernetes.Clientset) error {
 						},
 					},
 					Selector: map[string]string{
-						"mesh": "traefik-mesh",
+						"app": "whoami",
 					},
 				},
 			},
