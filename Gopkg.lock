@@ -242,7 +242,7 @@
   revision = "61630f889b3c3efb8c3a4ba377da1a421d9ff6ce"
 
 [[projects]]
-  digest = "1:78e69991920c699bbe599a70caf0e5c8d2a7c279c996721ea3a5d5d2ddf363db"
+  digest = "1:848f94c663d3726f802e99c9f80379b33f2ac8d941ee69260ae8a022db029a71"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -276,7 +276,6 @@
     "pkg/util/sets",
     "pkg/util/validation",
     "pkg/util/validation/field",
-    "pkg/util/wait",
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
@@ -287,7 +286,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:558b4de7381c65bdfa61deff879c4b23c0d88d6be61304b32f1184710f23612b"
+  digest = "1:7bfab29f018f915e8918dc214763247732b57a20b6bf8642a3f3d5d016efd125"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -349,7 +348,6 @@
     "util/flowcontrol",
     "util/homedir",
     "util/keyutil",
-    "util/retry",
   ]
   pruneopts = "UT"
   revision = "ef81ee0960bf57e94c697d674a1a8f5694c0ec9a"
@@ -384,10 +382,11 @@
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/labels",
+    "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/util/homedir",
-    "k8s.io/client-go/util/retry",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

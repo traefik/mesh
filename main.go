@@ -13,6 +13,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
@@ -22,6 +23,7 @@ const (
 	meshNamespace     string = "traefik-mesh"
 	meshPodPrefix     string = "traefik"
 	meshConfigmapName string = "traefik-mesh-config"
+	meshConfigmapKey  string = "traefik.toml"
 )
 
 type traefikMeshConfig struct {
@@ -99,6 +101,12 @@ func main() {
 	if err := patchCoreDNS(clientset, "coredns", "kube-system"); err != nil {
 		panic(err)
 	}
+
+	fmt.Println("Creating Traefik Mesh Daemonset...")
+	if err := createTraefikMeshDaemonset(clientset); err != nil {
+		panic(err)
+	}
+
 }
 
 func buildClient() (*kubernetes.Clientset, error) {
@@ -145,11 +153,13 @@ func verifyMeshServiceExists(client *kubernetes.Clientset, name, namespace strin
 			Spec: apiv1.ServiceSpec{
 				Ports: []apiv1.ServicePort{
 					{
-						Port: 80,
+						Name:       "web",
+						Port:       80,
+						TargetPort: intstr.FromInt(8000),
 					},
 				},
 				Selector: map[string]string{
-					"mesh": "traefik-mesh",
+					"app": "traefik-mesh-node",
 				},
 			},
 		}
@@ -262,11 +272,36 @@ func createRoutingConfigmap(client *kubernetes.Clientset, config *traefikMeshCon
 
 	output := tpl.String()
 
-	fmt.Printf("Templated config: %s", output)
-
-	m, _ := client.CoreV1().ConfigMaps(meshNamespace).Get(meshConfigmapName, metav1.GetOptions{})
-	if m != nil {
+	meshConfigmapList, _ := client.CoreV1().ConfigMaps(meshNamespace).List(metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("metadata.name=%s", meshConfigmapName),
+	})
+	if len(meshConfigmapList.Items) > 0 {
 		// Config exists, update
+		fmt.Println("Updating configmap...")
+		m, _ := client.CoreV1().ConfigMaps(meshNamespace).Get(meshConfigmapName, metav1.GetOptions{})
+		newConfigmap := m
+		newConfigmap.Data[meshConfigmapKey] = output
+		_, err := client.CoreV1().ConfigMaps(meshNamespace).Update(newConfigmap)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	fmt.Println("Creating new configmap...")
+
+	newConfigmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      meshConfigmapName,
+			Namespace: meshNamespace,
+		},
+		Data: map[string]string{
+			meshConfigmapKey: output,
+		},
+	}
+	_, err := client.CoreV1().ConfigMaps(meshNamespace).Create(newConfigmap)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -339,6 +374,52 @@ func createMeshConfig(client *kubernetes.Clientset) (meshConfig *traefikMeshConf
 	}, nil
 
 }
+
+func createTraefikMeshDaemonset(client *kubernetes.Clientset) error {
+	traefikDaemonset := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "traefik-mesh-node",
+			Namespace: meshNamespace,
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "traefik-mesh-node",
+				},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "traefik-mesh-node",
+					},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{
+							Name:  "traefik",
+							Image: "traefik:2.0.0-alpha4",
+							Ports: []apiv1.ContainerPort{
+								{
+									Name:          "http",
+									Protocol:      apiv1.ProtocolTCP,
+									ContainerPort: 8000,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := client.AppsV1().DaemonSets(meshNamespace).Create(traefikDaemonset)
+	if err != nil {
+		fmt.Printf("Daemonset %s already exists...\n", traefikDaemonset.Name)
+	}
+
+	return nil
+}
+
 func createDemoData(client *kubernetes.Clientset) error {
 	deploymentList := &appsv1.DeploymentList{
 		Items: []appsv1.Deployment{
@@ -436,13 +517,11 @@ func createDemoData(client *kubernetes.Clientset) error {
 							Containers: []apiv1.Container{
 								{
 									Name:  "demo",
-									Image: "traefik:alpine",
-									Ports: []apiv1.ContainerPort{
-										{
-											Name:          "http",
-											Protocol:      apiv1.ProtocolTCP,
-											ContainerPort: 80,
-										},
+									Image: "giantswarm/tiny-tools:3.9",
+									Command: []string{
+										"sh",
+										"-c",
+										"sleep 1000",
 									},
 								},
 							},
