@@ -397,12 +397,30 @@ func createTraefikMeshDaemonset(client *kubernetes.Clientset) error {
 					Containers: []apiv1.Container{
 						{
 							Name:  "traefik",
-							Image: "traefik:2.0.0-alpha4",
+							Image: "traefik:v2.0.0-alpha4-alpine",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
 									Protocol:      apiv1.ProtocolTCP,
 									ContainerPort: 8000,
+								},
+							},
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      "config",
+									MountPath: "/etc/traefik",
+								},
+							},
+						},
+					},
+					Volumes: []apiv1.Volume{
+						{
+							Name: "config",
+							VolumeSource: apiv1.VolumeSource{
+								ConfigMap: &apiv1.ConfigMapVolumeSource{
+									LocalObjectReference: apiv1.LocalObjectReference{
+										Name: meshConfigmapName,
+									},
 								},
 							},
 						},

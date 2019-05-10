@@ -15,6 +15,7 @@ level = "DEBUG"
 [http.routers]
 {{- range $key, $service := .Services }}
   [http.routers.{{ $service.ServiceName}}_{{ $service.ServiceNamespace }}]
+    entrypoints = ["web"]
     rule = "Host(`{{ $service.ServiceName }}.{{ $service.ServiceNamespace }}.traefik.mesh`)"
     service = "{{ $service.ServiceName}}_{{ $service.ServiceNamespace }}"
 {{- end }}
@@ -23,7 +24,7 @@ level = "DEBUG"
 {{- range $key, $service := .Services }}
   [http.services.{{ $service.ServiceName}}_{{ $service.ServiceNamespace }}.loadbalancer]
     {{- range $subkey, $server := $service.Servers }}
-    [[http.services.service1.loadbalancer.servers]]
+    [[http.services.{{ $service.ServiceName}}_{{ $service.ServiceNamespace }}.loadbalancer.servers]]
       url = "http://{{ $server.Address }}:{{ $server.Port }}"
       weight = 1
     {{- end -}}
