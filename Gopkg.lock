@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:04457f9f6f3ffc5fea48e71d62f2ca256637dee0a04d710288e27e05c8b41976"
+  name = "github.com/Sirupsen/logrus"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "839c75faf7f98a33d445d181f3018b5c3409a45e"
+  version = "v1.4.2"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -52,6 +60,17 @@
   revision = "0c5108395e2d"
 
 [[projects]]
+  digest = "1:d15ee511aa0f56baacc1eb4c6b922fa1c03b38413b6be18166b996d82a0156ea"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = "UT"
+  revision = "7087cb70de9f7a8bc0a10c375cb0d2280a8edf9c"
+  version = "v0.5.1"
+
+[[projects]]
   digest = "1:3e260afa138eab6492b531a3b3d10ab4cb70512d423faa78b8949dec76e66a21"
   name = "github.com/imdario/mergo"
   packages = ["."]
@@ -65,6 +84,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "ab8a2e0c74be"
+
+[[projects]]
+  digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
+  name = "github.com/konsorten/go-windows-terminal-sequences"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
+  version = "v1.0.2"
 
 [[projects]]
   digest = "1:33422d238f147d247752996a26574ac48dcf472976eda7f5134015f06bf16563"
@@ -242,12 +269,13 @@
   revision = "61630f889b3c3efb8c3a4ba377da1a421d9ff6ce"
 
 [[projects]]
-  digest = "1:848f94c663d3726f802e99c9f80379b33f2ac8d941ee69260ae8a022db029a71"
+  digest = "1:18849aa63e5048c3d2e76a88d16f69638bedb1b5e43b928099f54fc757c8aedc"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
+    "pkg/apis/meta/internalversion",
     "pkg/apis/meta/v1",
     "pkg/apis/meta/v1/unstructured",
     "pkg/apis/meta/v1beta1",
@@ -265,7 +293,9 @@
     "pkg/runtime/serializer/versioning",
     "pkg/selection",
     "pkg/types",
+    "pkg/util/cache",
     "pkg/util/clock",
+    "pkg/util/diff",
     "pkg/util/errors",
     "pkg/util/framer",
     "pkg/util/intstr",
@@ -276,6 +306,7 @@
     "pkg/util/sets",
     "pkg/util/validation",
     "pkg/util/validation/field",
+    "pkg/util/wait",
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
@@ -286,7 +317,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7bfab29f018f915e8918dc214763247732b57a20b6bf8642a3f3d5d016efd125"
+  digest = "1:bf76d4040114272d90c19db5869cec75b5ca1be59ffbb55c5957d3c6755adadd"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -336,11 +367,13 @@
     "rest",
     "rest/watch",
     "tools/auth",
+    "tools/cache",
     "tools/clientcmd",
     "tools/clientcmd/api",
     "tools/clientcmd/api/latest",
     "tools/clientcmd/api/v1",
     "tools/metrics",
+    "tools/pager",
     "tools/reference",
     "transport",
     "util/cert",
@@ -348,6 +381,8 @@
     "util/flowcontrol",
     "util/homedir",
     "util/keyutil",
+    "util/retry",
+    "util/workqueue",
   ]
   pruneopts = "UT"
   revision = "ef81ee0960bf57e94c697d674a1a8f5694c0ec9a"
@@ -361,9 +396,13 @@
   version = "v0.3.0"
 
 [[projects]]
-  digest = "1:8b40227d4bf8b431fdab4f9026e6e346f00ac3be5662af367a183f78c57660b3"
+  digest = "1:14e8a3b53e6d8cb5f44783056b71bb2ca1ac7e333939cc97f3e50b579c920845"
   name = "k8s.io/utils"
-  packages = ["integer"]
+  packages = [
+    "buffer",
+    "integer",
+    "trace",
+  ]
   pruneopts = "UT"
   revision = "c2654d5206da"
 
@@ -379,14 +418,19 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/Sirupsen/logrus",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/labels",
     "k8s.io/apimachinery/pkg/util/intstr",
+    "k8s.io/apimachinery/pkg/util/runtime",
+    "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/util/homedir",
+    "k8s.io/client-go/util/workqueue",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

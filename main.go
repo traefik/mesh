@@ -5,10 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,9 +48,11 @@ type traefikMeshBackendServer struct {
 
 var demo bool
 var kubeconfig string
+var debug bool
 
 func init() {
 	flag.BoolVar(&demo, "demo", false, "install demo data")
+	flag.BoolVar(&debug, "debug", false, "enable debug mode")
 
 	if home := homedir.HomeDir(); home != "" {
 		flag.StringVar(&kubeconfig, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -56,73 +62,93 @@ func init() {
 
 	flag.Parse()
 
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.InfoLevel)
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	}
 }
 
 func main() {
-	fmt.Println("Connecting to kubernetes...")
-	clientset, err := buildClient()
+	log.Infoln("Connecting to kubernetes...")
+	client, err := buildClient()
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Verifying mesh namespace exists...")
-	if err := verifyNamespaceExists(clientset, meshNamespace); err != nil {
+	log.Debugln("Verifying mesh namespace exists...")
+	if err := verifyNamespaceExists(client, meshNamespace); err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Creating demo data...")
+	log.Debugln("Creating demo data...")
 	if demo {
-		if err := createDemoData(clientset); err != nil {
+		if err := createDemoData(client); err != nil {
 			panic(err)
 		}
 	}
 
-	fmt.Println("Creating mesh structures for config...")
+	log.Debugln("Creating mesh structures for config...")
 	var meshConfig *traefikMeshConfig
-	if meshConfig, err = createMeshConfig(clientset); err != nil {
+	if meshConfig, err = createMeshConfig(client); err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Creating routing configmap...")
-	if err := createRoutingConfigmap(clientset, meshConfig); err != nil {
+	log.Debugln("Creating routing configmap...")
+	if err := createRoutingConfigmap(client, meshConfig); err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Listing services in mesh namespace %q:\n", meshNamespace)
-	serviceListMesh, err := clientset.CoreV1().Services(meshNamespace).List(metav1.ListOptions{})
+	log.Debugf("Listing services in mesh namespace %q:\n", meshNamespace)
+	serviceListMesh, err := client.CoreV1().Services(meshNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		panic(err)
 	}
 	for _, s := range serviceListMesh.Items {
-		fmt.Printf(" * %s/%s \n", s.Namespace, s.Name)
+		log.Debugf(" * %s/%s \n", s.Namespace, s.Name)
 	}
 
-	fmt.Println("Patching CoreDNS...")
-	if err := patchCoreDNS(clientset, "coredns", "kube-system"); err != nil {
+	log.Infoln("Patching CoreDNS...")
+	if err := patchCoreDNS(client, "coredns", "kube-system"); err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Creating Traefik Mesh Daemonset...")
-	if err := createTraefikMeshDaemonset(clientset); err != nil {
+	log.Infoln("Creating Traefik Mesh Daemonset...")
+	if err := createTraefikMeshDaemonset(client); err != nil {
 		panic(err)
 	}
+
+	controller := NewController(client)
+	// use a channel to synchronize the finalization for a graceful shutdown
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	// run the controller loop to process items
+	go controller.Run(stopCh)
+
+	// use a channel to handle OS signals to terminate and gracefully shut
+	// down processing
+	sigTerm := make(chan os.Signal, 1)
+	signal.Notify(sigTerm, syscall.SIGTERM)
+	signal.Notify(sigTerm, syscall.SIGINT)
+	<-sigTerm
 
 }
 
-func buildClient() (*kubernetes.Clientset, error) {
+func buildClient() (kubernetes.Interface, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		return nil, err
 	}
-	clientset, err := kubernetes.NewForConfig(config)
+	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return clientset, nil
+	return client, nil
 }
 
-func verifyNamespaceExists(client *kubernetes.Clientset, namespace string) error {
+func verifyNamespaceExists(client kubernetes.Interface, namespace string) error {
 	_, err := client.CoreV1().Namespaces().Get(meshNamespace, metav1.GetOptions{})
 	if err != nil {
 		ns := &apiv1.Namespace{
@@ -141,7 +167,7 @@ func verifyNamespaceExists(client *kubernetes.Clientset, namespace string) error
 	return nil
 }
 
-func verifyMeshServiceExists(client *kubernetes.Clientset, name, namespace string) error {
+func verifyMeshServiceExists(client kubernetes.Interface, name, namespace string) error {
 	meshServiceName := fmt.Sprintf("%s-%s-%s", meshPodPrefix, namespace, name)
 	meshServiceInstance, err := client.CoreV1().Services(meshNamespace).Get(meshServiceName, metav1.GetOptions{})
 	if meshServiceInstance == nil || err != nil {
@@ -172,20 +198,20 @@ func verifyMeshServiceExists(client *kubernetes.Clientset, name, namespace strin
 	return nil
 }
 
-func patchCoreDNS(client *kubernetes.Clientset, deploymentName, deploymentNamespace string) error {
+func patchCoreDNS(client kubernetes.Interface, deploymentName, deploymentNamespace string) error {
 	coreDeployment, err := client.AppsV1().Deployments(deploymentNamespace).Get(deploymentName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Patching CoreDNS configmap...")
+	log.Infoln("Patching CoreDNS configmap...")
 	patched, err := patchCoreConfigmap(client, coreDeployment)
 	if err != nil {
 		return err
 	}
 
 	if !patched {
-		fmt.Println("Restarting CoreDNS pods...")
+		log.Infoln("Restarting CoreDNS pods...")
 		if err := restartCorePods(client, coreDeployment); err != nil {
 			return err
 		}
@@ -194,7 +220,7 @@ func patchCoreDNS(client *kubernetes.Clientset, deploymentName, deploymentNamesp
 	return nil
 }
 
-func restartCorePods(client *kubernetes.Clientset, coreDeployment *appsv1.Deployment) error {
+func restartCorePods(client kubernetes.Interface, coreDeployment *appsv1.Deployment) error {
 	coreLabelSelector := labels.Set(coreDeployment.Spec.Selector.MatchLabels).String()
 	deploymentNamespace := coreDeployment.Namespace
 	deploymentName := coreDeployment.Name
@@ -204,7 +230,7 @@ func restartCorePods(client *kubernetes.Clientset, coreDeployment *appsv1.Deploy
 		return err
 	}
 	for _, p := range corePods.Items {
-		fmt.Printf("Deleting pod %s...\n", p.Name)
+		log.Infof("Deleting pod %s...\n", p.Name)
 		if err := client.CoreV1().Pods(deploymentNamespace).Delete(p.Name, nil); err != nil {
 			return err
 		}
@@ -223,7 +249,7 @@ func restartCorePods(client *kubernetes.Clientset, coreDeployment *appsv1.Deploy
 	return nil
 }
 
-func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Deployment) (bool, error) {
+func patchCoreConfigmap(client kubernetes.Interface, coreDeployment *appsv1.Deployment) (bool, error) {
 	coreConfigmapName := coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
 	//JESUS
 
@@ -234,7 +260,7 @@ func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Dep
 
 	if len(coreConfigmap.ObjectMeta.Labels) > 0 {
 		if _, ok := coreConfigmap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
-			fmt.Println("Configmap already patched...")
+			log.Infoln("Configmap already patched...")
 			return true, nil
 		}
 	}
@@ -262,7 +288,7 @@ func patchCoreConfigmap(client *kubernetes.Clientset, coreDeployment *appsv1.Dep
 	return false, nil
 }
 
-func createRoutingConfigmap(client *kubernetes.Clientset, config *traefikMeshConfig) error {
+func createRoutingConfigmap(client kubernetes.Interface, config *traefikMeshConfig) error {
 	t, _ := template.ParseFiles("templates/traefik-routing.tpl") // Parse template file.
 
 	var tpl bytes.Buffer
@@ -277,7 +303,7 @@ func createRoutingConfigmap(client *kubernetes.Clientset, config *traefikMeshCon
 	})
 	if len(meshConfigmapList.Items) > 0 {
 		// Config exists, update
-		fmt.Println("Updating configmap...")
+		log.Infoln("Updating configmap...")
 		m, _ := client.CoreV1().ConfigMaps(meshNamespace).Get(meshConfigmapName, metav1.GetOptions{})
 		newConfigmap := m
 		newConfigmap.Data[meshConfigmapKey] = output
@@ -288,7 +314,7 @@ func createRoutingConfigmap(client *kubernetes.Clientset, config *traefikMeshCon
 		return nil
 	}
 
-	fmt.Println("Creating new configmap...")
+	log.Infoln("Creating new configmap...")
 
 	newConfigmap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -307,8 +333,8 @@ func createRoutingConfigmap(client *kubernetes.Clientset, config *traefikMeshCon
 	return nil
 }
 
-func createMeshConfig(client *kubernetes.Clientset) (meshConfig *traefikMeshConfig, err error) {
-	fmt.Println("Listing services in all namespaces:")
+func createMeshConfig(client kubernetes.Interface) (meshConfig *traefikMeshConfig, err error) {
+	log.Debugln("Listing services in all namespaces:")
 	serviceListAll, err := client.CoreV1().Services(apiv1.NamespaceAll).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -324,7 +350,7 @@ func createMeshConfig(client *kubernetes.Clientset) (meshConfig *traefikMeshConf
 
 		serviceListNonMesh = append(serviceListNonMesh, s)
 
-		fmt.Printf(" * %s/%s \n", s.Namespace, s.Name)
+		log.Debugf(" * %s/%s \n", s.Namespace, s.Name)
 
 		if err := verifyMeshServiceExists(client, s.Namespace, s.Name); err != nil {
 			panic(err)
@@ -356,7 +382,7 @@ func createMeshConfig(client *kubernetes.Clientset) (meshConfig *traefikMeshConf
 				Address: ip,
 				Port:    port,
 			})
-			fmt.Printf(" - Adding server %s:%d to routing config\n", ip, port)
+			log.Debugf(" - Adding server %s:%d to routing config\n", ip, port)
 		}
 
 		meshService := traefikMeshService{
@@ -375,7 +401,7 @@ func createMeshConfig(client *kubernetes.Clientset) (meshConfig *traefikMeshConf
 
 }
 
-func createTraefikMeshDaemonset(client *kubernetes.Clientset) error {
+func createTraefikMeshDaemonset(client kubernetes.Interface) error {
 	traefikDaemonset := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "traefik-mesh-node",
@@ -432,13 +458,13 @@ func createTraefikMeshDaemonset(client *kubernetes.Clientset) error {
 
 	_, err := client.AppsV1().DaemonSets(meshNamespace).Create(traefikDaemonset)
 	if err != nil {
-		fmt.Printf("Daemonset %s already exists...\n", traefikDaemonset.Name)
+		log.Debugf("Daemonset %s already exists...\n", traefikDaemonset.Name)
 	}
 
 	return nil
 }
 
-func createDemoData(client *kubernetes.Clientset) error {
+func createDemoData(client kubernetes.Interface) error {
 	deploymentList := &appsv1.DeploymentList{
 		Items: []appsv1.Deployment{
 			{
@@ -636,27 +662,27 @@ func createDemoData(client *kubernetes.Clientset) error {
 		},
 	}
 
-	fmt.Println("Creating Demo Namespaces...")
+	log.Debugln("Creating Demo Namespaces...")
 	for _, n := range namespaceList.Items {
 		_, err := client.CoreV1().Namespaces().Create(&n)
 		if err != nil {
-			fmt.Printf("Namespace %s already exists...\n", n.Name)
+			log.Debugf("Namespace %s already exists...\n", n.Name)
 		}
 	}
 
-	fmt.Println("Creating Demo Services...")
+	log.Debugln("Creating Demo Services...")
 	for _, s := range serviceList.Items {
 		_, err := client.CoreV1().Services(s.Namespace).Create(&s)
 		if err != nil {
-			fmt.Printf("Service %s already exists...\n", s.Name)
+			log.Debugf("Service %s already exists...\n", s.Name)
 		}
 	}
 
-	fmt.Println("Creating Demo Deployments...")
+	log.Debugln("Creating Demo Deployments...")
 	for _, d := range deploymentList.Items {
 		_, err := client.AppsV1().Deployments(d.Namespace).Create(&d)
 		if err != nil {
-			fmt.Printf("Deployment %s already exists...\n", d.Name)
+			log.Debugf("Deployment %s already exists...\n", d.Name)
 		}
 	}
 
