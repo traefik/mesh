@@ -1,4 +1,4 @@
-package main
+package controller
 
 import (
 	"fmt"
@@ -17,34 +17,70 @@ import (
 )
 
 type Controller struct {
-	logger   *log.Entry
-	client   kubernetes.Interface
-	queue    workqueue.RateLimitingInterface
-	informer cache.SharedIndexInformer
-	handler  Handler
+	client         kubernetes.Interface
+	queue          workqueue.RateLimitingInterface
+	informer       cache.SharedIndexInformer
+	handler        Handler
+	controllerType string
 }
 
 // New is used to build the informers and other required components of the controller,
 // and return an initialized controller object
-func NewController(client kubernetes.Interface) *Controller {
-	// create the informer so that we can not only list resources
-	// but also watch them for all pods in the default namespace
+func NewController(client kubernetes.Interface, controllerType interface{}) *Controller {
+	var lw *cache.ListWatch
+	var ot runtime.Object
+	var printableType string
+	switch controllerType.(type) {
+	case apiv1.Service:
+		lw = &cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				// list all of the services (core resource) in all namespaces
+				return client.CoreV1().Services(metav1.NamespaceAll).List(options)
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				// watch all of the services (core resource) in all namespaces
+				return client.CoreV1().Services(metav1.NamespaceAll).Watch(options)
+			},
+		}
+		ot = &apiv1.Service{}
+		printableType = "service"
+
+	case apiv1.Endpoints:
+		lw = &cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				// list all of the endpoints (core resource) in all namespaces
+				return client.CoreV1().Endpoints(metav1.NamespaceAll).List(options)
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				// watch all of the endpoints (core resource) in all namespaces
+				return client.CoreV1().Endpoints(metav1.NamespaceAll).Watch(options)
+			},
+		}
+		ot = &apiv1.Endpoints{}
+		printableType = "endpoint"
+
+	case apiv1.Namespace:
+		lw = &cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				// list all of the namespaces
+				return client.CoreV1().Namespaces().List(options)
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				// watch all of the namespaces
+				return client.CoreV1().Namespaces().Watch(options)
+			},
+		}
+		ot = &apiv1.Namespace{}
+		printableType = "namespace"
+	}
+
 	informer := cache.NewSharedIndexInformer(
 		// the ListWatch contains two different functions that our
 		// informer requires: ListFunc to take care of listing and watching
 		// the resources we want to handle
-		&cache.ListWatch{
-			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-				// list all of the pods (core resource) in the deafult namespace
-				return client.CoreV1().Pods(metav1.NamespaceDefault).List(options)
-			},
-			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				// watch all of the pods (core resource) in the default namespace
-				return client.CoreV1().Pods(metav1.NamespaceDefault).Watch(options)
-			},
-		},
-		&apiv1.Pod{}, // the target type (Pod)
-		0,            // no resync (period of 0)
+		lw,
+		ot, // the target type
+		0,  // no resync (period of 0)
 		cache.Indexers{},
 	)
 	// create a new queue so that when the informer gets a resource that is either
@@ -61,7 +97,7 @@ func NewController(client kubernetes.Interface) *Controller {
 			// convert the resource object into a key (in this case
 			// we are just doing it in the format of 'namespace/name')
 			key, err := cache.MetaNamespaceKeyFunc(obj)
-			log.Infof("Add pod: %s", key)
+			log.Infof("Add %s: %s", printableType, key)
 			if err == nil {
 				// add the key to the queue for the handler to get
 				queue.Add(key)
@@ -69,7 +105,7 @@ func NewController(client kubernetes.Interface) *Controller {
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(newObj)
-			log.Infof("Update pod: %s", key)
+			log.Infof("Update %s: %s", printableType, key)
 			if err == nil {
 				queue.Add(key)
 			}
@@ -81,7 +117,7 @@ func NewController(client kubernetes.Interface) *Controller {
 			//
 			// this then in turn calls MetaNamespaceKeyFunc
 			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-			log.Infof("Delete pod: %s", key)
+			log.Infof("Delete %s: %s", printableType, key)
 			if err == nil {
 				queue.Add(key)
 			}
@@ -92,11 +128,11 @@ func NewController(client kubernetes.Interface) *Controller {
 	// handle logging, connections, informing (listing and watching), the queue,
 	// and the handler
 	return &Controller{
-		logger:   log.NewEntry(log.New()),
-		client:   client,
-		informer: informer,
-		queue:    queue,
-		handler:  &TestHandler{},
+		client:         client,
+		informer:       informer,
+		queue:          queue,
+		handler:        &ControllerHandler{},
+		controllerType: printableType,
 	}
 
 }
@@ -109,7 +145,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	// have completed existing items then shutdown
 	defer c.queue.ShutDown()
 
-	c.logger.Infoln("Initializing controller")
+	log.Infof("Initializing %s controller", c.controllerType)
 
 	// run the informer to start listing and watching resources
 	go c.informer.Run(stopCh)
@@ -119,7 +155,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 		utilruntime.HandleError(fmt.Errorf("Error syncing cache"))
 		return
 	}
-	c.logger.Info("Controller.Run: cache sync complete")
+	log.Infof("Controller.%s.Run: cache sync complete", c.controllerType)
 
 	// run the runWorker method every second with a stop channel
 	wait.Until(c.runWorker, time.Second, stopCh)
@@ -133,22 +169,22 @@ func (c *Controller) HasSynced() bool {
 
 // runWorker executes the loop to process new items added to the queue
 func (c *Controller) runWorker() {
-	log.Info("Controller.runWorker: starting")
+	log.Infof("Controller.%s.runWorker: starting", c.controllerType)
 
 	// invoke processNextItem to fetch and consume the next change
 	// to a watched or listed resource
 	for c.processNextItem() {
-		log.Info("Controller.runWorker: processing next item")
+		log.Infof("Controller.%s.runWorker: processing next item", c.controllerType)
 	}
 
-	log.Info("Controller.runWorker: completed")
+	log.Infof("Controller.%s.runWorker: completed", c.controllerType)
 }
 
 // processNextItem retrieves each queued item and takes the
 // necessary handler action based off of if the item was
 // created or deleted
 func (c *Controller) processNextItem() bool {
-	log.Info("Waiting for next item to process...")
+	log.Infof("Controller.%s Waiting for next item to process...", c.controllerType)
 
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
@@ -180,10 +216,10 @@ func (c *Controller) processNextItem() bool {
 	item, exists, err := c.informer.GetIndexer().GetByKey(keyRaw)
 	if err != nil {
 		if c.queue.NumRequeues(key) < 5 {
-			c.logger.Errorf("Controller.processNextItem: Failed processing item with key %s with error %v, retrying", key, err)
+			log.Errorf("Controller.processNextItem: Failed processing item with key %s with error %v, retrying", key, err)
 			c.queue.AddRateLimited(key)
 		} else {
-			c.logger.Errorf("Controller.processNextItem: Failed processing item with key %s with error %v, no more retries", key, err)
+			log.Errorf("Controller.processNextItem: Failed processing item with key %s with error %v, no more retries", key, err)
 			c.queue.Forget(key)
 			utilruntime.HandleError(err)
 		}
@@ -196,11 +232,11 @@ func (c *Controller) processNextItem() bool {
 	// after both instances, we want to forget the key from the queue, as this indicates
 	// a code path of successful queue key processing
 	if !exists {
-		c.logger.Infof("Controller.processNextItem: object deleted detected: %s", keyRaw)
+		log.Infof("Controller.processNextItem: %s deleted detected: %s", c.controllerType, keyRaw)
 		c.handler.ObjectDeleted(item)
 		c.queue.Forget(key)
 	} else {
-		c.logger.Infof("Controller.processNextItem: object created detected: %s", keyRaw)
+		log.Infof("Controller.processNextItem: %s created detected: %s", c.controllerType, keyRaw)
 		c.handler.ObjectCreated(item)
 		c.queue.Forget(key)
 	}
