@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -26,7 +27,7 @@ type Controller struct {
 
 // New is used to build the informers and other required components of the controller,
 // and return an initialized controller object
-func NewController(client kubernetes.Interface, controllerType interface{}) *Controller {
+func NewController(client kubernetes.Interface, controllerType interface{}, ignoredNamespaces []string) *Controller {
 	var lw *cache.ListWatch
 	var ot runtime.Object
 	var printableType string
@@ -44,7 +45,6 @@ func NewController(client kubernetes.Interface, controllerType interface{}) *Con
 		}
 		ot = &apiv1.Service{}
 		printableType = "service"
-
 	case apiv1.Endpoints:
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
@@ -83,31 +83,33 @@ func NewController(client kubernetes.Interface, controllerType interface{}) *Con
 		0,  // no resync (period of 0)
 		cache.Indexers{},
 	)
+
 	// create a new queue so that when the informer gets a resource that is either
 	// a result of listing or watching, we can add an idenfitying key to the queue
 	// so that it can be handled in the handler
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
-	// add event handlers to handle the three types of events for resources:
-	//  - adding new resources
-	//  - updating existing resources
-	//  - deleting resources
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			// convert the resource object into a key (in this case
 			// we are just doing it in the format of 'namespace/name')
 			key, err := cache.MetaNamespaceKeyFunc(obj)
-			log.Infof("Add %s: %s", printableType, key)
 			if err == nil {
 				// add the key to the queue for the handler to get
-				queue.Add(key)
+				// If object key is not in our list of ignored namespaces
+				if !ObjectKeyInNamespace(key, ignoredNamespaces) {
+					log.Warnf("%s informer - Added: %s to queue", printableType, key)
+					queue.Add(key)
+				}
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(newObj)
-			log.Infof("Update %s: %s", printableType, key)
 			if err == nil {
-				queue.Add(key)
+				if !ObjectKeyInNamespace(key, ignoredNamespaces) {
+					log.Warnf("%s informer - Update: %s", printableType, key)
+					queue.Add(key)
+				}
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -117,21 +119,22 @@ func NewController(client kubernetes.Interface, controllerType interface{}) *Con
 			//
 			// this then in turn calls MetaNamespaceKeyFunc
 			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-			log.Infof("Delete %s: %s", printableType, key)
 			if err == nil {
-				queue.Add(key)
+				if !ObjectKeyInNamespace(key, ignoredNamespaces) {
+					log.Warnf("%s informer - Delete: %s", printableType, key)
+					queue.Add(key)
+				}
 			}
 		},
 	})
 
-	// construct the Controller object which has all of the necessary components to
-	// handle logging, connections, informing (listing and watching), the queue,
-	// and the handler
 	return &Controller{
-		client:         client,
-		informer:       informer,
-		queue:          queue,
-		handler:        &ControllerHandler{},
+		client:   client,
+		informer: informer,
+		queue:    queue,
+		handler: &ControllerHandler{
+			IgnoredNamespaces: ignoredNamespaces,
+		},
 		controllerType: printableType,
 	}
 
@@ -169,22 +172,22 @@ func (c *Controller) HasSynced() bool {
 
 // runWorker executes the loop to process new items added to the queue
 func (c *Controller) runWorker() {
-	log.Infof("Controller.%s.runWorker: starting", c.controllerType)
+	log.Debugf("Controller.%s.runWorker: starting", c.controllerType)
 
 	// invoke processNextItem to fetch and consume the next change
 	// to a watched or listed resource
 	for c.processNextItem() {
-		log.Infof("Controller.%s.runWorker: processing next item", c.controllerType)
+		log.Debugf("Controller.%s.runWorker: processing next item", c.controllerType)
 	}
 
-	log.Infof("Controller.%s.runWorker: completed", c.controllerType)
+	log.Debugf("Controller.%s.runWorker: completed", c.controllerType)
 }
 
 // processNextItem retrieves each queued item and takes the
 // necessary handler action based off of if the item was
 // created or deleted
 func (c *Controller) processNextItem() bool {
-	log.Infof("Controller.%s Waiting for next item to process...", c.controllerType)
+	log.Debugf("Controller.%s Waiting for next item to process...", c.controllerType)
 
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
@@ -232,11 +235,11 @@ func (c *Controller) processNextItem() bool {
 	// after both instances, we want to forget the key from the queue, as this indicates
 	// a code path of successful queue key processing
 	if !exists {
-		log.Infof("Controller.processNextItem: %s deleted detected: %s", c.controllerType, keyRaw)
+		log.Infof("Controller.%s.processNextItem: deleted: %s", c.controllerType, keyRaw)
 		c.handler.ObjectDeleted(item)
 		c.queue.Forget(key)
 	} else {
-		log.Infof("Controller.processNextItem: %s created detected: %s", c.controllerType, keyRaw)
+		log.Infof("Controller.%s.processNextItem: created: %s", c.controllerType, keyRaw)
 		c.handler.ObjectCreated(item)
 		c.queue.Forget(key)
 	}
@@ -244,6 +247,26 @@ func (c *Controller) processNextItem() bool {
 	if c.queue.Len() > 0 {
 		// keep the worker loop running by returning true
 		return true
+	}
+	return false
+}
+
+func ObjectKeyInNamespace(key string, namespaces []string) bool {
+	splitKey := strings.Split(key, "/")
+	if len(splitKey) == 1 {
+		// No namespace in the key
+		return false
+	}
+
+	return Contains(namespaces, splitKey[0])
+}
+
+// Contains tells whether a contains x.
+func Contains(a []string, x string) bool {
+	for _, n := range a {
+		if x == n {
+			return true
+		}
 	}
 	return false
 }
