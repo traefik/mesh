@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containous/traefik/log"
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

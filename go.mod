@@ -3,7 +3,6 @@ module github.com/containous/i3o
 go 1.12
 
 require (
-	github.com/containous/traefik v1.7.12
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
