@@ -16,22 +16,6 @@ type MeshController struct {
 	namespaceController *controller.Controller
 }
 
-type traefikMeshConfig struct {
-	Services []traefikMeshService
-}
-
-type traefikMeshService struct {
-	ServicePort      int32
-	ServiceName      string
-	ServiceNamespace string
-	Servers          []traefikMeshBackendServer
-}
-
-type traefikMeshBackendServer struct {
-	Address string
-	Port    int32
-}
-
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object
 func NewController(client kubernetes.Interface) *MeshController {
