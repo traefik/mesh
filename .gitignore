@@ -1,7 +1,6 @@
 .idea/
 .intellij/
 *.iml
-.vscode/
 .DS_Store
 /static/
 /site/
@@ -11,3 +10,5 @@
 *.exe
 cover.out
 i3o
+/.vscode/
+/dist/
