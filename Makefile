@@ -1,5 +1,5 @@
 VERSION := v0.0.0-alpha1
-DOCKER_TAG := containous/traefik-mesh-controller
+DOCKER_TAG := containous/i3o
 
 # Static linting of source files. See .golangci.toml for options
 check:
