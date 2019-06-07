@@ -2,8 +2,8 @@ package meshcontroller
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/dtomcej/traefik-mesh-controller/controller"
-	"github.com/dtomcej/traefik-mesh-controller/utils"
+	"github.com/containous/i3o/controller"
+	"github.com/containous/i3o/utils"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -45,5 +45,4 @@ func (m *MeshController) Run(stopCh <-chan struct{}) {
 	go m.serviceController.Run(stopCh)
 	go m.endpointController.Run(stopCh)
 	go m.namespaceController.Run(stopCh)
-
 }

@@ -8,8 +8,8 @@ import (
 	"syscall"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/dtomcej/traefik-mesh-controller/meshcontroller"
-	"github.com/dtomcej/traefik-mesh-controller/utils"
+	"github.com/containous/i3o/meshcontroller"
+	"github.com/containous/i3o/utils"
 	"k8s.io/client-go/util/homedir"
 )
 

@@ -3,7 +3,8 @@ default: build
 build:
 	go build -o traefik-mesh-controller *.go 
 
-local-validate: local-validate-lint
-
-local-validate-lint:
+# Static linting of source files. See .golangci.toml for options
+check:
 	golangci-lint run
+
+.PHONY: check build

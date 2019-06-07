@@ -6,7 +6,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// BuildClient returns a useable kubernetes client
+// BuildClient returns a useable kubernetes client.
 func BuildClient(kubeconfig string) (kubernetes.Interface, error) {
 	log.Infoln("Connecting to kubernetes...")
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)

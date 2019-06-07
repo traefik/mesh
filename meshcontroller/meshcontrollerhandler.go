@@ -2,7 +2,7 @@ package meshcontroller
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/dtomcej/traefik-mesh-controller/utils"
+	"github.com/containous/i3o/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
