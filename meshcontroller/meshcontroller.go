@@ -14,7 +14,7 @@ type MeshController struct {
 	serviceController   *controller.Controller
 	endpointController  *controller.Controller
 	namespaceController *controller.Controller
-	handler             *MeshControllerHandler
+	handler             *Handler
 }
 
 // New is used to build the informers and other required components of the mesh controller,
@@ -27,11 +27,11 @@ func NewMeshController() *MeshController {
 func (m *MeshController) Init(client kubernetes.Interface) {
 	ignoredNamespaces := []string{metav1.NamespaceSystem, utils.MeshNamespace}
 
-	handler := NewMeshControllerHandler(ignoredNamespaces)
+	m.handler = NewHandler(ignoredNamespaces)
 	// Create the new subcontrollers
-	m.serviceController = controller.NewController(client, apiv1.Service{}, ignoredNamespaces, handler)
-	m.endpointController = controller.NewController(client, apiv1.Endpoints{}, ignoredNamespaces, handler)
-	m.namespaceController = controller.NewController(client, apiv1.Namespace{}, ignoredNamespaces, handler)
+	m.serviceController = controller.NewController(client, apiv1.Service{}, ignoredNamespaces, m.handler)
+	m.endpointController = controller.NewController(client, apiv1.Endpoints{}, ignoredNamespaces, m.handler)
+	m.namespaceController = controller.NewController(client, apiv1.Namespace{}, ignoredNamespaces, m.handler)
 }
 
 // Run is the main entrypoint for the controller

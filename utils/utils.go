@@ -251,7 +251,6 @@ func CreateMeshConfig(client kubernetes.Interface) (meshConfig *TraefikMeshConfi
 		return nil, err
 	}
 
-	var serviceListNonMesh []apiv1.Service
 	var meshServices []TraefikMeshService
 
 	for _, s := range serviceListAll.Items {
@@ -259,25 +258,27 @@ func CreateMeshConfig(client kubernetes.Interface) (meshConfig *TraefikMeshConfi
 			continue
 		}
 
-		serviceListNonMesh = append(serviceListNonMesh, s)
-
 		log.Debugf(" * %s/%s \n", s.Namespace, s.Name)
 
-		if err := verifyMeshServiceExists(client, s.Namespace, s.Name); err != nil {
+		if err = verifyMeshServiceExists(client, s.Namespace, s.Name); err != nil {
 			panic(err)
 		}
 
 		var endpoints *apiv1.EndpointsList
+	E:
 		for {
 			endpoints, err = client.CoreV1().Endpoints(s.Namespace).List(metav1.ListOptions{
 				FieldSelector: fmt.Sprintf("metadata.name=%s", s.Name),
 			})
-			if err != nil {
+			switch {
+			case err != nil:
 				time.Sleep(time.Second * 5)
-			} else if len(endpoints.Items[0].Subsets) == 0 {
+
+			case len(endpoints.Items[0].Subsets) == 0:
 				time.Sleep(time.Second * 5)
-			} else {
-				break
+
+			default:
+				break E
 			}
 		}
 
