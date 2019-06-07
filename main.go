@@ -3,30 +3,30 @@ package main
 import (
 	"flag"
 	"os"
-	"os/signal"
-	"path/filepath"
-	"syscall"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/containous/i3o/meshcontroller"
 	"github.com/containous/i3o/utils"
-	"k8s.io/client-go/util/homedir"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/sample-controller/pkg/signals"
 )
 
-var demo bool
-var kubeconfig string
-var debug bool
+var (
+	demo       bool
+	debug      bool
+	kubeconfig string
+	masterURL  string
+)
 
 func init() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.BoolVar(&demo, "demo", false, "install demo data")
 	flag.BoolVar(&debug, "debug", false, "enable debug mode")
+}
 
-	if home := homedir.HomeDir(); home != "" {
-		flag.StringVar(&kubeconfig, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		flag.StringVar(&kubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-
+func main() {
 	flag.Parse()
 
 	log.SetOutput(os.Stdout)
@@ -34,45 +34,41 @@ func init() {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
-}
 
-func main() {
-	client, err := utils.BuildClient(kubeconfig)
+	// set up signals so we handle the first shutdown signal gracefully
+	stopCh := signals.SetupSignalHandler()
+
+	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error building kubeconfig: %v", err)
 	}
 
-	if err = utils.InitCluster(client, demo); err != nil {
-		panic(err)
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		log.Fatalf("Error building kubernetes clientset: %v", err)
+	}
+
+	if err = utils.InitCluster(kubeClient, demo); err != nil {
+		log.Fatalf("Error initializing cluster: %v", err)
 	}
 
 	var meshConfig *utils.TraefikMeshConfig
-	if meshConfig, err = utils.CreateMeshConfig(client); err != nil {
-		panic(err)
+	if meshConfig, err = utils.CreateMeshConfig(kubeClient); err != nil {
+		log.Fatalf("Error creating mesh config: %v", err)
 	}
 
-	if err := utils.CreateRoutingConfigmap(client, meshConfig); err != nil {
-		panic(err)
+	if err := utils.CreateRoutingConfigmap(kubeClient, meshConfig); err != nil {
+		log.Fatalf("Error creating routing config map: %v", err)
 	}
 
 	// Create a new controller.
 	controller := meshcontroller.NewMeshController()
 
 	// Initialize the controller.
-	controller.Init(client)
-
-	// use a channel to synchronize the finalization for a graceful shutdown
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	controller.Init(kubeClient)
 
 	// run the controller loop to process items
-	go controller.Run(stopCh)
-
-	// use a channel to handle OS signals to terminate and gracefully shut
-	// down processing
-	sigTerm := make(chan os.Signal, 1)
-	signal.Notify(sigTerm, syscall.SIGTERM)
-	signal.Notify(sigTerm, syscall.SIGINT)
-	<-sigTerm
-
+	if err = controller.Run(stopCh); err != nil {
+		log.Fatalf("Error running controller: %v", err)
+	}
 }
