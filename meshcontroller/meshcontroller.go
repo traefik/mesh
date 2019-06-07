@@ -14,24 +14,24 @@ type MeshController struct {
 	serviceController   *controller.Controller
 	endpointController  *controller.Controller
 	namespaceController *controller.Controller
+	handler             *MeshControllerHandler
 }
 
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object
-func NewController(client kubernetes.Interface) *MeshController {
+func NewMeshController() *MeshController {
+	return &MeshController{}
+}
+
+// Init prepares the controller by creating the required subcontrollers.
+func (m *MeshController) Init(client kubernetes.Interface) {
 	ignoredNamespaces := []string{metav1.NamespaceSystem, utils.MeshNamespace}
 
+	handler := NewMeshControllerHandler(ignoredNamespaces)
 	// Create the new subcontrollers
-	sc := controller.NewController(client, apiv1.Service{}, ignoredNamespaces)
-	ec := controller.NewController(client, apiv1.Endpoints{}, ignoredNamespaces)
-	nc := controller.NewController(client, apiv1.Namespace{}, ignoredNamespaces)
-
-	return &MeshController{
-		serviceController:   sc,
-		endpointController:  ec,
-		namespaceController: nc,
-	}
-
+	m.serviceController = controller.NewController(client, apiv1.Service{}, ignoredNamespaces, handler)
+	m.endpointController = controller.NewController(client, apiv1.Endpoints{}, ignoredNamespaces, handler)
+	m.namespaceController = controller.NewController(client, apiv1.Namespace{}, ignoredNamespaces, handler)
 }
 
 // Run is the main entrypoint for the controller

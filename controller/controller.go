@@ -28,7 +28,7 @@ type Controller struct {
 
 // New is used to build the informers and other required components of the controller,
 // and return an initialized controller object
-func NewController(client kubernetes.Interface, controllerType interface{}, ignoredNamespaces []string) *Controller {
+func NewController(client kubernetes.Interface, controllerType interface{}, ignoredNamespaces []string, handler Handler) *Controller {
 	var lw *cache.ListWatch
 	var ot runtime.Object
 	var printableType string
@@ -130,12 +130,10 @@ func NewController(client kubernetes.Interface, controllerType interface{}, igno
 	})
 
 	return &Controller{
-		client:   client,
-		informer: informer,
-		queue:    queue,
-		handler: &ControllerHandler{
-			IgnoredNamespaces: ignoredNamespaces,
-		},
+		client:         client,
+		informer:       informer,
+		queue:          queue,
+		handler:        handler,
 		controllerType: printableType,
 	}
 

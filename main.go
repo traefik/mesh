@@ -55,8 +55,11 @@ func main() {
 		panic(err)
 	}
 
-	// create a new controller.
-	controller := meshcontroller.NewController(client)
+	// Create a new controller.
+	controller := meshcontroller.NewMeshController()
+
+	// Initialize the controller.
+	controller.Init(client)
 
 	// use a channel to synchronize the finalization for a graceful shutdown
 	stopCh := make(chan struct{})
