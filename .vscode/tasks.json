@@ -6,7 +6,7 @@
         {
             "label": "Make Validate",
             "type": "shell",
-            "command": "make local-validate",
+            "command": "make check",
             "group": "test",
             "problemMatcher": [
                 "$go"
