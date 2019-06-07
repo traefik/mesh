@@ -154,7 +154,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 
 	// do the initial synchronization (one time) to populate resources
 	if !cache.WaitForCacheSync(stopCh, c.HasSynced) {
-		utilruntime.HandleError(fmt.Errorf("Error syncing cache"))
+		utilruntime.HandleError(fmt.Errorf("error syncing cache"))
 		return
 	}
 	log.Infof("Controller.%s.Run: cache sync complete", c.controllerType)

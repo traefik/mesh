@@ -42,7 +42,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := utils.InitCluster(client, demo); err != nil {
+	if err = utils.InitCluster(client, demo); err != nil {
 		panic(err)
 	}
 

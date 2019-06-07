@@ -1,0 +1,36 @@
+[run]
+  deadline = "5m"
+
+[linters-settings]
+
+  [linters-settings.govet]
+    check-shadowing = true
+
+  [linters-settings.golint]
+    min-confidence = 0.0
+
+  [linters-settings.gocyclo]
+    min-complexity = 15.0
+
+  [linters-settings.maligned]
+    suggest-new = true
+
+  [linters-settings.goconst]
+    min-len = 3.0
+    min-occurrences = 3.0
+
+  [linters-settings.misspell]
+    locale = "US"
+
+[linters]
+  enable-all = true
+  disable = [
+    "lll",
+    "gas",
+    "dupl",
+    "prealloc",
+    "maligned",
+    "gochecknoinits",
+    "gochecknoglobals",
+    "scopelint",
+  ]
