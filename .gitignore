@@ -1,0 +1,13 @@
+.idea/
+.intellij/
+*.iml
+.vscode/
+.DS_Store
+/static/
+/site/
+/docs/site/
+/dist
+*.log
+*.exe
+cover.out
+traefik-mesh-controller
