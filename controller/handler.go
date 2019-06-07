@@ -2,6 +2,7 @@ package controller
 
 import (
 	log "github.com/Sirupsen/logrus"
+	"github.com/dtomcej/traefik-mesh-controller/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -30,7 +31,7 @@ func (c *ControllerHandler) ObjectCreated(obj interface{}) {
 	switch obj.(type) {
 	case *corev1.Service:
 		service := obj.(*corev1.Service)
-		if Contains(c.IgnoredNamespaces, service.Namespace) {
+		if utils.Contains(c.IgnoredNamespaces, service.Namespace) {
 			return
 		}
 		log.Debugln("ControllerHandler ObjectCreated with type: *corev1.Service")
@@ -40,7 +41,7 @@ func (c *ControllerHandler) ObjectCreated(obj interface{}) {
 
 	case *corev1.Endpoints:
 		endpoints := obj.(*corev1.Endpoints)
-		if Contains(c.IgnoredNamespaces, endpoints.Namespace) {
+		if utils.Contains(c.IgnoredNamespaces, endpoints.Namespace) {
 			return
 		}
 		log.Debugln("ControllerHandler ObjectCreated with type: *corev1.Endpoints")
@@ -50,7 +51,7 @@ func (c *ControllerHandler) ObjectCreated(obj interface{}) {
 
 	case *corev1.Namespace:
 		namespace := obj.(*corev1.Namespace)
-		if Contains(c.IgnoredNamespaces, namespace.Name) {
+		if utils.Contains(c.IgnoredNamespaces, namespace.Name) {
 			return
 		}
 		log.Debugln("ControllerHandler ObjectCreated with type: *corev1.Namespace")

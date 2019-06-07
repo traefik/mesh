@@ -6,6 +6,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/dtomcej/traefik-mesh-controller/utils"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -258,15 +259,5 @@ func ObjectKeyInNamespace(key string, namespaces []string) bool {
 		return false
 	}
 
-	return Contains(namespaces, splitKey[0])
-}
-
-// Contains tells whether a contains x.
-func Contains(a []string, x string) bool {
-	for _, n := range a {
-		if x == n {
-			return true
-		}
-	}
-	return false
+	return utils.Contains(namespaces, splitKey[0])
 }

@@ -3,6 +3,7 @@ package meshcontroller
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/dtomcej/traefik-mesh-controller/controller"
+	"github.com/dtomcej/traefik-mesh-controller/utils"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -15,14 +16,26 @@ type MeshController struct {
 	namespaceController *controller.Controller
 }
 
-const (
-	meshNamespace string = "traefik-mesh"
-)
+type traefikMeshConfig struct {
+	Services []traefikMeshService
+}
+
+type traefikMeshService struct {
+	ServicePort      int32
+	ServiceName      string
+	ServiceNamespace string
+	Servers          []traefikMeshBackendServer
+}
+
+type traefikMeshBackendServer struct {
+	Address string
+	Port    int32
+}
 
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object
 func NewController(client kubernetes.Interface) *MeshController {
-	ignoredNamespaces := []string{metav1.NamespaceSystem, meshNamespace}
+	ignoredNamespaces := []string{metav1.NamespaceSystem, utils.MeshNamespace}
 
 	// Create the new subcontrollers
 	sc := controller.NewController(client, apiv1.Service{}, ignoredNamespaces)
