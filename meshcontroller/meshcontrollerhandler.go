@@ -1,8 +1,8 @@
 package meshcontroller
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/containous/i3o/utils"
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 

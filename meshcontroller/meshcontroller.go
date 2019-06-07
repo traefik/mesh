@@ -1,9 +1,9 @@
 package meshcontroller
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/containous/i3o/controller"
 	"github.com/containous/i3o/utils"
+	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -35,14 +35,19 @@ func (m *MeshController) Init(client kubernetes.Interface) {
 }
 
 // Run is the main entrypoint for the controller
-func (m *MeshController) Run(stopCh <-chan struct{}) {
+func (m *MeshController) Run(stopCh <-chan struct{}) error {
 	// handle a panic with logging and exiting
 	defer utilruntime.HandleCrash()
 
-	log.Infoln("Initializing Mesh controller")
+	log.Debug("Initializing Mesh controller")
 
 	// run the informer to start listing and watching resources
 	go m.serviceController.Run(stopCh)
 	go m.endpointController.Run(stopCh)
 	go m.namespaceController.Run(stopCh)
+
+	<-stopCh
+	log.Info("Shutting down workers")
+
+	return nil
 }
