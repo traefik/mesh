@@ -38,4 +38,8 @@ build-docker: build
 push-docker:
 	docker push ${DOCKER_IMAGE_NAME}:${VERSION}
 
-.PHONY: local-check local-build check build build-docker push-docker
+# Update vendor directory
+vendor:
+	go mod vendor
+
+.PHONY: local-check local-build check build build-docker push-docker vendor
