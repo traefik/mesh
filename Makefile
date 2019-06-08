@@ -38,4 +38,4 @@ build-docker: build
 push-docker:
 	docker push ${DOCKER_IMAGE_NAME}:${VERSION}
 
-.PHONY: local-check local-build scheck build build-docker push-docker
+.PHONY: local-check local-build check build build-docker push-docker
