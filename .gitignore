@@ -12,3 +12,4 @@ cover.out
 i3o
 /.vscode/
 /dist/
+/vendor/
