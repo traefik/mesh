@@ -42,4 +42,7 @@ push-docker:
 vendor:
 	go mod vendor
 
-.PHONY: local-check local-build check build build-docker push-docker vendor
+helm-lint:
+	helm lint helm/chart/i3o
+
+.PHONY: local-check local-build check build build-docker push-docker vendor helm-lint

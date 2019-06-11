@@ -1,0 +1,10 @@
+## Default values for i3o
+image:
+  name: containous/i3o
+  # (Optional)
+  # pullPolicy: IfNotPresent
+  # (Optional)
+  # tag: v0.0.1
+  # (Optional)
+  # pullSecret: xxx
+  traefik: traefik:v2.0.0-alpha4-alpine
