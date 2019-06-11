@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	demo       bool
 	debug      bool
 	kubeconfig string
 	masterURL  string
@@ -22,7 +21,6 @@ var (
 func init() {
 	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	rootCmd.Flags().StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-	rootCmd.Flags().BoolVar(&demo, "demo", false, "install demo data")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "enable debug mode")
 }
 
@@ -65,7 +63,7 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 			log.Fatalf("Error building kubernetes clientset: %v", err)
 		}
 
-		if err = utils.InitCluster(kubeClient, demo); err != nil {
+		if err = utils.InitCluster(kubeClient); err != nil {
 			log.Fatalf("Error initializing cluster: %v", err)
 		}
 

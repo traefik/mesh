@@ -40,20 +40,13 @@ type TraefikMeshBackendServer struct {
 }
 
 // InitCluster is used to initialize a kubernetes cluster with a variety of configuration options
-func InitCluster(client kubernetes.Interface, demoData bool) error {
+func InitCluster(client kubernetes.Interface) error {
 	log.Infoln("Preparing Cluster...")
 	defer log.Infoln("Cluster Preparation Complete...")
 
 	log.Debugln("Verifying mesh namespace exists...")
 	if err := verifyNamespaceExists(client, MeshNamespace); err != nil {
 		return err
-	}
-
-	if demoData {
-		log.Debugln("Creating demo data...")
-		if err := createDemoData(client); err != nil {
-			return err
-		}
 	}
 
 	log.Debugln("Patching CoreDNS...")
