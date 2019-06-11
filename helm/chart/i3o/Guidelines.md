@@ -2,7 +2,7 @@
 
 This document outlines the guidelines for developing, managing and extending the i3o helm chart.
 
-## Optionallity
+## Optionality
 
 All non-critical features (Features not mandatory to starting a cluster) in the helm chart must be optional.
 All non-critical features should be disabled (commented out) in the `values.yaml` file.
@@ -64,7 +64,7 @@ These should just be added as an uncommented non-critical feature:
 
 ```yaml
 image:
-  name: store/containous/traefikee
+  name: containous/i3o
   # (Optional)
   # pullPolicy: IfNotPresent
 ```
@@ -96,10 +96,10 @@ There should be an empty commented line between each primary key in the `values.
 
 The `values.yaml` file is designed to be user-friendly.
 It does not have to resemble the templated configuration if it is not conducive.
-Similarly, value names to not have to correspond to fields in the tempate if it is not condusive.
+Similarly, value names to not have to correspond to fields in the template if it is not conducive.
 
 ## Comments
 
-The `values.yaml` file should not contain comments or explainations of what options are, or what values are available.
+The `values.yaml` file should not contain comments or explanations of what options are, or what values are available.
 The `values-ref.yaml` file is for this purpose.
 This file can contain comments above each value any number of comments to explain what the values are.

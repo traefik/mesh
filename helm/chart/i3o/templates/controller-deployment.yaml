@@ -4,7 +4,7 @@ metadata:
   name: i3o-controller
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote}}
+    app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -12,13 +12,13 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Release.Name | quote}}
+      app: {{ .Release.Name | quote }}
       component: controller
       release: {{ .Release.Name | quote }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name | quote}}
+        app: {{ .Release.Name | quote }}
         component: controller
         release: {{ .Release.Name | quote }}
       annotations:
@@ -44,7 +44,7 @@ spec:
       containers:
         - name: i3o-controller
           image: {{ include "i3o.image" . | quote }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent"}}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           securityContext:
             capabilities:
               drop:
