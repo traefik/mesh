@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/containous/i3o/utils"
+	traefik_v1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,13 +14,12 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
 
 type Controller struct {
-	client         kubernetes.Interface
+	clients        *utils.ClientWrapper
 	queue          workqueue.RateLimitingInterface
 	informer       cache.SharedIndexInformer
 	handler        Handler
@@ -28,7 +28,7 @@ type Controller struct {
 
 // New is used to build the informers and other required components of the controller,
 // and return an initialized controller object
-func NewController(client kubernetes.Interface, controllerType interface{}, ignoredNamespaces []string, handler Handler) *Controller {
+func NewController(clients *utils.ClientWrapper, controllerType interface{}, ignoredNamespaces []string, handler Handler) *Controller {
 	var lw *cache.ListWatch
 	var ot runtime.Object
 	var printableType string
@@ -37,11 +37,11 @@ func NewController(client kubernetes.Interface, controllerType interface{}, igno
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				// list all of the services (core resource) in all namespaces
-				return client.CoreV1().Services(metav1.NamespaceAll).List(options)
+				return clients.KubeClient.CoreV1().Services(metav1.NamespaceAll).List(options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				// watch all of the services (core resource) in all namespaces
-				return client.CoreV1().Services(metav1.NamespaceAll).Watch(options)
+				return clients.KubeClient.CoreV1().Services(metav1.NamespaceAll).Watch(options)
 			},
 		}
 		ot = &apiv1.Service{}
@@ -50,11 +50,11 @@ func NewController(client kubernetes.Interface, controllerType interface{}, igno
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				// list all of the endpoints (core resource) in all namespaces
-				return client.CoreV1().Endpoints(metav1.NamespaceAll).List(options)
+				return clients.KubeClient.CoreV1().Endpoints(metav1.NamespaceAll).List(options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				// watch all of the endpoints (core resource) in all namespaces
-				return client.CoreV1().Endpoints(metav1.NamespaceAll).Watch(options)
+				return clients.KubeClient.CoreV1().Endpoints(metav1.NamespaceAll).Watch(options)
 			},
 		}
 		ot = &apiv1.Endpoints{}
@@ -64,15 +64,29 @@ func NewController(client kubernetes.Interface, controllerType interface{}, igno
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				// list all of the namespaces
-				return client.CoreV1().Namespaces().List(options)
+				return clients.KubeClient.CoreV1().Namespaces().List(options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				// watch all of the namespaces
-				return client.CoreV1().Namespaces().Watch(options)
+				return clients.KubeClient.CoreV1().Namespaces().Watch(options)
 			},
 		}
 		ot = &apiv1.Namespace{}
 		printableType = "namespace"
+
+	case traefik_v1alpha1.IngressRoute:
+		lw = &cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				// list all of the namespaces
+				return clients.CrdClient.TraefikV1alpha1().IngressRoutes(metav1.NamespaceAll).List(options)
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				// watch all of the namespaces
+				return clients.CrdClient.TraefikV1alpha1().IngressRoutes(metav1.NamespaceAll).Watch(options)
+			},
+		}
+		ot = &traefik_v1alpha1.IngressRoute{}
+		printableType = "ingressroute"
 	}
 
 	informer := cache.NewSharedIndexInformer(
@@ -130,7 +144,7 @@ func NewController(client kubernetes.Interface, controllerType interface{}, igno
 	})
 
 	return &Controller{
-		client:         client,
+		clients:        clients,
 		informer:       informer,
 		queue:          queue,
 		handler:        handler,

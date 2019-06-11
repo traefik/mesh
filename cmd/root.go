@@ -7,8 +7,6 @@ import (
 	"github.com/containous/i3o/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/sample-controller/pkg/signals"
 )
 
@@ -19,7 +17,7 @@ var (
 )
 
 func init() {
-	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", os.Getenv("KUBECONFIG"), "Path to a kubeconfig. Only required if out-of-cluster.")
 	rootCmd.Flags().StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "enable debug mode")
 }
@@ -53,26 +51,21 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 		// set up signals so we handle the first shutdown signal gracefully
 		stopCh := signals.SetupSignalHandler()
 
-		cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+		clients, err := utils.BuildClients(masterURL, kubeconfig)
 		if err != nil {
-			log.Fatalf("Error building kubeconfig: %v", err)
+			log.Fatalf("Error building clients: %v", err)
 		}
 
-		kubeClient, err := kubernetes.NewForConfig(cfg)
-		if err != nil {
-			log.Fatalf("Error building kubernetes clientset: %v", err)
-		}
-
-		if err = utils.InitCluster(kubeClient); err != nil {
+		if err = utils.InitCluster(clients.KubeClient); err != nil {
 			log.Fatalf("Error initializing cluster: %v", err)
 		}
 
 		var meshConfig *utils.TraefikMeshConfig
-		if meshConfig, err = utils.CreateMeshConfig(kubeClient); err != nil {
+		if meshConfig, err = utils.CreateMeshConfig(clients.KubeClient); err != nil {
 			log.Fatalf("Error creating mesh config: %v", err)
 		}
 
-		if err = utils.CreateRoutingConfigmap(kubeClient, meshConfig); err != nil {
+		if err = utils.CreateRoutingConfigmap(clients.KubeClient, meshConfig); err != nil {
 			log.Fatalf("Error creating routing config map: %v", err)
 		}
 
@@ -80,7 +73,7 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 		controller := meshcontroller.NewMeshController()
 
 		// Initialize the controller.
-		controller.Init(kubeClient)
+		controller.Init(clients)
 
 		// run the controller loop to process items
 		if err = controller.Run(stopCh); err != nil {
