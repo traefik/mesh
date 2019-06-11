@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"strings"
@@ -44,13 +45,31 @@ func InitCluster(client kubernetes.Interface) error {
 	log.Infoln("Preparing Cluster...")
 	defer log.Infoln("Cluster Preparation Complete...")
 
-	log.Debugln("Verifying mesh namespace exists...")
+	log.Debugln("Creating mesh namespace...")
 	if err := verifyNamespaceExists(client, MeshNamespace); err != nil {
 		return err
 	}
 
 	log.Debugln("Patching CoreDNS...")
 	if err := patchCoreDNS(client, "coredns", metav1.NamespaceSystem); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// VerifyCluster is used to verify a kubernetes cluster has been initialized properly
+func VerifyCluster(client kubernetes.Interface) error {
+	log.Infoln("Verifying Cluster...")
+	defer log.Infoln("Cluster Verification Complete...")
+
+	log.Debugln("Verifying mesh namespace exists...")
+	if err := verifyNamespaceExists(client, MeshNamespace); err != nil {
+		return err
+	}
+
+	log.Debugln("Verifying CoreDNS Patched...")
+	if err := verifyCoreDNSPatched(client, "coredns", metav1.NamespaceSystem); err != nil {
 		return err
 	}
 
@@ -76,6 +95,32 @@ func verifyNamespaceExists(client kubernetes.Interface, namespace string) error 
 	return nil
 }
 
+func verifyCoreDNSPatched(client kubernetes.Interface, deploymentName, deploymentNamespace string) error {
+	coreDeployment, err := client.AppsV1().Deployments(deploymentNamespace).Get(deploymentName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	var coreConfigmapName string
+	if len(coreDeployment.Spec.Template.Spec.Volumes) > 0 {
+		coreConfigmapName = coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+	} else {
+		return errors.New("coreDNS configmap not defined")
+	}
+
+	coreConfigmap, err := client.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigmapName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if len(coreConfigmap.ObjectMeta.Labels) > 0 {
+		if _, ok := coreConfigmap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
+			return nil
+		}
+	}
+	return errors.New("coreDNS not patched. Run ./i3o patch to update DNS")
+}
+
 func patchCoreDNS(client kubernetes.Interface, deploymentName, deploymentNamespace string) error {
 	coreDeployment, err := client.AppsV1().Deployments(deploymentNamespace).Get(deploymentName, metav1.GetOptions{})
 	if err != nil {
@@ -99,8 +144,12 @@ func patchCoreDNS(client kubernetes.Interface, deploymentName, deploymentNamespa
 }
 
 func patchCoreConfigmap(client kubernetes.Interface, coreDeployment *appsv1.Deployment) (bool, error) {
-	coreConfigmapName := coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
-	//JESUS
+	var coreConfigmapName string
+	if len(coreDeployment.Spec.Template.Spec.Volumes) > 0 {
+		coreConfigmapName = coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+	} else {
+		return false, errors.New("coreDNS configmap not defined")
+	}
 
 	coreConfigmap, err := client.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigmapName, metav1.GetOptions{})
 	if err != nil {

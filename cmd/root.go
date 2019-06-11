@@ -56,8 +56,8 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 			log.Fatalf("Error building clients: %v", err)
 		}
 
-		if err = utils.InitCluster(clients.KubeClient); err != nil {
-			log.Fatalf("Error initializing cluster: %v", err)
+		if err = utils.VerifyCluster(clients.KubeClient); err != nil {
+			log.Fatalf("Error verifying cluster: %v", err)
 		}
 
 		var meshConfig *utils.TraefikMeshConfig
