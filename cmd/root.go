@@ -17,7 +17,7 @@ var (
 )
 
 func init() {
-	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", os.Getenv("KUBECONFIG"), "Path to a kubeconfig. Only required if out-of-cluster.")
 	rootCmd.Flags().StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "enable debug mode")
 }
@@ -51,7 +51,7 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 		// set up signals so we handle the first shutdown signal gracefully
 		stopCh := signals.SetupSignalHandler()
 
-		clients, err := utils.BuildClients(masterURL, kubeconfig, "", "")
+		clients, err := utils.BuildClients(masterURL, kubeconfig)
 		if err != nil {
 			log.Fatalf("Error building clients: %v", err)
 		}
