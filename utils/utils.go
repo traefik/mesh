@@ -1,10 +1,8 @@
 package utils
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"html/template"
 	"strings"
 	"time"
 
@@ -13,35 +11,12 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
-	MeshNamespace     string = "traefik-mesh"
-	MeshPodPrefix     string = "traefik"
-	MeshConfigmapName string = "traefik-mesh-config"
-	MeshConfigmapKey  string = "traefik.toml"
+	MeshNamespace string = "traefik-mesh"
 )
-
-// TraefikMeshConfig holds traefik mesh services.
-type TraefikMeshConfig struct {
-	Services []TraefikMeshService
-}
-
-// TraefikMeshService holds service information.
-type TraefikMeshService struct {
-	ServicePort      int32
-	ServiceName      string
-	ServiceNamespace string
-	Servers          []TraefikMeshBackendServer
-}
-
-// TraefikMeshBackendServer holds backend server.
-type TraefikMeshBackendServer struct {
-	Address string
-	Port    int32
-}
 
 // InitCluster is used to initialize a kubernetes cluster with a variety of configuration options.
 func InitCluster(client kubernetes.Interface) error {
@@ -218,159 +193,6 @@ func restartCorePods(client kubernetes.Interface, coreDeployment *appsv1.Deploym
 	return nil
 }
 
-// CreateMeshConfig parses the kubernetes service list, and creates a structure for building configurations from.
-func CreateMeshConfig(client kubernetes.Interface) (meshConfig *TraefikMeshConfig, err error) {
-	log.Infoln("Creating mesh structures for config...")
-	defer log.Infoln("Config Structure Creation Complete...")
-
-	log.Debugln("Listing services in all namespaces:")
-	serviceListAll, err := client.CoreV1().Services(apiv1.NamespaceAll).List(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	var meshServices []TraefikMeshService
-
-	for _, s := range serviceListAll.Items {
-		if s.Namespace == MeshNamespace {
-			continue
-		}
-
-		log.Debugf(" * %s/%s \n", s.Namespace, s.Name)
-
-		if err = verifyMeshServiceExists(client, s.Namespace, s.Name); err != nil {
-			panic(err)
-		}
-
-		var endpoints *apiv1.EndpointsList
-	E:
-		for {
-			endpoints, err = client.CoreV1().Endpoints(s.Namespace).List(metav1.ListOptions{
-				FieldSelector: fmt.Sprintf("metadata.name=%s", s.Name),
-			})
-			switch {
-			case err != nil:
-				time.Sleep(time.Second * 5)
-
-			case len(endpoints.Items[0].Subsets) == 0:
-				time.Sleep(time.Second * 5)
-
-			default:
-				break E
-			}
-		}
-
-		// Verify that the expected amount of control nodes are listed in the endpoint list.
-
-		var svr []TraefikMeshBackendServer
-
-		for _, e := range endpoints.Items[0].Subsets[0].Addresses {
-			ip := e.IP
-			port := endpoints.Items[0].Subsets[0].Ports[0].Port
-
-			svr = append(svr, TraefikMeshBackendServer{
-				Address: ip,
-				Port:    port,
-			})
-			log.Debugf(" - Adding server %s:%d to routing config\n", ip, port)
-		}
-
-		meshService := TraefikMeshService{
-			ServiceName:      s.Name,
-			ServiceNamespace: s.Namespace,
-			ServicePort:      s.Spec.Ports[0].Port,
-			Servers:          svr,
-		}
-
-		meshServices = append(meshServices, meshService)
-	}
-
-	return &TraefikMeshConfig{
-		Services: meshServices,
-	}, nil
-}
-
-func verifyMeshServiceExists(client kubernetes.Interface, name, namespace string) error {
-	meshServiceName := fmt.Sprintf("%s-%s-%s", MeshPodPrefix, namespace, name)
-	meshServiceInstance, err := client.CoreV1().Services(MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
-	if meshServiceInstance == nil || err != nil {
-		svc := &apiv1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      meshServiceName,
-				Namespace: MeshNamespace,
-			},
-			Spec: apiv1.ServiceSpec{
-				Ports: []apiv1.ServicePort{
-					{
-						Name:       "web",
-						Port:       80,
-						TargetPort: intstr.FromInt(8000),
-					},
-				},
-				Selector: map[string]string{
-					"app": "traefik-mesh-node",
-				},
-			},
-		}
-
-		if _, err := client.CoreV1().Services(MeshNamespace).Create(svc); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// CreateRoutingConfigMap takes a config of traefik mesh, and creates the associated configmap.
-func CreateRoutingConfigMap(client kubernetes.Interface, config *TraefikMeshConfig) error {
-	log.Infoln("Creating routing configmap...")
-	defer log.Infoln("Configmap Creation Complete...")
-
-	t, _ := template.ParseFiles("templates/traefik-routing.tpl") // Parse template file.
-
-	var tpl bytes.Buffer
-	if err := t.Execute(&tpl, &config); err != nil {
-		return err
-	}
-
-	output := tpl.String()
-
-	meshConfigMapList, _ := client.CoreV1().ConfigMaps(MeshNamespace).List(metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("metadata.name=%s", MeshConfigmapName),
-	})
-	if len(meshConfigMapList.Items) > 0 {
-		// Config exists, update
-		log.Debugln("Updating configmap...")
-
-		m, _ := client.CoreV1().ConfigMaps(MeshNamespace).Get(MeshConfigmapName, metav1.GetOptions{})
-		newConfigmap := m
-		newConfigmap.Data[MeshConfigmapKey] = output
-
-		if _, err := client.CoreV1().ConfigMaps(MeshNamespace).Update(newConfigmap); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	log.Debugln("Creating new configmap...")
-
-	newConfigMap := &apiv1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      MeshConfigmapName,
-			Namespace: MeshNamespace,
-		},
-		Data: map[string]string{
-			MeshConfigmapKey: output,
-		},
-	}
-
-	if _, err := client.CoreV1().ConfigMaps(MeshNamespace).Create(newConfigMap); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // Contains tells whether a contains x.
 func Contains(a []string, x string) bool {
 	for _, n := range a {
@@ -379,4 +201,9 @@ func Contains(a []string, x string) bool {
 		}
 	}
 	return false
+}
+
+// ServiceToMeshName converts a service with a namespace to a traefik-mesh ingressroute name
+func ServiceToMeshName(serviceName string, namespace string) string {
+	return fmt.Sprintf("traefik-%s-%s", namespace, serviceName)
 }
