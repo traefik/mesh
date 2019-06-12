@@ -40,20 +40,18 @@ func (h *Handler) Init() error {
 // ObjectCreated is called when an object is created
 func (h *Handler) ObjectCreated(obj interface{}) {
 	// assert the type to an object to pull out relevant data
-	switch obj := obj.(type) {
-	case *corev1.Service:
-		if utils.Contains(h.IgnoredNamespaces, obj.Namespace) {
-			return
-		}
-		log.Debugln("MeshControllerHandler ObjectCreated with type: *corev1.Service")
-		if err := VerifyMeshServiceExists(h.Clients.KubeClient, obj.Name, obj.Namespace); err != nil {
-			log.Errorf("Could not verify mesh service exists: %v", err)
-			return
-		}
+	service := obj.(*corev1.Service)
+	if utils.Contains(h.IgnoredNamespaces, service.Namespace) {
+		return
+	}
+	log.Debugln("MeshControllerHandler ObjectCreated with type: *corev1.Service")
+	if err := VerifyMeshServiceExists(h.Clients.KubeClient, service); err != nil {
+		log.Errorf("Could not verify mesh service exists: %v", err)
+		return
+	}
 
-		if err := VerifyMeshIngressRouteExists(h.Clients.CrdClient, obj); err != nil {
-			log.Errorf("Could not verify mesh ingressroute exists: %v", err)
-		}
+	if err := VerifyMeshIngressRouteExists(h.Clients.CrdClient, service); err != nil {
+		log.Errorf("Could not verify mesh ingressroute exists: %v", err)
 	}
 
 }
@@ -61,20 +59,19 @@ func (h *Handler) ObjectCreated(obj interface{}) {
 // ObjectDeleted is called when an object is deleted
 func (h *Handler) ObjectDeleted(obj interface{}) {
 	// assert the type to an object to pull out relevant data
-	switch obj := obj.(type) {
-	case *corev1.Service:
-		if utils.Contains(h.IgnoredNamespaces, obj.Namespace) {
-			return
-		}
-		log.Debugln("MeshControllerHandler.ObjectDeleted")
-		if err := VerifyMeshServiceDeleted(h.Clients.KubeClient, obj.Name, obj.Namespace); err != nil {
-			log.Errorf("Could not verify mesh service deleted: %v", err)
-			return
-		}
+	service := obj.(*corev1.Service)
 
-		if err := VerifyMeshIngressRouteDeleted(h.Clients.CrdClient, obj); err != nil {
-			log.Errorf("Could not verify mesh ingressroute deleted: %v", err)
-		}
+	if utils.Contains(h.IgnoredNamespaces, service.Namespace) {
+		return
+	}
+	log.Debugln("MeshControllerHandler.ObjectDeleted")
+	if err := VerifyMeshServiceDeleted(h.Clients.KubeClient, service); err != nil {
+		log.Errorf("Could not verify mesh service deleted: %v", err)
+		return
+	}
+
+	if err := VerifyMeshIngressRouteDeleted(h.Clients.CrdClient, service); err != nil {
+		log.Errorf("Could not verify mesh ingressroute deleted: %v", err)
 	}
 }
 
@@ -83,8 +80,8 @@ func (h *Handler) ObjectUpdated(objOld, objNew interface{}) {
 	log.Debugln("MeshControllerHandler.ObjectUpdated")
 }
 
-func VerifyMeshServiceExists(client kubernetes.Interface, name, namespace string) error {
-	meshServiceName := utils.ServiceToMeshName(name, namespace)
+func VerifyMeshServiceExists(client kubernetes.Interface, service *apiv1.Service) error {
+	meshServiceName := utils.ServiceToMeshName(service.Name, service.Namespace)
 	meshServiceInstance, err := client.CoreV1().Services(utils.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
 	if meshServiceInstance == nil || err != nil {
 		svc := &apiv1.Service{
@@ -114,9 +111,26 @@ func VerifyMeshServiceExists(client kubernetes.Interface, name, namespace string
 	return nil
 }
 
+func VerifyMeshServiceDeleted(client kubernetes.Interface, service *apiv1.Service) error {
+	meshServiceName := utils.ServiceToMeshName(service.Name, service.Namespace)
+	meshServiceInstance, err := client.CoreV1().Services(utils.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if meshServiceInstance != nil {
+		// Service exists, delete
+		if err := client.CoreV1().Services(utils.MeshNamespace).Delete(meshServiceName, &metav1.DeleteOptions{}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func VerifyMeshIngressRouteExists(client crdclientset.Interface, service *apiv1.Service) error {
 	meshIngressRouteName := utils.ServiceToMeshName(service.Name, service.Namespace)
-	meshIngressRouteInstance, err := client.TraefikV1alpha1().IngressRoutes(metav1.NamespaceAll).Get(meshIngressRouteName, metav1.GetOptions{})
+	meshIngressRouteInstance, err := client.TraefikV1alpha1().IngressRoutes(service.Namespace).Get(meshIngressRouteName, metav1.GetOptions{})
 	if meshIngressRouteInstance == nil || err != nil {
 		ir := &traefik_v1alpha1.IngressRoute{
 			ObjectMeta: metav1.ObjectMeta{
@@ -140,6 +154,23 @@ func VerifyMeshIngressRouteExists(client crdclientset.Interface, service *apiv1.
 			return err
 		}
 
+	}
+
+	return nil
+}
+
+func VerifyMeshIngressRouteDeleted(client crdclientset.Interface, service *apiv1.Service) error {
+	meshIngressRouteName := utils.ServiceToMeshName(service.Name, service.Namespace)
+	meshIngressRouteInstance, err := client.TraefikV1alpha1().IngressRoutes(service.Namespace).Get(meshIngressRouteName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if meshIngressRouteInstance != nil {
+		// CRD exists, delete
+		if err := client.TraefikV1alpha1().IngressRoutes(service.Namespace).Delete(meshIngressRouteName, &metav1.DeleteOptions{}); err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -64,15 +64,6 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 			log.Fatalf("Error verifying cluster: %v", err)
 		}
 
-		var meshConfig *utils.TraefikMeshConfig
-		if meshConfig, err = utils.CreateMeshConfig(clients.KubeClient); err != nil {
-			log.Fatalf("Error creating mesh config: %v", err)
-		}
-
-		if err = utils.CreateRoutingConfigMap(clients.KubeClient, meshConfig); err != nil {
-			log.Fatalf("Error creating routing config map: %v", err)
-		}
-
 		// Create a new controller.
 		controller := meshcontroller.NewMeshController()
 
