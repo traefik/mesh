@@ -22,6 +22,10 @@ local-check: $(DIST_DIR)
 local-build: $(DIST_DIR)
 	CGO_ENABLED=0 go build -o ${DIST_DIR_I3O} ./
 
+# Integration test
+local-test-integration: $(DIST_DIR) local-build
+	CGO_ENABLED=0 go test ./integration -integration "-test.timeout=20m" -check.v
+
 build: $(DIST_DIR)
 	docker build --tag "$(DOCKER_IMAGE_NAME):latest" --build-arg="MAKE_TARGET=local-build" $(CURDIR)/
 	docker run --name=build -t "$(DOCKER_IMAGE_NAME):latest" version
