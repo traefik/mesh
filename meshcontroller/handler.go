@@ -44,12 +44,16 @@ func (h *Handler) ObjectCreated(obj interface{}) {
 	if utils.Contains(h.IgnoredNamespaces, service.Namespace) {
 		return
 	}
-	log.Debugln("MeshControllerHandler ObjectCreated with type: *corev1.Service")
+
+	log.Debugf("MeshControllerHandler ObjectCreated with type: *corev1.Service: %s/%s", service.Namespace, service.Name)
+
+	log.Debugf("Verifying associated mesh service for service: %s/%s", service.Namespace, service.Name)
 	if err := VerifyMeshServiceExists(h.Clients.KubeClient, service); err != nil {
 		log.Errorf("Could not verify mesh service exists: %v", err)
 		return
 	}
 
+	log.Debugf("Verifying associated mesh ingressroute for service: %s/%s", service.Namespace, service.Name)
 	if err := VerifyMeshIngressRouteExists(h.Clients.CrdClient, service); err != nil {
 		log.Errorf("Could not verify mesh ingressroute exists: %v", err)
 	}
