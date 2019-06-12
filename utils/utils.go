@@ -54,10 +54,6 @@ func InitCluster(client kubernetes.Interface) error {
 		return err
 	}
 
-	log.Debugln("Creating Traefik Mesh Daemonset...")
-	if err := createTraefikMeshDaemonset(client, MeshNamespace); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -167,69 +163,6 @@ func restartCorePods(client kubernetes.Interface, coreDeployment *appsv1.Deploym
 			time.Sleep(5 * time.Second)
 		}
 	}
-	return nil
-}
-
-func createTraefikMeshDaemonset(client kubernetes.Interface, meshNamespace string) error {
-	traefikDaemonset := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "traefik-mesh-node",
-			Namespace: meshNamespace,
-		},
-		Spec: appsv1.DaemonSetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "traefik-mesh-node",
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "traefik-mesh-node",
-					},
-				},
-				Spec: apiv1.PodSpec{
-					Containers: []apiv1.Container{
-						{
-							Name:  "traefik",
-							Image: "traefik:v2.0.0-alpha4-alpine",
-							Ports: []apiv1.ContainerPort{
-								{
-									Name:          "http",
-									Protocol:      apiv1.ProtocolTCP,
-									ContainerPort: 8000,
-								},
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      "config",
-									MountPath: "/etc/traefik",
-								},
-							},
-						},
-					},
-					Volumes: []apiv1.Volume{
-						{
-							Name: "config",
-							VolumeSource: apiv1.VolumeSource{
-								ConfigMap: &apiv1.ConfigMapVolumeSource{
-									LocalObjectReference: apiv1.LocalObjectReference{
-										Name: MeshConfigmapName,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	_, err := client.AppsV1().DaemonSets(meshNamespace).Create(traefikDaemonset)
-	if err != nil {
-		log.Debugf("Daemonset %s already exists...\n", traefikDaemonset.Name)
-	}
-
 	return nil
 }
 
