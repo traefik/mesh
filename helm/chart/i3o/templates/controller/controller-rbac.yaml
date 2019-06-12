@@ -24,22 +24,33 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - services
-      - endpoints
-      - secrets
       - namespaces
     verbs:
       - get
-      - list
-      - watch
+      - create
   - apiGroups:
-      - extensions
+      - ""
     resources:
-      - ingresses
+      - configmaps
+    verbs:
+      - get
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+  - apiGroups:
+      - traefik.containo.us
+    resources:
+      - ingressroutes
+      - ingressroutetcps
     verbs:
       - get
       - list
       - watch
+      - update
+      - create
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1

@@ -1,7 +1,7 @@
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
-  name: i3o-mesh
+  name: i3o-controller
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
@@ -9,33 +9,46 @@ metadata:
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:
+  serviceAccountName: i3o-controller
+  replicas: 1
   selector:
     matchLabels:
       app: {{ .Release.Name | quote }}
-      component: mesh
+      component: controller
       release: {{ .Release.Name | quote }}
   template:
     metadata:
       labels:
         app: {{ .Release.Name | quote }}
-        component: mesh
+        component: controller
         release: {{ .Release.Name | quote }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4646"
     spec:
-      terminationGracePeriodSeconds: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: component
+                      operator: In
+                      values:
+                        - controller
+                topologyKey: "kubernetes.io/hostname"
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret }}
       {{- end }}
       containers:
-        - name: i3o-mesh
-          image: {{ .Values.image.traefik | quote }}
+        - name: i3o-controller
+          image: {{ include "i3o.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
-          args:
-            - "--kubernetesCRD"
           securityContext:
             capabilities:
               drop:
                 - ALL
               add:
                 - NET_BIND_SERVICE
-          
