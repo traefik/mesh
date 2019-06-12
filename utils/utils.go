@@ -24,10 +24,12 @@ const (
 	MeshConfigmapKey  string = "traefik.toml"
 )
 
+// TraefikMeshConfig holds traefik mesh services.
 type TraefikMeshConfig struct {
 	Services []TraefikMeshService
 }
 
+// TraefikMeshService holds service information.
 type TraefikMeshService struct {
 	ServicePort      int32
 	ServiceName      string
@@ -35,12 +37,13 @@ type TraefikMeshService struct {
 	Servers          []TraefikMeshBackendServer
 }
 
+// TraefikMeshBackendServer holds backend server.
 type TraefikMeshBackendServer struct {
 	Address string
 	Port    int32
 }
 
-// InitCluster is used to initialize a kubernetes cluster with a variety of configuration options
+// InitCluster is used to initialize a kubernetes cluster with a variety of configuration options.
 func InitCluster(client kubernetes.Interface) error {
 	log.Infoln("Preparing Cluster...")
 	defer log.Infoln("Cluster Preparation Complete...")
@@ -58,7 +61,7 @@ func InitCluster(client kubernetes.Interface) error {
 	return nil
 }
 
-// VerifyCluster is used to verify a kubernetes cluster has been initialized properly
+// VerifyCluster is used to verify a kubernetes cluster has been initialized properly.
 func VerifyCluster(client kubernetes.Interface) error {
 	log.Infoln("Verifying Cluster...")
 	defer log.Infoln("Cluster Verification Complete...")
@@ -101,14 +104,13 @@ func verifyCoreDNSPatched(client kubernetes.Interface, deploymentName, deploymen
 		return err
 	}
 
-	var coreConfigmapName string
-	if len(coreDeployment.Spec.Template.Spec.Volumes) > 0 {
-		coreConfigmapName = coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
-	} else {
+	if len(coreDeployment.Spec.Template.Spec.Volumes) == 0 {
 		return errors.New("coreDNS configmap not defined")
 	}
 
-	coreConfigmap, err := client.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigmapName, metav1.GetOptions{})
+	coreConfigMapName := coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+
+	coreConfigmap, err := client.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -118,6 +120,7 @@ func verifyCoreDNSPatched(client kubernetes.Interface, deploymentName, deploymen
 			return nil
 		}
 	}
+
 	return errors.New("coreDNS not patched. Run ./i3o patch to update DNS")
 }
 
@@ -128,7 +131,7 @@ func patchCoreDNS(client kubernetes.Interface, deploymentName, deploymentNamespa
 	}
 
 	log.Debugln("Patching CoreDNS configmap...")
-	patched, err := patchCoreConfigmap(client, coreDeployment)
+	patched, err := patchCoreConfigMap(client, coreDeployment)
 	if err != nil {
 		return err
 	}
@@ -143,21 +146,21 @@ func patchCoreDNS(client kubernetes.Interface, deploymentName, deploymentNamespa
 	return nil
 }
 
-func patchCoreConfigmap(client kubernetes.Interface, coreDeployment *appsv1.Deployment) (bool, error) {
-	var coreConfigmapName string
-	if len(coreDeployment.Spec.Template.Spec.Volumes) > 0 {
-		coreConfigmapName = coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
-	} else {
+func patchCoreConfigMap(client kubernetes.Interface, coreDeployment *appsv1.Deployment) (bool, error) {
+	var coreConfigMapName string
+	if len(coreDeployment.Spec.Template.Spec.Volumes) == 0 {
 		return false, errors.New("coreDNS configmap not defined")
 	}
 
-	coreConfigmap, err := client.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigmapName, metav1.GetOptions{})
+	coreConfigMapName = coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+
+	coreConfigMap, err := client.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
 
-	if len(coreConfigmap.ObjectMeta.Labels) > 0 {
-		if _, ok := coreConfigmap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
+	if len(coreConfigMap.ObjectMeta.Labels) > 0 {
+		if _, ok := coreConfigMap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
 			log.Debugln("Configmap already patched...")
 			return true, nil
 		}
@@ -169,7 +172,7 @@ func patchCoreConfigmap(client kubernetes.Interface, coreDeployment *appsv1.Depl
         answer name traefik-([a-z]*)-([a-z]*)\.traefik-mesh\.svc\.cluster\.local {1}.{2}.traefik.mesh
     }
 `
-	newCoreConfigmap := coreConfigmap
+	newCoreConfigmap := coreConfigMap
 	oldData := newCoreConfigmap.Data["Corefile"]
 	newData := strings.Replace(oldData, "loadbalance", patchString, 1)
 	newCoreConfigmap.Data["Corefile"] = newData
@@ -178,8 +181,7 @@ func patchCoreConfigmap(client kubernetes.Interface, coreDeployment *appsv1.Depl
 	}
 	newCoreConfigmap.ObjectMeta.Labels["traefik-mesh-patched"] = "true"
 
-	_, err = client.CoreV1().ConfigMaps(coreDeployment.Namespace).Update(newCoreConfigmap)
-	if err != nil {
+	if _, err = client.CoreV1().ConfigMaps(coreDeployment.Namespace).Update(newCoreConfigmap); err != nil {
 		return false, err
 	}
 
@@ -195,6 +197,7 @@ func restartCorePods(client kubernetes.Interface, coreDeployment *appsv1.Deploym
 	if err != nil {
 		return err
 	}
+
 	for _, p := range corePods.Items {
 		log.Infof("Deleting pod %s...\n", p.Name)
 		if err := client.CoreV1().Pods(deploymentNamespace).Delete(p.Name, nil); err != nil {
@@ -281,10 +284,10 @@ func CreateMeshConfig(client kubernetes.Interface) (meshConfig *TraefikMeshConfi
 
 		meshServices = append(meshServices, meshService)
 	}
+
 	return &TraefikMeshConfig{
 		Services: meshServices,
 	}, nil
-
 }
 
 func verifyMeshServiceExists(client kubernetes.Interface, name, namespace string) error {
@@ -310,16 +313,16 @@ func verifyMeshServiceExists(client kubernetes.Interface, name, namespace string
 			},
 		}
 
-		_, err := client.CoreV1().Services(MeshNamespace).Create(svc)
-		if err != nil {
+		if _, err := client.CoreV1().Services(MeshNamespace).Create(svc); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-// CreateRoutingConfigmap takes a config of traefik mesh, and creates the associated configmap
-func CreateRoutingConfigmap(client kubernetes.Interface, config *TraefikMeshConfig) error {
+// CreateRoutingConfigMap takes a config of traefik mesh, and creates the associated configmap.
+func CreateRoutingConfigMap(client kubernetes.Interface, config *TraefikMeshConfig) error {
 	log.Infoln("Creating routing configmap...")
 	defer log.Infoln("Configmap Creation Complete...")
 
@@ -332,18 +335,18 @@ func CreateRoutingConfigmap(client kubernetes.Interface, config *TraefikMeshConf
 
 	output := tpl.String()
 
-	meshConfigmapList, _ := client.CoreV1().ConfigMaps(MeshNamespace).List(metav1.ListOptions{
+	meshConfigMapList, _ := client.CoreV1().ConfigMaps(MeshNamespace).List(metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("metadata.name=%s", MeshConfigmapName),
 	})
-	if len(meshConfigmapList.Items) > 0 {
+	if len(meshConfigMapList.Items) > 0 {
 		// Config exists, update
 		log.Debugln("Updating configmap...")
 
 		m, _ := client.CoreV1().ConfigMaps(MeshNamespace).Get(MeshConfigmapName, metav1.GetOptions{})
 		newConfigmap := m
 		newConfigmap.Data[MeshConfigmapKey] = output
-		_, err := client.CoreV1().ConfigMaps(MeshNamespace).Update(newConfigmap)
-		if err != nil {
+
+		if _, err := client.CoreV1().ConfigMaps(MeshNamespace).Update(newConfigmap); err != nil {
 			return err
 		}
 		return nil
@@ -351,7 +354,7 @@ func CreateRoutingConfigmap(client kubernetes.Interface, config *TraefikMeshConf
 
 	log.Debugln("Creating new configmap...")
 
-	newConfigmap := &apiv1.ConfigMap{
+	newConfigMap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      MeshConfigmapName,
 			Namespace: MeshNamespace,
@@ -360,15 +363,13 @@ func CreateRoutingConfigmap(client kubernetes.Interface, config *TraefikMeshConf
 			MeshConfigmapKey: output,
 		},
 	}
-	_, err := client.CoreV1().ConfigMaps(MeshNamespace).Create(newConfigmap)
-	if err != nil {
+
+	if _, err := client.CoreV1().ConfigMaps(MeshNamespace).Create(newConfigMap); err != nil {
 		return err
 	}
+
 	return nil
 }
-
-// Int32Ptr converts an int32 to a pointer.
-func Int32Ptr(i int32) *int32 { return &i }
 
 // Contains tells whether a contains x.
 func Contains(a []string, x string) bool {

@@ -65,7 +65,7 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 			log.Fatalf("Error creating mesh config: %v", err)
 		}
 
-		if err = utils.CreateRoutingConfigmap(clients.KubeClient, meshConfig); err != nil {
+		if err = utils.CreateRoutingConfigMap(clients.KubeClient, meshConfig); err != nil {
 			log.Fatalf("Error creating routing config map: %v", err)
 		}
 
