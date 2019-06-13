@@ -32,7 +32,8 @@ spec:
           image: {{ .Values.image.traefik | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
-            - "--providers.kubernetescrd"
+            - "--kubernetesCRD"
+            - "--kubernetesCRD.labelselector='i3o-mesh=internal'"
           securityContext:
             capabilities:
               drop:
