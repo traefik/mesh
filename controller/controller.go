@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containous/i3o/utils"
-	traefik_v1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	"github.com/containous/i3o/k8s"
+	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +19,7 @@ import (
 )
 
 type Controller struct {
-	clients        *utils.ClientWrapper
+	clients        *k8s.ClientWrapper
 	queue          workqueue.RateLimitingInterface
 	informer       cache.SharedIndexInformer
 	handler        Handler
@@ -28,7 +28,7 @@ type Controller struct {
 
 // New is used to build the informers and other required components of the controller,
 // and return an initialized controller object
-func NewController(clients *utils.ClientWrapper, controllerType interface{}, ignoredNamespaces []string, handler Handler) *Controller {
+func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignoredNamespaces k8s.Namespaces, handler Handler) *Controller {
 	var lw *cache.ListWatch
 	var ot runtime.Object
 	var printableType string
@@ -74,7 +74,7 @@ func NewController(clients *utils.ClientWrapper, controllerType interface{}, ign
 		ot = &apiv1.Namespace{}
 		printableType = "namespace"
 
-	case traefik_v1alpha1.IngressRoute:
+	case traefikv1alpha1.IngressRoute:
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				// list all of the namespaces
@@ -85,7 +85,7 @@ func NewController(clients *utils.ClientWrapper, controllerType interface{}, ign
 				return clients.CrdClient.TraefikV1alpha1().IngressRoutes(metav1.NamespaceAll).Watch(options)
 			},
 		}
-		ot = &traefik_v1alpha1.IngressRoute{}
+		ot = &traefikv1alpha1.IngressRoute{}
 		printableType = "ingressroute"
 	}
 
@@ -264,12 +264,12 @@ func (c *Controller) processNextItem() bool {
 	return false
 }
 
-func ObjectKeyInNamespace(key string, namespaces []string) bool {
+func ObjectKeyInNamespace(key string, namespaces k8s.Namespaces) bool {
 	splitKey := strings.Split(key, "/")
 	if len(splitKey) == 1 {
 		// No namespace in the key
 		return false
 	}
 
-	return utils.Contains(namespaces, splitKey[0])
+	return namespaces.Contains(splitKey[0])
 }

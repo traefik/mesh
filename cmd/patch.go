@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/containous/i3o/utils"
+	"github.com/containous/i3o/k8s"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -34,12 +34,12 @@ func patchCommand() func(cmd *cobra.Command, args []string) {
 		log.Debugf("Using masterURL: %q", masterURL)
 		log.Debugf("Using kubeconfig: %q", kubeconfig)
 
-		clients, err := utils.BuildClients(masterURL, kubeconfig)
+		clients, err := k8s.NewClientWrapper(masterURL, kubeconfig)
 		if err != nil {
 			log.Fatalf("Error building clients: %v", err)
 		}
 
-		if err = utils.InitCluster(clients.KubeClient); err != nil {
+		if err = clients.InitCluster(); err != nil {
 			log.Fatalf("Error initializing cluster: %v", err)
 		}
 
