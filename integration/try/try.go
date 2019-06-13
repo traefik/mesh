@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -68,8 +69,23 @@ func WaitClientCreated(url string, kubeConfigPath string, timeout time.Duration)
 func applyCIMultiplier(timeout time.Duration) time.Duration {
 	ci := os.Getenv("CI")
 	if len(ci) > 0 {
-		log.Debug("Apply CI multiplier:", CITimeoutMultiplier)
-		return time.Duration(float64(timeout) * CITimeoutMultiplier)
+		ciTimeoutMultiplier := getCITimeoutMultiplier()
+		log.Debug("Apply CI multiplier:", ciTimeoutMultiplier)
+		return time.Duration(float64(timeout) * ciTimeoutMultiplier)
 	}
 	return timeout
+}
+
+func getCITimeoutMultiplier() float64 {
+	ciTimeoutMultiplier := os.Getenv("CI_TIMEOUT_MULTIPLIER")
+	if ciTimeoutMultiplier == "" {
+		return CITimeoutMultiplier
+	}
+
+	multiplier, err := strconv.ParseFloat(ciTimeoutMultiplier, 64)
+	if err != nil {
+		return CITimeoutMultiplier
+	}
+
+	return multiplier
 }

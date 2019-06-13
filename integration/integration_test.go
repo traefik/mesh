@@ -20,6 +20,7 @@ import (
 var (
 	integration    = flag.Bool("integration", true, "run integration tests")
 	kubeConfigPath = "/tmp/k3s-output/kubeconfig.yaml"
+	masterURL      = "https://localhost:6443"
 )
 
 func Test(t *testing.T) {
@@ -69,7 +70,7 @@ func (s *BaseSuite) createComposeProject(c *check.C, name string) {
 
 	s.composeProject = composeFile
 	s.projectName = projectName
-	s.clients, err = try.WaitClientCreated("https://127.0.0.1:6443", kubeConfigPath, 30*time.Second)
+	s.clients, err = try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
 	c.Check(err, checker.IsNil)
 
 }
@@ -94,10 +95,9 @@ func (s *BaseSuite) waitForCoreDNS(c *check.C) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) startI3o(_ *check.C) {
+func (s *BaseSuite) startPathI3o(_ *check.C) {
 	cmd := exec.Command(i3oBinary, "patch",
-		"--master", "https://localhost:6443",
-		"--kubeconfig", kubeConfigPath)
+		"--master", masterURL, "--kubeconfig", kubeConfigPath)
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()

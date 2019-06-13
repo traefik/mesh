@@ -22,6 +22,7 @@ func (s *StartI3oSuite) TearDownSuite(c *check.C) {
 }
 
 func (s *StartI3oSuite) TestSimpleStart(c *check.C) {
-	s.startI3o(c)
+	s.startPathI3o(c)
+	s.waitForCoreDNS(c)
 	c.Assert(os.Getenv("KUBECONFIG"), checker.Equals, kubeConfigPath)
 }
