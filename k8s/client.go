@@ -3,7 +3,6 @@ package k8s
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	crdclientset "github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/clientset/versioned"
 	"github.com/google/uuid"
@@ -126,13 +125,29 @@ func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (b
 		}
 	}
 
-	patchString := `loadbalance
-    rewrite {
+	serverBlock :=
+		`
+traefik.mesh.svc.cluster.local:53 {
+    errors
+    rewrite continue {
         name regex ([a-z]*)\.([a-z]*)\.traefik\.mesh traefik-{1}-{2}.traefik-mesh.svc.cluster.local
         answer name traefik-([a-z]*)-([a-z]*)\.traefik-mesh\.svc\.cluster\.local {1}.{2}.traefik.mesh
     }
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+        pods insecure
+        upstream
+    fallthrough in-addr.arpa ip6.arpa
+    }
+    forward . /etc/resolv.conf
+    cache 30
+    loop
+    reload
+    loadbalance
+}
 `
-	coreConfigMap.Data["Corefile"] = strings.Replace(coreConfigMap.Data["Corefile"], "loadbalance", patchString, 1)
+	originalBlock := coreConfigMap.Data["Corefile"]
+	newBlock := originalBlock + serverBlock
+	coreConfigMap.Data["Corefile"] = newBlock
 	if len(coreConfigMap.ObjectMeta.Labels) == 0 {
 		coreConfigMap.ObjectMeta.Labels = make(map[string]string)
 	}
