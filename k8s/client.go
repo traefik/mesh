@@ -80,7 +80,7 @@ func (w *ClientWrapper) verifyNamespaceExists(namespace string) error {
 		if _, err := w.KubeClient.CoreV1().Namespaces().Create(ns); err != nil {
 			return fmt.Errorf("unable to create namespace %q: %v", namespace, err)
 		}
-		log.Infof("Namespace %q created successfully")
+		log.Infof("Namespace %q created successfully", namespace)
 	} else {
 		log.Debugf("Namespace %q already exist", namespace)
 	}
@@ -257,7 +257,7 @@ func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
 	log.Infoln("Building Kubernetes Client...")
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to create kubernetes client: %v", err)
 	}
 
 	return client, nil
@@ -268,7 +268,7 @@ func buildKubernetesCRDClient(config *rest.Config) (*crdclientset.Clientset, err
 	log.Infoln("Building Kubernetes CRD Client...")
 	client, err := crdclientset.NewForConfig(config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to create CRD client: %v", err)
 	}
 
 	return client, nil

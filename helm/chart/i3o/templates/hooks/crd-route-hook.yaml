@@ -9,8 +9,8 @@ spec:
   version: v1alpha1
   scope: Namespaced
   names:
+    kind: IngressRoute
     plural: ingressroutes
     singular: ingressroute
-    kind: IngressRoute
     shortNames:
     - ir
