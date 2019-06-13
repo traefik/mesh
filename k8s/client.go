@@ -4,17 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
-
-	"github.com/cenkalti/backoff"
-	"github.com/containous/traefik/pkg/safe"
 
 	crdclientset "github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/clientset/versioned"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -150,40 +146,20 @@ func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (b
 }
 
 func (w *ClientWrapper) restartCorePods(coreDeployment *appsv1.Deployment) error {
-	coreLabelSelector := labels.Set(coreDeployment.Spec.Selector.MatchLabels).String()
-	namespace := coreDeployment.Namespace
-	name := coreDeployment.Name
+	log.Infoln("Restarting coreDNS pods...")
 
-	corePods, err := w.KubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: coreLabelSelector})
-	if err != nil {
-		return err
+	//Never edit original object, always work with a clone for updates
+	newDeployment := coreDeployment
+	annotations := newDeployment.Spec.Template.Annotations
+	if len(annotations) == 0 {
+		annotations = make(map[string]string)
 	}
 
-	for _, p := range corePods.Items {
-		log.Infof("Deleting pod %s...\n", p.Name)
-		if err := w.KubeClient.CoreV1().Pods(namespace).Delete(p.Name, nil); err != nil {
-			return err
-		}
-	}
+	annotations["i3o-hash"] = uuid.New().String()
+	newDeployment.Spec.Template.Annotations = annotations
+	_, err := w.KubeClient.AppsV1().Deployments(newDeployment.Namespace).Update(newDeployment)
 
-	time.Sleep(1 * time.Second)
-	ebo := backoff.NewExponentialBackOff()
-	ebo.MaxElapsedTime = 1 * time.Minute // 1 minute at least.
-	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		d, err := w.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("unable to get deployment %q in namespace %q: %v", name, namespace, err)
-		}
-		if d.Status.ReadyReplicas == d.Status.Replicas {
-			return nil
-		}
-
-		return fmt.Errorf("pods are not all ready yet")
-	}), ebo); err != nil {
-		return fmt.Errorf("unable to verify that the deployment %q in namesapce, %q has restarted: %v", name, namespace, err)
-	}
-
-	return nil
+	return err
 }
 
 // VerifyCluster is used to verify a kubernetes cluster has been initialized properly.
