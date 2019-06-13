@@ -3,7 +3,7 @@ module github.com/containous/i3o
 go 1.12
 
 require (
-	github.com/cenkalti/backoff v2.1.1+incompatible // indirect
+	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/containous/flaeg v1.4.1 // indirect
 	github.com/containous/mux v0.0.0-20181024131434-c33f32e26898 // indirect
 	github.com/containous/traefik v2.0.0-alpha4+incompatible
@@ -14,6 +14,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.4
+	github.com/stretchr/testify v1.3.0
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect

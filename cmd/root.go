@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
+	"github.com/containous/i3o/k8s"
 	"github.com/containous/i3o/meshcontroller"
-	"github.com/containous/i3o/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/sample-controller/pkg/signals"
@@ -55,20 +55,17 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 		log.Debugf("Using masterURL: %q", masterURL)
 		log.Debugf("Using kubeconfig: %q", kubeconfig)
 
-		clients, err := utils.BuildClients(masterURL, kubeconfig)
+		clients, err := k8s.NewClientWrapper(masterURL, kubeconfig)
 		if err != nil {
 			log.Fatalf("Error building clients: %v", err)
 		}
 
-		if err = utils.VerifyCluster(clients.KubeClient); err != nil {
+		if err = clients.VerifyCluster(); err != nil {
 			log.Fatalf("Error verifying cluster: %v", err)
 		}
 
 		// Create a new controller.
-		controller := meshcontroller.NewMeshController()
-
-		// Initialize the controller.
-		controller.Init(clients)
+		controller := meshcontroller.NewMeshController(clients)
 
 		// run the controller loop to process items
 		if err = controller.Run(stopCh); err != nil {
