@@ -3,7 +3,7 @@ package meshcontroller
 import (
 	"github.com/containous/i3o/utils"
 	crdclientset "github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/clientset/versioned"
-	traefik_v1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// MeshControllerHandler is an implementation of Handler
+// MeshControllerHandler is an implementation of Handler.
 type Handler struct {
 	Clients           *utils.ClientWrapper
 	IgnoredNamespaces []string
@@ -31,13 +31,13 @@ func NewHandler(clients *utils.ClientWrapper, namespaces []string) *Handler {
 	return h
 }
 
-// Init handles any handler initialization
+// Init handles any handler initialization.
 func (h *Handler) Init() error {
 	log.Debugln("MeshControllerHandler.Init")
 	return nil
 }
 
-// ObjectCreated is called when an object is created
+// ObjectCreated is called when an object is created.
 func (h *Handler) ObjectCreated(obj interface{}) {
 	// assert the type to an object to pull out relevant data
 	service := obj.(*corev1.Service)
@@ -48,19 +48,19 @@ func (h *Handler) ObjectCreated(obj interface{}) {
 	log.Debugf("MeshControllerHandler ObjectCreated with type: *corev1.Service: %s/%s", service.Namespace, service.Name)
 
 	log.Debugf("Verifying associated mesh service for service: %s/%s", service.Namespace, service.Name)
-	if err := VerifyMeshServiceExists(h.Clients.KubeClient, service); err != nil {
+	if err := verifyMeshServiceExists(h.Clients.KubeClient, service); err != nil {
 		log.Errorf("Could not verify mesh service exists: %v", err)
 		return
 	}
 
 	log.Debugf("Verifying associated mesh ingressroute for service: %s/%s", service.Namespace, service.Name)
-	if err := VerifyMeshIngressRouteExists(h.Clients.CrdClient, service); err != nil {
+	if err := verifyMeshIngressRouteExists(h.Clients.CrdClient, service); err != nil {
 		log.Errorf("Could not verify mesh ingressroute exists: %v", err)
 	}
 
 }
 
-// ObjectDeleted is called when an object is deleted
+// ObjectDeleted is called when an object is deleted.
 func (h *Handler) ObjectDeleted(obj interface{}) {
 	// assert the type to an object to pull out relevant data
 	service := obj.(*corev1.Service)
@@ -69,22 +69,22 @@ func (h *Handler) ObjectDeleted(obj interface{}) {
 		return
 	}
 	log.Debugln("MeshControllerHandler.ObjectDeleted")
-	if err := VerifyMeshServiceDeleted(h.Clients.KubeClient, service); err != nil {
+	if err := verifyMeshServiceDeleted(h.Clients.KubeClient, service); err != nil {
 		log.Errorf("Could not verify mesh service deleted: %v", err)
 		return
 	}
 
-	if err := VerifyMeshIngressRouteDeleted(h.Clients.CrdClient, service); err != nil {
+	if err := verifyMeshIngressRouteDeleted(h.Clients.CrdClient, service); err != nil {
 		log.Errorf("Could not verify mesh ingressroute deleted: %v", err)
 	}
 }
 
-// ObjectUpdated is called when an object is updated
+// ObjectUpdated is called when an object is updated.
 func (h *Handler) ObjectUpdated(objOld, objNew interface{}) {
 	log.Debugln("MeshControllerHandler.ObjectUpdated")
 }
 
-func VerifyMeshServiceExists(client kubernetes.Interface, service *apiv1.Service) error {
+func verifyMeshServiceExists(client kubernetes.Interface, service *apiv1.Service) error {
 	meshServiceName := utils.ServiceToMeshName(service.Name, service.Namespace)
 	meshServiceInstance, err := client.CoreV1().Services(utils.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
 	if meshServiceInstance == nil || err != nil {
@@ -115,7 +115,7 @@ func VerifyMeshServiceExists(client kubernetes.Interface, service *apiv1.Service
 	return nil
 }
 
-func VerifyMeshServiceDeleted(client kubernetes.Interface, service *apiv1.Service) error {
+func verifyMeshServiceDeleted(client kubernetes.Interface, service *apiv1.Service) error {
 	meshServiceName := utils.ServiceToMeshName(service.Name, service.Namespace)
 	meshServiceInstance, err := client.CoreV1().Services(utils.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
 	if err != nil {
@@ -132,19 +132,19 @@ func VerifyMeshServiceDeleted(client kubernetes.Interface, service *apiv1.Servic
 	return nil
 }
 
-func VerifyMeshIngressRouteExists(client crdclientset.Interface, service *apiv1.Service) error {
+func verifyMeshIngressRouteExists(client crdclientset.Interface, service *apiv1.Service) error {
 	meshIngressRouteName := utils.ServiceToMeshName(service.Name, service.Namespace)
 	meshIngressRouteInstance, err := client.TraefikV1alpha1().IngressRoutes(service.Namespace).Get(meshIngressRouteName, metav1.GetOptions{})
 	if meshIngressRouteInstance == nil || err != nil {
-		ir := &traefik_v1alpha1.IngressRoute{
+		ir := &traefikv1alpha1.IngressRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      meshIngressRouteName,
 				Namespace: service.Namespace,
 			},
-			Spec: traefik_v1alpha1.IngressRouteSpec{
-				Routes: []traefik_v1alpha1.Route{
+			Spec: traefikv1alpha1.IngressRouteSpec{
+				Routes: []traefikv1alpha1.Route{
 					{
-						Services: []traefik_v1alpha1.Service{
+						Services: []traefikv1alpha1.Service{
 							{
 								Name: service.Name,
 								Port: service.Spec.Ports[0].Port,
@@ -163,7 +163,7 @@ func VerifyMeshIngressRouteExists(client crdclientset.Interface, service *apiv1.
 	return nil
 }
 
-func VerifyMeshIngressRouteDeleted(client crdclientset.Interface, service *apiv1.Service) error {
+func verifyMeshIngressRouteDeleted(client crdclientset.Interface, service *apiv1.Service) error {
 	meshIngressRouteName := utils.ServiceToMeshName(service.Name, service.Namespace)
 	meshIngressRouteInstance, err := client.TraefikV1alpha1().IngressRoutes(service.Namespace).Get(meshIngressRouteName, metav1.GetOptions{})
 	if err != nil {

@@ -203,7 +203,7 @@ func Contains(a []string, x string) bool {
 	return false
 }
 
-// ServiceToMeshName converts a service with a namespace to a traefik-mesh ingressroute name
+// ServiceToMeshName converts a service with a namespace to a traefik-mesh ingressroute name.
 func ServiceToMeshName(serviceName string, namespace string) string {
 	return fmt.Sprintf("traefik-%s-%s", namespace, serviceName)
 }
