@@ -30,6 +30,10 @@ func patchCommand() func(cmd *cobra.Command, args []string) {
 			log.SetLevel(log.DebugLevel)
 		}
 
+		log.Debugln("Starting i3o patch...")
+		log.Debugf("Using masterURL: %q", masterURL)
+		log.Debugf("Using kubeconfig: %q", kubeconfig)
+
 		clients, err := utils.BuildClients(masterURL, kubeconfig)
 		if err != nil {
 			log.Fatalf("Error building clients: %v", err)

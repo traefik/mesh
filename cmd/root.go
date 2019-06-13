@@ -51,6 +51,10 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 		// set up signals so we handle the first shutdown signal gracefully
 		stopCh := signals.SetupSignalHandler()
 
+		log.Debugln("Starting i3o controller...")
+		log.Debugf("Using masterURL: %q", masterURL)
+		log.Debugf("Using kubeconfig: %q", kubeconfig)
+
 		clients, err := utils.BuildClients(masterURL, kubeconfig)
 		if err != nil {
 			log.Fatalf("Error building clients: %v", err)
