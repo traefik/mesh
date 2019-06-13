@@ -134,16 +134,24 @@ func (h *Handler) verifyMeshServiceDeleted(service *apiv1.Service) error {
 
 func (h *Handler) verifyMeshIngressRouteExists(service *apiv1.Service) error {
 	meshIngressRouteName := serviceToMeshName(service.Name, service.Namespace)
+	matchRule := fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", service.Name, service.Namespace, service.Spec.ClusterIP)
+	labels := map[string]string{
+		"i3o-mesh": "internal",
+	}
+
 	meshIngressRouteInstance, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(service.Namespace).Get(meshIngressRouteName, metav1.GetOptions{})
 	if meshIngressRouteInstance == nil || err != nil {
 		ir := &traefikv1alpha1.IngressRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      meshIngressRouteName,
 				Namespace: service.Namespace,
+				Labels:    labels,
 			},
 			Spec: traefikv1alpha1.IngressRouteSpec{
 				Routes: []traefikv1alpha1.Route{
 					{
+						Match: matchRule,
+						Kind:  "Rule",
 						Services: []traefikv1alpha1.Service{
 							{
 								Name: service.Name,
