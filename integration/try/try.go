@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/containous/i3o/utils"
+	"github.com/containous/i3o/k8s"
 	"github.com/containous/traefik/pkg/safe"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +20,7 @@ const (
 )
 
 // WaitReadyReplica wait until the deployment is ready.
-func WaitReadyReplica(clients *utils.ClientWrapper, name string, namespace string, timeout time.Duration) error {
+func WaitReadyReplica(clients *k8s.ClientWrapper, name string, namespace string, timeout time.Duration) error {
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
@@ -42,14 +42,14 @@ func WaitReadyReplica(clients *utils.ClientWrapper, name string, namespace strin
 }
 
 // WaitClientCreated wait until the file is created.
-func WaitClientCreated(url string, kubeConfigPath string, timeout time.Duration) (*utils.ClientWrapper, error) {
+func WaitClientCreated(url string, kubeConfigPath string, timeout time.Duration) (*k8s.ClientWrapper, error) {
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
-	var clients *utils.ClientWrapper
+	var clients *k8s.ClientWrapper
 	var err error
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
-		clients, err = utils.BuildClients("https://localhost:6443", kubeConfigPath)
+		clients, err = k8s.NewClientWrapper(url, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("unable to create clients: %v", err)
 		}
