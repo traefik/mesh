@@ -25,6 +25,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "4646"
     spec:
+      serviceAccountName: i3o-controller
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

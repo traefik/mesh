@@ -9,6 +9,7 @@ metadata:
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:
+  serviceAccountName: i3o-mesh
   selector:
     matchLabels:
       app: {{ .Release.Name | quote }}
@@ -31,7 +32,7 @@ spec:
           image: {{ .Values.image.traefik | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
-            - "--kubernetesCRD"
+            - "--providers.kubernetescrd"
           securityContext:
             capabilities:
               drop:

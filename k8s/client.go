@@ -88,23 +88,6 @@ func (w *ClientWrapper) verifyNamespaceExists(namespace string) error {
 	return nil
 }
 
-func (w *ClientWrapper) verifyCRDsExist() error {
-	crds := []string{"ingressroutes.traefik.containo.us", "ingressroutetcps.traefik.containo.us", "middlewares.traefik.containo.us"}
-	for _, value := range crds {
-		_, err := w.KubeClient.RESTClient().
-			Get().
-			RequestURI("/apis/apiextensions.k8s.io/v1beta1/customresourcedefinitions").
-			Name(value).
-			Do().Get()
-
-		if err != nil {
-			return fmt.Errorf("unable to retrieve CRD: %v", err)
-		}
-	}
-
-	return nil
-}
-
 func (w *ClientWrapper) patchCoreDNS(deploymentName string, deploymentNamespace string) error {
 	coreDeployment, err := w.KubeClient.AppsV1().Deployments(deploymentNamespace).Get(deploymentName, metav1.GetOptions{})
 	if err != nil {
@@ -215,11 +198,6 @@ func (w *ClientWrapper) VerifyCluster() error {
 
 	log.Debugln("Verifying CoreDNS Patched...")
 	if err := w.verifyCoreDNSPatched("coredns", metav1.NamespaceSystem); err != nil {
-		return err
-	}
-
-	log.Debugln("Verifying traefik CRDs exist...")
-	if err := w.verifyCRDsExist(); err != nil {
 		return err
 	}
 

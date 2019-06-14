@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: i3o-controller
+  name: i3o-mesh
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote}}
@@ -13,7 +13,7 @@ metadata:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: i3o-controller-role
+  name: i3o-mesh-role
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote}}
@@ -26,7 +26,6 @@ rules:
     resources:
       - services
       - endpoints
-      - secrets
       - namespaces
     verbs:
       - get
@@ -40,11 +39,21 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - traefik.containo.us
+    resources:
+      - ingressroutes
+      - ingressroutetcps
+      - middlewares
+    verbs:
+      - get
+      - list
+      - watch
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: i3o-controller
+  name: i3o-mesh
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote}}
@@ -54,8 +63,8 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: i3o-controller-role
+  name: i3o-mesh-role
 subjects:
 - kind: ServiceAccount
-  name: i3o-controller
+  name: i3o-mesh
   namespace: {{ .Release.Namespace }}
