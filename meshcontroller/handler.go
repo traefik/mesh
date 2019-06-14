@@ -162,7 +162,7 @@ func (h *Handler) verifyMeshIngressRouteExists(service *apiv1.Service) error {
 				},
 			},
 		}
-		if _, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(metav1.NamespaceAll).Create(ir); err != nil {
+		if _, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(metav1.NamespaceDefault).Create(ir); err != nil {
 			return err
 		}
 
