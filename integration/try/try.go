@@ -19,8 +19,8 @@ const (
 	CITimeoutMultiplier = 3
 )
 
-// WaitReadyReplica wait until the deployment is ready.
-func WaitReadyReplica(clients *k8s.ClientWrapper, name string, namespace string, timeout time.Duration) error {
+// WaitReadyDeployment wait until the deployment is ready.
+func WaitReadyDeployment(clients *k8s.ClientWrapper, name string, namespace string, timeout time.Duration) error {
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
@@ -30,10 +30,14 @@ func WaitReadyReplica(clients *k8s.ClientWrapper, name string, namespace string,
 			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 		}
 
-		if d.Status.ReadyReplicas == d.Status.Replicas {
-			return errors.New("deployment not ready")
+		if d.Status.Replicas == 0 {
+			return fmt.Errorf("deployment %q has not been yet created", name)
 		}
-		return nil
+
+		if d.Status.ReadyReplicas == d.Status.Replicas {
+			return nil
+		}
+		return errors.New("deployment not ready")
 	}), ebo); err != nil {
 		return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 	}

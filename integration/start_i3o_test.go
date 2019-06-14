@@ -11,10 +11,10 @@ import (
 type StartI3oSuite struct{ BaseSuite }
 
 func (s *StartI3oSuite) SetUpSuite(c *check.C) {
-	s.createComposeProject(c, "k3s")
-	s.waitForCoreDNS(c)
-	err := os.Setenv("KUBECONFIG", kubeConfigPath)
+	err := s.startk3s(c)
 	c.Assert(err, checker.IsNil)
+	s.waitForCoreDNSStarted(c)
+	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 }
 
 func (s *StartI3oSuite) TearDownSuite(c *check.C) {
@@ -22,7 +22,7 @@ func (s *StartI3oSuite) TearDownSuite(c *check.C) {
 }
 
 func (s *StartI3oSuite) TestSimpleStart(c *check.C) {
-	s.startPathI3o(c)
-	s.waitForCoreDNS(c)
-	c.Assert(os.Getenv("KUBECONFIG"), checker.Equals, kubeConfigPath)
+	err := s.installHelmI3o(c)
+	c.Assert(err, checker.IsNil)
+	s.waitForI3oControllerStarted(c)
 }

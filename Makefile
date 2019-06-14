@@ -25,7 +25,7 @@ local-build: $(DIST_DIR)
 	CGO_ENABLED=0 go build -o ${DIST_DIR_I3O} ./
 
 # Integration test
-local-test-integration: $(DIST_DIR) local-build
+test-integration: $(DIST_DIR) build-docker
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.v
 
 build: $(DIST_DIR)

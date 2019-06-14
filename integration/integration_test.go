@@ -10,10 +10,12 @@ import (
 	"time"
 
 	"github.com/containous/i3o/integration/try"
-	"github.com/containous/i3o/utils"
+	"github.com/containous/i3o/k8s"
 	"github.com/go-check/check"
 	log "github.com/sirupsen/logrus"
 	checker "github.com/vdemeester/shakers"
+	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,42 +39,53 @@ func init() {
 	check.Suite(&StartI3oSuite{})
 }
 
-var i3oBinary = "../dist/i3o"
-
 type BaseSuite struct {
 	composeProject string
 	projectName    string
-	clients        *utils.ClientWrapper
+	clients        *k8s.ClientWrapper
 }
 
-func (s *BaseSuite) createComposeProject(c *check.C, name string) {
+func (s *BaseSuite) startk3s(_ *check.C) error {
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	projectName := fmt.Sprintf("integration-test-%s", name)
-	composeFile := path.Join(dir, fmt.Sprintf("resources/compose/%s.yaml", name))
-
-	fmt.Println(s.composeProject)
-
-	cmd := exec.Command("docker-compose",
-		"--file", composeFile, "--project-name", projectName,
-		"up", "-d")
+	if err = os.MkdirAll(path.Join(dir, "resources/compose/images"), 0755); err != nil {
+		return err
+	}
+	// Save i3o image in k3s.
+	cmd := exec.Command("docker",
+		"save", "containous/i3o:latest", "-o", path.Join(dir, "resources/compose/images/i3o.tar"))
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
 
 	fmt.Println(string(output))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	s.composeProject = composeFile
-	s.projectName = projectName
-	s.clients, err = try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
-	c.Check(err, checker.IsNil)
+	s.composeProject = path.Join(dir, "resources/compose/k3s.yaml")
+	s.projectName = "integration-test-k3s"
 
+	s.stopComposeProject()
+
+	// Start k3s stack.
+	cmd = exec.Command("docker-compose",
+		"--file", s.composeProject, "--project-name", s.projectName,
+		"up", "-d")
+	cmd.Env = os.Environ()
+
+	output, err = cmd.CombinedOutput()
+
+	fmt.Println(string(output))
+	if err != nil {
+		return err
+	}
+
+	s.clients, err = try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
+	return err
 }
 
 func (s *BaseSuite) stopComposeProject() {
@@ -90,20 +103,93 @@ func (s *BaseSuite) stopComposeProject() {
 	}
 }
 
-func (s *BaseSuite) waitForCoreDNS(c *check.C) {
-	err := try.WaitReadyReplica(s.clients, "coredns", metav1.NamespaceSystem, 60*time.Second)
+func (s *BaseSuite) waitForCoreDNSStarted(c *check.C) {
+	err := try.WaitReadyDeployment(s.clients, "coredns", metav1.NamespaceSystem, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) startPathI3o(_ *check.C) {
-	cmd := exec.Command(i3oBinary, "patch",
-		"--master", masterURL, "--kubeconfig", kubeConfigPath)
+func (s *BaseSuite) waitForI3oControllerStarted(c *check.C) {
+	err := try.WaitReadyDeployment(s.clients, "i3o-controller", metav1.NamespaceDefault, 60*time.Second)
+	c.Assert(err, checker.IsNil)
+}
+
+func (s *BaseSuite) waitForTiller(c *check.C) {
+	err := try.WaitReadyDeployment(s.clients, "tiller-deploy", metav1.NamespaceSystem, 60*time.Second)
+	c.Assert(err, checker.IsNil)
+}
+
+func (s *BaseSuite) installHelmI3o(c *check.C) error {
+	// Delete previous tiller service account.
+	err := s.clients.KubeClient.CoreV1().ServiceAccounts(metav1.NamespaceSystem).Delete("tiller", &metav1.DeleteOptions{})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Create tiller service account.
+	_, err = s.clients.KubeClient.CoreV1().ServiceAccounts(metav1.NamespaceSystem).Create(&v1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tiller",
+			Namespace: metav1.NamespaceSystem,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Delete previous tiller cluster role bindings.
+	err = s.clients.KubeClient.RbacV1().ClusterRoleBindings().Delete("tiller", &metav1.DeleteOptions{})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Create tiller cluster role bindings.
+	_, err = s.clients.KubeClient.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "tiller",
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "cluster-admin",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      "tiller",
+				Namespace: metav1.NamespaceSystem,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Init helm with the service account created before.
+	cmd := exec.Command("helm", "init",
+		"--service-account", "tiller", "--upgrade")
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
 
 	fmt.Println(string(output))
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
+
+	// Wait for tiller initialized.
+	s.waitForTiller(c)
+
+	// Install the helm chart.
+	cmd = exec.Command("helm", "install",
+		"../helm/chart/i3o", "--values", "resources/values.yaml")
+	cmd.Env = os.Environ()
+
+	output, err = cmd.CombinedOutput()
+
+	fmt.Println(string(output))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
