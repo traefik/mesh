@@ -9,7 +9,6 @@ metadata:
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:
-  serviceAccountName: i3o-mesh
   selector:
     matchLabels:
       app: {{ .Release.Name | quote }}
@@ -22,6 +21,7 @@ spec:
         component: mesh
         release: {{ .Release.Name | quote }}
     spec:
+      serviceAccountName: i3o-mesh
       terminationGracePeriodSeconds: 30
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:
@@ -32,7 +32,8 @@ spec:
           image: {{ .Values.image.traefik | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
-            - "--providers.kubernetescrd"
+            - "providers.kubernetescrd"
+            - "providers.kubernetescrd.labelselector='i3o-mesh=internal'"
           securityContext:
             capabilities:
               drop:
