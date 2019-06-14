@@ -8,6 +8,7 @@ require (
 	github.com/containous/mux v0.0.0-20181024131434-c33f32e26898 // indirect
 	github.com/containous/traefik v2.0.0-alpha4+incompatible
 	github.com/go-acme/lego v2.6.0+incompatible // indirect
+	github.com/google/uuid v1.0.0
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
