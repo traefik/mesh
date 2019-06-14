@@ -32,7 +32,7 @@ spec:
           image: {{ .Values.image.traefik | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
-            - "--kubernetesCRD"
+            - "--providers.kubernetescrd"
           securityContext:
             capabilities:
               drop:

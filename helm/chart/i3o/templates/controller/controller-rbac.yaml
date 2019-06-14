@@ -45,6 +45,7 @@ rules:
     resources:
       - ingressroutes
       - ingressroutetcps
+      - middlewares
     verbs:
       - get
       - list
