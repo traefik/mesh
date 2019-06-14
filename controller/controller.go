@@ -19,11 +19,12 @@ import (
 )
 
 type Controller struct {
-	clients        *k8s.ClientWrapper
-	queue          workqueue.RateLimitingInterface
-	informer       cache.SharedIndexInformer
-	handler        Handler
-	controllerType string
+	clients              *k8s.ClientWrapper
+	queue                workqueue.RateLimitingInterface
+	informer             cache.SharedIndexInformer
+	handler              Handler
+	controllerType       interface{}
+	controllerTypeString string
 }
 
 // New is used to build the informers and other required components of the controller,
@@ -144,11 +145,12 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 	})
 
 	return &Controller{
-		clients:        clients,
-		informer:       informer,
-		queue:          queue,
-		handler:        handler,
-		controllerType: printableType,
+		clients:              clients,
+		informer:             informer,
+		queue:                queue,
+		handler:              handler,
+		controllerType:       controllerType,
+		controllerTypeString: printableType,
 	}
 
 }
@@ -161,7 +163,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	// have completed existing items then shutdown
 	defer c.queue.ShutDown()
 
-	log.Infof("Initializing %s controller", c.controllerType)
+	log.Infof("Initializing %s controller", c.controllerTypeString)
 
 	// run the informer to start listing and watching resources
 	go c.informer.Run(stopCh)
@@ -171,7 +173,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 		utilruntime.HandleError(fmt.Errorf("error syncing cache"))
 		return
 	}
-	log.Infof("Controller.%s.Run: cache sync complete", c.controllerType)
+	log.Infof("Controller.%s.Run: cache sync complete", c.controllerTypeString)
 
 	// run the runWorker method every second with a stop channel
 	wait.Until(c.runWorker, time.Second, stopCh)
@@ -185,22 +187,22 @@ func (c *Controller) HasSynced() bool {
 
 // runWorker executes the loop to process new items added to the queue
 func (c *Controller) runWorker() {
-	log.Debugf("Controller.%s.runWorker: starting", c.controllerType)
+	log.Debugf("Controller.%s.runWorker: starting", c.controllerTypeString)
 
 	// invoke processNextItem to fetch and consume the next change
 	// to a watched or listed resource
 	for c.processNextItem() {
-		log.Debugf("Controller.%s.runWorker: processing next item", c.controllerType)
+		log.Debugf("Controller.%s.runWorker: processing next item", c.controllerTypeString)
 	}
 
-	log.Debugf("Controller.%s.runWorker: completed", c.controllerType)
+	log.Debugf("Controller.%s.runWorker: completed", c.controllerTypeString)
 }
 
 // processNextItem retrieves each queued item and takes the
 // necessary handler action based off of if the item was
 // created or deleted
 func (c *Controller) processNextItem() bool {
-	log.Debugf("Controller.%s Waiting for next item to process...", c.controllerType)
+	log.Debugf("Controller.%s Waiting for next item to process...", c.controllerTypeString)
 
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
@@ -248,11 +250,11 @@ func (c *Controller) processNextItem() bool {
 	// after both instances, we want to forget the key from the queue, as this indicates
 	// a code path of successful queue key processing
 	if !exists {
-		log.Infof("Controller.%s.processNextItem: deleted: %s", c.controllerType, keyRaw)
-		c.handler.ObjectDeleted(item)
+		log.Infof("Controller.%s.processNextItem: deleted: %s", c.controllerTypeString, keyRaw)
+		c.handler.ObjectDeleted(keyRaw, c.controllerType)
 		c.queue.Forget(key)
 	} else {
-		log.Infof("Controller.%s.processNextItem: created: %s", c.controllerType, keyRaw)
+		log.Infof("Controller.%s.processNextItem: created: %s", c.controllerTypeString, keyRaw)
 		c.handler.ObjectCreated(item)
 		c.queue.Forget(key)
 	}

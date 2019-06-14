@@ -4,6 +4,6 @@ package controller
 type Handler interface {
 	Init() error
 	ObjectCreated(obj interface{})
-	ObjectDeleted(obj interface{})
+	ObjectDeleted(key string, obj interface{})
 	ObjectUpdated(objOld, objNew interface{})
 }

@@ -12,13 +12,13 @@ spec:
   selector:
     matchLabels:
       app: {{ .Release.Name | quote }}
-      component: mesh
+      component: i3o-mesh
       release: {{ .Release.Name | quote }}
   template:
     metadata:
       labels:
         app: {{ .Release.Name | quote }}
-        component: mesh
+        component: i3o-mesh
         release: {{ .Release.Name | quote }}
     spec:
       serviceAccountName: i3o-mesh
