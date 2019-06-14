@@ -148,8 +148,8 @@ func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (b
 func (w *ClientWrapper) restartCorePods(coreDeployment *appsv1.Deployment) error {
 	log.Infoln("Restarting coreDNS pods...")
 
-	//Never edit original object, always work with a clone for updates
-	newDeployment := coreDeployment
+	// Never edit original object, always work with a clone for updates.
+	newDeployment := coreDeployment.DeepCopy()
 	annotations := newDeployment.Spec.Template.Annotations
 	if len(annotations) == 0 {
 		annotations = make(map[string]string)
