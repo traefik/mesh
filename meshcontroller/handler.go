@@ -55,9 +55,21 @@ func (h *Handler) ObjectCreated(obj interface{}) {
 		return
 	}
 
-	log.Debugf("Verifying associated mesh ingressroute for service: %s/%s", userService.Namespace, userService.Name)
-	if err := h.verifyMeshIngressRouteExists(userService, createdService); err != nil {
-		log.Errorf("Could not verify mesh ingressroute exists: %v", err)
+	if serviceType, ok := userService.Annotations[k8s.ServiceType]; ok {
+		if strings.ToLower(serviceType) == "http" {
+			// Use http ingressRoutes
+			log.Debugf("Verifying associated mesh ingressroute for service: %s/%s", userService.Namespace, userService.Name)
+			if err := h.verifyMeshIngressRouteExists(userService, createdService); err != nil {
+				log.Errorf("Could not verify mesh ingressroute exists: %v", err)
+			}
+			return
+		}
+	}
+
+	// Default to use ingressRouteTCP
+	log.Debugf("Verifying associated mesh ingressrouteTCP for service: %s/%s", userService.Namespace, userService.Name)
+	if err := h.verifyMeshIngressRouteTCPExists(userService, createdService); err != nil {
+		log.Errorf("Could not verify mesh ingressrouteTCP exists: %v", err)
 	}
 
 }
@@ -78,10 +90,16 @@ func (h *Handler) ObjectDeleted(key string, obj interface{}) {
 			return
 		}
 
+		// Since we don't have annotations from the key, delete both HTTP and TCP routes for the service
 		if err := h.verifyMeshIngressRouteDeleted(name, namespace); err != nil {
 			log.Errorf("Could not verify mesh ingressroute deleted: %v", err)
 		}
+
+		if err := h.verifyMeshIngressRouteTCPDeleted(name, namespace); err != nil {
+			log.Errorf("Could not verify mesh ingressroute deleted: %v", err)
+		}
 	}
+
 }
 
 // ObjectUpdated is called when an object is updated.
@@ -97,6 +115,11 @@ func (h *Handler) verifyMeshServiceExists(service *apiv1.Service) (*apiv1.Servic
 		var ports []apiv1.ServicePort
 
 		for id, sp := range service.Spec.Ports {
+			if sp.Protocol != corev1.ProtocolTCP {
+				log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, service.Namespace, service.Name)
+				continue
+			}
+
 			meshPort := apiv1.ServicePort{
 				Name:       sp.Name,
 				Port:       sp.Port,
@@ -187,26 +210,25 @@ func (h *Handler) verifyMeshIngressRouteExists(userService *apiv1.Service, creat
 
 func (h *Handler) verifyMeshIngressRouteTCPExists(userService *apiv1.Service, createdService *apiv1.Service) error {
 	meshIngressRouteName := serviceToMeshName(userService.Name, userService.Namespace)
-	matchRule := fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", userService.Name, userService.Namespace, userService.Spec.ClusterIP)
+	matchRule := fmt.Sprintf("HostSNI(`%s.%s.traefik.mesh`) || HostSNI(`%s`)", userService.Name, userService.Namespace, userService.Spec.ClusterIP)
 	labels := map[string]string{
 		"i3o-mesh":     "internal",
 		"user-service": userService.Name,
 	}
 
 	for _, sp := range createdService.Spec.Ports {
-		ir := &traefikv1alpha1.IngressRoute{
+		irtcp := &traefikv1alpha1.IngressRouteTCP{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s-%d", meshIngressRouteName, sp.TargetPort.IntVal),
 				Namespace: userService.Namespace,
 				Labels:    labels,
 			},
-			Spec: traefikv1alpha1.IngressRouteSpec{
+			Spec: traefikv1alpha1.IngressRouteTCPSpec{
 				EntryPoints: []string{fmt.Sprintf("ingress-%d", sp.TargetPort.IntVal)},
-				Routes: []traefikv1alpha1.Route{
+				Routes: []traefikv1alpha1.RouteTCP{
 					{
 						Match: matchRule,
-						Kind:  "Rule",
-						Services: []traefikv1alpha1.Service{
+						Services: []traefikv1alpha1.ServiceTCP{
 							{
 								Name: userService.Name,
 								Port: sp.Port,
@@ -217,9 +239,9 @@ func (h *Handler) verifyMeshIngressRouteTCPExists(userService *apiv1.Service, cr
 			},
 		}
 
-		irInstance, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(ir.Namespace).Get(ir.Name, metav1.GetOptions{})
-		if irInstance == nil || err != nil {
-			if _, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(ir.Namespace).Create(ir); err != nil {
+		irtcpInstance, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRouteTCPs(irtcp.Namespace).Get(irtcp.Name, metav1.GetOptions{})
+		if irtcpInstance == nil || err != nil {
+			if _, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRouteTCPs(irtcp.Namespace).Create(irtcp); err != nil {
 				return err
 			}
 		}
@@ -247,15 +269,15 @@ func (h *Handler) verifyMeshIngressRouteDeleted(serviceName, serviceNamespace st
 
 func (h *Handler) verifyMeshIngressRouteTCPDeleted(serviceName, serviceNamespace string) error {
 	selector := fmt.Sprintf("user-service=%s", serviceName)
-	irs, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(serviceNamespace).List(metav1.ListOptions{LabelSelector: selector})
+	irtcps, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRouteTCPs(serviceNamespace).List(metav1.ListOptions{LabelSelector: selector})
 	if err != nil {
 		return err
 	}
-	for _, ir := range irs.Items {
-		if err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(ir.Namespace).Delete(ir.Name, &metav1.DeleteOptions{}); err != nil {
+	for _, irtcp := range irtcps.Items {
+		if err := h.Clients.CrdClient.TraefikV1alpha1().IngressRouteTCPs(irtcp.Namespace).Delete(irtcp.Name, &metav1.DeleteOptions{}); err != nil {
 			return err
 		}
-		log.Debugf("Deleted IngressRoute: %s/%s", ir.Namespace, ir.Name)
+		log.Debugf("Deleted IngressRouteTCP: %s/%s", irtcp.Namespace, irtcp.Name)
 	}
 
 	return nil
