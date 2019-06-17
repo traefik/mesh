@@ -12,13 +12,13 @@ spec:
   selector:
     matchLabels:
       app: {{ .Release.Name | quote }}
-      component: mesh
+      component: i3o-mesh
       release: {{ .Release.Name | quote }}
   template:
     metadata:
       labels:
         app: {{ .Release.Name | quote }}
-        component: mesh
+        component: i3o-mesh
         release: {{ .Release.Name | quote }}
     spec:
       serviceAccountName: i3o-mesh
@@ -32,8 +32,18 @@ spec:
           image: {{ .Values.image.traefik | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
-            - "providers.kubernetescrd"
-            - "providers.kubernetescrd.labelselector='i3o-mesh=internal'"
+            - "--entryPoints='Name:ingress-5000 Address::5000'"
+            - "--entryPoints='Name:ingress-5001 Address::5001'"
+            - "--entryPoints='Name:ingress-5002 Address::5002'"
+            - "--entryPoints='Name:ingress-5003 Address::5003'"
+            - "--entryPoints='Name:ingress-5004 Address::5004'"
+            - "--entryPoints='Name:ingress-5005 Address::5005'"
+            - "--entryPoints='Name:ingress-5006 Address::5006'"
+            - "--entryPoints='Name:ingress-5007 Address::5007'"
+            - "--entryPoints='Name:ingress-5008 Address::5008'"
+            - "--entryPoints='Name:ingress-5009 Address::5009'"
+            - "--providers.kubernetescrd"
+            - "--providers.kubernetescrd.labelselector='i3o-mesh=internal'"
           securityContext:
             capabilities:
               drop:

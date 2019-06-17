@@ -35,6 +35,14 @@ rules:
     verbs:
       - get
   - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - delete
+      - create
+  - apiGroups:
       - apps
     resources:
       - deployments
