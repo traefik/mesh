@@ -22,7 +22,7 @@ import (
 var (
 	integration    = flag.Bool("integration", true, "run integration tests")
 	kubeConfigPath = "/tmp/k3s-output/kubeconfig.yaml"
-	masterURL      = "https://localhost:8643"
+	masterURL      = "https://localhost:8443"
 )
 
 func Test(t *testing.T) {
