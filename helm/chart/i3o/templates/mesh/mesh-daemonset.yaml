@@ -32,16 +32,16 @@ spec:
           image: {{ .Values.image.traefik | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
-            - "--entryPoints='Name:ingress-5000 Address::5000'"
-            - "--entryPoints='Name:ingress-5001 Address::5001'"
-            - "--entryPoints='Name:ingress-5002 Address::5002'"
-            - "--entryPoints='Name:ingress-5003 Address::5003'"
-            - "--entryPoints='Name:ingress-5004 Address::5004'"
-            - "--entryPoints='Name:ingress-5005 Address::5005'"
-            - "--entryPoints='Name:ingress-5006 Address::5006'"
-            - "--entryPoints='Name:ingress-5007 Address::5007'"
-            - "--entryPoints='Name:ingress-5008 Address::5008'"
-            - "--entryPoints='Name:ingress-5009 Address::5009'"
+            - "--entryPoints.ingress-5000.address=:5000"
+            - "--entryPoints.ingress-5001.address=:5001"
+            - "--entryPoints.ingress-5002.address=:5002"
+            - "--entryPoints.ingress-5003.address=:5003"
+            - "--entryPoints.ingress-5004.address=:5004"
+            - "--entryPoints.ingress-5005.address=:5005"
+            - "--entryPoints.ingress-5006.address=:5006"
+            - "--entryPoints.ingress-5007.address=:5007"
+            - "--entryPoints.ingress-5008.address=:5008"
+            - "--entryPoints.ingress-5009.address=:5009"
             - "--providers.kubernetescrd"
             - "--providers.kubernetescrd.labelselector='i3o-mesh=internal'"
           securityContext:

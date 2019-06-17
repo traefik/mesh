@@ -11,6 +11,10 @@ github.com/containous/mux v0.0.0-20181024131434-c33f32e26898 h1:1srn9voikJGofblB
 github.com/containous/mux v0.0.0-20181024131434-c33f32e26898/go.mod h1:z8WW7n06n8/1xF9Jl9WmuDeZuHAhfL+bwarNjsciwwg=
 github.com/containous/traefik v2.0.0-alpha4+incompatible h1:uRU2pJJN4k2BMCfM0ZxHmjgv2/SGtJGaaXY9w3ZyFGk=
 github.com/containous/traefik v2.0.0-alpha4+incompatible/go.mod h1:epDRqge3JzKOhlSWzOpNYEEKXmM6yfN5tPzDGKk3ljo=
+github.com/containous/traefik v2.0.0-alpha4.0.20190612224206-d18edd6f776c+incompatible h1:mUgIXlReMRsw6M9A0z5cCl9t7tx5zcF+MOPRGatT9TQ=
+github.com/containous/traefik v2.0.0-alpha4.0.20190612224206-d18edd6f776c+incompatible/go.mod h1:epDRqge3JzKOhlSWzOpNYEEKXmM6yfN5tPzDGKk3ljo=
+github.com/containous/traefik v2.0.0-alpha4.0.20190617094805-8d7eccad5dd7+incompatible h1:ir+a6gbdUhLCClx5VgzyBDBcYlGiizYV3rBeSM1Kj+8=
+github.com/containous/traefik v2.0.0-alpha4.0.20190617094805-8d7eccad5dd7+incompatible/go.mod h1:epDRqge3JzKOhlSWzOpNYEEKXmM6yfN5tPzDGKk3ljo=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/go-etcd v2.0.0+incompatible/go.mod h1:Jez6KQU2B/sWsbdaef3ED8NzMklzPG4d5KIOhIy30Tk=
 github.com/coreos/go-semver v0.2.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=

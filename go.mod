@@ -28,3 +28,5 @@ require (
 	k8s.io/sample-controller v0.0.0-20190531134801-325dc0a18ed9
 	k8s.io/utils v0.0.0-20190529001817-6999998975a7 // indirect
 )
+
+replace github.com/containous/traefik v2.0.0-alpha4+incompatible => github.com/containous/traefik v2.0.0-alpha4.0.20190617094805-8d7eccad5dd7+incompatible
