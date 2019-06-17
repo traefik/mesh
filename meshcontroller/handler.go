@@ -15,14 +15,14 @@ import (
 
 // MeshControllerHandler is an implementation of Handler.
 type Handler struct {
-	Clients           *k8s.ClientWrapper
-	IgnoredNamespaces k8s.Namespaces
+	Clients *k8s.ClientWrapper
+	Ignored k8s.IgnoreWrapper
 }
 
-func NewHandler(clients *k8s.ClientWrapper, namespaces k8s.Namespaces) *Handler {
+func NewHandler(clients *k8s.ClientWrapper, ignored k8s.IgnoreWrapper) *Handler {
 	h := &Handler{
-		Clients:           clients,
-		IgnoredNamespaces: namespaces,
+		Clients: clients,
+		Ignored: ignored,
 	}
 
 	if err := h.Init(); err != nil {
@@ -42,7 +42,11 @@ func (h *Handler) Init() error {
 func (h *Handler) ObjectCreated(obj interface{}) {
 	// assert the type to an object to pull out relevant data
 	userService := obj.(*corev1.Service)
-	if h.IgnoredNamespaces.Contains(userService.Namespace) {
+	if h.Ignored.Namespaces.Contains(userService.Namespace) {
+		return
+	}
+
+	if h.Ignored.Services.Contains(userService.Name, userService.Namespace) {
 		return
 	}
 
@@ -82,9 +86,14 @@ func (h *Handler) ObjectDeleted(key string, obj interface{}) {
 	// assert the type to find out what was deleted
 	if _, ok := obj.(corev1.Service); ok {
 		// This is a service, process as a deleted service.
-		if h.IgnoredNamespaces.Contains(namespace) {
+		if h.Ignored.Namespaces.Contains(namespace) {
 			return
 		}
+
+		if h.Ignored.Services.Contains(name, namespace) {
+			return
+		}
+
 		if err := h.verifyMeshServiceDeleted(name, namespace); err != nil {
 			log.Errorf("Could not verify mesh service deleted: %v", err)
 			return

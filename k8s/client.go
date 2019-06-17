@@ -21,6 +21,12 @@ type ClientWrapper struct {
 	KubeClient *kubernetes.Clientset
 }
 
+// IgnoreWrapper holds namespaces and services to ignore
+type IgnoreWrapper struct {
+	Namespaces Namespaces
+	Services   Services
+}
+
 // NewClientWrapper creates and returns both a kubernetes client, and a CRD client.
 func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {
 	config, err := clientcmd.BuildConfigFromFlags(url, kubeConfig)

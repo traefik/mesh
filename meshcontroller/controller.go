@@ -18,11 +18,23 @@ type MeshController struct {
 // and return an initialized mesh controller object
 func NewMeshController(clients *k8s.ClientWrapper) *MeshController {
 	ignoredNamespaces := k8s.Namespaces{metav1.NamespaceSystem, k8s.MeshNamespace}
-	handler := NewHandler(clients, ignoredNamespaces)
+	ignoredServices := k8s.Services{
+		{
+			Name:      "kubernetes",
+			Namespace: metav1.NamespaceDefault,
+		},
+	}
+
+	ignored := k8s.IgnoreWrapper{
+		Namespaces: ignoredNamespaces,
+		Services:   ignoredServices,
+	}
+
+	handler := NewHandler(clients, ignored)
 
 	return &MeshController{
 		handler:           handler,
-		serviceController: controller.NewController(clients, apiv1.Service{}, ignoredNamespaces, handler),
+		serviceController: controller.NewController(clients, apiv1.Service{}, ignored, handler),
 	}
 }
 
