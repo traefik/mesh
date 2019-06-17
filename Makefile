@@ -7,6 +7,8 @@ DIST_DIR_I3O = $(DIST_DIR)/$(BINARY_NAME)
 PROJECT ?= github.com/containous/$(BINARY_NAME)
 GOLANGCI_LINTER_VERSION = v1.16.0
 
+INTEGRATION_TEST_OPTS := -timeout 20m
+
 export GO111MODULE=on
 
 default: check build
@@ -21,6 +23,10 @@ local-check: $(DIST_DIR)
 # Build
 local-build: $(DIST_DIR)
 	CGO_ENABLED=0 go build -o ${DIST_DIR_I3O} ./
+
+# Integration test
+test-integration: $(DIST_DIR) build-docker
+	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.v
 
 build: $(DIST_DIR)
 	docker build --tag "$(DOCKER_IMAGE_NAME):latest" --build-arg="MAKE_TARGET=local-build" $(CURDIR)/

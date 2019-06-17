@@ -14,3 +14,4 @@ i3o
 /dist/
 .vscode
 vendor
+integration/resources/compose/images

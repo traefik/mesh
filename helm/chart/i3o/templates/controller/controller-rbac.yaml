@@ -40,6 +40,8 @@ rules:
       - services
     verbs:
       - get
+      - list
+      - watch
       - delete
       - create
   - apiGroups:

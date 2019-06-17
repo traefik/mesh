@@ -1,0 +1,36 @@
+version: '3.7'
+services:
+  server:
+    image: rancher/k3s:v0.5.0
+    command: server --disable-agent --no-deploy traefik --https-listen-port=8443
+    environment:
+      - K3S_CLUSTER_SECRET=somethingtotallyrandom
+      - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml
+      - K3S_KUBECONFIG_MODE=666
+    volumes:
+      - ./images:/var/lib/rancher/k3s/agent/images
+      # This is just so that we get the kubeconfig file out
+      - /tmp/k3s-output:/output
+    ports:
+      - 8443:8443
+
+  node: &nodes-base
+    image: rancher/k3s:v0.5.0
+    command: agent
+    depends_on:
+      - server
+    tmpfs:
+      - /run
+      - /var/run
+    volumes:
+      - ./images:/var/lib/rancher/k3s/agent/images
+    privileged: true
+    environment:
+      - K3S_URL=https://server:8443
+      - K3S_CLUSTER_SECRET=somethingtotallyrandom
+  node-forwarder:
+    <<: *nodes-base
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
