@@ -42,21 +42,23 @@ func init() {
 type BaseSuite struct {
 	composeProject string
 	projectName    string
+	dir            string
 	clients        *k8s.ClientWrapper
 }
 
 func (s *BaseSuite) startk3s(_ *check.C) error {
-	dir, err := os.Getwd()
+	var err error
+	s.dir, err = os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	if err = os.MkdirAll(path.Join(dir, "resources/compose/images"), 0755); err != nil {
+	if err = os.MkdirAll(path.Join(s.dir, "resources/compose/images"), 0755); err != nil {
 		return err
 	}
 	// Save i3o image in k3s.
 	cmd := exec.Command("docker",
-		"save", "containous/i3o:latest", "-o", path.Join(dir, "resources/compose/images/i3o.tar"))
+		"save", "containous/i3o:latest", "-o", path.Join(s.dir, "resources/compose/images/i3o.tar"))
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
@@ -66,7 +68,7 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 		return err
 	}
 
-	s.composeProject = path.Join(dir, "resources/compose/k3s.yaml")
+	s.composeProject = path.Join(s.dir, "resources/compose/k3s.yaml")
 	s.projectName = "integration-test-k3s"
 
 	s.stopComposeProject()
@@ -115,6 +117,18 @@ func (s *BaseSuite) waitForI3oControllerStarted(c *check.C) {
 
 func (s *BaseSuite) waitForTiller(c *check.C) {
 	err := try.WaitReadyDeployment(s.clients, "tiller-deploy", metav1.NamespaceSystem, 60*time.Second)
+	c.Assert(err, checker.IsNil)
+}
+
+func (s *BaseSuite) startWhoami(c *check.C) {
+	// Init helm with the service account created before.
+	cmd := exec.Command("kubectl", "apply",
+		"-f", path.Join(s.dir, "resources/whoami"))
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
+
+	fmt.Println(string(output))
 	c.Assert(err, checker.IsNil)
 }
 

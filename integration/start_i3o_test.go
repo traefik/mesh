@@ -25,4 +25,5 @@ func (s *StartI3oSuite) TestSimpleStart(c *check.C) {
 	err := s.installHelmI3o(c)
 	c.Assert(err, checker.IsNil)
 	s.waitForI3oControllerStarted(c)
+	s.startWhoami(c)
 }
