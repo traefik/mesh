@@ -185,7 +185,67 @@ func (h *Handler) verifyMeshIngressRouteExists(userService *apiv1.Service, creat
 	return nil
 }
 
+func (h *Handler) verifyMeshIngressRouteTCPExists(userService *apiv1.Service, createdService *apiv1.Service) error {
+	meshIngressRouteName := serviceToMeshName(userService.Name, userService.Namespace)
+	matchRule := fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", userService.Name, userService.Namespace, userService.Spec.ClusterIP)
+	labels := map[string]string{
+		"i3o-mesh":     "internal",
+		"user-service": userService.Name,
+	}
+
+	for _, sp := range createdService.Spec.Ports {
+		ir := &traefikv1alpha1.IngressRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-%d", meshIngressRouteName, sp.TargetPort.IntVal),
+				Namespace: userService.Namespace,
+				Labels:    labels,
+			},
+			Spec: traefikv1alpha1.IngressRouteSpec{
+				EntryPoints: []string{fmt.Sprintf("ingress-%d", sp.TargetPort.IntVal)},
+				Routes: []traefikv1alpha1.Route{
+					{
+						Match: matchRule,
+						Kind:  "Rule",
+						Services: []traefikv1alpha1.Service{
+							{
+								Name: userService.Name,
+								Port: sp.Port,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		irInstance, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(ir.Namespace).Get(ir.Name, metav1.GetOptions{})
+		if irInstance == nil || err != nil {
+			if _, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(ir.Namespace).Create(ir); err != nil {
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 func (h *Handler) verifyMeshIngressRouteDeleted(serviceName, serviceNamespace string) error {
+	selector := fmt.Sprintf("user-service=%s", serviceName)
+	irs, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(serviceNamespace).List(metav1.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return err
+	}
+	for _, ir := range irs.Items {
+		if err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(ir.Namespace).Delete(ir.Name, &metav1.DeleteOptions{}); err != nil {
+			return err
+		}
+		log.Debugf("Deleted IngressRoute: %s/%s", ir.Namespace, ir.Name)
+	}
+
+	return nil
+}
+
+func (h *Handler) verifyMeshIngressRouteTCPDeleted(serviceName, serviceNamespace string) error {
 	selector := fmt.Sprintf("user-service=%s", serviceName)
 	irs, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(serviceNamespace).List(metav1.ListOptions{LabelSelector: selector})
 	if err != nil {
