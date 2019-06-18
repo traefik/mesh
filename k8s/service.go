@@ -1,6 +1,6 @@
 package k8s
 
-//Service holds a combination of service name and namespace
+// Service holds a combination of service name and namespace.
 type Service struct {
 	Namespace string
 	Name      string

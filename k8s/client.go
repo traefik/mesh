@@ -21,7 +21,7 @@ type ClientWrapper struct {
 	KubeClient *kubernetes.Clientset
 }
 
-// IgnoreWrapper holds namespaces and services to ignore
+// IgnoreWrapper holds namespaces and services to ignore.
 type IgnoreWrapper struct {
 	Namespaces Namespaces
 	Services   Services

@@ -1,6 +1,6 @@
 package k8s
 
 const (
-	baseAnnotationURL string = "i3o.containo.us/"
-	ServiceType       string = baseAnnotationURL + "i3o-traffic-type"
+	baseAnnotationURL = "i3o.containo.us/"
+	ServiceType       = baseAnnotationURL + "i3o-traffic-type"
 )
