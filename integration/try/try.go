@@ -71,13 +71,14 @@ func WaitClientCreated(url string, kubeConfigPath string, timeout time.Duration)
 }
 
 func applyCIMultiplier(timeout time.Duration) time.Duration {
-	ci := os.Getenv("CI")
-	if len(ci) > 0 {
-		ciTimeoutMultiplier := getCITimeoutMultiplier()
-		log.Debug("Apply CI multiplier:", ciTimeoutMultiplier)
-		return time.Duration(float64(timeout) * ciTimeoutMultiplier)
+	if os.Getenv("CI") == "" {
+		return timeout
 	}
-	return timeout
+
+	ciTimeoutMultiplier := getCITimeoutMultiplier()
+	log.Debug("Apply CI multiplier:", ciTimeoutMultiplier)
+	return time.Duration(float64(timeout) * ciTimeoutMultiplier)
+
 }
 
 func getCITimeoutMultiplier() float64 {
