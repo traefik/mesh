@@ -31,6 +31,6 @@ services:
   node-forwarder:
     <<: *nodes-base
     ports:
-      - "80:80"
-      - "443:443"
+      - "9080:80"
+      - "9443:443"
       - "8080:8080"
