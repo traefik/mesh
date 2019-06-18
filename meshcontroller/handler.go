@@ -40,7 +40,7 @@ func (h *Handler) Init() error {
 }
 
 // ObjectCreated is called when an object is created.
-func (h *Handler) ObjectCreated(event controller.ControllerMessage) {
+func (h *Handler) ObjectCreated(event controller.Message) {
 
 	// assert the type to an object to pull out relevant data
 	userService := event.Object.(*corev1.Service)
@@ -61,8 +61,8 @@ func (h *Handler) ObjectCreated(event controller.ControllerMessage) {
 		return
 	}
 
-	if serviceType, ok := userService.Annotations[k8s.ServiceType]; ok {
-		if strings.ToLower(serviceType) == "http" {
+	if serviceType, ok := userService.Annotations[k8s.AnnotationServiceType]; ok {
+		if strings.ToLower(serviceType) == k8s.ServiceTypeHTTP {
 			// Use http ingressRoutes
 			log.Debugf("Creating associated mesh ingressroute for service: %s/%s", userService.Namespace, userService.Name)
 			if err := h.verifyMeshIngressRouteExists(userService, createdService); err != nil {
@@ -81,7 +81,7 @@ func (h *Handler) ObjectCreated(event controller.ControllerMessage) {
 }
 
 // ObjectDeleted is called when an object is deleted.
-func (h *Handler) ObjectDeleted(event controller.ControllerMessage) {
+func (h *Handler) ObjectDeleted(event controller.Message) {
 
 	// assert the type to an object to pull out relevant data
 	userService := event.Object.(*corev1.Service)
@@ -100,8 +100,8 @@ func (h *Handler) ObjectDeleted(event controller.ControllerMessage) {
 		return
 	}
 
-	serviceType, _ := userService.Annotations[k8s.ServiceType]
-	if strings.ToLower(serviceType) == "http" {
+	serviceType := userService.Annotations[k8s.AnnotationServiceType]
+	if strings.ToLower(serviceType) == k8s.ServiceTypeHTTP {
 		// Use http ingressRoutes
 		log.Debugf("Deleting associated mesh ingressroute for service: %s/%s", userService.Namespace, userService.Name)
 		if err := h.verifyMeshIngressRouteDeleted(userService.Name, userService.Namespace); err != nil {
@@ -118,7 +118,7 @@ func (h *Handler) ObjectDeleted(event controller.ControllerMessage) {
 }
 
 // ObjectUpdated is called when an object is updated.
-func (h *Handler) ObjectUpdated(event controller.ControllerMessage) {
+func (h *Handler) ObjectUpdated(event controller.Message) {
 
 	// assert the type to an object to pull out relevant data
 	newService := event.Object.(*corev1.Service)
@@ -141,8 +141,8 @@ func (h *Handler) ObjectUpdated(event controller.ControllerMessage) {
 	}
 
 	// Delete old routes based on old service.
-	serviceType, _ := oldService.Annotations[k8s.ServiceType]
-	if strings.ToLower(serviceType) == "http" {
+	serviceType := oldService.Annotations[k8s.AnnotationServiceType]
+	if strings.ToLower(serviceType) == k8s.ServiceTypeHTTP {
 		// Use http ingressRoutes
 		log.Debugf("Deleting associated mesh ingressroute for service: %s/%s", oldService.Namespace, oldService.Name)
 		if err := h.verifyMeshIngressRouteDeleted(oldService.Name, oldService.Namespace); err != nil {
@@ -157,22 +157,20 @@ func (h *Handler) ObjectUpdated(event controller.ControllerMessage) {
 	}
 
 	// Create new routes based on new service.
-	serviceType, _ = newService.Annotations[k8s.ServiceType]
-	if strings.ToLower(serviceType) == "http" {
+	serviceType = newService.Annotations[k8s.AnnotationServiceType]
+	if strings.ToLower(serviceType) == k8s.ServiceTypeHTTP {
 		// Use http ingressRoutes
 		log.Debugf("Creating associated mesh ingressroute for service: %s/%s", newService.Namespace, newService.Name)
 		if err := h.verifyMeshIngressRouteExists(newService, updatedMeshService); err != nil {
 			log.Errorf("Could not crea mesh ingressroute: %v", err)
 		}
-		return
+	} else {
+		// Default to use ingressRouteTCP
+		log.Debugf("Creating associated mesh ingressrouteTCP for service: %s/%s", newService.Namespace, newService.Name)
+		if err := h.verifyMeshIngressRouteTCPExists(newService, updatedMeshService); err != nil {
+			log.Errorf("Could not create mesh ingressrouteTCP: %v", err)
+		}
 	}
-
-	// Default to use ingressRouteTCP
-	log.Debugf("Creating associated mesh ingressrouteTCP for service: %s/%s", newService.Namespace, newService.Name)
-	if err := h.verifyMeshIngressRouteTCPExists(newService, updatedMeshService); err != nil {
-		log.Errorf("Could not create mesh ingressrouteTCP: %v", err)
-	}
-
 }
 
 func (h *Handler) verifyMeshServiceExists(service *apiv1.Service) (*apiv1.Service, error) {
@@ -280,7 +278,7 @@ func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserServic
 		return service, nil
 	}
 
-	return nil, fmt.Errorf("Could not update service: %s", meshServiceName)
+	return nil, fmt.Errorf("could not update service: %s", meshServiceName)
 }
 
 func (h *Handler) verifyMeshIngressRouteExists(userService *apiv1.Service, createdService *apiv1.Service) error {

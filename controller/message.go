@@ -6,8 +6,8 @@ const (
 	MessageTypeDeleted = "deleted"
 )
 
-// ControllerMessage holds a message type for processing in the controller queue.
-type ControllerMessage struct {
+// Message holds a message type for processing in the controller queue.
+type Message struct {
 	Key       string
 	Object    interface{}
 	OldObject interface{}

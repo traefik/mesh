@@ -88,7 +88,7 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 				// If object key is not in our list of ignored namespaces
 				if !ObjectKeyInNamespace(key, ignored.Namespaces) {
 					log.Warnf("%s informer - Added: %s to queue", printableType, key)
-					event := ControllerMessage{
+					event := Message{
 						Key:    key,
 						Object: obj,
 						Action: MessageTypeCreated,
@@ -102,7 +102,7 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 			if err == nil {
 				if !ObjectKeyInNamespace(key, ignored.Namespaces) {
 					log.Warnf("%s informer - Update: %s", printableType, key)
-					event := ControllerMessage{
+					event := Message{
 						Key:       key,
 						Object:    newObj,
 						OldObject: oldObj,
@@ -122,7 +122,7 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 			if err == nil {
 				if !ObjectKeyInNamespace(key, ignored.Namespaces) {
 					log.Warnf("%s informer - Delete: %s", printableType, key)
-					event := ControllerMessage{
+					event := Message{
 						Key:    key,
 						Object: obj,
 						Action: MessageTypeDeleted,
@@ -206,7 +206,7 @@ func (c *Controller) processNextItem() bool {
 
 	defer c.queue.Done(item)
 
-	event := item.(ControllerMessage)
+	event := item.(Message)
 
 	switch event.Action {
 	case MessageTypeCreated:
@@ -224,11 +224,8 @@ func (c *Controller) processNextItem() bool {
 
 	c.queue.Forget(item)
 
-	if c.queue.Len() > 0 {
-		// keep the worker loop running by returning true
-		return true
-	}
-	return false
+	// keep the worker loop running by returning true if there are queue objects remaining
+	return c.queue.Len() > 0
 }
 
 func ObjectKeyInNamespace(key string, namespaces k8s.Namespaces) bool {
