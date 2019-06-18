@@ -10,8 +10,11 @@ import (
 )
 
 type MeshController struct {
-	serviceController *controller.Controller
-	handler           *Handler
+	serviceController   *controller.Controller
+	smiAccessController *controller.Controller
+	smiSpecsController  *controller.Controller
+	smiSplitController  *controller.Controller
+	handler             *Handler
 }
 
 // New is used to build the informers and other required components of the mesh controller,

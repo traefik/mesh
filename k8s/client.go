@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	crdclientset "github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/clientset/versioned"
+	crdClientset "github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/clientset/versioned"
+	smiAccessClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	smiSpecsClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
+	smiSplitClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -15,10 +18,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// ClientWrapper holds both the CRD and kube clients.
+// ClientWrapper holds the clients for the various resource controllers.
 type ClientWrapper struct {
-	CrdClient  *crdclientset.Clientset
-	KubeClient *kubernetes.Clientset
+	CrdClient       *crdClientset.Clientset
+	KubeClient      *kubernetes.Clientset
+	SmiAccessClient *smiAccessClientset.Clientset
+	SmiSpecsClient  *smiSpecsClientset.Clientset
+	SmiSplitClient  *smiSplitClientset.Clientset
 }
 
 // IgnoreWrapper holds namespaces and services to ignore.
@@ -44,9 +50,27 @@ func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {
 		return nil, err
 	}
 
+	smiAccessClient, err := buildSmiAccessClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	smiSpecsClient, err := buildSmiSpecsClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	smiSplitClient, err := buildSmiSplitClient(config)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ClientWrapper{
-		CrdClient:  crdClient,
-		KubeClient: kubeClient,
+		CrdClient:       crdClient,
+		KubeClient:      kubeClient,
+		SmiAccessClient: smiAccessClient,
+		SmiSpecsClient:  smiSpecsClient,
+		SmiSplitClient:  smiSplitClient,
 	}, nil
 }
 
@@ -239,11 +263,44 @@ func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
 }
 
 // buildKubernetesCRDClient returns a client to manage CRD objects.
-func buildKubernetesCRDClient(config *rest.Config) (*crdclientset.Clientset, error) {
+func buildKubernetesCRDClient(config *rest.Config) (*crdClientset.Clientset, error) {
 	log.Infoln("Building Kubernetes CRD Client...")
-	client, err := crdclientset.NewForConfig(config)
+	client, err := crdClientset.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create CRD client: %v", err)
+	}
+
+	return client, nil
+}
+
+// buildSmiAccessClient returns a client to manage SMI Access objects.
+func buildSmiAccessClient(config *rest.Config) (*smiAccessClientset.Clientset, error) {
+	log.Infoln("Building SMI Access Client...")
+	client, err := smiAccessClientset.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create SMI Access Client: %v", err)
+	}
+
+	return client, nil
+}
+
+// buildSmiSpecsClient returns a client to manage SMI Specs objects.
+func buildSmiSpecsClient(config *rest.Config) (*smiSpecsClientset.Clientset, error) {
+	log.Infoln("Building SMI Specs Client...")
+	client, err := smiSpecsClientset.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create SMI Specs Client: %v", err)
+	}
+
+	return client, nil
+}
+
+// buildSmiSplitClient returns a client to manage SMI Split objects.
+func buildSmiSplitClient(config *rest.Config) (*smiSplitClientset.Clientset, error) {
+	log.Infoln("Building SMI Split Client...")
+	client, err := smiSplitClientset.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create SMI Split Client: %v", err)
 	}
 
 	return client, nil
