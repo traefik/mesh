@@ -25,8 +25,14 @@ local-build: $(DIST_DIR)
 	CGO_ENABLED=0 go build -o ${DIST_DIR_I3O} ./
 
 # Integration test
-test-integration: $(DIST_DIR) build
+test-integration: $(DIST_DIR) kubectl helm build
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.v
+
+kubectl:
+	@command -v kubectl >/dev/null 2>&1 || (curl -LO https://storage.googleapis.com/kubernetes-release/release/$(shell curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl)
+
+helm:
+	@command -v helm >/dev/null 2>&1 || curl https://raw.githubusercontent.com/helm/helm/v2.14.1/scripts/get | bash
 
 build: $(DIST_DIR)
 	docker build --tag "$(DOCKER_IMAGE_NAME):latest" --build-arg="MAKE_TARGET=local-build" $(CURDIR)/
@@ -48,4 +54,4 @@ vendor:
 helm-lint:
 	helm lint helm/chart/i3o
 
-.PHONY: local-check local-build check build build-docker push-docker vendor helm-lint
+.PHONY: local-check local-build check build build-docker push-docker vendor helm-lint helm kubectl
