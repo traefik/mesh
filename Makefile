@@ -11,7 +11,7 @@ INTEGRATION_TEST_OPTS := -timeout 20m
 
 export GO111MODULE=on
 
-default: check build test-integration
+default: check build
 
 $(DIST_DIR):
 	mkdir -p $(DIST_DIR)
