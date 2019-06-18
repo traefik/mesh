@@ -76,7 +76,7 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 	// Start k3s stack.
 	cmd = exec.Command("docker-compose",
 		"--file", s.composeProject, "--project-name", s.projectName,
-		"up", "-d")
+		"up", "-d", "--scale", "node=2")
 	cmd.Env = os.Environ()
 
 	output, err = cmd.CombinedOutput()
