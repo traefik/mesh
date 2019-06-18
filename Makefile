@@ -11,7 +11,7 @@ INTEGRATION_TEST_OPTS := -timeout 20m
 
 export GO111MODULE=on
 
-default: check build
+default: check build test-integration
 
 $(DIST_DIR):
 	mkdir -p $(DIST_DIR)
@@ -25,7 +25,7 @@ local-build: $(DIST_DIR)
 	CGO_ENABLED=0 go build -o ${DIST_DIR_I3O} ./
 
 # Integration test
-test-integration: $(DIST_DIR) build-docker
+test-integration: $(DIST_DIR) build
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.v
 
 build: $(DIST_DIR)
@@ -37,11 +37,8 @@ build: $(DIST_DIR)
 check: $(DIST_DIR)
 	docker run -t --rm -v $(CURDIR):/go/src/$(PROJECT) -w /go/src/$(PROJECT) -e GO111MODULE golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run --config .golangci.toml
 
-# Build docker image
-build-docker: build
-	docker build -f ./Dockerfile -t ${DOCKER_IMAGE_NAME}:${VERSION} .
-
-push-docker:
+push-docker: build
+	docker tag "$(DOCKER_IMAGE_NAME):latest" ${DOCKER_IMAGE_NAME}:${VERSION}
 	docker push ${DOCKER_IMAGE_NAME}:${VERSION}
 
 # Update vendor directory
