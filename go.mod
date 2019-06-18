@@ -6,7 +6,7 @@ require (
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/containous/flaeg v1.4.1 // indirect
 	github.com/containous/mux v0.0.0-20181024131434-c33f32e26898 // indirect
-	github.com/containous/traefik v2.0.0-alpha4+incompatible
+	github.com/containous/traefik v2.0.0-alpha5+incompatible
 	github.com/go-acme/lego v2.6.0+incompatible // indirect
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	github.com/google/uuid v1.0.0
@@ -28,5 +28,3 @@ require (
 	k8s.io/sample-controller v0.0.0-20190531134801-325dc0a18ed9
 	k8s.io/utils v0.0.0-20190529001817-6999998975a7 // indirect
 )
-
-replace github.com/containous/traefik v2.0.0-alpha4+incompatible => github.com/containous/traefik v2.0.0-alpha4.0.20190617094805-8d7eccad5dd7+incompatible
