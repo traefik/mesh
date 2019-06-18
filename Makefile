@@ -61,4 +61,5 @@ vendor:
 helm-lint:
 	helm lint helm/chart/i3o
 
-.PHONY: local-check local-build check build build-docker push-docker vendor helm-lint helm kubectl test-integration local-test-integration
+.PHONY: local-check local-build check build push-docker \
+		vendor helm-lint helm kubectl test-integration local-test-integration
