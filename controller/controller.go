@@ -29,7 +29,7 @@ type Controller struct {
 
 // New is used to build the informers and other required components of the controller,
 // and return an initialized controller object
-func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignoredNamespaces k8s.Namespaces, handler Handler) *Controller {
+func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignored k8s.IgnoreWrapper, handler Handler) *Controller {
 	var lw *cache.ListWatch
 	var ot runtime.Object
 	var printableType string
@@ -113,7 +113,7 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 			if err == nil {
 				// add the key to the queue for the handler to get
 				// If object key is not in our list of ignored namespaces
-				if !ObjectKeyInNamespace(key, ignoredNamespaces) {
+				if !ObjectKeyInNamespace(key, ignored.Namespaces) {
 					log.Warnf("%s informer - Added: %s to queue", printableType, key)
 					queue.Add(key)
 				}
@@ -122,7 +122,7 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(newObj)
 			if err == nil {
-				if !ObjectKeyInNamespace(key, ignoredNamespaces) {
+				if !ObjectKeyInNamespace(key, ignored.Namespaces) {
 					log.Warnf("%s informer - Update: %s", printableType, key)
 					queue.Add(key)
 				}
@@ -136,7 +136,7 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 			// this then in turn calls MetaNamespaceKeyFunc
 			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 			if err == nil {
-				if !ObjectKeyInNamespace(key, ignoredNamespaces) {
+				if !ObjectKeyInNamespace(key, ignored.Namespaces) {
 					log.Warnf("%s informer - Delete: %s", printableType, key)
 					queue.Add(key)
 				}

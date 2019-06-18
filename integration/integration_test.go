@@ -76,7 +76,7 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 	// Start k3s stack.
 	cmd = exec.Command("docker-compose",
 		"--file", s.composeProject, "--project-name", s.projectName,
-		"up", "-d")
+		"up", "-d", "--scale", "node=2")
 	cmd.Env = os.Environ()
 
 	output, err = cmd.CombinedOutput()
@@ -130,9 +130,12 @@ func (s *BaseSuite) startWhoami(c *check.C) {
 
 	fmt.Println(string(output))
 	c.Assert(err, checker.IsNil)
+
+	err = try.WaitReadyDeployment(s.clients, "whoami", "whoami", 60*time.Second)
+	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) installHelmI3o(c *check.C) error {
+func (s *BaseSuite) installHelmI3o(c *check.C) {
 	// Delete previous tiller service account.
 	err := s.clients.KubeClient.CoreV1().ServiceAccounts(metav1.NamespaceSystem).Delete("tiller", &metav1.DeleteOptions{})
 	if err != nil {
@@ -146,9 +149,7 @@ func (s *BaseSuite) installHelmI3o(c *check.C) error {
 			Namespace: metav1.NamespaceSystem,
 		},
 	})
-	if err != nil {
-		return err
-	}
+	c.Assert(err, checker.IsNil)
 
 	// Delete previous tiller cluster role bindings.
 	err = s.clients.KubeClient.RbacV1().ClusterRoleBindings().Delete("tiller", &metav1.DeleteOptions{})
@@ -174,9 +175,7 @@ func (s *BaseSuite) installHelmI3o(c *check.C) error {
 			},
 		},
 	})
-	if err != nil {
-		return err
-	}
+	c.Assert(err, checker.IsNil)
 
 	// Init helm with the service account created before.
 	cmd := exec.Command("helm", "init",
@@ -186,9 +185,7 @@ func (s *BaseSuite) installHelmI3o(c *check.C) error {
 	output, err := cmd.CombinedOutput()
 
 	fmt.Println(string(output))
-	if err != nil {
-		return err
-	}
+	c.Assert(err, checker.IsNil)
 
 	// Wait for tiller initialized.
 	s.waitForTiller(c)
@@ -201,9 +198,5 @@ func (s *BaseSuite) installHelmI3o(c *check.C) error {
 	output, err = cmd.CombinedOutput()
 
 	fmt.Println(string(output))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	c.Assert(err, checker.IsNil)
 }
