@@ -9,6 +9,9 @@ GOLANGCI_LINTER_VERSION = v1.16.0
 
 INTEGRATION_TEST_OPTS := -timeout 20m
 
+DOCKER_INTEGRATION_TEST_NAME := $(DOCKER_IMAGE_NAME)-integration-tests
+DOCKER_INTEGRATION_TEST_OTPS := -v $(CURDIR):/i3o --privileged -e INTEGRATION_TEST_OPTS
+
 export GO111MODULE=on
 
 default: check build
@@ -25,8 +28,12 @@ local-build: $(DIST_DIR)
 	CGO_ENABLED=0 go build -o ${DIST_DIR_I3O} ./
 
 # Integration test
-test-integration: $(DIST_DIR) kubectl helm build
+local-test-integration: $(DIST_DIR) kubectl helm build
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.v
+
+test-integration:
+	docker build -t $(DOCKER_INTEGRATION_TEST_NAME) integration/resources/build
+	docker run --rm $(DOCKER_INTEGRATION_TEST_OTPS) $(DOCKER_INTEGRATION_TEST_NAME) make local-test-integration
 
 kubectl:
 	@command -v kubectl >/dev/null 2>&1 || (curl -LO https://storage.googleapis.com/kubernetes-release/release/$(shell curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl)
@@ -54,4 +61,4 @@ vendor:
 helm-lint:
 	helm lint helm/chart/i3o
 
-.PHONY: local-check local-build check build build-docker push-docker vendor helm-lint helm kubectl
+.PHONY: local-check local-build check build build-docker push-docker vendor helm-lint helm kubectl test-integration local-test-integration
