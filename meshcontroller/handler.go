@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/util/retry"
 )
 
 // MeshControllerHandler is an implementation of Handler.
@@ -41,7 +42,6 @@ func (h *Handler) Init() error {
 
 // ObjectCreated is called when an object is created.
 func (h *Handler) ObjectCreated(event controller.Message) {
-
 	// assert the type to an object to pull out relevant data
 	userService := event.Object.(*corev1.Service)
 	if h.Ignored.Namespaces.Contains(userService.Namespace) {
@@ -82,7 +82,6 @@ func (h *Handler) ObjectCreated(event controller.Message) {
 
 // ObjectDeleted is called when an object is deleted.
 func (h *Handler) ObjectDeleted(event controller.Message) {
-
 	// assert the type to an object to pull out relevant data
 	userService := event.Object.(*corev1.Service)
 	if h.Ignored.Namespaces.Contains(userService.Namespace) {
@@ -119,7 +118,6 @@ func (h *Handler) ObjectDeleted(event controller.Message) {
 
 // ObjectUpdated is called when an object is updated.
 func (h *Handler) ObjectUpdated(event controller.Message) {
-
 	// assert the type to an object to pull out relevant data
 	newService := event.Object.(*corev1.Service)
 	oldService := event.OldObject.(*corev1.Service)
@@ -233,52 +231,57 @@ func (h *Handler) verifyMeshServiceDeleted(serviceName, serviceNamespace string)
 // updateMeshService updates the mesh service based on an old/new user service, and returns the updated mesh service
 // for use to update the ingressRoutes[TCP]
 func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserService *apiv1.Service) (*apiv1.Service, error) {
+	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 	meshServiceName := userServiceToMeshServiceName(oldUserService.Name, oldUserService.Namespace)
-	meshServiceInstance, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
+	var svc *corev1.Service
+	service, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	if meshServiceInstance != nil {
-		var ports []apiv1.ServicePort
-
-		for id, sp := range newUserService.Spec.Ports {
-			if sp.Protocol != corev1.ProtocolTCP {
-				log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, newUserService.Namespace, newUserService.Name)
-				continue
-			}
-
-			meshPort := apiv1.ServicePort{
-				Name:       sp.Name,
-				Port:       sp.Port,
-				TargetPort: intstr.FromInt(5000 + id),
-			}
-
-			ports = append(ports, meshPort)
-		}
-
-		svc := &apiv1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      meshServiceName,
-				Namespace: k8s.MeshNamespace,
-			},
-			Spec: apiv1.ServiceSpec{
-				Ports: ports,
-				Selector: map[string]string{
-					"component": "i3o-mesh",
-				},
-			},
-		}
-
-		service, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Update(svc)
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		existing, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
 		if err != nil {
-			return nil, err
+			return err
 		}
-		log.Debugf("Updated service: %s/%s", k8s.MeshNamespace, meshServiceName)
-		return service, nil
+
+		if existing != nil {
+			var ports []apiv1.ServicePort
+
+			for id, sp := range newUserService.Spec.Ports {
+				if sp.Protocol != corev1.ProtocolTCP {
+					log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, newUserService.Namespace, newUserService.Name)
+					continue
+				}
+
+				meshPort := apiv1.ServicePort{
+					Name:       sp.Name,
+					Port:       sp.Port,
+					TargetPort: intstr.FromInt(5000 + id),
+				}
+
+				ports = append(ports, meshPort)
+			}
+
+			service.SetResourceVersion(existing.GetResourceVersion())
+			service.Spec.Ports = ports
+
+			svc, err = h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Update(service)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+		}
+		return nil
+	})
+
+	if retryErr != nil {
+		return nil, fmt.Errorf("unable to update service %q: %v", meshServiceName, retryErr)
 	}
 
-	return nil, fmt.Errorf("could not update service: %s", meshServiceName)
+	log.Debugf("Updated service: %s/%s", k8s.MeshNamespace, meshServiceName)
+	return svc, nil
+
 }
 
 func (h *Handler) verifyMeshIngressRouteExists(userService *apiv1.Service, createdService *apiv1.Service) error {
