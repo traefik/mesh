@@ -205,8 +205,10 @@ func (h *Handler) verifyMeshServiceExists(service *apiv1.Service) (*apiv1.Servic
 				},
 			},
 		}
+
 		return h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Create(svc)
 	}
+
 	return meshServiceInstance, nil
 }
 
@@ -233,12 +235,8 @@ func (h *Handler) verifyMeshServiceDeleted(serviceName, serviceNamespace string)
 func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserService *apiv1.Service) (*apiv1.Service, error) {
 	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 	meshServiceName := userServiceToMeshServiceName(oldUserService.Name, oldUserService.Namespace)
-	var svc *corev1.Service
-	service, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
 
+	var updatedSvc *corev1.Service
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		existing, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
 		if err != nil {
@@ -263,10 +261,9 @@ func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserServic
 				ports = append(ports, meshPort)
 			}
 
-			service.SetResourceVersion(existing.GetResourceVersion())
-			service.Spec.Ports = ports
+			existing.Spec.Ports = ports
 
-			svc, err = h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Update(service)
+			updatedSvc, err = h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Update(existing)
 			if err != nil {
 				fmt.Println(err)
 				return err
@@ -280,7 +277,7 @@ func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserServic
 	}
 
 	log.Debugf("Updated service: %s/%s", k8s.MeshNamespace, meshServiceName)
-	return svc, nil
+	return updatedSvc, nil
 
 }
 
