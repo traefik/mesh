@@ -7,4 +7,4 @@ image:
   # tag: v0.0.1
   # (Optional)
   # pullSecret: xxx
-  traefik: traefik:v2.0.0-alpha4-alpine
+  traefik: containous/traefik:experimental-v2.0
