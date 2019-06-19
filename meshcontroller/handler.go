@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/containous/i3o/controller"
 	"github.com/containous/i3o/k8s"
 	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -11,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/util/retry"
 )
 
 // MeshControllerHandler is an implementation of Handler.
@@ -39,9 +41,9 @@ func (h *Handler) Init() error {
 }
 
 // ObjectCreated is called when an object is created.
-func (h *Handler) ObjectCreated(obj interface{}) {
+func (h *Handler) ObjectCreated(event controller.Message) {
 	// assert the type to an object to pull out relevant data
-	userService := obj.(*corev1.Service)
+	userService := event.Object.(*corev1.Service)
 	if h.Ignored.Namespaces.Contains(userService.Namespace) {
 		return
 	}
@@ -52,72 +54,125 @@ func (h *Handler) ObjectCreated(obj interface{}) {
 
 	log.Debugf("MeshControllerHandler ObjectCreated with type: *corev1.Service: %s/%s", userService.Namespace, userService.Name)
 
-	log.Debugf("Verifying associated mesh service for service: %s/%s", userService.Namespace, userService.Name)
+	log.Debugf("Creating associated mesh service for service: %s/%s", userService.Namespace, userService.Name)
 	createdService, err := h.verifyMeshServiceExists(userService)
 	if err != nil {
-		log.Errorf("Could not verify mesh service exists: %v", err)
+		log.Errorf("Could not create mesh service: %v", err)
 		return
 	}
 
-	if serviceType, ok := userService.Annotations[k8s.ServiceType]; ok {
-		if strings.ToLower(serviceType) == "http" {
+	if serviceType, ok := userService.Annotations[k8s.AnnotationServiceType]; ok {
+		if strings.ToLower(serviceType) == k8s.ServiceTypeHTTP {
 			// Use http ingressRoutes
-			log.Debugf("Verifying associated mesh ingressroute for service: %s/%s", userService.Namespace, userService.Name)
+			log.Debugf("Creating associated mesh ingressroute for service: %s/%s", userService.Namespace, userService.Name)
 			if err := h.verifyMeshIngressRouteExists(userService, createdService); err != nil {
-				log.Errorf("Could not verify mesh ingressroute exists: %v", err)
+				log.Errorf("Could not create mesh ingressroute: %v", err)
 			}
 			return
 		}
 	}
 
 	// Default to use ingressRouteTCP
-	log.Debugf("Verifying associated mesh ingressrouteTCP for service: %s/%s", userService.Namespace, userService.Name)
+	log.Debugf("Creating associated mesh ingressrouteTCP for service: %s/%s", userService.Namespace, userService.Name)
 	if err := h.verifyMeshIngressRouteTCPExists(userService, createdService); err != nil {
-		log.Errorf("Could not verify mesh ingressrouteTCP exists: %v", err)
+		log.Errorf("Could not create mesh ingressrouteTCP: %v", err)
 	}
 
 }
 
 // ObjectDeleted is called when an object is deleted.
-func (h *Handler) ObjectDeleted(key string, obj interface{}) {
-	name, namespace := keyToNameAndNamespace(key)
-	log.Debugf("MeshControllerHandler.ObjectDeleted: %s", key)
-
-	// assert the type to find out what was deleted
-	if _, ok := obj.(corev1.Service); ok {
-		// This is a service, process as a deleted service.
-		if h.Ignored.Namespaces.Contains(namespace) {
-			return
-		}
-
-		if h.Ignored.Services.Contains(name, namespace) {
-			return
-		}
-
-		if err := h.verifyMeshServiceDeleted(name, namespace); err != nil {
-			log.Errorf("Could not verify mesh service deleted: %v", err)
-			return
-		}
-
-		// Since we don't have annotations from the key, delete both HTTP and TCP routes for the service
-		if err := h.verifyMeshIngressRouteDeleted(name, namespace); err != nil {
-			log.Errorf("Could not verify mesh ingressroute deleted: %v", err)
-		}
-
-		if err := h.verifyMeshIngressRouteTCPDeleted(name, namespace); err != nil {
-			log.Errorf("Could not verify mesh ingressroute deleted: %v", err)
-		}
+func (h *Handler) ObjectDeleted(event controller.Message) {
+	// assert the type to an object to pull out relevant data
+	userService := event.Object.(*corev1.Service)
+	if h.Ignored.Namespaces.Contains(userService.Namespace) {
+		return
 	}
 
+	if h.Ignored.Services.Contains(userService.Name, userService.Namespace) {
+		return
+	}
+
+	log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", userService.Namespace, userService.Name)
+
+	if err := h.verifyMeshServiceDeleted(userService.Name, userService.Namespace); err != nil {
+		log.Errorf("Could not verify mesh service deleted: %v", err)
+		return
+	}
+
+	serviceType := userService.Annotations[k8s.AnnotationServiceType]
+	if strings.ToLower(serviceType) == k8s.ServiceTypeHTTP {
+		// Use http ingressRoutes
+		log.Debugf("Deleting associated mesh ingressroute for service: %s/%s", userService.Namespace, userService.Name)
+		if err := h.verifyMeshIngressRouteDeleted(userService.Name, userService.Namespace); err != nil {
+			log.Errorf("Could not delete mesh ingressroute: %v", err)
+		}
+		return
+	}
+
+	// Default to use ingressRouteTCP
+	log.Debugf("Deleting associated mesh ingressrouteTCP for service: %s/%s", userService.Namespace, userService.Name)
+	if err := h.verifyMeshIngressRouteTCPDeleted(userService.Name, userService.Namespace); err != nil {
+		log.Errorf("Could not delete mesh ingressroute: %v", err)
+	}
 }
 
 // ObjectUpdated is called when an object is updated.
-func (h *Handler) ObjectUpdated(objOld, objNew interface{}) {
-	log.Debugln("MeshControllerHandler.ObjectUpdated")
+func (h *Handler) ObjectUpdated(event controller.Message) {
+	// assert the type to an object to pull out relevant data
+	newService := event.Object.(*corev1.Service)
+	oldService := event.OldObject.(*corev1.Service)
+
+	if h.Ignored.Namespaces.Contains(newService.Namespace) {
+		return
+	}
+
+	if h.Ignored.Services.Contains(newService.Name, newService.Namespace) {
+		return
+	}
+
+	log.Debugf("MeshControllerHandler ObjectUdated with type: *corev1.Service: %s/%s", newService.Namespace, newService.Name)
+
+	updatedMeshService, err := h.updateMeshService(oldService, newService)
+	if err != nil {
+		log.Errorf("Could not update mesh service: %v", err)
+		return
+	}
+
+	// Delete old routes based on old service.
+	serviceType := oldService.Annotations[k8s.AnnotationServiceType]
+	if strings.ToLower(serviceType) == k8s.ServiceTypeHTTP {
+		// Use http ingressRoutes
+		log.Debugf("Deleting associated mesh ingressroute for service: %s/%s", oldService.Namespace, oldService.Name)
+		if err := h.verifyMeshIngressRouteDeleted(oldService.Name, oldService.Namespace); err != nil {
+			log.Errorf("Could not delete mesh ingressroute: %v", err)
+		}
+	} else {
+		// Default to use ingressRouteTCP
+		log.Debugf("Deleting associated mesh ingressrouteTCP for service: %s/%s", oldService.Namespace, oldService.Name)
+		if err := h.verifyMeshIngressRouteTCPDeleted(oldService.Name, oldService.Namespace); err != nil {
+			log.Errorf("Could not delete mesh ingressroute: %v", err)
+		}
+	}
+
+	// Create new routes based on new service.
+	serviceType = newService.Annotations[k8s.AnnotationServiceType]
+	if strings.ToLower(serviceType) == k8s.ServiceTypeHTTP {
+		// Use http ingressRoutes
+		log.Debugf("Creating associated mesh ingressroute for service: %s/%s", newService.Namespace, newService.Name)
+		if err := h.verifyMeshIngressRouteExists(newService, updatedMeshService); err != nil {
+			log.Errorf("Could not crea mesh ingressroute: %v", err)
+		}
+	} else {
+		// Default to use ingressRouteTCP
+		log.Debugf("Creating associated mesh ingressrouteTCP for service: %s/%s", newService.Namespace, newService.Name)
+		if err := h.verifyMeshIngressRouteTCPExists(newService, updatedMeshService); err != nil {
+			log.Errorf("Could not create mesh ingressrouteTCP: %v", err)
+		}
+	}
 }
 
 func (h *Handler) verifyMeshServiceExists(service *apiv1.Service) (*apiv1.Service, error) {
-	meshServiceName := serviceToMeshName(service.Name, service.Namespace)
+	meshServiceName := userServiceToMeshServiceName(service.Name, service.Namespace)
 	meshServiceInstance, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
 	if meshServiceInstance == nil || err != nil {
 		// Mesh service does not exist.
@@ -156,7 +211,7 @@ func (h *Handler) verifyMeshServiceExists(service *apiv1.Service) (*apiv1.Servic
 }
 
 func (h *Handler) verifyMeshServiceDeleted(serviceName, serviceNamespace string) error {
-	meshServiceName := serviceToMeshName(serviceName, serviceNamespace)
+	meshServiceName := userServiceToMeshServiceName(serviceName, serviceNamespace)
 	meshServiceInstance, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -173,8 +228,64 @@ func (h *Handler) verifyMeshServiceDeleted(serviceName, serviceNamespace string)
 	return nil
 }
 
+// updateMeshService updates the mesh service based on an old/new user service, and returns the updated mesh service
+// for use to update the ingressRoutes[TCP]
+func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserService *apiv1.Service) (*apiv1.Service, error) {
+	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+	meshServiceName := userServiceToMeshServiceName(oldUserService.Name, oldUserService.Namespace)
+	var svc *corev1.Service
+	service, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		existing, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if existing != nil {
+			var ports []apiv1.ServicePort
+
+			for id, sp := range newUserService.Spec.Ports {
+				if sp.Protocol != corev1.ProtocolTCP {
+					log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, newUserService.Namespace, newUserService.Name)
+					continue
+				}
+
+				meshPort := apiv1.ServicePort{
+					Name:       sp.Name,
+					Port:       sp.Port,
+					TargetPort: intstr.FromInt(5000 + id),
+				}
+
+				ports = append(ports, meshPort)
+			}
+
+			service.SetResourceVersion(existing.GetResourceVersion())
+			service.Spec.Ports = ports
+
+			svc, err = h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Update(service)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+		}
+		return nil
+	})
+
+	if retryErr != nil {
+		return nil, fmt.Errorf("unable to update service %q: %v", meshServiceName, retryErr)
+	}
+
+	log.Debugf("Updated service: %s/%s", k8s.MeshNamespace, meshServiceName)
+	return svc, nil
+
+}
+
 func (h *Handler) verifyMeshIngressRouteExists(userService *apiv1.Service, createdService *apiv1.Service) error {
-	meshIngressRouteName := serviceToMeshName(userService.Name, userService.Namespace)
+	meshIngressRouteName := userServiceToMeshServiceName(userService.Name, userService.Namespace)
 	matchRule := fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", userService.Name, userService.Namespace, userService.Spec.ClusterIP)
 	labels := map[string]string{
 		"i3o-mesh":     "internal",
@@ -218,7 +329,7 @@ func (h *Handler) verifyMeshIngressRouteExists(userService *apiv1.Service, creat
 }
 
 func (h *Handler) verifyMeshIngressRouteTCPExists(userService *apiv1.Service, createdService *apiv1.Service) error {
-	meshIngressRouteName := serviceToMeshName(userService.Name, userService.Namespace)
+	meshIngressRouteName := userServiceToMeshServiceName(userService.Name, userService.Namespace)
 	matchRule := fmt.Sprintf("HostSNI(`%s.%s.traefik.mesh`) || HostSNI(`%s`)", userService.Name, userService.Namespace, userService.Spec.ClusterIP)
 	labels := map[string]string{
 		"i3o-mesh":     "internal",
@@ -292,18 +403,7 @@ func (h *Handler) verifyMeshIngressRouteTCPDeleted(serviceName, serviceNamespace
 	return nil
 }
 
-// serviceToMeshName converts a service with a namespace to a traefik-mesh ingressroute name.
-func serviceToMeshName(serviceName string, namespace string) string {
+// userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh ingressroute name.
+func userServiceToMeshServiceName(serviceName string, namespace string) string {
 	return fmt.Sprintf("traefik-%s-%s", namespace, serviceName)
-}
-
-// keyToNameAndNamespace splits a key to key and namespace strings
-func keyToNameAndNamespace(key string) (name, namespace string) {
-	splitKey := strings.Split(key, "/")
-	if len(splitKey) == 1 {
-		// No namespace in the key, return key in default namespace
-		return key, metav1.NamespaceDefault
-	}
-
-	return splitKey[1], splitKey[0]
 }

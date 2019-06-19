@@ -47,33 +47,6 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 		}
 		ot = &apiv1.Service{}
 		printableType = "service"
-	case apiv1.Endpoints:
-		lw = &cache.ListWatch{
-			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-				// list all of the endpoints (core resource) in all namespaces
-				return clients.KubeClient.CoreV1().Endpoints(metav1.NamespaceAll).List(options)
-			},
-			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				// watch all of the endpoints (core resource) in all namespaces
-				return clients.KubeClient.CoreV1().Endpoints(metav1.NamespaceAll).Watch(options)
-			},
-		}
-		ot = &apiv1.Endpoints{}
-		printableType = "endpoint"
-
-	case apiv1.Namespace:
-		lw = &cache.ListWatch{
-			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-				// list all of the namespaces
-				return clients.KubeClient.CoreV1().Namespaces().List(options)
-			},
-			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				// watch all of the namespaces
-				return clients.KubeClient.CoreV1().Namespaces().Watch(options)
-			},
-		}
-		ot = &apiv1.Namespace{}
-		printableType = "namespace"
 
 	case traefikv1alpha1.IngressRoute:
 		lw = &cache.ListWatch{
@@ -115,7 +88,12 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 				// If object key is not in our list of ignored namespaces
 				if !ObjectKeyInNamespace(key, ignored.Namespaces) {
 					log.Warnf("%s informer - Added: %s to queue", printableType, key)
-					queue.Add(key)
+					event := Message{
+						Key:    key,
+						Object: obj,
+						Action: MessageTypeCreated,
+					}
+					queue.Add(event)
 				}
 			}
 		},
@@ -124,7 +102,13 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 			if err == nil {
 				if !ObjectKeyInNamespace(key, ignored.Namespaces) {
 					log.Warnf("%s informer - Update: %s", printableType, key)
-					queue.Add(key)
+					event := Message{
+						Key:       key,
+						Object:    newObj,
+						OldObject: oldObj,
+						Action:    MessageTypeUpdated,
+					}
+					queue.Add(event)
 				}
 			}
 		},
@@ -138,7 +122,12 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 			if err == nil {
 				if !ObjectKeyInNamespace(key, ignored.Namespaces) {
 					log.Warnf("%s informer - Delete: %s", printableType, key)
-					queue.Add(key)
+					event := Message{
+						Key:    key,
+						Object: obj,
+						Action: MessageTypeDeleted,
+					}
+					queue.Add(event)
 				}
 			}
 		},
@@ -199,15 +188,14 @@ func (c *Controller) runWorker() {
 }
 
 // processNextItem retrieves each queued item and takes the
-// necessary handler action based off of if the item was
-// created or deleted
+// necessary handler action based off of the event type.
 func (c *Controller) processNextItem() bool {
 	log.Debugf("Controller.%s Waiting for next item to process...", c.controllerTypeString)
 
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
 	// processing
-	key, quit := c.queue.Get()
+	item, quit := c.queue.Get()
 
 	// stop the worker loop from running as this indicates we
 	// have sent a shutdown message that the queue has indicated
@@ -216,54 +204,28 @@ func (c *Controller) processNextItem() bool {
 		return false
 	}
 
-	defer c.queue.Done(key)
+	defer c.queue.Done(item)
 
-	// assert the string out of the key (format `namespace/name`)
-	keyRaw := key.(string)
+	event := item.(Message)
 
-	// take the string key and get the object out of the indexer
-	//
-	// item will contain the complex object for the resource and
-	// exists is a bool that'll indicate whether or not the
-	// resource was created (true) or deleted (false)
-	//
-	// if there is an error in getting the key from the index
-	// then we want to retry this particular queue key a certain
-	// number of times (5 here) before we forget the queue key
-	// and throw an error
-	item, exists, err := c.informer.GetIndexer().GetByKey(keyRaw)
-	if err != nil {
-		if c.queue.NumRequeues(key) < 5 {
-			log.Errorf("Controller.processNextItem: Failed processing item with key %s with error %v, retrying", key, err)
-			c.queue.AddRateLimited(key)
-		} else {
-			log.Errorf("Controller.processNextItem: Failed processing item with key %s with error %v, no more retries", key, err)
-			c.queue.Forget(key)
-			utilruntime.HandleError(err)
-		}
+	switch event.Action {
+	case MessageTypeCreated:
+		log.Infof("Controller.%s.processNextItem: created: %s", c.controllerTypeString, event.Key)
+		c.handler.ObjectCreated(event)
+
+	case MessageTypeUpdated:
+		log.Infof("Controller.%s.processNextItem: updated: %s", c.controllerTypeString, event.Key)
+		c.handler.ObjectUpdated(event)
+
+	case MessageTypeDeleted:
+		log.Infof("Controller.%s.processNextItem: deleted: %s", c.controllerTypeString, event.Key)
+		c.handler.ObjectDeleted(event)
 	}
 
-	// if the item doesn't exist then it was deleted and we need to fire off the handler's
-	// ObjectDeleted method. but if the object does exist that indicates that the object
-	// was created (or updated) so run the ObjectCreated method
-	//
-	// after both instances, we want to forget the key from the queue, as this indicates
-	// a code path of successful queue key processing
-	if !exists {
-		log.Infof("Controller.%s.processNextItem: deleted: %s", c.controllerTypeString, keyRaw)
-		c.handler.ObjectDeleted(keyRaw, c.controllerType)
-		c.queue.Forget(key)
-	} else {
-		log.Infof("Controller.%s.processNextItem: created: %s", c.controllerTypeString, keyRaw)
-		c.handler.ObjectCreated(item)
-		c.queue.Forget(key)
-	}
+	c.queue.Forget(item)
 
-	if c.queue.Len() > 0 {
-		// keep the worker loop running by returning true
-		return true
-	}
-	return false
+	// keep the worker loop running by returning true if there are queue objects remaining
+	return c.queue.Len() > 0
 }
 
 func ObjectKeyInNamespace(key string, namespaces k8s.Namespaces) bool {

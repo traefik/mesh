@@ -2,10 +2,12 @@ package integration
 
 import (
 	"os"
+	"time"
 
 	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -46,4 +48,23 @@ func (s *StartI3oSuite) TestSimpleStart(c *check.C) {
 	c.Assert(len(ingressRouteList.Items), checker.Equals, 1)
 
 	c.Assert(ingressRouteList.Items[0].Name, checker.Contains, "whoami-whoami-http")
+
+	// Get the whoami service in whoami namespace
+	service, err := s.clients.KubeClient.CoreV1().Services("whoami").Get("whoami", v1.GetOptions{})
+	c.Assert(err, checker.IsNil)
+	// Add a fake port to the service
+	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "test-update", Port: 90})
+	// Update the service
+	_, err = s.clients.KubeClient.CoreV1().Services("whoami").Update(service)
+	c.Assert(err, checker.IsNil)
+
+	// FIXME remove
+	time.Sleep(10 * time.Second)
+	// Check that ingressroutetcs is updates for the whoami service.
+	ingressRouteTCPList, err = s.clients.CrdClient.TraefikV1alpha1().IngressRouteTCPs("whoami").List(v1.ListOptions{})
+	c.Assert(err, checker.IsNil)
+	c.Assert(ingressRouteTCPList, checker.NotNil)
+	c.Assert(len(ingressRouteTCPList.Items), checker.Equals, 2)
+
+	c.Assert(ingressRouteTCPList.Items[0].Name, checker.Contains, "whoami-whoami")
 }
