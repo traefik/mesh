@@ -6,7 +6,8 @@ The simple service mesh controller
 
 To run this app, you require the following:
 
-- Kubernetes 1.11+ (Not sure, but probably close to the oldest version supported)
+- Kubernetes 1.11+
+- CoreDNS installed as Cluster DNS Provider (https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/)
 - Helm v2 with working tiller service account (may require updating tiller or creating the service account/`helm init`)
 
 ## Installation
@@ -35,5 +36,9 @@ To deploy the helm chart, run:
 
 `helm install helm/chart/i3o --set image.pullPolicy=IfNotPresent --set image.tag=latest`
 
+## Usage
 
+To use i3o, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.traefik.mesh`.
+This will access the i3o service mesh, and will allow you to route requests through i3o.
 
+By default, i3o is opt-in, meaning you have to use the i3o service names to access the mesh, so you can have some services running through the mesh, and some services not.
