@@ -1,8 +1,8 @@
 package mesh
 
 import (
-	"github.com/containous/i3o/pkg/controller/i3o"
-	"github.com/containous/i3o/pkg/k8s"
+	"github.com/containous/i3o/internal/controller/i3o"
+	"github.com/containous/i3o/internal/k8s"
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"

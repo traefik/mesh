@@ -7,6 +7,11 @@ DIST_DIR_I3O = $(DIST_DIR)/$(BINARY_NAME)
 PROJECT ?= github.com/containous/$(BINARY_NAME)
 GOLANGCI_LINTER_VERSION = v1.16.0
 
+TAG_NAME := $(shell git tag -l --contains HEAD)
+SHA := $(shell git rev-parse --short HEAD)
+VERSION := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
+BUILD_DATE := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
+
 INTEGRATION_TEST_OPTS := -timeout 20m
 
 DOCKER_INTEGRATION_TEST_NAME := $(DOCKER_IMAGE_NAME)-integration-tests
@@ -25,7 +30,11 @@ local-check: $(DIST_DIR)
 
 # Build
 local-build: $(DIST_DIR)
-	CGO_ENABLED=0 go build -o ${DIST_DIR_I3O} ./
+	CGO_ENABLED=0 go build -o ${DIST_DIR_I3O} -ldflags="-s -w \
+	-X github.com/containous/$(BINARY_NAME)/cmd/version.version=$(VERSION) \
+	-X github.com/containous/$(BINARY_NAME)/cmd/version.commit=$(SHA) \
+	-X github.com/containous/$(BINARY_NAME)/cmd/version.date=$(BUILD_DATE)" \
+	$(CURDIR)/cmd/$(BINARY_NAME)/*.go
 
 # Integration test
 local-test-integration: $(DIST_DIR) kubectl helm build

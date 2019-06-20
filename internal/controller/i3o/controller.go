@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containous/i3o/pkg/k8s"
+	"github.com/containous/i3o/internal/k8s"
 	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"

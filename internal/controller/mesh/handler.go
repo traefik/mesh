@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/containous/i3o/pkg/controller/i3o"
-	"github.com/containous/i3o/pkg/k8s"
+	"github.com/containous/i3o/internal/controller/i3o"
+	"github.com/containous/i3o/internal/k8s"
 	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"

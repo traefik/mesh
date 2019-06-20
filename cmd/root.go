@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
-	"github.com/containous/i3o/pkg/controller/mesh"
-	"github.com/containous/i3o/pkg/k8s"
+	"github.com/containous/i3o/internal/controller/mesh"
+	"github.com/containous/i3o/internal/k8s"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/sample-controller/pkg/signals"
