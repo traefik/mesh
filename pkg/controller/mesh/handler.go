@@ -1,11 +1,11 @@
-package meshcontroller
+package mesh
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/containous/i3o/controller"
-	"github.com/containous/i3o/k8s"
+	"github.com/containous/i3o/pkg/controller/i3o"
+	"github.com/containous/i3o/pkg/k8s"
 	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
@@ -41,7 +41,7 @@ func (h *Handler) Init() error {
 }
 
 // ObjectCreated is called when an object is created.
-func (h *Handler) ObjectCreated(event controller.Message) {
+func (h *Handler) ObjectCreated(event i3o.Message) {
 	// assert the type to an object to pull out relevant data
 	userService := event.Object.(*corev1.Service)
 	if h.Ignored.Namespaces.Contains(userService.Namespace) {
@@ -81,7 +81,7 @@ func (h *Handler) ObjectCreated(event controller.Message) {
 }
 
 // ObjectDeleted is called when an object is deleted.
-func (h *Handler) ObjectDeleted(event controller.Message) {
+func (h *Handler) ObjectDeleted(event i3o.Message) {
 	// assert the type to an object to pull out relevant data
 	userService := event.Object.(*corev1.Service)
 	if h.Ignored.Namespaces.Contains(userService.Namespace) {
@@ -117,7 +117,7 @@ func (h *Handler) ObjectDeleted(event controller.Message) {
 }
 
 // ObjectUpdated is called when an object is updated.
-func (h *Handler) ObjectUpdated(event controller.Message) {
+func (h *Handler) ObjectUpdated(event i3o.Message) {
 	// assert the type to an object to pull out relevant data
 	newService := event.Object.(*corev1.Service)
 	oldService := event.OldObject.(*corev1.Service)

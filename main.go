@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/containous/i3o/cmd"
+	"github.com/containous/i3o/pkg/cmd"
 )
 
 func main() {

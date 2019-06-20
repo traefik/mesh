@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/containous/i3o/integration/try"
-	"github.com/containous/i3o/k8s"
+	"github.com/containous/i3o/pkg/k8s"
 	"github.com/go-check/check"
 	log "github.com/sirupsen/logrus"
 	checker "github.com/vdemeester/shakers"

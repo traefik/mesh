@@ -1,4 +1,4 @@
-package controller
+package i3o
 
 // Handler interface contains the methods that are required
 type Handler interface {

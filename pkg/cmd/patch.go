@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/containous/i3o/k8s"
+	"github.com/containous/i3o/pkg/k8s"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

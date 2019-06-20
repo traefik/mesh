@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
-	"github.com/containous/i3o/k8s"
-	"github.com/containous/i3o/meshcontroller"
+	"github.com/containous/i3o/pkg/controller/mesh"
+	"github.com/containous/i3o/pkg/k8s"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/sample-controller/pkg/signals"
@@ -65,7 +65,7 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 		}
 
 		// Create a new controller.
-		controller := meshcontroller.NewMeshController(clients)
+		controller := mesh.NewMeshController(clients)
 
 		// run the controller loop to process items
 		if err = controller.Run(stopCh); err != nil {
