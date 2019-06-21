@@ -62,7 +62,7 @@ spec:
             - "--providers.kubernetescrd"
             - "--providers.kubernetescrd.labelselector=i3o-mesh=internal"
             - "--tracing.backend=jaeger"
-            - "--tracing.jaeger.localagenthostport=jaeger-agent.default.svc.cluster.local"
+            - "--tracing.jaeger.localagenthostport=jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local"
             - "--api.dashboard"
             - "--accesslog"
           securityContext:
