@@ -251,6 +251,10 @@ func (s *BaseSuite) installTinyToolsI3o(c *check.C) {
 	s.waitForTools(c)
 }
 
-func (s *BaseSuite) getToolsPodI3o(c *check.C) (*corev1.Pod, error) {
-	return s.clients.KubeClient.CoreV1().Pods(metav1.NamespaceDefault).Get("tiny-tools", metav1.GetOptions{})
+func (s *BaseSuite) getToolsPodI3o(c *check.C) *corev1.Pod {
+	pod, err := s.clients.KubeClient.CoreV1().Pods(metav1.NamespaceDefault).Get("tiny-tools", metav1.GetOptions{})
+	c.Assert(err, checker.IsNil)
+	c.Assert(pod, checker.NotNil)
+
+	return pod
 }

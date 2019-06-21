@@ -40,8 +40,7 @@ func (s *CurlI3oSuite) TearDownSuite(c *check.C) {
 
 func (s *CurlI3oSuite) TestSimpleCURL(c *check.C) {
 	// Get the tools pod service in whoami namespace
-	pod, err := s.getToolsPodI3o(c)
-	c.Assert(err, checker.IsNil)
+	pod := s.getToolsPodI3o(c)
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
