@@ -53,7 +53,6 @@ func (s *CurlI3oSuite) TestSimpleCURL(c *check.C) {
 		"-c",
 		pod.Spec.Containers[0].Name,
 		"curl",
-		"-v",
 		"whoami.whoami.traefik.mesh",
 	}
 
