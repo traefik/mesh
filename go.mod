@@ -4,7 +4,6 @@ go 1.12
 
 require (
 	github.com/cenkalti/backoff v2.1.1+incompatible
-	github.com/containous/flaeg v1.4.1 // indirect
 	github.com/containous/mux v0.0.0-20181024131434-c33f32e26898 // indirect
 	github.com/containous/traefik v2.0.0-alpha5+incompatible
 	github.com/deislabs/smi-sdk-go v0.0.0-20190614052637-0c7d04dba950
