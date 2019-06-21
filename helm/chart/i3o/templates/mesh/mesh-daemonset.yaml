@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: i3o-mesh-api
-  namespace: {{ .Release.Namespace }}
+  namespace: traefik-mesh
   labels:
     app: mesh-api
 spec:
@@ -19,7 +19,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: i3o-mesh
-  namespace: {{ .Release.Namespace }}
+  namespace: traefik-mesh
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
