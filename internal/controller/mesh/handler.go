@@ -401,5 +401,5 @@ func (h *Handler) verifyMeshIngressRouteTCPDeleted(serviceName, serviceNamespace
 
 // userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh ingressroute name.
 func userServiceToMeshServiceName(serviceName string, namespace string) string {
-	return fmt.Sprintf("traefik-%s-%s", namespace, serviceName)
+	return fmt.Sprintf("traefik-%s-%s", serviceName, namespace)
 }

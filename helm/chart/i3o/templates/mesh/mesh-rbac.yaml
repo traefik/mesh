@@ -27,6 +27,7 @@ rules:
       - services
       - endpoints
       - namespaces
+      - secrets
     verbs:
       - get
       - list
@@ -45,6 +46,7 @@ rules:
       - ingressroutes
       - ingressroutetcps
       - middlewares
+      - tlsoptions
     verbs:
       - get
       - list

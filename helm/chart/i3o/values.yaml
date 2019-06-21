@@ -8,3 +8,9 @@ image:
   # (Optional)
   # pullSecret: xxx
   traefik: containous/traefik:experimental-v2.0
+
+#
+# addon jaeger tracing configuration
+#
+tracing:
+  enabled: true

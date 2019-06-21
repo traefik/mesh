@@ -1,3 +1,20 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: i3o-mesh-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: mesh-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: mesh-api
+  selector:
+    component: i3o-mesh
+
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -43,7 +60,11 @@ spec:
             - "--entryPoints.ingress-5008.address=:5008"
             - "--entryPoints.ingress-5009.address=:5009"
             - "--providers.kubernetescrd"
-            - "--providers.kubernetescrd.labelselector='i3o-mesh=internal'"
+            - "--providers.kubernetescrd.labelselector=i3o-mesh=internal"
+            - "--tracing.backend=jaeger"
+            - "--tracing.jaeger.localagenthostport=jaeger-agent.default.svc.cluster.local"
+            - "--api.dashboard"
+            - "--accesslog"
           securityContext:
             capabilities:
               drop:
