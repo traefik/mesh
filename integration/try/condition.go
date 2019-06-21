@@ -20,7 +20,7 @@ func (l List) contains(s string) bool {
 
 type IngressRouteListCondition func(*traefikv1alpha1.IngressRouteList) error
 
-func HasIngressRouteList(nb int) IngressRouteListCondition {
+func HasIngressRouteListLength(nb int) IngressRouteListCondition {
 	return func(lst *traefikv1alpha1.IngressRouteList) error {
 		if len(lst.Items) != nb {
 			return fmt.Errorf("unable to find %d ingressroutes in %v", nb, lst.Items)
@@ -42,7 +42,7 @@ func HasNamesIngressRouteList(names List) IngressRouteListCondition {
 
 type IngressRouteTCPListCondition func(list *traefikv1alpha1.IngressRouteTCPList) error
 
-func HasIngressRouteTCPList(nb int) IngressRouteTCPListCondition {
+func HasIngressRouteTCPListLength(nb int) IngressRouteTCPListCondition {
 	return func(lst *traefikv1alpha1.IngressRouteTCPList) error {
 		if len(lst.Items) != nb {
 			return fmt.Errorf("unable to find %d ingressroutetcps in %v", nb, lst.Items)

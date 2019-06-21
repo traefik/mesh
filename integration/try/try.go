@@ -31,7 +31,7 @@ func (t *Try) ListIngressRoutes(namespace string, timeout time.Duration, conditi
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
 
-		ingressRouteList, err := t.clients.CrdClient.TraefikV1alpha1().IngressRoutes("whoami").List(metav1.ListOptions{})
+		ingressRouteList, err := t.clients.CrdClient.TraefikV1alpha1().IngressRoutes(namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -53,7 +53,7 @@ func (t *Try) ListIngressRouteTCPs(namespace string, timeout time.Duration, cond
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		ingressRouteTCPList, err := t.clients.CrdClient.TraefikV1alpha1().IngressRouteTCPs("whoami").List(metav1.ListOptions{})
+		ingressRouteTCPList, err := t.clients.CrdClient.TraefikV1alpha1().IngressRouteTCPs(namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
