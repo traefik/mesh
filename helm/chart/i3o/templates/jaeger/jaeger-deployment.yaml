@@ -1,0 +1,55 @@
+## Based off of https://github.com/jaegertracing/jaeger-kubernetes/blob/master/all-in-one/jaeger-all-in-one-template.yml
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: i3o-jaeger
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: all-in-one
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | quote }}
+        chart: {{ include "i3o.chartLabel" . | quote }}
+        release: {{ .Release.Name | quote }}
+        heritage: {{ .Release.Service | quote }}
+        app.kubernetes.io/name: jaeger
+        app.kubernetes.io/component: all-in-one
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "16686"
+    spec:
+        containers:
+        -   env:
+            - name: COLLECTOR_ZIPKIN_HTTP_PORT
+              value: "9411"
+            image: jaegertracing/all-in-one:1.12.0
+            name: jaeger
+            ports:
+              - containerPort: 5775
+                protocol: UDP
+              - containerPort: 6831
+                protocol: UDP
+              - containerPort: 6832
+                protocol: UDP
+              - containerPort: 5778
+                protocol: TCP
+              - containerPort: 16686
+                protocol: TCP
+              - containerPort: 9411
+                protocol: TCP
+            readinessProbe:
+              httpGet:
+                path: "/"
+                port: 14269
+              initialDelaySeconds: 5

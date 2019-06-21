@@ -1,0 +1,130 @@
+## Based off of https://github.com/jaegertracing/jaeger-kubernetes/blob/master/all-in-one/jaeger-all-in-one-template.yml
+
+apiVersion: v1
+kind: List
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: jaeger-query
+    namespace: {{ .Release.Namespace }}
+    labels:
+      app: {{ .Release.Name | quote }}
+      chart: {{ include "i3o.chartLabel" . | quote }}
+      release: {{ .Release.Name | quote }}
+      heritage: {{ .Release.Service | quote }}
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: query
+  spec:
+    ports:
+      - name: query-http
+        port: 80
+        protocol: TCP
+        targetPort: 16686
+    selector:
+      app: {{ .Release.Name | quote }}
+      chart: {{ include "i3o.chartLabel" . | quote }}
+      release: {{ .Release.Name | quote }}
+      heritage: {{ .Release.Service | quote }}
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: all-in-one
+    type: LoadBalancer
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: jaeger-collector
+    namespace: {{ .Release.Namespace }}
+    labels:
+      app: {{ .Release.Name | quote }}
+      chart: {{ include "i3o.chartLabel" . | quote }}
+      release: {{ .Release.Name | quote }}
+      heritage: {{ .Release.Service | quote }}
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: collector
+  spec:
+    ports:
+    - name: jaeger-collector-tchannel
+      port: 14267
+      protocol: TCP
+      targetPort: 14267
+    - name: jaeger-collector-http
+      port: 14268
+      protocol: TCP
+      targetPort: 14268
+    - name: jaeger-collector-zipkin
+      port: 9411
+      protocol: TCP
+      targetPort: 9411
+    selector:
+      app: {{ .Release.Name | quote }}
+      chart: {{ include "i3o.chartLabel" . | quote }}
+      release: {{ .Release.Name | quote }}
+      heritage: {{ .Release.Service | quote }}
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: all-in-one
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: jaeger-agent
+    namespace: {{ .Release.Namespace }}
+    labels:
+      app: {{ .Release.Name | quote }}
+      chart: {{ include "i3o.chartLabel" . | quote }}
+      release: {{ .Release.Name | quote }}
+      heritage: {{ .Release.Service | quote }}
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: agent
+  spec:
+    ports:
+    - name: agent-zipkin-thrift
+      port: 5775
+      protocol: UDP
+      targetPort: 5775
+    - name: agent-compact
+      port: 6831
+      protocol: UDP
+      targetPort: 6831
+    - name: agent-binary
+      port: 6832
+      protocol: UDP
+      targetPort: 6832
+    - name: agent-configs
+      port: 5778
+      protocol: TCP
+      targetPort: 5778
+    clusterIP: None
+    selector:
+      app: {{ .Release.Name | quote }}
+      chart: {{ include "i3o.chartLabel" . | quote }}
+      release: {{ .Release.Name | quote }}
+      heritage: {{ .Release.Service | quote }}
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: all-in-one
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: zipkin
+    namespace: {{ .Release.Namespace }}
+    labels:
+      app: {{ .Release.Name | quote }}
+      chart: {{ include "i3o.chartLabel" . | quote }}
+      release: {{ .Release.Name | quote }}
+      heritage: {{ .Release.Service | quote }}
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: zipkin
+  spec:
+    ports:
+    - name: jaeger-collector-zipkin
+      port: 9411
+      protocol: TCP
+      targetPort: 9411
+    clusterIP: None
+    selector:
+      app: {{ .Release.Name | quote }}
+      chart: {{ include "i3o.chartLabel" . | quote }}
+      release: {{ .Release.Name | quote }}
+      heritage: {{ .Release.Service | quote }}
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: all-in-one
+
