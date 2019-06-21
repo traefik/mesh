@@ -14,9 +14,11 @@ import (
 	"github.com/go-check/check"
 	log "github.com/sirupsen/logrus"
 	checker "github.com/vdemeester/shakers"
-	v1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilpointer "k8s.io/utils/pointer"
 )
 
 var (
@@ -126,6 +128,11 @@ func (s *BaseSuite) waitForTiller(c *check.C) {
 	c.Assert(err, checker.IsNil)
 }
 
+func (s *BaseSuite) waitForTools(c *check.C) {
+	err := s.try.WaitReadyDeployment("tiny-tools", metav1.NamespaceDefault, 60*time.Second)
+	c.Assert(err, checker.IsNil)
+}
+
 func (s *BaseSuite) startWhoami(c *check.C) {
 	// Init helm with the service account created before.
 	cmd := exec.Command("kubectl", "apply",
@@ -149,7 +156,7 @@ func (s *BaseSuite) installHelmI3o(c *check.C) {
 	}
 
 	// Create tiller service account.
-	_, err = s.clients.KubeClient.CoreV1().ServiceAccounts(metav1.NamespaceSystem).Create(&v1.ServiceAccount{
+	_, err = s.clients.KubeClient.CoreV1().ServiceAccounts(metav1.NamespaceSystem).Create(&corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tiller",
 			Namespace: metav1.NamespaceSystem,
@@ -205,4 +212,45 @@ func (s *BaseSuite) installHelmI3o(c *check.C) {
 
 	fmt.Println(string(output))
 	c.Assert(err, checker.IsNil)
+}
+
+func (s *BaseSuite) installTinyToolsI3o(c *check.C) {
+	// Delete previous tiny tools deployment.
+	err := s.clients.KubeClient.AppsV1().Deployments(metav1.NamespaceDefault).Delete("tiny-tools", &metav1.DeleteOptions{})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Create new tiny tools deployment.
+	_, err = s.clients.KubeClient.AppsV1().Deployments(metav1.NamespaceDefault).Create(&appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tiny-tools",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: utilpointer.Int32Ptr(1),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tiny-tools",
+					Namespace: metav1.NamespaceDefault,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name:    "tinyTools",
+						Image:   "giantswarm/tiny-tools",
+						Command: []string{"sleep", "36000"},
+					},
+					},
+				},
+			},
+		},
+	})
+	c.Assert(err, checker.IsNil)
+
+	// Wait for tools to be initialized.
+	s.waitForTools(c)
+}
+
+func (s *BaseSuite) getToolsPodI3o(c *check.C) (*corev1.Pod, error) {
+	return s.clients.KubeClient.CoreV1().Pods(metav1.NamespaceDefault).Get("tiny-tools", metav1.GetOptions{})
 }

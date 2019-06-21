@@ -8,7 +8,7 @@ import (
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // StartI3oSuite
@@ -39,7 +39,7 @@ func (s *StartI3oSuite) TestSimpleStart(c *check.C) {
 	c.Assert(err, checker.IsNil)
 
 	// Get the whoami service in whoami namespace
-	service, err := s.clients.KubeClient.CoreV1().Services("whoami").Get("whoami", v1.GetOptions{})
+	service, err := s.clients.KubeClient.CoreV1().Services("whoami").Get("whoami", metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 	// Add a fake port to the service
 	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "test-update", Port: 90})

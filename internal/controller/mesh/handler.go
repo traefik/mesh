@@ -8,7 +8,6 @@ import (
 	"github.com/containous/i3o/internal/k8s"
 	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	log "github.com/sirupsen/logrus"
-	apiv1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -171,12 +170,12 @@ func (h *Handler) ObjectUpdated(event i3o.Message) {
 	}
 }
 
-func (h *Handler) verifyMeshServiceExists(service *apiv1.Service) (*apiv1.Service, error) {
+func (h *Handler) verifyMeshServiceExists(service *corev1.Service) (*corev1.Service, error) {
 	meshServiceName := userServiceToMeshServiceName(service.Name, service.Namespace)
 	meshServiceInstance, err := h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Get(meshServiceName, metav1.GetOptions{})
 	if meshServiceInstance == nil || err != nil {
 		// Mesh service does not exist.
-		var ports []apiv1.ServicePort
+		var ports []corev1.ServicePort
 
 		for id, sp := range service.Spec.Ports {
 			if sp.Protocol != corev1.ProtocolTCP {
@@ -184,7 +183,7 @@ func (h *Handler) verifyMeshServiceExists(service *apiv1.Service) (*apiv1.Servic
 				continue
 			}
 
-			meshPort := apiv1.ServicePort{
+			meshPort := corev1.ServicePort{
 				Name:       sp.Name,
 				Port:       sp.Port,
 				TargetPort: intstr.FromInt(5000 + id),
@@ -193,12 +192,12 @@ func (h *Handler) verifyMeshServiceExists(service *apiv1.Service) (*apiv1.Servic
 			ports = append(ports, meshPort)
 		}
 
-		svc := &apiv1.Service{
+		svc := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      meshServiceName,
 				Namespace: k8s.MeshNamespace,
 			},
-			Spec: apiv1.ServiceSpec{
+			Spec: corev1.ServiceSpec{
 				Ports: ports,
 				Selector: map[string]string{
 					"component": "i3o-mesh",
@@ -232,7 +231,7 @@ func (h *Handler) verifyMeshServiceDeleted(serviceName, serviceNamespace string)
 
 // updateMeshService updates the mesh service based on an old/new user service, and returns the updated mesh service
 // for use to update the ingressRoutes[TCP]
-func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserService *apiv1.Service) (*apiv1.Service, error) {
+func (h *Handler) updateMeshService(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error) {
 	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 	meshServiceName := userServiceToMeshServiceName(oldUserService.Name, oldUserService.Namespace)
 
@@ -244,7 +243,7 @@ func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserServic
 		}
 
 		if existing != nil {
-			var ports []apiv1.ServicePort
+			var ports []corev1.ServicePort
 
 			for id, sp := range newUserService.Spec.Ports {
 				if sp.Protocol != corev1.ProtocolTCP {
@@ -252,7 +251,7 @@ func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserServic
 					continue
 				}
 
-				meshPort := apiv1.ServicePort{
+				meshPort := corev1.ServicePort{
 					Name:       sp.Name,
 					Port:       sp.Port,
 					TargetPort: intstr.FromInt(5000 + id),
@@ -281,7 +280,7 @@ func (h *Handler) updateMeshService(oldUserService *apiv1.Service, newUserServic
 
 }
 
-func (h *Handler) verifyMeshIngressRouteExists(userService *apiv1.Service, createdService *apiv1.Service) error {
+func (h *Handler) verifyMeshIngressRouteExists(userService *corev1.Service, createdService *corev1.Service) error {
 	meshIngressRouteName := userServiceToMeshServiceName(userService.Name, userService.Namespace)
 	matchRule := fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", userService.Name, userService.Namespace, userService.Spec.ClusterIP)
 	labels := map[string]string{
@@ -325,7 +324,7 @@ func (h *Handler) verifyMeshIngressRouteExists(userService *apiv1.Service, creat
 	return nil
 }
 
-func (h *Handler) verifyMeshIngressRouteTCPExists(userService *apiv1.Service, createdService *apiv1.Service) error {
+func (h *Handler) verifyMeshIngressRouteTCPExists(userService *corev1.Service, createdService *corev1.Service) error {
 	meshIngressRouteName := userServiceToMeshServiceName(userService.Name, userService.Namespace)
 	matchRule := fmt.Sprintf("HostSNI(`%s.%s.traefik.mesh`) || HostSNI(`%s`)", userService.Name, userService.Namespace, userService.Spec.ClusterIP)
 	labels := map[string]string{

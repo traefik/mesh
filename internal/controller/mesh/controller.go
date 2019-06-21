@@ -7,7 +7,7 @@ import (
 	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	log "github.com/sirupsen/logrus"
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
@@ -40,7 +40,7 @@ func NewMeshController(clients *k8s.ClientWrapper) *Controller {
 
 	return &Controller{
 		handler:             handler,
-		serviceController:   i3o.NewController(clients, apiv1.Service{}, ignored, handler),
+		serviceController:   i3o.NewController(clients, corev1.Service{}, ignored, handler),
 		smiAccessController: i3o.NewController(clients, smiAccessv1alpha1.TrafficTarget{}, ignored, handler),
 		smiSpecsController:  i3o.NewController(clients, smiSpecsv1alpha1.HTTPRouteGroup{}, ignored, handler),
 		smiSplitController:  i3o.NewController(clients, smiSplitv1alpha1.TrafficSplit{}, ignored, handler),
