@@ -1,9 +1,9 @@
 package integration
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/containous/i3o/integration/try"
@@ -60,7 +60,11 @@ func (s *CurlI3oSuite) TestSimpleCURL(c *check.C) {
 
 	output, err := cmd.CombinedOutput()
 
-	fmt.Println(string(output))
+	stringOutput := string(output)
+
+	if !strings.Contains(stringOutput, "whoami") {
+		c.Errorf("Curl response did not contain: whoami, got: %s", stringOutput)
+	}
 	c.Assert(err, checker.IsNil)
 
 }
