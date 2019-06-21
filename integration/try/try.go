@@ -19,13 +19,66 @@ const (
 	CITimeoutMultiplier = 3
 )
 
+type Try struct {
+	clients *k8s.ClientWrapper
+}
+
+func NewTry(clients *k8s.ClientWrapper) *Try {
+	return &Try{clients: clients}
+}
+func (t *Try) ListIngressRoutes(namespace string, timeout time.Duration, conditions ...IngressRouteListCondition) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+
+		ingressRouteList, err := t.clients.CrdClient.TraefikV1alpha1().IngressRoutes(namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, condition := range conditions {
+			if err := condition(ingressRouteList); err != nil {
+				return err
+			}
+		}
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable to list ingressroutes in namespace %q: %v", namespace, err)
+	}
+
+	return nil
+}
+
+func (t *Try) ListIngressRouteTCPs(namespace string, timeout time.Duration, conditions ...IngressRouteTCPListCondition) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		ingressRouteTCPList, err := t.clients.CrdClient.TraefikV1alpha1().IngressRouteTCPs(namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, condition := range conditions {
+			if err := condition(ingressRouteTCPList); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable to list ingressroutetcps in namespace %q: %v", namespace, err)
+	}
+
+	return nil
+}
+
 // WaitReadyDeployment wait until the deployment is ready.
-func WaitReadyDeployment(clients *k8s.ClientWrapper, name string, namespace string, timeout time.Duration) error {
+func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Duration) error {
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		d, err := clients.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+		d, err := t.clients.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 		}
@@ -46,7 +99,7 @@ func WaitReadyDeployment(clients *k8s.ClientWrapper, name string, namespace stri
 }
 
 // WaitClientCreated wait until the file is created.
-func WaitClientCreated(url string, kubeConfigPath string, timeout time.Duration) (*k8s.ClientWrapper, error) {
+func (t *Try) WaitClientCreated(url string, kubeConfigPath string, timeout time.Duration) (*k8s.ClientWrapper, error) {
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 

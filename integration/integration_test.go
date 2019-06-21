@@ -43,6 +43,7 @@ type BaseSuite struct {
 	composeProject string
 	projectName    string
 	dir            string
+	try            *try.Try
 	clients        *k8s.ClientWrapper
 }
 
@@ -86,8 +87,13 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 		return err
 	}
 
-	s.clients, err = try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
-	return err
+	s.clients, err = s.try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
+	if err != nil {
+		return err
+	}
+
+	s.try = try.NewTry(s.clients)
+	return nil
 }
 
 func (s *BaseSuite) stopComposeProject() {
@@ -106,17 +112,17 @@ func (s *BaseSuite) stopComposeProject() {
 }
 
 func (s *BaseSuite) waitForCoreDNSStarted(c *check.C) {
-	err := try.WaitReadyDeployment(s.clients, "coredns", metav1.NamespaceSystem, 60*time.Second)
+	err := s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
 func (s *BaseSuite) waitForI3oControllerStarted(c *check.C) {
-	err := try.WaitReadyDeployment(s.clients, "i3o-controller", metav1.NamespaceDefault, 60*time.Second)
+	err := s.try.WaitReadyDeployment("i3o-controller", metav1.NamespaceDefault, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
 func (s *BaseSuite) waitForTiller(c *check.C) {
-	err := try.WaitReadyDeployment(s.clients, "tiller-deploy", metav1.NamespaceSystem, 60*time.Second)
+	err := s.try.WaitReadyDeployment("tiller-deploy", metav1.NamespaceSystem, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -131,7 +137,7 @@ func (s *BaseSuite) startWhoami(c *check.C) {
 	fmt.Println(string(output))
 	c.Assert(err, checker.IsNil)
 
-	err = try.WaitReadyDeployment(s.clients, "whoami", "whoami", 60*time.Second)
+	err = s.try.WaitReadyDeployment("whoami", "whoami", 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
