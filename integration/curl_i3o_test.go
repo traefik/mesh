@@ -29,7 +29,7 @@ func (s *CurlI3oSuite) SetUpSuite(c *check.C) {
 	c.Assert(err, checker.IsNil)
 
 	// Check that ingressroutes is created for the whoami-http service
-	err = s.try.ListIngressRoutes("whoami", 20*time.Second, try.HasIngressRouteListLength(1), try.HasNamesIngressRouteList(try.List{"whoami-whoami-http"}))
+	err = s.try.ListIngressRoutes("whoami", 20*time.Second, try.HasIngressRouteListLength(1), try.HasNamesIngressRouteList(try.List{"whoami-http-whoami"}))
 	c.Assert(err, checker.IsNil)
 
 }
