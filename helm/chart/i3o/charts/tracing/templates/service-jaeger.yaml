@@ -1,5 +1,3 @@
-{{ if eq .Values.provider "jaeger" }}
-
 apiVersion: v1
 kind: List
 metadata:
@@ -86,5 +84,3 @@ items:
     clusterIP: None
     selector:
       app: jaeger
-{{ end }}
-

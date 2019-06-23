@@ -12,9 +12,6 @@ metadata:
   annotations:
     helm.sh/hook: test-success
 spec:
-{{- if .Values.global.priorityClassName }}
-  priorityClassName: "{{ .Values.global.priorityClassName }}"
-{{- end }}
   containers:
     - name: "{{ .Values.provider }}-test"
       image: {{ .Values.global.hub }}/{{ .Values.global.proxy.image }}:{{ .Values.global.tag }}
