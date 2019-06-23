@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -95,11 +95,11 @@ func (w *ClientWrapper) InitCluster() error {
 
 func (w *ClientWrapper) verifyNamespaceExists(namespace string) error {
 	if _, err := w.KubeClient.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{}); err != nil {
-		ns := &apiv1.Namespace{
+		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespace,
 			},
-			Spec: apiv1.NamespaceSpec{},
+			Spec: corev1.NamespaceSpec{},
 		}
 
 		if _, err := w.KubeClient.CoreV1().Namespaces().Create(ns); err != nil {

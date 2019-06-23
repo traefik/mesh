@@ -11,7 +11,7 @@ import (
 	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	log "github.com/sirupsen/logrus"
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -37,7 +37,7 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 	var ot runtime.Object
 	var printableType string
 	switch controllerType.(type) {
-	case apiv1.Service:
+	case corev1.Service:
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				// list all of the services (core resource) in all namespaces
@@ -48,7 +48,7 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 				return clients.KubeClient.CoreV1().Services(metav1.NamespaceAll).Watch(options)
 			},
 		}
-		ot = &apiv1.Service{}
+		ot = &corev1.Service{}
 		printableType = "service"
 	case smiAccessv1alpha1.TrafficTarget:
 		lw = &cache.ListWatch{
