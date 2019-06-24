@@ -457,6 +457,7 @@ func (h *Handler) updateMeshServicesWithSMI(obj interface{}) error {
 	var validTargetFound bool
 	for _, endpoint := range endpoints.Items {
 		// Check Endpoints against service account via targetref in EndpointAddress.
+		TODO: WE NEED TO CHECK FOR DESTINATION PORT IN ENDPOINTS FIRST, MAY BE MUCH FASTER
 		for _, subset := range endpoint.Subsets {
 			for _, address := range subset.Addresses {
 				if pod, err := h.Clients.KubeClient.CoreV1().Pods(address.TargetRef.Namespace).Get(address.TargetRef.Name, metav1.GetOptions{}); err != nil {
