@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: i3o-controller
-  namespace: {{ .Release.Namespace }}
+  namespace: traefik-mesh
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}

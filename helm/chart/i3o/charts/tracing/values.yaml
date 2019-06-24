@@ -1,0 +1,14 @@
+enabled: false
+
+jaeger:
+  hub: docker.io/jaegertracing
+  tag: 1.9
+  memory:
+    max_traces: 50000
+
+service:
+  annotations: {}
+  name: http
+  type: ClusterIP
+  externalPort: 9411
+

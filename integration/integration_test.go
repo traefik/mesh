@@ -25,6 +25,7 @@ var (
 	integration    = flag.Bool("integration", true, "run integration tests")
 	kubeConfigPath = "/tmp/k3s-output/kubeconfig.yaml"
 	masterURL      = "https://localhost:8443"
+	meshNamespace  = "traefik-mesh"
 )
 
 func Test(t *testing.T) {
@@ -119,7 +120,7 @@ func (s *BaseSuite) waitForCoreDNSStarted(c *check.C) {
 }
 
 func (s *BaseSuite) waitForI3oControllerStarted(c *check.C) {
-	err := s.try.WaitReadyDeployment("i3o-controller", metav1.NamespaceDefault, 60*time.Second)
+	err := s.try.WaitReadyDeployment("i3o-controller", meshNamespace, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 

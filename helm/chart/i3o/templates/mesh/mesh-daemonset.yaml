@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: i3o-mesh
-  namespace: {{ .Release.Namespace }}
+  namespace: traefik-mesh
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -43,7 +43,13 @@ spec:
             - "--entryPoints.ingress-5008.address=:5008"
             - "--entryPoints.ingress-5009.address=:5009"
             - "--providers.kubernetescrd"
-            - "--providers.kubernetescrd.labelselector='i3o-mesh=internal'"
+            - "--providers.kubernetescrd.labelselector=i3o-mesh=internal"
+            {{- if .Values.tracing.enable }}
+            - "--tracing.jaeger.localagenthostport=jaeger-agent.traefik-mesh.svc.cluster.local:6831"
+            - "--tracing.jaeger.SamplingServerURL=http://jaeger-agent.traefik-mesh.svc.cluster.local:5778/sampling"
+            {{- end }}
+            - "--api.dashboard"
+            - "--accesslog"
           securityContext:
             capabilities:
               drop:

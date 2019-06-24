@@ -8,3 +8,6 @@ image:
   # (Optional)
   # pullSecret: xxx
   traefik: containous/traefik:experimental-v2.0
+
+tracing:
+  enabled: false
