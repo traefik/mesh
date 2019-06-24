@@ -258,6 +258,13 @@ func (w *ClientWrapper) verifyCoreDNSPatched(deploymentName string, namespace st
 	return errors.New("coreDNS not patched. Run ./i3o patch to update DNS")
 }
 
+// createSMIMiddlware creates middleware objects to be used and referenced when using SMI in the cluster.
+func createSMIMiddleware() error {
+
+	THIS IS WHERE WE NEED TO INSTALL THE BLOCK-ALL WHITELIST MIDDLEWARE
+	return nil
+}
+
 // buildClient returns a useable kubernetes client.
 func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
 	log.Infoln("Building Kubernetes Client...")
