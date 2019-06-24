@@ -14,12 +14,14 @@ var (
 	debug      bool
 	kubeconfig string
 	masterURL  string
+	smi        bool
 )
 
 func init() {
 	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", os.Getenv("KUBECONFIG"), "Path to a kubeconfig. Only required if out-of-cluster.")
 	rootCmd.Flags().StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	rootCmd.Flags().BoolVar(&debug, "debug", false, "enable debug mode")
+	rootCmd.Flags().BoolVar(&smi, "smi", false, "enable SMI")
 }
 
 // rootCmd represents the base command when called without any subcommands.
@@ -65,7 +67,7 @@ func runCommand() func(cmd *cobra.Command, args []string) {
 		}
 
 		// Create a new controller.
-		controller := mesh.NewMeshController(clients)
+		controller := mesh.NewMeshController(clients, smi)
 
 		// run the controller loop to process items
 		if err = controller.Run(stopCh); err != nil {

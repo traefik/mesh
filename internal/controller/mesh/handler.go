@@ -2,6 +2,7 @@ package mesh
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/containous/i3o/internal/controller/i3o"
@@ -20,14 +21,16 @@ import (
 
 // MeshControllerHandler is an implementation of Handler.
 type Handler struct {
-	Clients *k8s.ClientWrapper
-	Ignored k8s.IgnoreWrapper
+	Clients    *k8s.ClientWrapper
+	Ignored    k8s.IgnoreWrapper
+	smiEnabled bool
 }
 
-func NewHandler(clients *k8s.ClientWrapper, ignored k8s.IgnoreWrapper) *Handler {
+func NewHandler(clients *k8s.ClientWrapper, ignored k8s.IgnoreWrapper, smiEnabled bool) *Handler {
 	h := &Handler{
-		Clients: clients,
-		Ignored: ignored,
+		Clients:    clients,
+		Ignored:    ignored,
+		smiEnabled: smiEnabled,
 	}
 
 	if err := h.Init(); err != nil {
@@ -431,8 +434,8 @@ func (h *Handler) updateMeshServicesWithSMI(obj interface{}) error {
 	var sourceIPs []string
 	for _, source := range trafficTarget.Sources {
 		fieldSelector := fmt.Sprintf("spec.serviceAccountName=%s", source.Name)
-		// Get all pods with the associated source serviceAccount.
-		pods, err := h.Clients.KubeClient.CoreV1().Pods(metav1.NamespaceAll).List(metav1.ListOptions{FieldSelector: fieldSelector})
+		// Get all pods with the associated source serviceAccount (can only be in the source namespaces).
+		pods, err := h.Clients.KubeClient.CoreV1().Pods(source.Namespace).List(metav1.ListOptions{FieldSelector: fieldSelector})
 		if err != nil {
 			return err
 		}
@@ -444,6 +447,71 @@ func (h *Handler) updateMeshServicesWithSMI(obj interface{}) error {
 	}
 
 	h.createUpdateIPWhitelistMiddleware(trafficTarget.Name, trafficTarget.Namespace, sourceIPs)
+
+	// Get Endpoints in destination namespace.
+	endpoints, err := h.Clients.KubeClient.CoreV1().Endpoints(trafficTarget.Destination.Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	var validTargetFound bool
+	for _, endpoint := range endpoints.Items {
+		// Check Endpoints against service account via targetref in EndpointAddress.
+		for _, subset := range endpoint.Subsets {
+			for _, address := range subset.Addresses {
+				if pod, err := h.Clients.KubeClient.CoreV1().Pods(address.TargetRef.Namespace).Get(address.TargetRef.Name, metav1.GetOptions{}); err != nil {
+					if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
+						validTargetFound = true
+					}
+				}
+				if validTargetFound {
+					break
+				}
+			}
+
+			// If any addresses match, then the subset is valid for all ports listed.
+			if validTargetFound {
+				// If present, then ingressroute[tcp]s for that service needs whitelist added.
+				for _, endpointPort := range subset.Ports {
+					portString := strconv.FormatInt(int64(endpointPort.Port), 10)
+					meshIngressRouteName := userServiceToMeshServiceName(endpoint.Name, trafficTarget.Destination.Namespace) + "-" + portString
+
+					retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+						obj, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(trafficTarget.Destination.Namespace).Get(meshIngressRouteName, metav1.GetOptions{})
+						if err != nil {
+							return err
+						}
+						if obj != nil {
+							// Never modify the original object, always use a copy
+							ir := obj.DeepCopy()
+
+							for _, route := range ir.Spec.Routes {
+								ENSURE OUR WHITELIST MIDDLEWARE IS ADDED BEFORE
+								THE BLOCKALL MIDDLEWARE (whitelist 255.255.255.255)
+							}
+
+							updatedSvc, err = h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Update(existing)
+							if err != nil {
+								fmt.Println(err)
+								return err
+							}
+						}
+						return nil
+					})
+
+					if retryErr != nil {
+						return nil, fmt.Errorf("unable to update service %q: %v", meshServiceName, retryErr)
+					}
+
+				}
+			}
+		}
+
+		if validTargetFound {
+
+		}
+	}
+	// Ensure blockAll whitelist is present
 
 	return nil
 }
@@ -461,7 +529,7 @@ func (h *Handler) createUpdateIPWhitelistMiddleware(name string, namespace strin
 			// Update middleware, using a copy
 			middleware := mw.DeepCopy()
 			if middleware.Spec.IPWhiteList == nil {
-				return fmt.Errorf("Could not update mesh whitelist: %s/%s is not type whitelist", middleware.Namespace, middleware.Name)
+				return fmt.Errorf("could not update mesh whitelist: %s/%s is not type whitelist", middleware.Namespace, middleware.Name)
 			}
 
 			middleware.Spec.IPWhiteList.SourceRange = ips
