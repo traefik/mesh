@@ -13,7 +13,7 @@ spec:
       containers:
       - name: whoami
         image: containous/whoami
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
 
 ---
 apiVersion: v1

@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: i3o-tracing
-  namespace: {{ .Release.Namespace }}
+  namespace: traefik-mesh
   labels:
     app: jaeger
     chart: {{ template "tracing.chart" . }}

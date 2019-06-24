@@ -1,4 +1,4 @@
-nabled: false
+enabled: false
 
 jaeger:
   hub: docker.io/jaegertracing
