@@ -67,6 +67,10 @@ push-docker: build
 vendor:
 	go mod vendor
 
+upgrade:
+	go get -u
+	go mod tidy
+
 helm-lint:
 	helm lint helm/chart/i3o
 
