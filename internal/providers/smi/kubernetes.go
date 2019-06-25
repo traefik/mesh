@@ -362,6 +362,16 @@ func loadServersWithServiceAccount(client Client, namespace string, svc v1alpha1
 			}
 
 			for _, addr := range subset.Addresses {
+				pod, exists, err := client.GetPod(addr.TargetRef.Namespace, addr.TargetRef.Name)
+				if err != nil {
+					return nil, err
+				}
+				if !exists {
+					continue
+				}
+				if pod.Spec.ServiceAccountName != serviceAccountName {
+					continue
+				}
 				servers = append(servers, config.Server{
 					URL: fmt.Sprintf("%s://%s:%d", protocol, addr.IP, port),
 				})
@@ -462,9 +472,9 @@ func (p *Provider) loadIngressRouteConfiguration(ctx context.Context, client Cli
 
 			var allServers []config.Server
 			for _, service := range route.Services {
-				if len(ingressRoute.Labels[k8s.IngressRouteDestinationSA]) != 0 {
+				if len(ingressRoute.Annotations[k8s.IngressRouteDestinationSA]) != 0 {
 					// SMI defined for this IngressRoute, filter destination servers by SA
-					servers, err := loadServersWithServiceAccount(client, ingressRoute.Namespace, service, ingressRoute.Labels[k8s.IngressRouteDestinationSA])
+					servers, err := loadServersWithServiceAccount(client, ingressRoute.Namespace, service, ingressRoute.Annotations[k8s.IngressRouteDestinationSA])
 					if err != nil {
 						logger.
 							WithField("serviceName", service.Name).

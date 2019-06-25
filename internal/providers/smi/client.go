@@ -52,6 +52,7 @@ type Client interface {
 	GetTLSOptions() []*v1alpha1.TLSOption
 
 	GetIngresses() []*extensionsv1beta1.Ingress
+	GetPod(namespace, name string) (*corev1.Pod, bool, error)
 	GetService(namespace, name string) (*corev1.Service, bool, error)
 	GetSecret(namespace, name string) (*corev1.Secret, bool, error)
 	GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error)
@@ -331,6 +332,17 @@ func (c *clientWrapper) GetSecret(namespace, name string) (*corev1.Secret, bool,
 	secret, err := c.factoriesKube[c.lookupNamespace(namespace)].Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
 	exist, err := translateNotFoundError(err)
 	return secret, exist, err
+}
+
+// GetPod returns the named od from the given namespace.
+func (c *clientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
+	if !c.isWatchedNamespace(namespace) {
+		return nil, false, fmt.Errorf("failed to get pod %s/%s: namespace is not within watched namespaces", namespace, name)
+	}
+
+	pod, err := c.factoriesKube[c.lookupNamespace(namespace)].Core().V1().Pods().Lister().Pods(namespace).Get(name)
+	exist, err := translateNotFoundError(err)
+	return pod, exist, err
 }
 
 // lookupNamespace returns the lookup namespace key for the given namespace.
