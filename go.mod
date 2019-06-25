@@ -88,6 +88,7 @@ require (
 	github.com/miekg/dns v1.1.14 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/hashstructure v1.0.0 // indirect
+	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/mitchellh/reflectwalk v1.0.1 // indirect
 	github.com/mvdan/xurls v1.1.0 // indirect
 	github.com/namedotcom/go v0.0.0-20180403034216-08470befbe04 // indirect
@@ -111,7 +112,7 @@ require (
 	github.com/sacloud/libsacloud v1.24.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/assertions v1.0.0 // indirect
-	github.com/spf13/cobra v0.0.5
+	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.3.0
 	github.com/stvp/go-udp-testing v0.0.0-20171104055251-c4434f09ec13 // indirect
@@ -143,7 +144,6 @@ require (
 	k8s.io/apimachinery v0.0.0-20190624085041-961b39a1baa0
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog v0.3.3 // indirect
-	k8s.io/sample-controller v0.0.0-20190625130054-294bc0f66822
 	k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a
 )
 

@@ -1,4 +1,4 @@
-package cmd
+package traefik
 
 import (
 	"context"
@@ -11,8 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containous/i3o/internal/providers/smi"
+	traefikcmd "github.com/containous/traefik/cmd"
+	"github.com/containous/traefik/pkg/cli"
 	"github.com/containous/traefik/pkg/collector"
-	"github.com/containous/traefik/pkg/config"
 	"github.com/containous/traefik/pkg/config/static"
 	"github.com/containous/traefik/pkg/log"
 	"github.com/containous/traefik/pkg/provider/aggregator"
@@ -22,49 +24,20 @@ import (
 	traefiktls "github.com/containous/traefik/pkg/tls"
 	"github.com/sirupsen/logrus"
 	"github.com/vulcand/oxy/roundrobin"
-
-	traefikcmd "github.com/containous/traefik/cmd"
-	"github.com/containous/traefik/pkg/cli"
-	"github.com/spf13/cobra"
 )
 
-// traefikServerCmd start a traefik instance.
-var traefikServerCmd = &cobra.Command{
-	Use:   "traefik",
-	Short: "Start traefik isntance",
-	Run: func(cmd *cobra.Command, args []string) {
-		startTraefik()
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(traefikServerCmd)
-}
-
-func startTraefik() {
-	// traefik config inits
-	tConfig := traefikcmd.NewTraefikConfiguration()
-
-	loaders := []cli.ResourceLoader{&cli.FileLoader{}, &cli.FlagLoader{}, &cli.EnvLoader{}}
-
-	cmdTraefik := &cli.Command{
+// NewCmd builds a new Version command
+func NewCmd(tConfig *traefikcmd.TraefikCmdConfiguration, loaders []cli.ResourceLoader) *cli.Command {
+	return &cli.Command{
 		Name: "traefik",
 		Description: `Traefik is a modern HTTP reverse proxy and load balancer made to deploy microservices with ease.
 Complete documentation is available at https://traefik.io`,
 		Configuration: tConfig,
-		Resources:     loaders,
 		Run: func(_ []string) error {
 			return runCmd(&tConfig.Configuration, cli.GetConfigFile(loaders))
 		},
+		Resources: loaders,
 	}
-
-	err := cli.Execute(cmdTraefik)
-	if err != nil {
-		stdlog.Println(err)
-		os.Exit(1)
-	}
-
-	os.Exit(0)
 }
 
 func runCmd(staticConfiguration *static.Configuration, configFile string) error {
@@ -91,14 +64,8 @@ func runCmd(staticConfiguration *static.Configuration, configFile string) error 
 
 	providerAggregator := aggregator.NewProviderAggregator(*staticConfiguration.Providers)
 
-	acmeProvider, err := staticConfiguration.InitACMEProvider()
-	if err != nil {
-		log.WithoutContext().Errorf("Unable to initialize ACME provider: %v", err)
-	} else if acmeProvider != nil {
-		if err := providerAggregator.AddProvider(acmeProvider); err != nil {
-			log.WithoutContext().Errorf("Unable to add ACME provider to the providers list: %v", err)
-			acmeProvider = nil
-		}
+	if err = providerAggregator.AddProvider(&smi.Provider{}); err != nil {
+		log.WithoutContext().Errorf("Unable to add kubernetessmi provider to the providers list: %v", err)
 	}
 
 	serverEntryPointsTCP := make(server.TCPEntryPoints)
@@ -108,18 +75,12 @@ func runCmd(staticConfiguration *static.Configuration, configFile string) error 
 		if err != nil {
 			return fmt.Errorf("error while building entryPoint %s: %v", entryPointName, err)
 		}
-		serverEntryPointsTCP[entryPointName].RouteAppenderFactory = router.NewRouteAppenderFactory(*staticConfiguration, entryPointName, acmeProvider)
-
+		serverEntryPointsTCP[entryPointName].RouteAppenderFactory = router.NewRouteAppenderFactory(*staticConfiguration, entryPointName, nil)
 	}
 
 	tlsManager := traefiktls.NewManager()
 
 	svr := server.NewServer(*staticConfiguration, providerAggregator, serverEntryPointsTCP, tlsManager)
-
-	if acmeProvider != nil && acmeProvider.OnHostRule {
-		acmeProvider.SetConfigListenerChan(make(chan config.Configuration))
-		svr.AddListener(acmeProvider.ListenConfiguration)
-	}
 	ctx := traefikcmd.ContextWithSignal(context.Background())
 
 	if staticConfiguration.Ping != nil {
@@ -172,13 +133,13 @@ func configureLogging(staticConfiguration *static.Configuration) {
 	if len(logFile) > 0 {
 		dir := filepath.Dir(logFile)
 
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err = os.MkdirAll(dir, 0755); err != nil {
 			log.WithoutContext().Errorf("Failed to create log path %s: %s", dir, err)
 		}
 
 		err = log.OpenFile(logFile)
 		logrus.RegisterExitHandler(func() {
-			if err := log.CloseFile(); err != nil {
+			if err = log.CloseFile(); err != nil {
 				log.WithoutContext().Errorf("Error while closing log: %v", err)
 			}
 		})
@@ -215,9 +176,9 @@ More details on: https://docs.traefik.io/basics/#collected-data
 }
 
 func collect(staticConfiguration *static.Configuration) {
-	ticker := time.Tick(24 * time.Hour)
+	ticker := time.NewTicker(24 * time.Hour)
 	safe.Go(func() {
-		for time.Sleep(10 * time.Minute); ; <-ticker {
+		for time.Sleep(10 * time.Minute); ; <-ticker.C {
 			if err := collector.Collect(staticConfiguration); err != nil {
 				log.WithoutContext().Debug(err)
 			}
