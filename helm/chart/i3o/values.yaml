@@ -14,3 +14,6 @@ image:
 #
 tracing:
   enabled: true
+
+smi:
+  enabled: true

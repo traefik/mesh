@@ -103,12 +103,8 @@ func (h *Handler) ObjectCreated(event i3o.Message) {
 
 		log.Debugf("MeshControllerHandler ObjectCreated with type: *smiAccessv1alpha1.TrafficTarget: %s/%s", trafficTarget.Namespace, trafficTarget.Name)
 
-		if err := h.updateMeshServicesWithSMI(trafficTarget); err != nil {
+		if err := h.updateIngressRoutesWithSMI(trafficTarget); err != nil {
 			log.Errorf("Could not update mesh services with smi: %v", err)
-		}
-
-		if err := h.createUpdateShadowServicesWithSMI(trafficTarget); err != nil {
-			log.Errorf("Could not update shadow services with smi: %v", err)
 		}
 	}
 
@@ -348,6 +344,14 @@ func (h *Handler) createMeshIngressRoutes(userService *corev1.Service, createdSe
 			},
 		}
 
+		if h.smiEnabled {
+			ir.Spec.Routes[0].Middlewares = []traefikv1alpha1.MiddlewareRef{
+				{
+					Name:      "block-all-whitelist",
+					Namespace: userService.Namespace,
+				},
+			}
+		}
 		irInstance, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(ir.Namespace).Get(ir.Name, metav1.GetOptions{})
 		if irInstance == nil || err != nil {
 			if _, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(ir.Namespace).Create(ir); err != nil {
@@ -435,7 +439,7 @@ func (h *Handler) deleteMeshIngressRouteTCPsByService(serviceName, serviceNamesp
 	return nil
 }
 
-func (h *Handler) updateMeshServicesWithSMI(obj interface{}) error {
+func (h *Handler) updateIngressRoutesWithSMI(obj interface{}) error {
 	trafficTarget := obj.(*smiAccessv1alpha1.TrafficTarget)
 
 	var sourceIPs []string
@@ -614,12 +618,10 @@ func (h *Handler) createUpdateIPWhitelistMiddleware(name string, namespace strin
 }
 
 func (h *Handler) createBlockAllMiddleware(serviceNamespace string) error {
-	mw, err := h.Clients.CrdClient.TraefikV1alpha1().Middlewares(serviceNamespace).Get("block-all-whitelist", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	if mw != nil {
+	_, err := h.Clients.CrdClient.TraefikV1alpha1().Middlewares(serviceNamespace).Get("block-all-whitelist", metav1.GetOptions{})
+	if err == nil {
 		//middleware already exists
+		log.Debugf("Middleware: block-all-whitelist already exists in namespace: %s", serviceNamespace)
 		return nil
 	}
 
@@ -635,6 +637,7 @@ func (h *Handler) createBlockAllMiddleware(serviceNamespace string) error {
 		},
 	}
 
+	log.Debugf("Creating middleware: block-all-whitelist in namespace: %s", serviceNamespace)
 	_, err = h.Clients.CrdClient.TraefikV1alpha1().Middlewares(serviceNamespace).Create(middleware)
 	return err
 }
