@@ -151,7 +151,7 @@ func checkStringQuoteValidity(value string) error {
 	return err
 }
 
-func loadTCPServers(client Client, namespace string, svc v1alpha1.ServiceTCP) ([]config.TCPServer, error) {
+func loadTCPServers(client Client, namespace string, svc v1alpha1.ServiceTCP, serviceAccountName string) ([]config.TCPServer, error) {
 	service, exists, err := client.GetService(namespace, svc.Name)
 	if err != nil {
 		return nil, err
@@ -206,6 +206,18 @@ func loadTCPServers(client Client, namespace string, svc v1alpha1.ServiceTCP) ([
 			}
 
 			for _, addr := range subset.Addresses {
+				if serviceAccountName != "" {
+					pod, exists, err := client.GetPod(addr.TargetRef.Namespace, addr.TargetRef.Name)
+					if err != nil {
+						return nil, err
+					}
+					if !exists {
+						continue
+					}
+					if pod.Spec.ServiceAccountName != serviceAccountName {
+						continue
+					}
+				}
 				servers = append(servers, config.TCPServer{
 					Address: fmt.Sprintf("%s:%d", addr.IP, port),
 				})
@@ -216,7 +228,7 @@ func loadTCPServers(client Client, namespace string, svc v1alpha1.ServiceTCP) ([
 	return servers, nil
 }
 
-func loadServers(client Client, namespace string, svc v1alpha1.Service) ([]config.Server, error) {
+func loadServers(client Client, namespace string, svc v1alpha1.Service, serviceAccountName string) ([]config.Server, error) {
 	strategy := svc.Strategy
 	if strategy == "" {
 		strategy = "RoundRobin"
@@ -284,93 +296,17 @@ func loadServers(client Client, namespace string, svc v1alpha1.Service) ([]confi
 			}
 
 			for _, addr := range subset.Addresses {
-				servers = append(servers, config.Server{
-					URL: fmt.Sprintf("%s://%s:%d", protocol, addr.IP, port),
-				})
-			}
-		}
-	}
-
-	return servers, nil
-}
-
-func loadServersWithServiceAccount(client Client, namespace string, svc v1alpha1.Service, serviceAccountName string) ([]config.Server, error) {
-	strategy := svc.Strategy
-	if strategy == "" {
-		strategy = "RoundRobin"
-	}
-	if strategy != "RoundRobin" {
-		return nil, fmt.Errorf("load balancing strategy %v is not supported", strategy)
-	}
-
-	service, exists, err := client.GetService(namespace, svc.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, errors.New("service not found")
-	}
-
-	var portSpec *corev1.ServicePort
-	for _, p := range service.Spec.Ports {
-		if svc.Port == p.Port {
-			portSpec = &p
-			break
-		}
-	}
-
-	if portSpec == nil {
-		return nil, errors.New("service port not found")
-	}
-
-	var servers []config.Server
-	if service.Spec.Type == corev1.ServiceTypeExternalName {
-		servers = append(servers, config.Server{
-			URL: fmt.Sprintf("http://%s:%d", service.Spec.ExternalName, portSpec.Port),
-		})
-	} else {
-		endpoints, endpointsExists, endpointsErr := client.GetEndpoints(namespace, svc.Name)
-		if endpointsErr != nil {
-			return nil, endpointsErr
-		}
-
-		if !endpointsExists {
-			return nil, errors.New("endpoints not found")
-		}
-
-		if len(endpoints.Subsets) == 0 {
-			return nil, errors.New("subset not found")
-		}
-
-		var port int32
-		for _, subset := range endpoints.Subsets {
-			for _, p := range subset.Ports {
-				if portSpec.Name == p.Name {
-					port = p.Port
-					break
-				}
-			}
-
-			if port == 0 {
-				return nil, errors.New("cannot define a port")
-			}
-
-			protocol := "http"
-			if port == 443 || strings.HasPrefix(portSpec.Name, "https") {
-				protocol = "https"
-			}
-
-			for _, addr := range subset.Addresses {
-				pod, exists, err := client.GetPod(addr.TargetRef.Namespace, addr.TargetRef.Name)
-				if err != nil {
-					return nil, err
-				}
-				if !exists {
-					continue
-				}
-				if pod.Spec.ServiceAccountName != serviceAccountName {
-					continue
+				if serviceAccountName != "" {
+					pod, exists, err := client.GetPod(addr.TargetRef.Namespace, addr.TargetRef.Name)
+					if err != nil {
+						return nil, err
+					}
+					if !exists {
+						continue
+					}
+					if pod.Spec.ServiceAccountName != serviceAccountName {
+						continue
+					}
 				}
 				servers = append(servers, config.Server{
 					URL: fmt.Sprintf("%s://%s:%d", protocol, addr.IP, port),
@@ -472,20 +408,7 @@ func (p *Provider) loadIngressRouteConfiguration(ctx context.Context, client Cli
 
 			var allServers []config.Server
 			for _, service := range route.Services {
-				if len(ingressRoute.Annotations[k8s.IngressRouteDestinationSA]) != 0 {
-					// SMI defined for this IngressRoute, filter destination servers by SA
-					servers, err := loadServersWithServiceAccount(client, ingressRoute.Namespace, service, ingressRoute.Annotations[k8s.IngressRouteDestinationSA])
-					if err != nil {
-						logger.
-							WithField("serviceName", service.Name).
-							WithField("servicePort", service.Port).
-							Errorf("Cannot create service: %v", err)
-						continue
-					}
-					allServers = append(allServers, servers...)
-					continue
-				}
-				servers, err := loadServers(client, ingressRoute.Namespace, service)
+				servers, err := loadServers(client, ingressRoute.Namespace, service, ingressRoute.Annotations[k8s.AnnotationSMIDestinationSA])
 				if err != nil {
 					logger.
 						WithField("serviceName", service.Name).
@@ -596,7 +519,7 @@ func (p *Provider) loadIngressRouteTCPConfiguration(ctx context.Context, client 
 
 			var allServers []config.TCPServer
 			for _, service := range route.Services {
-				servers, err := loadTCPServers(client, ingressRouteTCP.Namespace, service)
+				servers, err := loadTCPServers(client, ingressRouteTCP.Namespace, service, ingressRouteTCP.Annotations[k8s.AnnotationSMIDestinationSA])
 				if err != nil {
 					logger.
 						WithField("serviceName", service.Name).
