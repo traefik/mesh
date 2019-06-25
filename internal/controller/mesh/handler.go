@@ -10,8 +10,6 @@ import (
 	traefikconfig "github.com/containous/traefik/pkg/config"
 	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
-	// smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
-	// smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -442,6 +440,11 @@ func (h *Handler) deleteMeshIngressRouteTCPsByService(serviceName, serviceNamesp
 func (h *Handler) updateIngressRoutesWithSMI(obj interface{}) error {
 	trafficTarget := obj.(*smiAccessv1alpha1.TrafficTarget)
 
+	//	For each service, check to see if the destination SA applies,
+	//	If it does, there needs to be a route for each source, to apply
+	//	the source whitelisting to. This will eventually be extended to
+	//	Add the HTTPRouteGroup filtering
+
 	var sourceIPs []string
 	for _, source := range trafficTarget.Sources {
 		fieldSelector := fmt.Sprintf("spec.serviceAccountName=%s", source.Name)
@@ -640,10 +643,6 @@ func (h *Handler) createBlockAllMiddleware(serviceNamespace string) error {
 	log.Debugf("Creating middleware: block-all-whitelist in namespace: %s", serviceNamespace)
 	_, err = h.Clients.CrdClient.TraefikV1alpha1().Middlewares(serviceNamespace).Create(middleware)
 	return err
-}
-
-func (h *Handler) createUpdateShadowServicesWithSMI(obj interface{}) error {
-	return nil
 }
 
 // userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh ingressroute name.
