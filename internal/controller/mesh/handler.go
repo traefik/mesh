@@ -70,6 +70,13 @@ func (h *Handler) ObjectCreated(event i3o.Message) {
 			return
 		}
 
+		if h.smiEnabled {
+			if err := h.createBlockAllMiddleware(userService.Namespace); err != nil {
+				log.Errorf("Could not create block-all middleware: %v", err)
+				return
+			}
+		}
+
 		if serviceType, ok := userService.Annotations[k8s.AnnotationServiceType]; ok {
 			if strings.ToLower(serviceType) == k8s.ServiceTypeHTTP {
 				// Use http ingressRoutes
@@ -446,7 +453,10 @@ func (h *Handler) updateMeshServicesWithSMI(obj interface{}) error {
 		}
 	}
 
-	h.createUpdateIPWhitelistMiddleware(trafficTarget.Name, trafficTarget.Namespace, sourceIPs)
+	createdWhitelistMiddleware, err := h.createUpdateIPWhitelistMiddleware(trafficTarget.Name, trafficTarget.Destination.Namespace, sourceIPs)
+	if err != nil {
+		return err
+	}
 
 	// Get Endpoints in destination namespace.
 	endpoints, err := h.Clients.KubeClient.CoreV1().Endpoints(trafficTarget.Destination.Namespace).List(metav1.ListOptions{})
@@ -454,74 +464,114 @@ func (h *Handler) updateMeshServicesWithSMI(obj interface{}) error {
 		return err
 	}
 
-	var validTargetFound bool
 	for _, endpoint := range endpoints.Items {
 		// Check Endpoints against service account via targetref in EndpointAddress.
-		TODO: WE NEED TO CHECK FOR DESTINATION PORT IN ENDPOINTS FIRST, MAY BE MUCH FASTER
 		for _, subset := range endpoint.Subsets {
-			for _, address := range subset.Addresses {
-				if pod, err := h.Clients.KubeClient.CoreV1().Pods(address.TargetRef.Namespace).Get(address.TargetRef.Name, metav1.GetOptions{}); err != nil {
-					if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
-						validTargetFound = true
-					}
-				}
-				if validTargetFound {
+			var subsetMatch bool
+			for _, endpointPort := range subset.Ports {
+				if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port {
+					subsetMatch = true
 					break
 				}
 			}
 
-			// If any addresses match, then the subset is valid for all ports listed.
-			if validTargetFound {
-				// If present, then ingressroute[tcp]s for that service needs whitelist added.
-				for _, endpointPort := range subset.Ports {
-					portString := strconv.FormatInt(int64(endpointPort.Port), 10)
-					meshIngressRouteName := userServiceToMeshServiceName(endpoint.Name, trafficTarget.Destination.Namespace) + "-" + portString
+			if !subsetMatch {
+				// No subset port match on destination port, so subset is not affected
+				continue
+			}
 
-					retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-						obj, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(trafficTarget.Destination.Namespace).Get(meshIngressRouteName, metav1.GetOptions{})
-						if err != nil {
-							return err
-						}
-						if obj != nil {
-							// Never modify the original object, always use a copy
-							ir := obj.DeepCopy()
-
-							for _, route := range ir.Spec.Routes {
-								ENSURE OUR WHITELIST MIDDLEWARE IS ADDED BEFORE
-								THE BLOCKALL MIDDLEWARE (whitelist 255.255.255.255)
-							}
-
-							updatedSvc, err = h.Clients.KubeClient.CoreV1().Services(k8s.MeshNamespace).Update(existing)
-							if err != nil {
-								fmt.Println(err)
-								return err
-							}
-						}
-						return nil
-					})
-
-					if retryErr != nil {
-						return nil, fmt.Errorf("unable to update service %q: %v", meshServiceName, retryErr)
+			var validPodFound bool
+			for _, address := range subset.Addresses {
+				if pod, err := h.Clients.KubeClient.CoreV1().Pods(address.TargetRef.Namespace).Get(address.TargetRef.Name, metav1.GetOptions{}); err != nil {
+					if err != nil {
+						return err
 					}
-
+					if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
+						validPodFound = true
+						break
+					}
 				}
 			}
-		}
 
-		if validTargetFound {
+			if !validPodFound {
+				// No valid pods with serviceAccound found on the subset, so it is not affected
+				continue
+			}
 
+			// We have a subset match, and valid referenced pods.
+			// Update the ingressroute[tcp]s by adding the whitelist middleware
+
+			for _, endpointPort := range subset.Ports {
+				portString := strconv.FormatInt(int64(endpointPort.Port), 10)
+				if portString != trafficTarget.Destination.Port {
+					continue
+				}
+				meshIngressRouteName := userServiceToMeshServiceName(endpoint.Name, trafficTarget.Destination.Namespace) + "-" + portString
+
+				retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					obj, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(trafficTarget.Destination.Namespace).Get(meshIngressRouteName, metav1.GetOptions{})
+					if err != nil {
+						return err
+					}
+					if obj != nil {
+						// Never modify the original object, always use a copy
+						ir := obj.DeepCopy()
+
+						for x, route := range ir.Spec.Routes {
+							blockAllKey := -1
+							createdWhitelistKey := -1
+							for i, mw := range route.Middlewares {
+								if mw.Name == "block-all-whitelist" {
+									blockAllKey = i
+								}
+								if mw.Name == createdWhitelistMiddleware.Name {
+									createdWhitelistKey = i
+								}
+							}
+
+							if blockAllKey == -1 {
+								return fmt.Errorf("could not find block all middleware: %s/block-all-whitelist", trafficTarget.Destination.Namespace)
+							}
+
+							if createdWhitelistKey != -1 {
+								// Middleware already exists in the route, no need to modify
+								continue
+							}
+
+							//We have the key of the block-all middlware, so insert our middlware before
+							middlewareList := append(route.Middlewares, traefikv1alpha1.MiddlewareRef{})
+							copy(middlewareList[blockAllKey:], middlewareList[(blockAllKey-1):])
+							middlewareList[blockAllKey] = traefikv1alpha1.MiddlewareRef{Name: createdWhitelistMiddleware.Name, Namespace: createdWhitelistMiddleware.Namespace}
+
+							ir.Spec.Routes[x].Middlewares = middlewareList
+						}
+
+						_, err := h.Clients.CrdClient.TraefikV1alpha1().IngressRoutes(trafficTarget.Destination.Namespace).Update(ir)
+						if err != nil {
+							fmt.Println(err)
+							return err
+						}
+					}
+					return nil
+				})
+
+				if retryErr != nil {
+					return fmt.Errorf("unable to update ingressRoute %q: %v", meshIngressRouteName, retryErr)
+				}
+
+			}
 		}
 	}
-	// Ensure blockAll whitelist is present
 
 	return nil
 }
 
-func (h *Handler) createUpdateIPWhitelistMiddleware(name string, namespace string, ips []string) error {
+func (h *Handler) createUpdateIPWhitelistMiddleware(name string, namespace string, ips []string) (*traefikv1alpha1.Middleware, error) {
 
 	ipWhitelistMiddlewareName := name + namespace + "-whitelist"
+	var createdMiddleware *traefikv1alpha1.Middleware
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		mw, err := h.Clients.CrdClient.TraefikV1alpha1().Middlewares(k8s.MeshNamespace).Get(ipWhitelistMiddlewareName, metav1.GetOptions{})
+		mw, err := h.Clients.CrdClient.TraefikV1alpha1().Middlewares(namespace).Get(ipWhitelistMiddlewareName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -535,7 +585,7 @@ func (h *Handler) createUpdateIPWhitelistMiddleware(name string, namespace strin
 
 			middleware.Spec.IPWhiteList.SourceRange = ips
 
-			_, err = h.Clients.CrdClient.TraefikV1alpha1().Middlewares(k8s.MeshNamespace).Update(middleware)
+			createdMiddleware, err = h.Clients.CrdClient.TraefikV1alpha1().Middlewares(middleware.Namespace).Update(middleware)
 			return err
 		}
 
@@ -543,7 +593,7 @@ func (h *Handler) createUpdateIPWhitelistMiddleware(name string, namespace strin
 		middleware := &traefikv1alpha1.Middleware{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ipWhitelistMiddlewareName,
-				Namespace: k8s.MeshNamespace,
+				Namespace: namespace,
 			},
 			Spec: traefikconfig.Middleware{
 				IPWhiteList: &traefikconfig.IPWhiteList{
@@ -552,15 +602,41 @@ func (h *Handler) createUpdateIPWhitelistMiddleware(name string, namespace strin
 			},
 		}
 
-		_, err = h.Clients.CrdClient.TraefikV1alpha1().Middlewares(k8s.MeshNamespace).Create(middleware)
+		createdMiddleware, err = h.Clients.CrdClient.TraefikV1alpha1().Middlewares(middleware.Namespace).Create(middleware)
 		return err
 	})
 
 	if retryErr != nil {
-		return fmt.Errorf("unable to update middleware %q: %v", ipWhitelistMiddlewareName, retryErr)
+		return nil, fmt.Errorf("unable to update middleware %q: %v", ipWhitelistMiddlewareName, retryErr)
 	}
 
-	return nil
+	return createdMiddleware, nil
+}
+
+func (h *Handler) createBlockAllMiddleware(serviceNamespace string) error {
+	mw, err := h.Clients.CrdClient.TraefikV1alpha1().Middlewares(serviceNamespace).Get("block-all-whitelist", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	if mw != nil {
+		//middleware already exists
+		return nil
+	}
+
+	middleware := &traefikv1alpha1.Middleware{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "block-all-whitelist",
+			Namespace: serviceNamespace,
+		},
+		Spec: traefikconfig.Middleware{
+			IPWhiteList: &traefikconfig.IPWhiteList{
+				SourceRange: []string{"255.255.255.255"},
+			},
+		},
+	}
+
+	_, err = h.Clients.CrdClient.TraefikV1alpha1().Middlewares(serviceNamespace).Create(middleware)
+	return err
 }
 
 func (h *Handler) createUpdateShadowServicesWithSMI(obj interface{}) error {

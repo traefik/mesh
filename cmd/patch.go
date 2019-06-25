@@ -19,7 +19,6 @@ func init() {
 	patchCmd.Flags().StringVar(&kubeconfig, "kubeconfig", os.Getenv("KUBECONFIG"), "Path to a kubeconfig. Only required if out-of-cluster.")
 	patchCmd.Flags().StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	patchCmd.Flags().BoolVar(&debug, "debug", false, "enable debug mode")
-	rootCmd.Flags().BoolVar(&smi, "smi", false, "enable SMI")
 	rootCmd.AddCommand(patchCmd)
 }
 
@@ -40,7 +39,7 @@ func patchCommand() func(cmd *cobra.Command, args []string) {
 			log.Fatalf("Error building clients: %v", err)
 		}
 
-		if err = clients.InitCluster(smi); err != nil {
+		if err = clients.InitCluster(); err != nil {
 			log.Fatalf("Error initializing cluster: %v", err)
 		}
 

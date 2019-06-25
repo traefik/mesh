@@ -75,7 +75,7 @@ func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {
 }
 
 // InitCluster is used to initialize a kubernetes cluster with a variety of configuration options.
-func (w *ClientWrapper) InitCluster(smi bool) error {
+func (w *ClientWrapper) InitCluster() error {
 	log.Infoln("Preparing Cluster...")
 
 	log.Debugln("Creating mesh namespace...")
@@ -86,13 +86,6 @@ func (w *ClientWrapper) InitCluster(smi bool) error {
 	log.Debugln("Patching CoreDNS...")
 	if err := w.patchCoreDNS("coredns", metav1.NamespaceSystem); err != nil {
 		return err
-	}
-
-	if smi {
-		log.Debugln("Creating SMI middleware...")
-		if err := w.createSMIMiddleware(); err != nil {
-			return err
-		}
 	}
 
 	log.Infoln("Cluster Preparation Complete...")
@@ -256,13 +249,6 @@ func (w *ClientWrapper) verifyCoreDNSPatched(deploymentName string, namespace st
 	}
 
 	return errors.New("coreDNS not patched. Run ./i3o patch to update DNS")
-}
-
-// createSMIMiddlware creates middleware objects to be used and referenced when using SMI in the cluster.
-func createSMIMiddleware() error {
-
-	THIS IS WHERE WE NEED TO INSTALL THE BLOCK-ALL WHITELIST MIDDLEWARE
-	return nil
 }
 
 // buildClient returns a useable kubernetes client.
