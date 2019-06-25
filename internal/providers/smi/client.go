@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/containous/traefik/pkg/log"
+	"github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/clientset/versioned"
+	"github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/informers/externalversions"
+	"github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
@@ -42,6 +45,12 @@ func (reh *resourceEventHandler) OnDelete(obj interface{}) {
 // The stores can then be accessed via the Get* functions.
 type Client interface {
 	WatchAll(namespaces []string, stopCh <-chan struct{}) (<-chan interface{}, error)
+
+	GetIngressRoutes() []*v1alpha1.IngressRoute
+	GetIngressRouteTCPs() []*v1alpha1.IngressRouteTCP
+	GetMiddlewares() []*v1alpha1.Middleware
+	GetTLSOptions() []*v1alpha1.TLSOption
+
 	GetIngresses() []*extensionsv1beta1.Ingress
 	GetService(namespace, name string) (*corev1.Service, bool, error)
 	GetSecret(namespace, name string) (*corev1.Secret, bool, error)
@@ -49,12 +58,41 @@ type Client interface {
 	UpdateIngressStatus(namespace, name, ip, hostname string) error
 }
 
+// TODO: add tests for the clientWrapper (and its methods) itself.
 type clientWrapper struct {
-	clientset            *kubernetes.Clientset
-	factories            map[string]informers.SharedInformerFactory
-	ingressLabelSelector labels.Selector
-	isNamespaceAll       bool
-	watchedNamespaces    []string
+	csCrd  *versioned.Clientset
+	csKube *kubernetes.Clientset
+
+	factoriesCrd  map[string]externalversions.SharedInformerFactory
+	factoriesKube map[string]informers.SharedInformerFactory
+
+	labelSelector labels.Selector
+
+	isNamespaceAll    bool
+	watchedNamespaces []string
+}
+
+func createClientFromConfig(c *rest.Config) (*clientWrapper, error) {
+	csCrd, err := versioned.NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
+
+	csKube, err := kubernetes.NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return newClientImpl(csKube, csCrd), nil
+}
+
+func newClientImpl(csKube *kubernetes.Clientset, csCrd *versioned.Clientset) *clientWrapper {
+	return &clientWrapper{
+		csCrd:         csCrd,
+		csKube:        csKube,
+		factoriesCrd:  make(map[string]externalversions.SharedInformerFactory),
+		factoriesKube: make(map[string]informers.SharedInformerFactory),
+	}
 }
 
 // newInClusterClient returns a new Provider client that is expected to run
@@ -101,23 +139,8 @@ func newExternalClusterClient(endpoint, token, caFilePath string) (*clientWrappe
 
 		config.TLSClientConfig = rest.TLSClientConfig{CAData: caData}
 	}
+
 	return createClientFromConfig(config)
-}
-
-func createClientFromConfig(c *rest.Config) (*clientWrapper, error) {
-	clientset, err := kubernetes.NewForConfig(c)
-	if err != nil {
-		return nil, err
-	}
-
-	return newClientImpl(clientset), nil
-}
-
-func newClientImpl(clientset *kubernetes.Clientset) *clientWrapper {
-	return &clientWrapper{
-		clientset: clientset,
-		factories: make(map[string]informers.SharedInformerFactory),
-	}
 }
 
 // WatchAll starts namespace-specific controllers for all relevant kinds.
@@ -129,23 +152,37 @@ func (c *clientWrapper) WatchAll(namespaces []string, stopCh <-chan struct{}) (<
 		namespaces = []string{metav1.NamespaceAll}
 		c.isNamespaceAll = true
 	}
-
 	c.watchedNamespaces = namespaces
 
 	for _, ns := range namespaces {
-		factory := informers.NewFilteredSharedInformerFactory(c.clientset, resyncPeriod, ns, nil)
-		factory.Extensions().V1beta1().Ingresses().Informer().AddEventHandler(eventHandler)
-		factory.Core().V1().Services().Informer().AddEventHandler(eventHandler)
-		factory.Core().V1().Endpoints().Informer().AddEventHandler(eventHandler)
-		c.factories[ns] = factory
+		factoryCrd := externalversions.NewSharedInformerFactoryWithOptions(c.csCrd, resyncPeriod, externalversions.WithNamespace(ns))
+		factoryCrd.Traefik().V1alpha1().IngressRoutes().Informer().AddEventHandler(eventHandler)
+		factoryCrd.Traefik().V1alpha1().Middlewares().Informer().AddEventHandler(eventHandler)
+		factoryCrd.Traefik().V1alpha1().IngressRouteTCPs().Informer().AddEventHandler(eventHandler)
+		factoryCrd.Traefik().V1alpha1().TLSOptions().Informer().AddEventHandler(eventHandler)
+
+		factoryKube := informers.NewFilteredSharedInformerFactory(c.csKube, resyncPeriod, ns, nil)
+		factoryKube.Extensions().V1beta1().Ingresses().Informer().AddEventHandler(eventHandler)
+		factoryKube.Core().V1().Services().Informer().AddEventHandler(eventHandler)
+		factoryKube.Core().V1().Endpoints().Informer().AddEventHandler(eventHandler)
+
+		c.factoriesCrd[ns] = factoryCrd
+		c.factoriesKube[ns] = factoryKube
 	}
 
 	for _, ns := range namespaces {
-		c.factories[ns].Start(stopCh)
+		c.factoriesCrd[ns].Start(stopCh)
+		c.factoriesKube[ns].Start(stopCh)
 	}
 
 	for _, ns := range namespaces {
-		for t, ok := range c.factories[ns].WaitForCacheSync(stopCh) {
+		for t, ok := range c.factoriesCrd[ns].WaitForCacheSync(stopCh) {
+			if !ok {
+				return nil, fmt.Errorf("timed out waiting for controller caches to sync %s in namespace %q", t.String(), ns)
+			}
+		}
+
+		for t, ok := range c.factoriesKube[ns].WaitForCacheSync(stopCh) {
 			if !ok {
 				return nil, fmt.Errorf("timed out waiting for controller caches to sync %s in namespace %q", t.String(), ns)
 			}
@@ -157,18 +194,75 @@ func (c *clientWrapper) WatchAll(namespaces []string, stopCh <-chan struct{}) (<
 	// https://github.com/containous/traefik/issues/1784 should improve the
 	// situation here in the future.
 	for _, ns := range namespaces {
-		c.factories[ns].Core().V1().Secrets().Informer().AddEventHandler(eventHandler)
-		c.factories[ns].Start(stopCh)
+		c.factoriesKube[ns].Core().V1().Secrets().Informer().AddEventHandler(eventHandler)
+		c.factoriesKube[ns].Start(stopCh)
 	}
 
 	return eventCh, nil
 }
 
+func (c *clientWrapper) GetIngressRoutes() []*v1alpha1.IngressRoute {
+	var result []*v1alpha1.IngressRoute
+
+	for ns, factory := range c.factoriesCrd {
+		ings, err := factory.Traefik().V1alpha1().IngressRoutes().Lister().List(c.labelSelector)
+		if err != nil {
+			log.Errorf("Failed to list ingresses in namespace %s: %s", ns, err)
+		}
+		result = append(result, ings...)
+	}
+
+	return result
+}
+
+func (c *clientWrapper) GetIngressRouteTCPs() []*v1alpha1.IngressRouteTCP {
+	var result []*v1alpha1.IngressRouteTCP
+
+	for ns, factory := range c.factoriesCrd {
+		ings, err := factory.Traefik().V1alpha1().IngressRouteTCPs().Lister().List(c.labelSelector)
+		if err != nil {
+			log.Errorf("Failed to list tcp ingresses in namespace %s: %s", ns, err)
+		}
+		result = append(result, ings...)
+	}
+
+	return result
+}
+
+func (c *clientWrapper) GetMiddlewares() []*v1alpha1.Middleware {
+	var result []*v1alpha1.Middleware
+
+	for ns, factory := range c.factoriesCrd {
+		ings, err := factory.Traefik().V1alpha1().Middlewares().Lister().List(c.labelSelector)
+		if err != nil {
+			log.Errorf("Failed to list ingresses in namespace %s: %s", ns, err)
+		}
+		result = append(result, ings...)
+	}
+
+	return result
+}
+
+// GetTLSOptions
+func (c *clientWrapper) GetTLSOptions() []*v1alpha1.TLSOption {
+	var result []*v1alpha1.TLSOption
+
+	for ns, factory := range c.factoriesCrd {
+		options, err := factory.Traefik().V1alpha1().TLSOptions().Lister().List(c.labelSelector)
+		if err != nil {
+			log.Errorf("Failed to list tls options in namespace %s: %s", ns, err)
+		}
+		result = append(result, options...)
+	}
+
+	return result
+}
+
 // GetIngresses returns all Ingresses for observed namespaces in the cluster.
 func (c *clientWrapper) GetIngresses() []*extensionsv1beta1.Ingress {
 	var result []*extensionsv1beta1.Ingress
-	for ns, factory := range c.factories {
-		ings, err := factory.Extensions().V1beta1().Ingresses().Lister().List(c.ingressLabelSelector)
+	for ns, factory := range c.factoriesKube {
+		ings, err := factory.Extensions().V1beta1().Ingresses().Lister().List(c.labelSelector)
 		if err != nil {
 			log.Errorf("Failed to list ingresses in namespace %s: %s", ns, err)
 		}
@@ -183,7 +277,7 @@ func (c *clientWrapper) UpdateIngressStatus(namespace, name, ip, hostname string
 		return fmt.Errorf("failed to get ingress %s/%s: namespace is not within watched namespaces", namespace, name)
 	}
 
-	ing, err := c.factories[c.lookupNamespace(namespace)].Extensions().V1beta1().Ingresses().Lister().Ingresses(namespace).Get(name)
+	ing, err := c.factoriesKube[c.lookupNamespace(namespace)].Extensions().V1beta1().Ingresses().Lister().Ingresses(namespace).Get(name)
 	if err != nil {
 		return fmt.Errorf("failed to get ingress %s/%s: %v", namespace, name, err)
 	}
@@ -198,7 +292,7 @@ func (c *clientWrapper) UpdateIngressStatus(namespace, name, ip, hostname string
 	ingCopy := ing.DeepCopy()
 	ingCopy.Status = extensionsv1beta1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: []corev1.LoadBalancerIngress{{IP: ip, Hostname: hostname}}}}
 
-	_, err = c.clientset.ExtensionsV1beta1().Ingresses(ingCopy.Namespace).UpdateStatus(ingCopy)
+	_, err = c.csKube.ExtensionsV1beta1().Ingresses(ingCopy.Namespace).UpdateStatus(ingCopy)
 	if err != nil {
 		return fmt.Errorf("failed to update ingress status %s/%s: %v", namespace, name, err)
 	}
@@ -212,7 +306,7 @@ func (c *clientWrapper) GetService(namespace, name string) (*corev1.Service, boo
 		return nil, false, fmt.Errorf("failed to get service %s/%s: namespace is not within watched namespaces", namespace, name)
 	}
 
-	service, err := c.factories[c.lookupNamespace(namespace)].Core().V1().Services().Lister().Services(namespace).Get(name)
+	service, err := c.factoriesKube[c.lookupNamespace(namespace)].Core().V1().Services().Lister().Services(namespace).Get(name)
 	exist, err := translateNotFoundError(err)
 	return service, exist, err
 }
@@ -223,7 +317,7 @@ func (c *clientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints,
 		return nil, false, fmt.Errorf("failed to get endpoints %s/%s: namespace is not within watched namespaces", namespace, name)
 	}
 
-	endpoint, err := c.factories[c.lookupNamespace(namespace)].Core().V1().Endpoints().Lister().Endpoints(namespace).Get(name)
+	endpoint, err := c.factoriesKube[c.lookupNamespace(namespace)].Core().V1().Endpoints().Lister().Endpoints(namespace).Get(name)
 	exist, err := translateNotFoundError(err)
 	return endpoint, exist, err
 }
@@ -234,7 +328,7 @@ func (c *clientWrapper) GetSecret(namespace, name string) (*corev1.Secret, bool,
 		return nil, false, fmt.Errorf("failed to get secret %s/%s: namespace is not within watched namespaces", namespace, name)
 	}
 
-	secret, err := c.factories[c.lookupNamespace(namespace)].Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
+	secret, err := c.factoriesKube[c.lookupNamespace(namespace)].Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
 	exist, err := translateNotFoundError(err)
 	return secret, exist, err
 }
@@ -258,7 +352,7 @@ func (c *clientWrapper) newResourceEventHandler(events chan<- interface{}) cache
 			// Ignore Ingresses that do not match our custom label selector.
 			if ing, ok := obj.(*extensionsv1beta1.Ingress); ok {
 				lbls := labels.Set(ing.GetLabels())
-				return c.ingressLabelSelector.Matches(lbls)
+				return c.labelSelector.Matches(lbls)
 			}
 			return true
 		},
