@@ -26,7 +26,7 @@ import (
 	"github.com/vulcand/oxy/roundrobin"
 )
 
-// NewCmd builds a new Version command
+// NewCmd builds a new Traefik command.
 func NewCmd(tConfig *traefikcmd.TraefikCmdConfiguration, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name: "traefik",

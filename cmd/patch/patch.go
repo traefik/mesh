@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// NewCmd builds a new Version command
+// NewCmd builds a new Patch command.
 func NewCmd(pConfig *cmd.PatchConfig, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name:          "patch",
@@ -42,5 +42,6 @@ func patchCommand(pConfig *cmd.PatchConfig) error {
 	if err = clients.InitCluster(); err != nil {
 		return fmt.Errorf("error initializing cluster: %v", err)
 	}
+
 	return nil
 }

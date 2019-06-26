@@ -13,7 +13,7 @@ var (
 	date    = "I don't remember exactly"
 )
 
-// NewCmd builds a new Version command
+// NewCmd builds a new Version command.
 func NewCmd() *cli.Command {
 	return &cli.Command{
 		Name:          "version",

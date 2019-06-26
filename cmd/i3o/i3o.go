@@ -27,27 +27,23 @@ func main() {
 	}
 
 	pConfig := cmd.NewPatchConfig()
-	err := cmdI3o.AddCommand(patch.NewCmd(pConfig, loaders))
-	if err != nil {
+	if err := cmdI3o.AddCommand(patch.NewCmd(pConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
 	tConfig := traefikcmd.NewTraefikConfiguration()
-	err = cmdI3o.AddCommand(traefik.NewCmd(tConfig, loaders))
-	if err != nil {
+	if err := cmdI3o.AddCommand(traefik.NewCmd(tConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	err = cmdI3o.AddCommand(version.NewCmd())
-	if err != nil {
+	if err := cmdI3o.AddCommand(version.NewCmd()); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	err = cli.Execute(cmdI3o)
-	if err != nil {
+	if err := cli.Execute(cmdI3o); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
