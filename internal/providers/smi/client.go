@@ -10,6 +10,12 @@ import (
 	"github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/clientset/versioned"
 	"github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/informers/externalversions"
 	"github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
+	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	smiAccessClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	smiAccessExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
+	smiSpecsClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
+	smiSpecsExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
@@ -46,26 +52,31 @@ func (reh *resourceEventHandler) OnDelete(obj interface{}) {
 type Client interface {
 	WatchAll(namespaces []string, stopCh <-chan struct{}) (<-chan interface{}, error)
 
-	GetIngressRoutes() []*v1alpha1.IngressRoute
-	GetIngressRouteTCPs() []*v1alpha1.IngressRouteTCP
 	GetMiddlewares() []*v1alpha1.Middleware
-	GetTLSOptions() []*v1alpha1.TLSOption
 
-	GetIngresses() []*extensionsv1beta1.Ingress
+	GetNamespaces() []*corev1.Namespace
 	GetPod(namespace, name string) (*corev1.Pod, bool, error)
 	GetService(namespace, name string) (*corev1.Service, bool, error)
-	GetSecret(namespace, name string) (*corev1.Secret, bool, error)
+	GetServicesInNamespace(namespace string) []*corev1.Service
 	GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error)
-	UpdateIngressStatus(namespace, name, ip, hostname string) error
+
+	GetTrafficTargets() []*accessv1alpha1.TrafficTarget
+	GetTrafficTargetsWithDestinationInNamespace(namespace string) []*accessv1alpha1.TrafficTarget
+
+	GetHTTPRouteGroup(namespace, name string) (*specsv1alpha1.HTTPRouteGroup, bool, error)
 }
 
 // TODO: add tests for the clientWrapper (and its methods) itself.
 type clientWrapper struct {
-	csCrd  *versioned.Clientset
-	csKube *kubernetes.Clientset
+	csCrd    *versioned.Clientset
+	csKube   *kubernetes.Clientset
+	csAccess *smiAccessClientset.Clientset
+	csSpecs  *smiSpecsClientset.Clientset
 
-	factoriesCrd  map[string]externalversions.SharedInformerFactory
-	factoriesKube map[string]informers.SharedInformerFactory
+	factoriesCrd    map[string]externalversions.SharedInformerFactory
+	factoriesKube   map[string]informers.SharedInformerFactory
+	factoriesAccess map[string]smiAccessExternalversions.SharedInformerFactory
+	factoriesSpecs  map[string]smiSpecsExternalversions.SharedInformerFactory
 
 	labelSelector labels.Selector
 
@@ -84,15 +95,29 @@ func createClientFromConfig(c *rest.Config) (*clientWrapper, error) {
 		return nil, err
 	}
 
-	return newClientImpl(csKube, csCrd), nil
+	csAccess, err := smiAccessClientset.NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
+
+	csSpecs, err := smiSpecsClientset.NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return newClientImpl(csKube, csCrd, csAccess, csSpecs), nil
 }
 
-func newClientImpl(csKube *kubernetes.Clientset, csCrd *versioned.Clientset) *clientWrapper {
+func newClientImpl(csKube *kubernetes.Clientset, csCrd *versioned.Clientset, csAccess *smiAccessClientset.Clientset, csSpecs *smiSpecsClientset.Clientset) *clientWrapper {
 	return &clientWrapper{
-		csCrd:         csCrd,
-		csKube:        csKube,
-		factoriesCrd:  make(map[string]externalversions.SharedInformerFactory),
-		factoriesKube: make(map[string]informers.SharedInformerFactory),
+		csCrd:           csCrd,
+		csKube:          csKube,
+		csAccess:        csAccess,
+		csSpecs:         csSpecs,
+		factoriesCrd:    make(map[string]externalversions.SharedInformerFactory),
+		factoriesKube:   make(map[string]informers.SharedInformerFactory),
+		factoriesAccess: make(map[string]smiAccessExternalversions.SharedInformerFactory),
+		factoriesSpecs:  make(map[string]smiSpecsExternalversions.SharedInformerFactory),
 	}
 }
 
@@ -157,23 +182,31 @@ func (c *clientWrapper) WatchAll(namespaces []string, stopCh <-chan struct{}) (<
 
 	for _, ns := range namespaces {
 		factoryCrd := externalversions.NewSharedInformerFactoryWithOptions(c.csCrd, resyncPeriod, externalversions.WithNamespace(ns))
-		factoryCrd.Traefik().V1alpha1().IngressRoutes().Informer().AddEventHandler(eventHandler)
 		factoryCrd.Traefik().V1alpha1().Middlewares().Informer().AddEventHandler(eventHandler)
-		factoryCrd.Traefik().V1alpha1().IngressRouteTCPs().Informer().AddEventHandler(eventHandler)
-		factoryCrd.Traefik().V1alpha1().TLSOptions().Informer().AddEventHandler(eventHandler)
 
 		factoryKube := informers.NewFilteredSharedInformerFactory(c.csKube, resyncPeriod, ns, nil)
-		factoryKube.Extensions().V1beta1().Ingresses().Informer().AddEventHandler(eventHandler)
 		factoryKube.Core().V1().Services().Informer().AddEventHandler(eventHandler)
 		factoryKube.Core().V1().Endpoints().Informer().AddEventHandler(eventHandler)
+		factoryKube.Core().V1().Pods().Informer().AddEventHandler(eventHandler)
+		factoryKube.Core().V1().Namespaces().Informer().AddEventHandler(eventHandler)
+
+		factoryAccess := smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.csAccess, resyncPeriod, smiAccessExternalversions.WithNamespace(ns))
+		factoryAccess.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(eventHandler)
+
+		factorySpecs := smiSpecsExternalversions.NewSharedInformerFactoryWithOptions(c.csSpecs, resyncPeriod, smiSpecsExternalversions.WithNamespace(ns))
+		factorySpecs.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(eventHandler)
 
 		c.factoriesCrd[ns] = factoryCrd
 		c.factoriesKube[ns] = factoryKube
+		c.factoriesAccess[ns] = factoryAccess
+		c.factoriesSpecs[ns] = factorySpecs
 	}
 
 	for _, ns := range namespaces {
 		c.factoriesCrd[ns].Start(stopCh)
 		c.factoriesKube[ns].Start(stopCh)
+		c.factoriesAccess[ns].Start(stopCh)
+		c.factoriesSpecs[ns].Start(stopCh)
 	}
 
 	for _, ns := range namespaces {
@@ -188,46 +221,19 @@ func (c *clientWrapper) WatchAll(namespaces []string, stopCh <-chan struct{}) (<
 				return nil, fmt.Errorf("timed out waiting for controller caches to sync %s in namespace %q", t.String(), ns)
 			}
 		}
-	}
-
-	// Do not wait for the Secrets store to get synced since we cannot rely on
-	// users having granted RBAC permissions for this object.
-	// https://github.com/containous/traefik/issues/1784 should improve the
-	// situation here in the future.
-	for _, ns := range namespaces {
-		c.factoriesKube[ns].Core().V1().Secrets().Informer().AddEventHandler(eventHandler)
-		c.factoriesKube[ns].Start(stopCh)
+		for t, ok := range c.factoriesAccess[ns].WaitForCacheSync(stopCh) {
+			if !ok {
+				return nil, fmt.Errorf("timed out waiting for controller caches to sync %s in namespace %q", t.String(), ns)
+			}
+		}
+		for t, ok := range c.factoriesSpecs[ns].WaitForCacheSync(stopCh) {
+			if !ok {
+				return nil, fmt.Errorf("timed out waiting for controller caches to sync %s in namespace %q", t.String(), ns)
+			}
+		}
 	}
 
 	return eventCh, nil
-}
-
-func (c *clientWrapper) GetIngressRoutes() []*v1alpha1.IngressRoute {
-	var result []*v1alpha1.IngressRoute
-
-	for ns, factory := range c.factoriesCrd {
-		ings, err := factory.Traefik().V1alpha1().IngressRoutes().Lister().List(c.labelSelector)
-		if err != nil {
-			log.Errorf("Failed to list ingresses in namespace %s: %s", ns, err)
-		}
-		result = append(result, ings...)
-	}
-
-	return result
-}
-
-func (c *clientWrapper) GetIngressRouteTCPs() []*v1alpha1.IngressRouteTCP {
-	var result []*v1alpha1.IngressRouteTCP
-
-	for ns, factory := range c.factoriesCrd {
-		ings, err := factory.Traefik().V1alpha1().IngressRouteTCPs().Lister().List(c.labelSelector)
-		if err != nil {
-			log.Errorf("Failed to list tcp ingresses in namespace %s: %s", ns, err)
-		}
-		result = append(result, ings...)
-	}
-
-	return result
 }
 
 func (c *clientWrapper) GetMiddlewares() []*v1alpha1.Middleware {
@@ -244,61 +250,18 @@ func (c *clientWrapper) GetMiddlewares() []*v1alpha1.Middleware {
 	return result
 }
 
-// GetTLSOptions
-func (c *clientWrapper) GetTLSOptions() []*v1alpha1.TLSOption {
-	var result []*v1alpha1.TLSOption
-
-	for ns, factory := range c.factoriesCrd {
-		options, err := factory.Traefik().V1alpha1().TLSOptions().Lister().List(c.labelSelector)
+// GetNamespaces returns all watched namespaces in the cluster.
+func (c *clientWrapper) GetNamespaces() []*corev1.Namespace {
+	var result []*corev1.Namespace
+	for _, factory := range c.factoriesKube {
+		namespaces, err := factory.Core().V1().Namespaces().Lister().List(c.labelSelector)
 		if err != nil {
-			log.Errorf("Failed to list tls options in namespace %s: %s", ns, err)
+			log.Errorf("Failed to list namespaces: %v", err)
 		}
-		result = append(result, options...)
+		result = append(result, namespaces...)
 	}
 
 	return result
-}
-
-// GetIngresses returns all Ingresses for observed namespaces in the cluster.
-func (c *clientWrapper) GetIngresses() []*extensionsv1beta1.Ingress {
-	var result []*extensionsv1beta1.Ingress
-	for ns, factory := range c.factoriesKube {
-		ings, err := factory.Extensions().V1beta1().Ingresses().Lister().List(c.labelSelector)
-		if err != nil {
-			log.Errorf("Failed to list ingresses in namespace %s: %s", ns, err)
-		}
-		result = append(result, ings...)
-	}
-	return result
-}
-
-// UpdateIngressStatus updates an Ingress with a provided status.
-func (c *clientWrapper) UpdateIngressStatus(namespace, name, ip, hostname string) error {
-	if !c.isWatchedNamespace(namespace) {
-		return fmt.Errorf("failed to get ingress %s/%s: namespace is not within watched namespaces", namespace, name)
-	}
-
-	ing, err := c.factoriesKube[c.lookupNamespace(namespace)].Extensions().V1beta1().Ingresses().Lister().Ingresses(namespace).Get(name)
-	if err != nil {
-		return fmt.Errorf("failed to get ingress %s/%s: %v", namespace, name, err)
-	}
-
-	if len(ing.Status.LoadBalancer.Ingress) > 0 {
-		if ing.Status.LoadBalancer.Ingress[0].Hostname == hostname && ing.Status.LoadBalancer.Ingress[0].IP == ip {
-			// If status is already set, skip update
-			log.Debugf("Skipping status update on ingress %s/%s", ing.Namespace, ing.Name)
-			return nil
-		}
-	}
-	ingCopy := ing.DeepCopy()
-	ingCopy.Status = extensionsv1beta1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: []corev1.LoadBalancerIngress{{IP: ip, Hostname: hostname}}}}
-
-	_, err = c.csKube.ExtensionsV1beta1().Ingresses(ingCopy.Namespace).UpdateStatus(ingCopy)
-	if err != nil {
-		return fmt.Errorf("failed to update ingress status %s/%s: %v", namespace, name, err)
-	}
-	log.Infof("Updated status on ingress %s/%s", namespace, name)
-	return nil
 }
 
 // GetService returns the named service from the given namespace.
@@ -312,6 +275,20 @@ func (c *clientWrapper) GetService(namespace, name string) (*corev1.Service, boo
 	return service, exist, err
 }
 
+// GetServicesInNamespace returns all services in the given namespace.
+func (c *clientWrapper) GetServicesInNamespace(namespace string) []*corev1.Service {
+	if !c.isWatchedNamespace(namespace) {
+		log.Errorf("failed to get services: namespace %s is not within watched namespaces", namespace)
+		return nil
+	}
+
+	services, err := c.factoriesKube[c.lookupNamespace(namespace)].Core().V1().Services().Lister().Services(namespace).List(c.labelSelector)
+	if err != nil {
+		log.Errorf("Failed to list services: %v", err)
+	}
+	return services
+}
+
 // GetEndpoints returns the named endpoints from the given namespace.
 func (c *clientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error) {
 	if !c.isWatchedNamespace(namespace) {
@@ -323,17 +300,6 @@ func (c *clientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints,
 	return endpoint, exist, err
 }
 
-// GetSecret returns the named secret from the given namespace.
-func (c *clientWrapper) GetSecret(namespace, name string) (*corev1.Secret, bool, error) {
-	if !c.isWatchedNamespace(namespace) {
-		return nil, false, fmt.Errorf("failed to get secret %s/%s: namespace is not within watched namespaces", namespace, name)
-	}
-
-	secret, err := c.factoriesKube[c.lookupNamespace(namespace)].Core().V1().Secrets().Lister().Secrets(namespace).Get(name)
-	exist, err := translateNotFoundError(err)
-	return secret, exist, err
-}
-
 // GetPod returns the named od from the given namespace.
 func (c *clientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
 	if !c.isWatchedNamespace(namespace) {
@@ -343,6 +309,46 @@ func (c *clientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error
 	pod, err := c.factoriesKube[c.lookupNamespace(namespace)].Core().V1().Pods().Lister().Pods(namespace).Get(name)
 	exist, err := translateNotFoundError(err)
 	return pod, exist, err
+}
+
+// GetTrafficTargets returns all trafficTargets in watched namespaces in the cluster.
+func (c *clientWrapper) GetTrafficTargets() []*accessv1alpha1.TrafficTarget {
+	var result []*accessv1alpha1.TrafficTarget
+	for _, factory := range c.factoriesAccess {
+		trafficTargets, err := factory.Access().V1alpha1().TrafficTargets().Lister().List(c.labelSelector)
+		if err != nil {
+			log.Errorf("Failed to list TrafficTargets: %v", err)
+		}
+		result = append(result, trafficTargets...)
+	}
+
+	return result
+}
+
+// GetTrafficTargetsWithDestinationInNamespace returns trafficTargets with the destination SA in the given namespace.
+func (c *clientWrapper) GetTrafficTargetsWithDestinationInNamespace(namespace string) []*accessv1alpha1.TrafficTarget {
+	var result []*accessv1alpha1.TrafficTarget
+	allTrafficTargets := c.GetTrafficTargets()
+	for _, trafficTarget := range allTrafficTargets {
+		if trafficTarget.Destination.Namespace != namespace {
+			continue
+		}
+		result = append(result, trafficTarget)
+	}
+
+	return result
+}
+
+// GetHTTPRouteGroup returns an HTTPRouteGroup with the given name and namespace.
+func (c *clientWrapper) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha1.HTTPRouteGroup, bool, error) {
+	if !c.isWatchedNamespace(namespace) {
+		return nil, false, fmt.Errorf("failed to get HTTPRouteGroup %s/%s: namespace is not within watched namespaces", namespace, name)
+	}
+
+	hrg, err := c.factoriesSpecs[c.lookupNamespace(namespace)].Specs().V1alpha1().HTTPRouteGroups().Lister().HTTPRouteGroups(namespace).Get(name)
+	exist, err := translateNotFoundError(err)
+	return hrg, exist, err
+
 }
 
 // lookupNamespace returns the lookup namespace key for the given namespace.

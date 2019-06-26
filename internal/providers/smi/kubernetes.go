@@ -6,40 +6,41 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/traefik/pkg/config"
 	"github.com/containous/traefik/pkg/job"
 	"github.com/containous/traefik/pkg/log"
 	"github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	"github.com/containous/traefik/pkg/safe"
-	"github.com/containous/traefik/pkg/tls"
+	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
+	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-const (
-	annotationKubernetesIngressClass = "kubernetes.io/ingress.class"
-	traefikDefaultIngressClass       = "traefik"
-)
-
 // Provider holds configurations of the provider.
 type Provider struct {
-	Endpoint               string   `description:"Kubernetes server endpoint (required for external cluster client)."`
-	Token                  string   `description:"Kubernetes bearer token (not needed for in-cluster client)."`
-	CertAuthFilePath       string   `description:"Kubernetes certificate authority file path (not needed for in-cluster client)."`
-	DisablePassHostHeaders bool     `description:"Kubernetes disable PassHost Headers." export:"true"`
-	Namespaces             []string `description:"Kubernetes namespaces." export:"true"`
-	LabelSelector          string   `description:"Kubernetes label selector to use." export:"true"`
-	IngressClass           string   `description:"Value of kubernetes.io/ingress.class annotation to watch for." export:"true"`
-	lastConfiguration      safe.Safe
+	Endpoint          string   `description:"Kubernetes server endpoint (required for external cluster client)."`
+	Token             string   `description:"Kubernetes bearer token (not needed for in-cluster client)."`
+	CertAuthFilePath  string   `description:"Kubernetes certificate authority file path (not needed for in-cluster client)."`
+	Namespaces        []string `description:"Kubernetes namespaces." export:"true"`
+	LabelSelector     string   `description:"Kubernetes label selector to use." export:"true"`
+	lastConfiguration safe.Safe
+}
+
+// destinationKey is used to key a grouped map of trafficTargets.
+type destinationKey struct {
+	name      string
+	namespace string
+	port      string
 }
 
 func (p *Provider) newK8sClient(ctx context.Context, labelSelector string) (*clientWrapper, error) {
@@ -79,10 +80,10 @@ func (p *Provider) Init() error {
 	return nil
 }
 
-// Provide allows the k8s provider to provide configurations to traefik
-// using the given configuration channel.
+// Provide allows the i3o provider to provide configurations to traefik
+// using the given configuration channel based on services and SMI objects.
 func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.Pool) error {
-	ctxLog := log.With(context.Background(), log.Str(log.ProviderName, "kubernetescrd"))
+	ctxLog := log.With(context.Background(), log.Str(log.ProviderName, "i3o"))
 	logger := log.FromContext(ctxLog)
 	// Tell glog (used by client-go) to log into STDERR. Otherwise, we risk
 	// certain kinds of API errors getting logged into a directory not
@@ -119,14 +120,14 @@ func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.P
 				case <-stop:
 					return nil
 				case event := <-eventsChan:
-					conf := p.loadConfigurationFromCRD(ctxLog, k8sClient)
+					conf := p.loadConfiguration(ctxLog, k8sClient)
 
 					if reflect.DeepEqual(p.lastConfiguration.Get(), conf) {
 						logger.Debugf("Skipping Kubernetes event kind %T", event)
 					} else {
 						p.lastConfiguration.Set(conf)
 						configurationChan <- config.Message{
-							ProviderName:  "kubernetescrd",
+							ProviderName:  "i3o",
 							Configuration: conf,
 						}
 					}
@@ -318,278 +319,216 @@ func loadServers(client Client, namespace string, svc v1alpha1.Service, serviceA
 	return servers, nil
 }
 
-func buildTLSOptions(ctx context.Context, client Client) map[string]tls.TLS {
-	tlsOptionsCRD := client.GetTLSOptions()
-	var tlsOptions map[string]tls.TLS
+func (p *Provider) loadConfiguration(ctx context.Context, client Client) *config.Configuration {
+	configRouters := make(map[string]*config.Router)
+	configServices := make(map[string]*config.Service)
+	namespaces := client.GetNamespaces()
 
-	if len(tlsOptionsCRD) == 0 {
-		return tlsOptions
-	}
-	tlsOptions = make(map[string]tls.TLS)
+	for _, namespace := range namespaces {
+		trafficTargets := client.GetTrafficTargetsWithDestinationInNamespace(namespace.Name)
 
-	for _, tlsOption := range tlsOptionsCRD {
-		logger := log.FromContext(log.With(ctx, log.Str("tlsOption", tlsOption.Name), log.Str("namespace", tlsOption.Namespace)))
-		var clientCAs []tls.FileOrContent
+		services := client.GetServicesInNamespace(namespace.Name)
 
-		for _, secretName := range tlsOption.Spec.ClientCA.SecretNames {
-			secret, exists, err := client.GetSecret(tlsOption.Namespace, secretName)
-			if err != nil {
-				logger.Errorf("Failed to fetch secret %s/%s: %v", tlsOption.Namespace, secretName, err)
-				continue
+		for _, service := range services {
+			applicableTrafficTargets := p.getApplicableTrafficTargets(service, trafficTargets, client)
+
+			groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
+
+			for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
+				for _, groupedTrafficTarget := range groupedTrafficTargets {
+					key := uuid.New().String()
+					configRouters[key] = p.buildRouterFromTrafficTarget(service, groupedTrafficTarget, client)
+					configServices[key] = p.buildServiceFromTrafficTarget(service, groupedTrafficTarget, client)
+				}
 			}
 
-			if !exists {
-				logger.Warnf("Secret %s/%s does not exist", tlsOption.Namespace, secretName)
-				continue
-			}
-
-			cert, err := getCABlocks(secret, tlsOption.Namespace, secretName)
-			if err != nil {
-				logger.Errorf("Failed to extract CA from secret %s/%s: %v", tlsOption.Namespace, secretName, err)
-				continue
-			}
-
-			clientCAs = append(clientCAs, tls.FileOrContent(cert))
-		}
-
-		tlsOptions[makeID(tlsOption.Namespace, tlsOption.Name)] = tls.TLS{
-			MinVersion:   tlsOption.Spec.MinVersion,
-			CipherSuites: tlsOption.Spec.CipherSuites,
-			ClientCA: tls.ClientCA{
-				Files:    clientCAs,
-				Optional: tlsOption.Spec.ClientCA.Optional,
-			},
-			SniStrict: tlsOption.Spec.SniStrict,
 		}
 	}
-	return tlsOptions
+
+	return &config.Configuration{
+		HTTP: &config.HTTPConfiguration{
+			Routers:  configRouters,
+			Services: configServices,
+		},
+	}
 }
 
-func (p *Provider) loadIngressRouteConfiguration(ctx context.Context, client Client, tlsConfigs map[string]*tls.Configuration) *config.HTTPConfiguration {
-	conf := &config.HTTPConfiguration{
-		Routers:     map[string]*config.Router{},
-		Middlewares: map[string]*config.Middleware{},
-		Services:    map[string]*config.Service{},
+func (p *Provider) getApplicableTrafficTargets(service *corev1.Service, trafficTargets []*accessv1alpha1.TrafficTarget, client Client) []*accessv1alpha1.TrafficTarget {
+	var result []*accessv1alpha1.TrafficTarget
+
+	endpoint, exists, err := client.GetEndpoints(service.Namespace, service.Name)
+	if err != nil {
+		log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
+		return nil
+	}
+	if !exists {
+		log.Errorf("Endpoints for service %s/%s do not exist", service.Namespace, service.Name)
+		return nil
 	}
 
-	for _, ingressRoute := range client.GetIngressRoutes() {
-		logger := log.FromContext(log.With(ctx, log.Str("ingress", ingressRoute.Name), log.Str("namespace", ingressRoute.Namespace)))
+	for _, subset := range endpoint.Subsets {
+		for _, trafficTarget := range trafficTargets {
+			if service.Namespace != trafficTarget.Destination.Namespace {
+				// Destination not in service namespace, skip.
+				continue
+			}
 
-		// TODO keep the name ingressClass?
-		if !shouldProcessIngress(p.IngressClass, ingressRoute.Annotations[annotationKubernetesIngressClass]) {
-			continue
+			var subsetMatch bool
+			for _, endpointPort := range subset.Ports {
+				if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port {
+					subsetMatch = true
+					break
+				}
+			}
+
+			if !subsetMatch {
+				// No subset port match on destination port, so subset is not affected
+				continue
+			}
+
+			var validPodFound bool
+			for _, address := range subset.Addresses {
+				if pod, _, err := client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name); err != nil {
+					if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
+						validPodFound = true
+						break
+					}
+				}
+			}
+
+			if !validPodFound {
+				// No valid pods with serviceAccound found on the subset, so it is not affected
+				continue
+			}
+
+			// We have a subset match, and valid referenced pods for the trafficTarget.
+			result = append(result, trafficTarget)
 		}
 
-		err := getTLSHTTP(ctx, ingressRoute, client, tlsConfigs)
+	}
+
+	return result
+}
+
+func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1alpha1.TrafficTarget) map[destinationKey][]*accessv1alpha1.TrafficTarget {
+	result := make(map[destinationKey][]*accessv1alpha1.TrafficTarget)
+
+	for _, trafficTarget := range trafficTargets {
+		key := destinationKey{
+			name:      trafficTarget.Destination.Name,
+			namespace: trafficTarget.Destination.Namespace,
+			port:      trafficTarget.Destination.Port,
+		}
+
+		if _, ok := result[key]; !ok {
+			// If the destination key does not exist, create the key.
+			result[key] = []*accessv1alpha1.TrafficTarget{}
+		}
+
+		result[key] = append(result[key], trafficTarget)
+	}
+
+	return result
+}
+
+func (p *Provider) buildRouterFromTrafficTarget(service *corev1.Service, trafficTarget *accessv1alpha1.TrafficTarget, client Client) *config.Router {
+	var result *config.Router
+	var rule []string
+	for _, spec := range trafficTarget.Specs {
+		if spec.Kind != "HTTPRouteGroup" {
+			// TCP is unsupported for now.
+			continue
+		}
+		var builtRule []string
+		rawHTTPRouteGroup, _, err := client.GetHTTPRouteGroup(trafficTarget.Namespace, spec.Name)
 		if err != nil {
-			logger.Errorf("Error configuring TLS: %v", err)
-		}
-
-		ingressName := ingressRoute.Name
-		if len(ingressName) == 0 {
-			ingressName = ingressRoute.GenerateName
-		}
-
-		for _, route := range ingressRoute.Spec.Routes {
-			if route.Kind != "Rule" {
-				logger.Errorf("Unsupported match kind: %s. Only \"Rule\" is supported for now.", route.Kind)
-				continue
-			}
-
-			if len(route.Match) == 0 {
-				logger.Errorf("Empty match rule")
-				continue
-			}
-
-			if err := checkStringQuoteValidity(route.Match); err != nil {
-				logger.Errorf("Invalid syntax for match rule: %s", route.Match)
-				continue
-			}
-
-			var allServers []config.Server
-			for _, service := range route.Services {
-				servers, err := loadServers(client, ingressRoute.Namespace, service, ingressRoute.Annotations[k8s.AnnotationSMIDestinationSA])
-				if err != nil {
-					logger.
-						WithField("serviceName", service.Name).
-						WithField("servicePort", service.Port).
-						Errorf("Cannot create service: %v", err)
-					continue
-				}
-
-				allServers = append(allServers, servers...)
-			}
-
-			// TODO: support middlewares from other providers.
-			// Mechanism: in the spec, prefix the name with the provider name,
-			// with dot as the separator. In which case. we ignore the
-			// namespace.
-
-			var mds []string
-			for _, mi := range route.Middlewares {
-				ns := mi.Namespace
-				if len(ns) == 0 {
-					ns = ingressRoute.Namespace
-				}
-				mds = append(mds, makeID(ns, mi.Name))
-			}
-
-			key, err := makeServiceKey(route.Match, ingressName)
-			if err != nil {
-				logger.Error(err)
-				continue
-			}
-
-			serviceName := makeID(ingressRoute.Namespace, key)
-
-			conf.Routers[serviceName] = &config.Router{
-				Middlewares: mds,
-				Priority:    route.Priority,
-				EntryPoints: ingressRoute.Spec.EntryPoints,
-				Rule:        route.Match,
-				Service:     serviceName,
-			}
-
-			if ingressRoute.Spec.TLS != nil {
-				tlsConf := &config.RouterTLSConfig{}
-				if ingressRoute.Spec.TLS.Options != nil && len(ingressRoute.Spec.TLS.Options.Name) > 0 {
-					tlsOptionsName := ingressRoute.Spec.TLS.Options.Name
-					// Is a Kubernetes CRD reference, (i.e. not a cross-provider default)
-					if !strings.Contains(tlsOptionsName, "@") {
-						ns := ingressRoute.Spec.TLS.Options.Namespace
-						if len(ns) == 0 {
-							ns = ingressRoute.Namespace
-						}
-						tlsOptionsName = makeID(ns, tlsOptionsName)
-					}
-
-					tlsConf.Options = tlsOptionsName
-				}
-				conf.Routers[serviceName].TLS = tlsConf
-			}
-
-			conf.Services[serviceName] = &config.Service{
-				LoadBalancer: &config.LoadBalancerService{
-					Servers: allServers,
-					// TODO: support other strategies.
-					PassHostHeader: true,
-				},
-			}
-		}
-	}
-
-	return conf
-}
-
-func (p *Provider) loadIngressRouteTCPConfiguration(ctx context.Context, client Client, tlsConfigs map[string]*tls.Configuration) *config.TCPConfiguration {
-	conf := &config.TCPConfiguration{
-		Routers:  map[string]*config.TCPRouter{},
-		Services: map[string]*config.TCPService{},
-	}
-
-	for _, ingressRouteTCP := range client.GetIngressRouteTCPs() {
-		logger := log.FromContext(log.With(ctx, log.Str("ingress", ingressRouteTCP.Name), log.Str("namespace", ingressRouteTCP.Namespace)))
-
-		if !shouldProcessIngress(p.IngressClass, ingressRouteTCP.Annotations[annotationKubernetesIngressClass]) {
+			log.Errorf("Error getting HTTPRouteGroup: %v", err)
 			continue
 		}
 
-		if ingressRouteTCP.Spec.TLS != nil && !ingressRouteTCP.Spec.TLS.Passthrough {
-			err := getTLSTCP(ctx, ingressRouteTCP, client, tlsConfigs)
-			if err != nil {
-				logger.Errorf("Error configuring TLS: %v", err)
-			}
-		}
-
-		ingressName := ingressRouteTCP.Name
-		if len(ingressName) == 0 {
-			ingressName = ingressRouteTCP.GenerateName
-		}
-
-		for _, route := range ingressRouteTCP.Spec.Routes {
-			if len(route.Match) == 0 {
-				logger.Errorf("Empty match rule")
-				continue
-			}
-
-			if err := checkStringQuoteValidity(route.Match); err != nil {
-				logger.Errorf("Invalid syntax for match rule: %s", route.Match)
-				continue
-			}
-
-			var allServers []config.TCPServer
-			for _, service := range route.Services {
-				servers, err := loadTCPServers(client, ingressRouteTCP.Namespace, service, ingressRouteTCP.Annotations[k8s.AnnotationSMIDestinationSA])
-				if err != nil {
-					logger.
-						WithField("serviceName", service.Name).
-						WithField("servicePort", service.Port).
-						Errorf("Cannot create service: %v", err)
+		for _, match := range spec.Matches {
+			for _, httpMatch := range rawHTTPRouteGroup.Matches {
+				if match != httpMatch.Name {
+					// Matches specified, add only matches from route group
 					continue
 				}
-
-				allServers = append(allServers, servers...)
+				builtRule = append(builtRule, p.buildRuleSnippetFromMatch(httpMatch))
 			}
+		}
+		rule = append(rule, "("+strings.Join(builtRule, " || ")+")")
+	}
 
-			key, e := makeServiceKey(route.Match, ingressName)
-			if e != nil {
-				logger.Error(e)
-				continue
+	result.Rule = strings.Join(rule, " || ")
+	return result
+}
+
+func (p *Provider) buildRuleSnippetFromMatch(match specsv1alpha1.HTTPMatch) string {
+	var result []string
+	if len(match.PathRegex) > 0 {
+		result = append(result, fmt.Sprintf("PathPrefix(`%s`)", match.PathRegex))
+	}
+
+	if len(match.Methods) > 0 {
+		methods := strings.Join(match.Methods, ",")
+		result = append(result, fmt.Sprintf("Methods(%s)", methods))
+	}
+
+	return "(" + strings.Join(result, " && ") + ")"
+}
+
+func (p *Provider) buildServiceFromTrafficTarget(service *corev1.Service, trafficTarget *accessv1alpha1.TrafficTarget, client Client) *config.Service {
+	var servers []config.Server
+
+	if service.Namespace != trafficTarget.Destination.Namespace {
+		// Destination not in service namespace log error.
+		log.Errorf("TrafficTarget %s/%s destination not in namespace %s", trafficTarget.Namespace, trafficTarget.Name, service.Namespace)
+		return nil
+	}
+
+	endpoint, exists, err := client.GetEndpoints(service.Namespace, service.Name)
+	if err != nil {
+		log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
+		return nil
+	}
+	if !exists {
+		log.Errorf("Endpoints for service %s/%s do not exist", service.Namespace, service.Name)
+		return nil
+	}
+
+	for _, subset := range endpoint.Subsets {
+		var subsetMatch bool
+		for _, endpointPort := range subset.Ports {
+			if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port {
+				subsetMatch = true
+				break
 			}
+		}
 
-			serviceName := makeID(ingressRouteTCP.Namespace, key)
-			conf.Routers[serviceName] = &config.TCPRouter{
-				EntryPoints: ingressRouteTCP.Spec.EntryPoints,
-				Rule:        route.Match,
-				Service:     serviceName,
-			}
+		if !subsetMatch {
+			// No subset port match on destination port, so subset is not affected
+			continue
+		}
 
-			if ingressRouteTCP.Spec.TLS != nil {
-				conf.Routers[serviceName].TLS = &config.RouterTCPTLSConfig{
-					Passthrough: ingressRouteTCP.Spec.TLS.Passthrough,
-				}
-
-				if ingressRouteTCP.Spec.TLS.Options != nil && len(ingressRouteTCP.Spec.TLS.Options.Name) > 0 {
-					tlsOptionsName := ingressRouteTCP.Spec.TLS.Options.Name
-					// Is a Kubernetes CRD reference (i.e. not a cross-provider reference)
-					if !strings.Contains(tlsOptionsName, "@") {
-						ns := ingressRouteTCP.Spec.TLS.Options.Namespace
-						if len(ns) == 0 {
-							ns = ingressRouteTCP.Namespace
-						}
-						tlsOptionsName = makeID(ns, tlsOptionsName)
+		for _, address := range subset.Addresses {
+			if pod, _, err := client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name); err != nil {
+				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
+					server := config.Server{
+						URL: "http://" + net.JoinHostPort(address.IP, trafficTarget.Destination.Port),
 					}
-
-					conf.Routers[serviceName].TLS.Options = tlsOptionsName
-
+					servers = append(servers, server)
 				}
-			}
-
-			conf.Services[serviceName] = &config.TCPService{
-				LoadBalancer: &config.TCPLoadBalancerService{
-					Servers: allServers,
-				},
 			}
 		}
 	}
 
-	return conf
-}
-
-func (p *Provider) loadConfigurationFromCRD(ctx context.Context, client Client) *config.Configuration {
-	tlsConfigs := make(map[string]*tls.Configuration)
-	conf := &config.Configuration{
-		HTTP:       p.loadIngressRouteConfiguration(ctx, client, tlsConfigs),
-		TCP:        p.loadIngressRouteTCPConfiguration(ctx, client, tlsConfigs),
-		TLSOptions: buildTLSOptions(ctx, client),
-		TLS:        getTLSConfig(tlsConfigs),
+	lb := &config.LoadBalancerService{
+		PassHostHeader: true,
+		Servers:        servers,
 	}
 
-	for _, middleware := range client.GetMiddlewares() {
-		conf.HTTP.Middlewares[makeID(middleware.Namespace, middleware.Name)] = &middleware.Spec
+	return &config.Service{
+		LoadBalancer: lb,
 	}
-
-	return conf
 }
 
 func makeServiceKey(rule, ingressName string) (string, error) {
@@ -610,142 +549,4 @@ func makeID(namespace, name string) string {
 	}
 
 	return namespace + "/" + name
-}
-
-func shouldProcessIngress(ingressClass string, ingressClassAnnotation string) bool {
-	return ingressClass == ingressClassAnnotation ||
-		(len(ingressClass) == 0 && ingressClassAnnotation == traefikDefaultIngressClass)
-}
-
-func getTLSHTTP(ctx context.Context, ingressRoute *v1alpha1.IngressRoute, k8sClient Client, tlsConfigs map[string]*tls.Configuration) error {
-	if ingressRoute.Spec.TLS == nil {
-		return nil
-	}
-	if ingressRoute.Spec.TLS.SecretName == "" {
-		log.FromContext(ctx).Debugf("Skipping TLS sub-section: No secret name provided")
-		return nil
-	}
-
-	configKey := ingressRoute.Namespace + "/" + ingressRoute.Spec.TLS.SecretName
-	if _, tlsExists := tlsConfigs[configKey]; !tlsExists {
-		tlsConf, err := getTLS(k8sClient, ingressRoute.Spec.TLS.SecretName, ingressRoute.Namespace)
-		if err != nil {
-			return err
-		}
-
-		tlsConfigs[configKey] = tlsConf
-	}
-
-	return nil
-}
-
-func getTLSTCP(ctx context.Context, ingressRoute *v1alpha1.IngressRouteTCP, k8sClient Client, tlsConfigs map[string]*tls.Configuration) error {
-	if ingressRoute.Spec.TLS == nil {
-		return nil
-	}
-	if ingressRoute.Spec.TLS.SecretName == "" {
-		log.FromContext(ctx).Debugf("Skipping TLS sub-section for TCP: No secret name provided")
-		return nil
-	}
-
-	configKey := ingressRoute.Namespace + "/" + ingressRoute.Spec.TLS.SecretName
-	if _, tlsExists := tlsConfigs[configKey]; !tlsExists {
-		tlsConf, err := getTLS(k8sClient, ingressRoute.Spec.TLS.SecretName, ingressRoute.Namespace)
-		if err != nil {
-			return err
-		}
-
-		tlsConfigs[configKey] = tlsConf
-	}
-
-	return nil
-}
-
-func getTLS(k8sClient Client, secretName, namespace string) (*tls.Configuration, error) {
-	secret, exists, err := k8sClient.GetSecret(namespace, secretName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch secret %s/%s: %v", namespace, secretName, err)
-	}
-	if !exists {
-		return nil, fmt.Errorf("secret %s/%s does not exist", namespace, secretName)
-	}
-
-	cert, key, err := getCertificateBlocks(secret, namespace, secretName)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tls.Configuration{
-		Certificate: &tls.Certificate{
-			CertFile: tls.FileOrContent(cert),
-			KeyFile:  tls.FileOrContent(key),
-		},
-	}, nil
-}
-
-func getTLSConfig(tlsConfigs map[string]*tls.Configuration) []*tls.Configuration {
-	var secretNames []string
-	for secretName := range tlsConfigs {
-		secretNames = append(secretNames, secretName)
-	}
-	sort.Strings(secretNames)
-
-	var configs []*tls.Configuration
-	for _, secretName := range secretNames {
-		configs = append(configs, tlsConfigs[secretName])
-	}
-
-	return configs
-}
-
-func getCertificateBlocks(secret *corev1.Secret, namespace, secretName string) (string, string, error) {
-	var missingEntries []string
-
-	tlsCrtData, tlsCrtExists := secret.Data["tls.crt"]
-	if !tlsCrtExists {
-		missingEntries = append(missingEntries, "tls.crt")
-	}
-
-	tlsKeyData, tlsKeyExists := secret.Data["tls.key"]
-	if !tlsKeyExists {
-		missingEntries = append(missingEntries, "tls.key")
-	}
-
-	if len(missingEntries) > 0 {
-		return "", "", fmt.Errorf("secret %s/%s is missing the following TLS data entries: %s",
-			namespace, secretName, strings.Join(missingEntries, ", "))
-	}
-
-	cert := string(tlsCrtData)
-	if cert == "" {
-		missingEntries = append(missingEntries, "tls.crt")
-	}
-
-	key := string(tlsKeyData)
-	if key == "" {
-		missingEntries = append(missingEntries, "tls.key")
-	}
-
-	if len(missingEntries) > 0 {
-		return "", "", fmt.Errorf("secret %s/%s contains the following empty TLS data entries: %s",
-			namespace, secretName, strings.Join(missingEntries, ", "))
-	}
-
-	return cert, key, nil
-}
-
-func getCABlocks(secret *corev1.Secret, namespace, secretName string) (string, error) {
-	tlsCrtData, tlsCrtExists := secret.Data["tls.ca"]
-	if !tlsCrtExists {
-		return "", fmt.Errorf("the tls.ca entry is missing from secret %s/%s",
-			namespace, secretName)
-	}
-
-	cert := string(tlsCrtData)
-	if cert == "" {
-		return "", fmt.Errorf("the tls.ca entry in secret %s/%s is empty",
-			namespace, secretName)
-	}
-
-	return cert, nil
 }
