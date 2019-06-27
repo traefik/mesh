@@ -57,8 +57,6 @@ func (h *Handler) ObjectCreated(event i3o.Message) {
 		log.Errorf("Could not create mesh service: %v", err)
 		return
 	}
-
-	_ := 
 }
 
 // ObjectDeleted is called when an object is deleted.
