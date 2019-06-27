@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/containous/i3o/internal/k8s"
-	traefikv1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
@@ -22,7 +21,7 @@ import (
 )
 
 type Controller struct {
-	clients              *k8s.ClientWrapper
+	client               k8s.Client
 	queue                workqueue.RateLimitingInterface
 	informer             cache.SharedIndexInformer
 	handler              Handler
@@ -32,7 +31,7 @@ type Controller struct {
 
 // New is used to build the informers and other required components of the controller,
 // and return an initialized controller object
-func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignored k8s.IgnoreWrapper, handler Handler) *Controller {
+func NewController(client k8s.Client, controllerType interface{}, ignored k8s.IgnoreWrapper, handler Handler) *Controller {
 	var lw *cache.ListWatch
 	var ot runtime.Object
 	var printableType string
@@ -41,11 +40,11 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				// list all of the services (core resource) in all namespaces
-				return clients.KubeClient.CoreV1().Services(metav1.NamespaceAll).List(options)
+				return client.ListServicesWithOptions(metav1.NamespaceAll, options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				// watch all of the services (core resource) in all namespaces
-				return clients.KubeClient.CoreV1().Services(metav1.NamespaceAll).Watch(options)
+				return client.WatchServicesWithOptions(metav1.NamespaceAll, options)
 			},
 		}
 		ot = &corev1.Service{}
@@ -54,11 +53,11 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				// list all of the traffic targets (SMI access object) in all namespaces
-				return clients.SmiAccessClient.AccessV1alpha1().TrafficTargets(metav1.NamespaceAll).List(options)
+				return client.ListTrafficTargetsWithOptions(metav1.NamespaceAll, options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				// watch all of the traffic targets (SMI access object) in all namespaces
-				return clients.SmiAccessClient.AccessV1alpha1().TrafficTargets(metav1.NamespaceAll).Watch(options)
+				return client.WatchTrafficTargetsWithOptions(metav1.NamespaceAll, options)
 			},
 		}
 		ot = &smiAccessv1alpha1.TrafficTarget{}
@@ -68,11 +67,11 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				// list all of the httproutegroups (SMI specs object) in all namespaces
-				return clients.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(metav1.NamespaceAll).List(options)
+				return client.ListHTTPRouteGroupsWithOptions(metav1.NamespaceAll, options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				// watch all of the httproutegroups (SMI specs object) in all namespaces
-				return clients.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(metav1.NamespaceAll).Watch(options)
+				return client.WatchHTTPRouteGroupsWithOptions(metav1.NamespaceAll, options)
 			},
 		}
 		ot = &smiSpecsv1alpha1.HTTPRouteGroup{}
@@ -82,29 +81,15 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 		lw = &cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				// list all of the traffic splits (SMI specs object) in all namespaces
-				return clients.SmiSplitClient.SplitV1alpha1().TrafficSplits(metav1.NamespaceAll).List(options)
+				return client.ListTrafficSplitsWithOptions(metav1.NamespaceAll, options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				// watch all of the traffic splits (SMI specs object) in all namespaces
-				return clients.SmiSplitClient.SplitV1alpha1().TrafficSplits(metav1.NamespaceAll).Watch(options)
+				return client.WatchTrafficSplitsWithOptions(metav1.NamespaceAll, options)
 			},
 		}
 		ot = &smiSplitv1alpha1.TrafficSplit{}
 		printableType = "trafficsplit"
-
-	case traefikv1alpha1.IngressRoute:
-		lw = &cache.ListWatch{
-			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-				// list all of the namespaces
-				return clients.CrdClient.TraefikV1alpha1().IngressRoutes(metav1.NamespaceAll).List(options)
-			},
-			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				// watch all of the namespaces
-				return clients.CrdClient.TraefikV1alpha1().IngressRoutes(metav1.NamespaceAll).Watch(options)
-			},
-		}
-		ot = &traefikv1alpha1.IngressRoute{}
-		printableType = "ingressroute"
 	}
 
 	informer := cache.NewSharedIndexInformer(
@@ -178,7 +163,7 @@ func NewController(clients *k8s.ClientWrapper, controllerType interface{}, ignor
 	})
 
 	return &Controller{
-		clients:              clients,
+		client:               client,
 		informer:             informer,
 		queue:                queue,
 		handler:              handler,

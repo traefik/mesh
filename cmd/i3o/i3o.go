@@ -6,9 +6,7 @@ import (
 
 	"github.com/containous/i3o/cmd"
 	"github.com/containous/i3o/cmd/patch"
-	"github.com/containous/i3o/cmd/traefik"
 	"github.com/containous/i3o/cmd/version"
-	traefikcmd "github.com/containous/traefik/cmd"
 	"github.com/containous/traefik/pkg/cli"
 )
 
@@ -28,12 +26,6 @@ func main() {
 
 	pConfig := cmd.NewPatchConfig()
 	if err := cmdI3o.AddCommand(patch.NewCmd(pConfig, loaders)); err != nil {
-		stdlog.Println(err)
-		os.Exit(1)
-	}
-
-	tConfig := traefikcmd.NewTraefikConfiguration()
-	if err := cmdI3o.AddCommand(traefik.NewCmd(tConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
