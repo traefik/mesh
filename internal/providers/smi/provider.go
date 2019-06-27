@@ -1,7 +1,6 @@
 package smi
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"strconv"
@@ -40,12 +39,7 @@ func New(client k8s.Client) *Provider {
 	}
 }
 
-func checkStringQuoteValidity(value string) error {
-	_, err := strconv.Unquote(`"` + value + `"`)
-	return err
-}
-
-func (p *Provider) loadConfiguration(ctx context.Context) *config.Configuration {
+func (p *Provider) loadConfiguration() *config.Configuration {
 	configRouters := make(map[string]*config.Router)
 	configServices := make(map[string]*config.Service)
 	namespaces, err := p.client.GetNamespaces()
@@ -177,7 +171,6 @@ func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1al
 }
 
 func (p *Provider) buildRouterFromTrafficTarget(service *corev1.Service, trafficTarget *accessv1alpha1.TrafficTarget) *config.Router {
-	var result *config.Router
 	var rule []string
 	for _, spec := range trafficTarget.Specs {
 		if spec.Kind != "HTTPRouteGroup" {
@@ -197,17 +190,18 @@ func (p *Provider) buildRouterFromTrafficTarget(service *corev1.Service, traffic
 					// Matches specified, add only matches from route group
 					continue
 				}
-				builtRule = append(builtRule, p.buildRuleSnippetFromMatch(httpMatch))
+				builtRule = append(builtRule, p.buildRuleSnippetFromServiceAndMatch(service, httpMatch))
 			}
 		}
 		rule = append(rule, "("+strings.Join(builtRule, " || ")+")")
 	}
 
-	result.Rule = strings.Join(rule, " || ")
-	return result
+	return &config.Router{
+		Rule: strings.Join(rule, " || "),
+	}
 }
 
-func (p *Provider) buildRuleSnippetFromMatch(match specsv1alpha1.HTTPMatch) string {
+func (p *Provider) buildRuleSnippetFromServiceAndMatch(service *corev1.Service, match specsv1alpha1.HTTPMatch) string {
 	var result []string
 	if len(match.PathRegex) > 0 {
 		result = append(result, fmt.Sprintf("PathPrefix(`%s`)", match.PathRegex))
@@ -217,6 +211,8 @@ func (p *Provider) buildRuleSnippetFromMatch(match specsv1alpha1.HTTPMatch) stri
 		methods := strings.Join(match.Methods, ",")
 		result = append(result, fmt.Sprintf("Methods(%s)", methods))
 	}
+
+	result = append(result, fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", service.Name, service.Namespace, service.Spec.ClusterIP))
 
 	return "(" + strings.Join(result, " && ") + ")"
 }

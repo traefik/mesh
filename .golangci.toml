@@ -25,7 +25,6 @@
 [linters]
   enable-all = true
   disable = [
-    "gocyclo", # FIXME must be fixed
     "lll",
     "gas",
     "dupl",

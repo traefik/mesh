@@ -125,7 +125,7 @@ require (
 	github.com/unrolled/render v1.0.0 // indirect
 	github.com/unrolled/secure v1.0.0 // indirect
 	github.com/vdemeester/shakers v0.1.0
-	github.com/vulcand/oxy v0.0.0-20190611100332-3d629cff40b7
+	github.com/vulcand/oxy v0.0.0-20190611100332-3d629cff40b7 // indirect
 	github.com/vulcand/predicate v1.1.0 // indirect
 	go.opencensus.io v0.22.0 // indirect
 	go.uber.org/atomic v1.4.0 // indirect

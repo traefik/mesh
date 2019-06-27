@@ -44,8 +44,9 @@ type Client interface {
 	GetNamespaces() ([]*corev1.Namespace, error)
 
 	////////////////////////////////
-	// traefikv1alpha1
+	// appsv1
 	////////////////////////////////
+	GetDeployment(namespace, name string) (*appsv1.Deployment, error)
 
 	////////////////////////////////
 	// smiAccessv1alpha1
@@ -402,6 +403,11 @@ func (w *ClientWrapper) GetNamespaces() ([]*corev1.Namespace, error) {
 		result = append(result, &namespace)
 	}
 	return result, nil
+}
+
+// GetDeployment retrieves the deployment from the specified namespace.
+func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deployment, error) {
+	return w.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 }
 
 // ListTrafficTargetsWithOptions lists trafficTargets with the specified options.

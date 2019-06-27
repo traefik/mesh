@@ -52,11 +52,13 @@ func (h *Handler) ObjectCreated(event i3o.Message) {
 	log.Debugf("MeshControllerHandler ObjectCreated with type: *corev1.Service: %s/%s", userService.Namespace, userService.Name)
 
 	log.Debugf("Creating associated mesh service for service: %s/%s", userService.Namespace, userService.Name)
-	createdService, err := h.verifyMeshServiceExists(userService)
+	_, err := h.verifyMeshServiceExists(userService)
 	if err != nil {
 		log.Errorf("Could not create mesh service: %v", err)
 		return
 	}
+
+	_ := 
 }
 
 // ObjectDeleted is called when an object is deleted.
@@ -95,7 +97,7 @@ func (h *Handler) ObjectUpdated(event i3o.Message) {
 
 	log.Debugf("MeshControllerHandler ObjectUdated with type: *corev1.Service: %s/%s", newService.Namespace, newService.Name)
 
-	updatedMeshService, err := h.updateMeshService(oldService, newService)
+	_, err := h.updateMeshService(oldService, newService)
 	if err != nil {
 		log.Errorf("Could not update mesh service: %v", err)
 		return

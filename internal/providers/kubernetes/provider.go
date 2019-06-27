@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"strconv"
@@ -30,12 +29,7 @@ func New(client k8s.Client) *Provider {
 	}
 }
 
-func checkStringQuoteValidity(value string) error {
-	_, err := strconv.Unquote(`"` + value + `"`)
-	return err
-}
-
-func (p *Provider) loadConfiguration(ctx context.Context) *config.Configuration {
+func (p *Provider) loadConfiguration() *config.Configuration {
 	configRouters := make(map[string]*config.Router)
 	configServices := make(map[string]*config.Service)
 	namespaces, err := p.client.GetNamespaces()

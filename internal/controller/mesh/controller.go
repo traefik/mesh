@@ -22,7 +22,7 @@ type Controller struct {
 
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper) *Controller {
+func NewMeshController(client k8s.Client) *Controller {
 	ignoredNamespaces := k8s.Namespaces{metav1.NamespaceSystem, k8s.MeshNamespace}
 	ignoredServices := k8s.Services{
 		{
@@ -36,14 +36,14 @@ func NewMeshController(clients *k8s.ClientWrapper) *Controller {
 		Services:   ignoredServices,
 	}
 
-	handler := NewHandler(clients, ignored)
+	handler := NewHandler(client, ignored)
 
 	return &Controller{
 		handler:             handler,
-		serviceController:   i3o.NewController(clients, corev1.Service{}, ignored, handler),
-		smiAccessController: i3o.NewController(clients, smiAccessv1alpha1.TrafficTarget{}, ignored, handler),
-		smiSpecsController:  i3o.NewController(clients, smiSpecsv1alpha1.HTTPRouteGroup{}, ignored, handler),
-		smiSplitController:  i3o.NewController(clients, smiSplitv1alpha1.TrafficSplit{}, ignored, handler),
+		serviceController:   i3o.NewController(client, corev1.Service{}, ignored, handler),
+		smiAccessController: i3o.NewController(client, smiAccessv1alpha1.TrafficTarget{}, ignored, handler),
+		smiSpecsController:  i3o.NewController(client, smiSpecsv1alpha1.HTTPRouteGroup{}, ignored, handler),
+		smiSplitController:  i3o.NewController(client, smiSplitv1alpha1.TrafficSplit{}, ignored, handler),
 	}
 }
 
