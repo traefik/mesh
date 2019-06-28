@@ -76,9 +76,13 @@ func (p *Provider) buildRouterFromService(service *corev1.Service) *config.Route
 func (p *Provider) buildServiceFromService(service *corev1.Service) *config.Service {
 	var servers []config.Server
 
-	endpoint, err := p.client.GetEndpoints(service.Namespace, service.Name)
+	endpoint, exists, err := p.client.GetEndpoints(service.Namespace, service.Name)
 	if err != nil {
 		log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
+		return nil
+	}
+	if !exists {
+		log.Errorf("endpoints for service %s/%s do not exist", service.Namespace, service.Name)
 		return nil
 	}
 	for _, subset := range endpoint.Subsets {

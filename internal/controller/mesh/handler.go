@@ -113,8 +113,12 @@ func (h *Handler) ObjectUpdated(event i3o.Message) {
 
 func (h *Handler) verifyMeshServiceExists(service *corev1.Service) (*corev1.Service, error) {
 	meshServiceName := userServiceToMeshServiceName(service.Name, service.Namespace)
-	meshServiceInstance, err := h.Client.GetService(k8s.MeshNamespace, meshServiceName)
-	if meshServiceInstance == nil || err != nil {
+	meshServiceInstance, exists, err := h.Client.GetService(k8s.MeshNamespace, meshServiceName)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
 		// Mesh service does not exist.
 		var ports []corev1.ServicePort
 
@@ -154,12 +158,12 @@ func (h *Handler) verifyMeshServiceExists(service *corev1.Service) (*corev1.Serv
 
 func (h *Handler) verifyMeshServiceDeleted(serviceName, serviceNamespace string) error {
 	meshServiceName := userServiceToMeshServiceName(serviceName, serviceNamespace)
-	meshServiceInstance, err := h.Client.GetService(k8s.MeshNamespace, meshServiceName)
+	_, exists, err := h.Client.GetService(k8s.MeshNamespace, meshServiceName)
 	if err != nil {
 		return err
 	}
 
-	if meshServiceInstance != nil {
+	if exists {
 		// Service exists, delete
 		if err := h.Client.DeleteService(k8s.MeshNamespace, meshServiceName); err != nil {
 			return err
@@ -178,12 +182,12 @@ func (h *Handler) updateMeshService(oldUserService *corev1.Service, newUserServi
 
 	var updatedSvc *corev1.Service
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		existing, err := h.Client.GetService(k8s.MeshNamespace, meshServiceName)
+		service, exists, err := h.Client.GetService(k8s.MeshNamespace, meshServiceName)
 		if err != nil {
 			return err
 		}
 
-		if existing != nil {
+		if exists {
 			var ports []corev1.ServicePort
 
 			for id, sp := range newUserService.Spec.Ports {
@@ -201,9 +205,10 @@ func (h *Handler) updateMeshService(oldUserService *corev1.Service, newUserServi
 				ports = append(ports, meshPort)
 			}
 
-			existing.Spec.Ports = ports
+			newService := service.DeepCopy()
+			newService.Spec.Ports = ports
 
-			updatedSvc, err = h.Client.UpdateService(existing)
+			updatedSvc, err = h.Client.UpdateService(newService)
 			if err != nil {
 				fmt.Println(err)
 				return err

@@ -107,12 +107,15 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 func (p *Provider) getApplicableTrafficTargets(service *corev1.Service, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
 	var result []*accessv1alpha1.TrafficTarget
 
-	endpoint, err := p.client.GetEndpoints(service.Namespace, service.Name)
+	endpoint, exists, err := p.client.GetEndpoints(service.Namespace, service.Name)
 	if err != nil {
 		log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
 		return nil
 	}
-
+	if !exists {
+		log.Errorf("endpoints for service %s/%s do not exist", service.Namespace, service.Name)
+		return nil
+	}
 	for _, subset := range endpoint.Subsets {
 		for _, trafficTarget := range trafficTargets {
 			if service.Namespace != trafficTarget.Destination.Namespace {
@@ -135,10 +138,12 @@ func (p *Provider) getApplicableTrafficTargets(service *corev1.Service, trafficT
 
 			var validPodFound bool
 			for _, address := range subset.Addresses {
-				if pod, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name); err != nil {
-					if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
-						validPodFound = true
-						break
+				if pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name); err != nil {
+					if exists {
+						if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
+							validPodFound = true
+							break
+						}
 					}
 				}
 			}
@@ -186,12 +191,15 @@ func (p *Provider) buildRouterFromTrafficTarget(service *corev1.Service, traffic
 			continue
 		}
 		var builtRule []string
-		rawHTTPRouteGroup, err := p.client.GetHTTPRouteGroup(trafficTarget.Namespace, spec.Name)
+		rawHTTPRouteGroup, exists, err := p.client.GetHTTPRouteGroup(trafficTarget.Namespace, spec.Name)
 		if err != nil {
 			log.Errorf("Error getting HTTPRouteGroup: %v", err)
 			continue
 		}
-
+		if !exists {
+			log.Errorf("HTTPRouteGroup %s/%s does not exist", trafficTarget.Namespace, spec.Name)
+			continue
+		}
 		for _, match := range spec.Matches {
 			for _, httpMatch := range rawHTTPRouteGroup.Matches {
 				if match != httpMatch.Name {
@@ -234,9 +242,13 @@ func (p *Provider) buildServiceFromTrafficTarget(service *corev1.Service, traffi
 		return nil
 	}
 
-	endpoint, err := p.client.GetEndpoints(service.Namespace, service.Name)
+	endpoint, exists, err := p.client.GetEndpoints(service.Namespace, service.Name)
 	if err != nil {
 		log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
+		return nil
+	}
+	if !exists {
+		log.Errorf("endpoints for service %s/%s do not exist", service.Namespace, service.Name)
 		return nil
 	}
 	for _, subset := range endpoint.Subsets {
@@ -254,12 +266,14 @@ func (p *Provider) buildServiceFromTrafficTarget(service *corev1.Service, traffi
 		}
 
 		for _, address := range subset.Addresses {
-			if pod, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name); err != nil {
-				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
-					server := config.Server{
-						URL: "http://" + net.JoinHostPort(address.IP, trafficTarget.Destination.Port),
+			if pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name); err != nil {
+				if exists {
+					if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
+						server := config.Server{
+							URL: "http://" + net.JoinHostPort(address.IP, trafficTarget.Destination.Port),
+						}
+						servers = append(servers, server)
 					}
-					servers = append(servers, server)
 				}
 			}
 		}

@@ -388,8 +388,10 @@ func (w *ClientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints,
 }
 
 // GetPod retrieves the pod from the specified namespace.
-func (w *ClientWrapper) GetPod(namespace, name string) (*corev1.Pod, error) {
-	return w.KubeClient.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+func (w *ClientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
+	pod, err := w.KubeClient.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return pod, exists, err
 }
 
 // GetNamespaces returns a slice of all namespaces.
