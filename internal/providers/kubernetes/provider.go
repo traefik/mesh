@@ -1,13 +1,14 @@
 package kubernetes
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strconv"
 
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/traefik/pkg/config"
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -52,7 +53,14 @@ func (p *Provider) BuildConfiguration() *config.Configuration {
 		}
 
 		for _, service := range services {
-			key := uuid.New().String()
+			// Use the hash of the service name/namespace as the key
+			// So that we can update services based on their name
+			// and not have to worry about duplicates on merges.
+			sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s", service.Name, service.Namespace)))
+			dst := make([]byte, hex.EncodedLen(len(sum)))
+			hex.Encode(dst, sum[:])
+			key := string(dst)
+
 			configRouters[key] = p.buildRouterFromService(service)
 			configServices[key] = p.buildServiceFromService(service)
 
