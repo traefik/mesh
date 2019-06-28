@@ -29,20 +29,23 @@ type ClusterInitClient interface {
 }
 
 type CoreV1Client interface {
-	GetService(namespace, name string) (*corev1.Service, error)
+	GetService(namespace, name string) (*corev1.Service, bool, error)
 	GetServices(namespace string) ([]*corev1.Service, error)
 	ListServicesWithOptions(namespace string, options metav1.ListOptions) (*corev1.ServiceList, error)
 	WatchServicesWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
 	DeleteService(namespace, name string) error
 	CreateService(service *corev1.Service) (*corev1.Service, error)
 	UpdateService(service *corev1.Service) (*corev1.Service, error)
-	GetEndpoints(namespace, name string) (*corev1.Endpoints, error)
-	GetPod(namespace, name string) (*corev1.Pod, error)
+	GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error)
+	GetPod(namespace, name string) (*corev1.Pod, bool, error)
 	GetNamespaces() ([]*corev1.Namespace, error)
+	GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error)
+	CreateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error)
+	UpdateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error)
 }
 
 type AppsV1Client interface {
-	GetDeployment(namespace, name string) (*appsv1.Deployment, error)
+	GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error)
 }
 
 type SMIAccessV1Alpha1Client interface {
@@ -54,7 +57,7 @@ type SMIAccessV1Alpha1Client interface {
 type SMISpecsV1Alpha1Client interface {
 	ListHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (*smiSpecsv1alpha1.HTTPRouteGroupList, error)
 	WatchHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
-	GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, error)
+	GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error)
 }
 
 type SMISplitV1Alpha1Client interface {
@@ -333,8 +336,10 @@ func buildSmiSplitClient(config *rest.Config) (*smiSplitClientset.Clientset, err
 }
 
 // GetService retrieves the service from the specified namespace.
-func (w *ClientWrapper) GetService(namespace, name string) (*corev1.Service, error) {
-	return w.KubeClient.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
+func (w *ClientWrapper) GetService(namespace, name string) (*corev1.Service, bool, error) {
+	service, err := w.KubeClient.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return service, exists, err
 }
 
 // GetServices retrieves the services from the specified namespace.
@@ -376,8 +381,10 @@ func (w *ClientWrapper) WatchServicesWithOptions(namespace string, options metav
 }
 
 // GetEndpoints retrieves the endpoints from the specified namespace.
-func (w *ClientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints, error) {
-	return w.KubeClient.CoreV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
+func (w *ClientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error) {
+	endpoints, err := w.KubeClient.CoreV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return endpoints, exists, err
 }
 
 // GetPod retrieves the pod from the specified namespace.
@@ -399,8 +406,10 @@ func (w *ClientWrapper) GetNamespaces() ([]*corev1.Namespace, error) {
 }
 
 // GetDeployment retrieves the deployment from the specified namespace.
-func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deployment, error) {
-	return w.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error) {
+	deployment, err := w.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return deployment, exists, err
 }
 
 // ListTrafficTargetsWithOptions lists trafficTargets with the specified options.
@@ -437,8 +446,10 @@ func (w *ClientWrapper) WatchHTTPRouteGroupsWithOptions(namespace string, option
 }
 
 // GetHTTPRouteGroup retrieves the HTTPRouteGroup from the specified namespace.
-func (w *ClientWrapper) GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, error) {
-	return w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).Get(name, metav1.GetOptions{})
+func (w *ClientWrapper) GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error) {
+	group, err := w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return group, exists, err
 }
 
 // ListTrafficSplitsWithOptions lists TrafficSplits with the specified options.
@@ -449,6 +460,23 @@ func (w *ClientWrapper) ListTrafficSplitsWithOptions(namespace string, options m
 // WatchTrafficTargetsWithOptions watches trafficTargets with the specified options.
 func (w *ClientWrapper) WatchTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
 	return w.SmiSplitClient.SplitV1alpha1().TrafficSplits(namespace).Watch(options)
+}
+
+// GetConfigmap retrieves the named configmap in the specified namespace.
+func (w *ClientWrapper) GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error) {
+	configmap, err := w.KubeClient.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return configmap, exists, err
+}
+
+// UpdateConfigmap updates the specified service.
+func (w *ClientWrapper) UpdateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+	return w.KubeClient.CoreV1().ConfigMaps(configmap.Namespace).Update(configmap)
+}
+
+// CreateConfigmap creates the specified service.
+func (w *ClientWrapper) CreateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+	return w.KubeClient.CoreV1().ConfigMaps(configmap.Namespace).Create(configmap)
 }
 
 // translateNotFoundError will translate a "not found" error to a boolean return

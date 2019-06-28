@@ -1,11 +1,14 @@
 package deployer
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/traefik/pkg/config"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
@@ -89,8 +92,69 @@ func (d *Deployer) processNextItem() bool {
 	return d.configQueue.Len() > 0
 }
 
-func (d *Deployer) deployConfiguration(configuration *config.Configuration) bool {
+func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
+
 	// Only return true on successful deployment,
 	// or else the configuration will be removed from the queue
-	return false
+	return d.deployConfigmap(c) && d.deployAPI(c)
+}
+
+func (d *Deployer) deployConfigmap(c *config.Configuration) bool {
+
+	var jsonDataRaw []byte
+	jsonDataRaw, err := json.Marshal(c)
+	if err != nil {
+		log.Errorf("Could not marshal configuration: %s", err)
+		return false
+	}
+
+	jsonData := string(jsonDataRaw)
+
+	configmap, exists, err := d.client.GetConfigmap(k8s.MeshNamespace, "i3o-config")
+	if err != nil {
+		log.Errorf("Could not get configmap: %s", err)
+		return false
+	}
+	if !exists {
+		// Does not exist, create
+		newConfigmap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "i3o-config",
+				Namespace: k8s.MeshNamespace,
+			},
+			Data: map[string]string{
+				"config.yml": jsonData,
+			},
+		}
+
+		_, err = d.client.CreateConfigmap(newConfigmap)
+		if err != nil {
+			log.Errorf("Could not create configmap: %s", err)
+			return false
+		}
+		// Only return true on successful deployment,
+		// or else the configuration will be removed from the queue
+		return true
+	}
+
+	// Configmap exists, deep copy then update
+	newConfigmap := configmap.DeepCopy()
+	newConfigmap.Data["config.yml"] = jsonData
+
+	_, err = d.client.UpdateConfigmap(newConfigmap)
+	if err != nil {
+		log.Errorf("Could not update configmap: %s", err)
+		return false
+	}
+	// Only return true on successful deployment,
+	// or else the configuration will be removed from the queue
+	return true
+}
+
+func (d *Deployer) deployAPI(c *config.Configuration) bool {
+
+	// Only return true on successful deployment,
+	// FIXME: This will need to be implemented when
+	// Traefik v2 has an api provider
+	return true
 }
