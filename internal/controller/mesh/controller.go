@@ -162,6 +162,7 @@ func (m *Controller) processNextMessage() bool {
 	case i3o.MessageTypeCreated:
 		log.Infof("MeshController.processNextItem: created: %s", event.Key)
 		config := m.buildConfigurationFromProviders()
+		log.Warnf("MeshController.processNextItem: Adding: %s to the configuration queue", event.Key)
 		m.configurationQueue.Add(config)
 
 	case i3o.MessageTypeUpdated:

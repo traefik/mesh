@@ -64,7 +64,8 @@ func (h *Handler) ObjectCreated(event i3o.Message) {
 		return
 	}
 
-	// Add the event to the global queue to trigger a configuration reload
+	// Add the event to the message queue to trigger a configuration deployment
+	log.Warnf("Added *corev1.Service: %s/%s to the message queue", userService.Namespace, userService.Name)
 	h.queue.Add(event)
 }
 
