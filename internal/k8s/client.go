@@ -22,8 +22,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// Client is an interface that can be used.
-type Client interface {
+// ClusterInitClient is an interface that can be used for doing cluster initialization.
+type ClusterInitClient interface {
 	InitCluster() error
 	VerifyCluster() error
 }

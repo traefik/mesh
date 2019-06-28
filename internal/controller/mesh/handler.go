@@ -5,23 +5,28 @@ import (
 
 	"github.com/containous/i3o/internal/controller/i3o"
 	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/traefik/pkg/config"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/client-go/util/workqueue"
 )
 
 // MeshControllerHandler is an implementation of Handler.
 type Handler struct {
 	Client  *k8s.ClientWrapper
 	Ignored k8s.IgnoreWrapper
+	queue   workqueue.RateLimitingInterface
 }
 
-func NewHandler(client *k8s.ClientWrapper, ignored k8s.IgnoreWrapper) *Handler {
+func NewHandler(client *k8s.ClientWrapper, ignored k8s.IgnoreWrapper, queue workqueue.RateLimitingInterface) *Handler {
+
 	h := &Handler{
 		Client:  client,
 		Ignored: ignored,
+		queue:   queue,
 	}
 
 	if err := h.Init(); err != nil {
@@ -34,6 +39,7 @@ func NewHandler(client *k8s.ClientWrapper, ignored k8s.IgnoreWrapper) *Handler {
 // Init handles any handler initialization.
 func (h *Handler) Init() error {
 	log.Debugln("MeshControllerHandler.Init")
+
 	return nil
 }
 
@@ -57,6 +63,9 @@ func (h *Handler) ObjectCreated(event i3o.Message) {
 		log.Errorf("Could not create mesh service: %v", err)
 		return
 	}
+
+	// Add the event to the global queue to trigger a configuration reload
+	h.queue.Add(event)
 }
 
 // ObjectDeleted is called when an object is deleted.
@@ -215,4 +224,28 @@ func (h *Handler) updateMeshService(oldUserService *corev1.Service, newUserServi
 // userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh ingressroute name.
 func userServiceToMeshServiceName(serviceName string, namespace string) string {
 	return fmt.Sprintf("traefik-%s-%s", serviceName, namespace)
+}
+
+func mergeConfigurations(a *config.Configuration, b *config.Configuration) *config.Configuration {
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+
+	result := a
+
+	for key, value := range b.HTTP.Middlewares {
+		result.HTTP.Middlewares[key] = value
+	}
+	for key, value := range b.HTTP.Routers {
+		result.HTTP.Routers[key] = value
+	}
+	for key, value := range b.HTTP.Services {
+		result.HTTP.Services[key] = value
+	}
+
+	// FIXME: Add rest of values to merge
+	return result
 }

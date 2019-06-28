@@ -27,7 +27,7 @@ func newServiceListWatch(client k8s.CoreV1Client) (string, *cache.ListWatch, run
 	return "service", lw, &corev1.Service{}
 }
 
-func newTrafficTargetWatch(client k8s.SMIAccessV1Alpha1Client) (string, *cache.ListWatch, runtime.Object) {
+func newTrafficTargetListWatch(client k8s.SMIAccessV1Alpha1Client) (string, *cache.ListWatch, runtime.Object) {
 	lw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 			// list all of the traffic targets (SMI access object) in all namespaces
@@ -42,7 +42,7 @@ func newTrafficTargetWatch(client k8s.SMIAccessV1Alpha1Client) (string, *cache.L
 	return "traffictarget", lw, &smiAccessv1alpha1.TrafficTarget{}
 }
 
-func newHTTPRouteGroupWatch(client k8s.SMISpecsV1Alpha1Client) (string, *cache.ListWatch, runtime.Object) {
+func newHTTPRouteGroupListWatch(client k8s.SMISpecsV1Alpha1Client) (string, *cache.ListWatch, runtime.Object) {
 	lw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 			// list all of the httproutegroups (SMI specs object) in all namespaces
@@ -57,7 +57,7 @@ func newHTTPRouteGroupWatch(client k8s.SMISpecsV1Alpha1Client) (string, *cache.L
 	return "httproutegroup", lw, &smiSpecsv1alpha1.HTTPRouteGroup{}
 }
 
-func newTrafficSplitWatch(client k8s.SMISplitV1Alpha1Client) (string, *cache.ListWatch, runtime.Object) {
+func newTrafficSplitListWatch(client k8s.SMISplitV1Alpha1Client) (string, *cache.ListWatch, runtime.Object) {
 	lw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 			// list all of the traffic splits (SMI specs object) in all namespaces

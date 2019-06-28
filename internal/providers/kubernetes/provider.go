@@ -12,9 +12,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Provider holds configurations of the provider.
+// Provider holds a client to access the provider.
 type Provider struct {
-	client *k8s.ClientWrapper
+	client k8s.CoreV1Client
 }
 
 // Init the provider.
@@ -23,13 +23,21 @@ func (p *Provider) Init() error {
 }
 
 // New creates a new provider.
-func New(client *k8s.ClientWrapper) *Provider {
-	return &Provider{
+func New(client k8s.CoreV1Client) *Provider {
+	p := &Provider{
 		client: client,
 	}
+
+	if err := p.Init(); err != nil {
+		log.Errorln("Could not initialize Kubernetes Provider")
+	}
+
+	return p
 }
 
-func (p *Provider) loadConfiguration() *config.Configuration {
+// BuildConfiguration builds the configuration for routing
+// from a native kubernetes environment.
+func (p *Provider) BuildConfiguration() *config.Configuration {
 	configRouters := make(map[string]*config.Router)
 	configServices := make(map[string]*config.Service)
 	namespaces, err := p.client.GetNamespaces()
