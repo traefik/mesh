@@ -22,7 +22,7 @@ type Controller struct {
 
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(client k8s.Client) *Controller {
+func NewMeshController(clients *k8s.ClientWrapper) *Controller {
 	ignoredNamespaces := k8s.Namespaces{metav1.NamespaceSystem, k8s.MeshNamespace}
 	ignoredServices := k8s.Services{
 		{
@@ -36,14 +36,19 @@ func NewMeshController(client k8s.Client) *Controller {
 		Services:   ignoredServices,
 	}
 
-	handler := NewHandler(client, ignored)
+	handler := NewHandler(clients, ignored)
+
+	nameService, lwService, objService := newServiceListWatch(clients)
+	nameTrafficTarget, lwTrafficTarget, objTrafficTarget := newTrafficTargetWatch(clients)
+	nameHTTPGroup, lwHTTPGroup, objHTTPGroup := newHTTPRouteGroupWatch(clients)
+	nameTrafficSplit, lwTrafficSplit, objTrafficSplit := newTrafficSplitWatch(clients)
 
 	return &Controller{
 		handler:             handler,
-		serviceController:   i3o.NewController(client, corev1.Service{}, ignored, handler),
-		smiAccessController: i3o.NewController(client, smiAccessv1alpha1.TrafficTarget{}, ignored, handler),
-		smiSpecsController:  i3o.NewController(client, smiSpecsv1alpha1.HTTPRouteGroup{}, ignored, handler),
-		smiSplitController:  i3o.NewController(client, smiSplitv1alpha1.TrafficSplit{}, ignored, handler),
+		serviceController:   i3o.NewController(nameService, lwService, objService, corev1.Service{}, ignored, handler),
+		smiAccessController: i3o.NewController(nameTrafficTarget, lwTrafficTarget, objTrafficTarget, smiAccessv1alpha1.TrafficTarget{}, ignored, handler),
+		smiSpecsController:  i3o.NewController(nameHTTPGroup, lwHTTPGroup, objHTTPGroup, smiSpecsv1alpha1.HTTPRouteGroup{}, ignored, handler),
+		smiSplitController:  i3o.NewController(nameTrafficSplit, lwTrafficSplit, objTrafficSplit, smiSplitv1alpha1.TrafficSplit{}, ignored, handler),
 	}
 }
 

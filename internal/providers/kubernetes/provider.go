@@ -14,7 +14,7 @@ import (
 
 // Provider holds configurations of the provider.
 type Provider struct {
-	client k8s.Client
+	client *k8s.ClientWrapper
 }
 
 // Init the provider.
@@ -23,7 +23,7 @@ func (p *Provider) Init() error {
 }
 
 // New creates a new provider.
-func New(client k8s.Client) *Provider {
+func New(client *k8s.ClientWrapper) *Provider {
 	return &Provider{
 		client: client,
 	}

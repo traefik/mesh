@@ -19,10 +19,10 @@ const (
 )
 
 type Try struct {
-	client k8s.Client
+	client *k8s.ClientWrapper
 }
 
-func NewTry(client k8s.Client) *Try {
+func NewTry(client *k8s.ClientWrapper) *Try {
 	return &Try{client: client}
 }
 

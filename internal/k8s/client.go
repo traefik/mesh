@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
@@ -25,10 +26,9 @@ import (
 type Client interface {
 	InitCluster() error
 	VerifyCluster() error
+}
 
-	////////////////////////////////
-	// Corev1
-	////////////////////////////////
+type CoreV1Client interface {
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetServices(namespace string) ([]*corev1.Service, error)
 	ListServicesWithOptions(namespace string, options metav1.ListOptions) (*corev1.ServiceList, error)
@@ -36,35 +36,28 @@ type Client interface {
 	DeleteService(namespace, name string) error
 	CreateService(service *corev1.Service) (*corev1.Service, error)
 	UpdateService(service *corev1.Service) (*corev1.Service, error)
-
 	GetEndpoints(namespace, name string) (*corev1.Endpoints, error)
-
 	GetPod(namespace, name string) (*corev1.Pod, error)
-
 	GetNamespaces() ([]*corev1.Namespace, error)
+}
 
-	////////////////////////////////
-	// appsv1
-	////////////////////////////////
+type AppsV1Client interface {
 	GetDeployment(namespace, name string) (*appsv1.Deployment, error)
+}
 
-	////////////////////////////////
-	// smiAccessv1alpha1
-	////////////////////////////////
+type SMIAccessV1Alpha1Client interface {
 	ListTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (*smiAccessv1alpha1.TrafficTargetList, error)
 	WatchTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
 	GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget, error)
+}
 
-	////////////////////////////////
-	// smiSpecsv1alpha1
-	////////////////////////////////
+type SMISpecsV1Alpha1Client interface {
 	ListHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (*smiSpecsv1alpha1.HTTPRouteGroupList, error)
 	WatchHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
 	GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, error)
+}
 
-	////////////////////////////////
-	// smiSplitv1alpha1
-	////////////////////////////////
+type SMISplitV1Alpha1Client interface {
 	ListTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (*smiSplitv1alpha1.TrafficSplitList, error)
 	WatchTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
 }
@@ -456,4 +449,13 @@ func (w *ClientWrapper) ListTrafficSplitsWithOptions(namespace string, options m
 // WatchTrafficTargetsWithOptions watches trafficTargets with the specified options.
 func (w *ClientWrapper) WatchTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
 	return w.SmiSplitClient.SplitV1alpha1().TrafficSplits(namespace).Watch(options)
+}
+
+// translateNotFoundError will translate a "not found" error to a boolean return
+// value which indicates if the resource exists and a nil error.
+func translateNotFoundError(err error) (bool, error) {
+	if kubeerror.IsNotFound(err) {
+		return false, nil
+	}
+	return err == nil, err
 }

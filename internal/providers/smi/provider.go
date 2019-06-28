@@ -17,7 +17,7 @@ import (
 
 // Provider holds configurations of the provider.
 type Provider struct {
-	client k8s.Client
+	client *k8s.ClientWrapper
 }
 
 // destinationKey is used to key a grouped map of trafficTargets.
@@ -33,7 +33,7 @@ func (p *Provider) Init() error {
 }
 
 // New creates a new provider.
-func New(client k8s.Client) *Provider {
+func New(client *k8s.ClientWrapper) *Provider {
 	return &Provider{
 		client: client,
 	}

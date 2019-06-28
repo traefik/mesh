@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	integration    = flag.Bool("integration", true, "run integration tests")
+	integration    = flag.Bool("integration", false, "run integration tests")
 	kubeConfigPath = "/tmp/k3s-output/kubeconfig.yaml"
 	masterURL      = "https://localhost:8443"
 	meshNamespace  = "traefik-mesh"
@@ -44,7 +44,7 @@ type BaseSuite struct {
 	projectName    string
 	dir            string
 	try            *try.Try
-	client         k8s.Client
+	client         *k8s.ClientWrapper
 }
 
 func (s *BaseSuite) startk3s(_ *check.C) error {

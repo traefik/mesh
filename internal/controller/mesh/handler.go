@@ -14,11 +14,11 @@ import (
 
 // MeshControllerHandler is an implementation of Handler.
 type Handler struct {
-	Client  k8s.Client
+	Client  *k8s.ClientWrapper
 	Ignored k8s.IgnoreWrapper
 }
 
-func NewHandler(client k8s.Client, ignored k8s.IgnoreWrapper) *Handler {
+func NewHandler(client *k8s.ClientWrapper, ignored k8s.IgnoreWrapper) *Handler {
 	h := &Handler{
 		Client:  client,
 		Ignored: ignored,

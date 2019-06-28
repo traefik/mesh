@@ -1,13 +1,18 @@
 package main
 
 import (
+	"fmt"
 	stdlog "log"
 	"os"
+
+	"github.com/containous/i3o/internal/controller/mesh"
 
 	"github.com/containous/i3o/cmd"
 	"github.com/containous/i3o/cmd/patch"
 	"github.com/containous/i3o/cmd/version"
+	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/traefik/pkg/cli"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -20,7 +25,7 @@ func main() {
 		Configuration: iConfig,
 		Resources:     loaders,
 		Run: func(_ []string) error {
-			return nil
+			return i3oCommand(iConfig)
 		},
 	}
 
@@ -41,4 +46,26 @@ func main() {
 	}
 
 	os.Exit(0)
+}
+
+func i3oCommand(iConfig *cmd.I3oConfiguration) error {
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.InfoLevel)
+	if iConfig.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	log.Debugln("Starting i3o patch...")
+	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
+	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)
+
+	clients, err := k8s.NewClientWrapper(iConfig.MasterURL, iConfig.KubeConfig)
+	if err != nil {
+		return fmt.Errorf("error building clients: %v", err)
+	}
+	_ = clients
+
+	mesh.NewMeshController(clients)
+
+	return nil
 }
