@@ -31,11 +31,13 @@ type Controller struct {
 	kubernetesProvider  *kubernetes.Provider
 	smiProvider         *smi.Provider
 	deployer            *deployer.Deployer
+	ignored             k8s.IgnoreWrapper
+	smiEnabled          bool
 }
 
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper) *Controller {
+func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool) *Controller {
 	ignoredNamespaces := k8s.Namespaces{metav1.NamespaceSystem, k8s.MeshNamespace}
 	ignoredServices := k8s.Services{
 		{
@@ -56,17 +58,13 @@ func NewMeshController(clients *k8s.ClientWrapper) *Controller {
 	handler := NewHandler(clients, ignored, messageQueue)
 
 	nameService, lwService, objService := newServiceListWatch(clients)
-	nameTrafficTarget, lwTrafficTarget, objTrafficTarget := newTrafficTargetListWatch(clients)
-	nameHTTPGroup, lwHTTPGroup, objHTTPGroup := newHTTPRouteGroupListWatch(clients)
-	nameTrafficSplit, lwTrafficSplit, objTrafficSplit := newTrafficSplitListWatch(clients)
 
 	m := &Controller{
-		handler:             handler,
-		messageQueue:        messageQueue,
-		serviceController:   i3o.NewController(nameService, lwService, objService, corev1.Service{}, ignored, handler),
-		smiAccessController: i3o.NewController(nameTrafficTarget, lwTrafficTarget, objTrafficTarget, smiAccessv1alpha1.TrafficTarget{}, ignored, handler),
-		smiSpecsController:  i3o.NewController(nameHTTPGroup, lwHTTPGroup, objHTTPGroup, smiSpecsv1alpha1.HTTPRouteGroup{}, ignored, handler),
-		smiSplitController:  i3o.NewController(nameTrafficSplit, lwTrafficSplit, objTrafficSplit, smiSplitv1alpha1.TrafficSplit{}, ignored, handler),
+		handler:           handler,
+		messageQueue:      messageQueue,
+		ignored:           ignored,
+		smiEnabled:        smiEnabled,
+		serviceController: i3o.NewController(nameService, lwService, objService, corev1.Service{}, ignored, handler),
 	}
 
 	if err := m.Init(clients); err != nil {
@@ -79,9 +77,7 @@ func NewMeshController(clients *k8s.ClientWrapper) *Controller {
 // Init the Controller.
 func (m *Controller) Init(clients *k8s.ClientWrapper) error {
 
-	//Initialize the providers
 	m.kubernetesProvider = kubernetes.New(clients)
-	m.smiProvider = smi.New(clients)
 
 	// configurationQueue is used to process configurations from the providers
 	// and deal with pushing them to mesh nodes
@@ -89,6 +85,19 @@ func (m *Controller) Init(clients *k8s.ClientWrapper) error {
 
 	//Initialize the deployer
 	m.deployer = deployer.New(clients, m.configurationQueue)
+
+	if m.smiEnabled {
+		m.smiProvider = smi.New(clients)
+
+		nameTrafficTarget, lwTrafficTarget, objTrafficTarget := newTrafficTargetListWatch(clients)
+		nameHTTPGroup, lwHTTPGroup, objHTTPGroup := newHTTPRouteGroupListWatch(clients)
+		nameTrafficSplit, lwTrafficSplit, objTrafficSplit := newTrafficSplitListWatch(clients)
+
+		m.smiAccessController = i3o.NewController(nameTrafficTarget, lwTrafficTarget, objTrafficTarget, smiAccessv1alpha1.TrafficTarget{}, m.ignored, m.handler)
+		m.smiSpecsController = i3o.NewController(nameHTTPGroup, lwHTTPGroup, objHTTPGroup, smiSpecsv1alpha1.HTTPRouteGroup{}, m.ignored, m.handler)
+		m.smiSplitController = i3o.NewController(nameTrafficSplit, lwTrafficSplit, objTrafficSplit, smiSplitv1alpha1.TrafficSplit{}, m.ignored, m.handler)
+
+	}
 
 	return nil
 }
@@ -170,7 +179,9 @@ func (m *Controller) processNextMessage() bool {
 
 func (m *Controller) buildConfigurationFromProviders() *config.Configuration {
 	result := m.kubernetesProvider.BuildConfiguration()
-	result = mergeConfigurations(result, m.smiProvider.BuildConfiguration())
+	if m.smiEnabled {
+		result = mergeConfigurations(result, m.smiProvider.BuildConfiguration())
+	}
 
 	return result
 }

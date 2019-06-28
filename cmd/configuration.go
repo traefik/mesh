@@ -9,6 +9,7 @@ type I3oConfiguration struct {
 	KubeConfig string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	Debug      bool   `description:"Debug mode" export:"true"`
+	SMI        bool   `description:"Enable SMI operation" export:"true"`
 }
 
 // NewI3oConfiguration creates a I3oConfiguration with default values.

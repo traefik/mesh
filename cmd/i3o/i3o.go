@@ -68,7 +68,7 @@ func i3oCommand(iConfig *cmd.I3oConfiguration) error {
 	// Create a new stop Channel
 	stopCh := signals.SetupSignalHandler()
 	// Create a new controller.
-	controller := mesh.NewMeshController(clients)
+	controller := mesh.NewMeshController(clients, iConfig.SMI)
 
 	// run the controller loop to process items
 	if err = controller.Run(stopCh); err != nil {
