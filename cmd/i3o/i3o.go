@@ -13,6 +13,7 @@ import (
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/traefik/pkg/cli"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/sample-controller/pkg/signals"
 )
 
 func main() {
@@ -63,9 +64,15 @@ func i3oCommand(iConfig *cmd.I3oConfiguration) error {
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
 	}
-	_ = clients
 
-	mesh.NewMeshController(clients)
+	// Create a new stop Channel
+	stopCh := signals.SetupSignalHandler()
+	// Create a new controller.
+	controller := mesh.NewMeshController(clients)
 
+	// run the controller loop to process items
+	if err = controller.Run(stopCh); err != nil {
+		log.Fatalf("Error running controller: %v", err)
+	}
 	return nil
 }

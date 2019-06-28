@@ -144,7 +144,8 @@ require (
 	k8s.io/apimachinery v0.0.0-20190624085041-961b39a1baa0
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog v0.3.3 // indirect
-	k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a
+	k8s.io/sample-controller v0.0.0-00010101000000-000000000000
+	k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a // indirect
 )
 
 replace (
