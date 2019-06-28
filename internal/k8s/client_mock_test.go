@@ -6,11 +6,10 @@ import (
 	"path/filepath"
 
 	"github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
-	"github.com/containous/traefik/pkg/provider/kubernetes/k8s"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
-
 	//smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	//smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	//smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
@@ -19,7 +18,6 @@ import (
 	//smiSplitClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	//log "github.com/sirupsen/logrus"
 	//appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ CoreV1Client = (*coreV1ClientMock)(nil)
@@ -38,11 +36,13 @@ type coreV1ClientMock struct {
 	pods         []*corev1.Pod
 	endpoints    []*corev1.Endpoints
 	namespaces   []*corev1.Namespace
+	configmaps   []*corev1.ConfigMap
 
 	apiServiceError   error
 	apiPodError       error
 	apiEndpointsError error
 	apiNamespaceError error
+	apiConfigmapError error
 }
 
 func newCoreV1ClientMock(paths ...string) coreV1ClientMock {
@@ -54,7 +54,7 @@ func newCoreV1ClientMock(paths ...string) coreV1ClientMock {
 			panic(err)
 		}
 
-		k8sObjects := k8s.MustParseYaml(yamlContent)
+		k8sObjects := MustParseYaml(yamlContent)
 		for _, obj := range k8sObjects {
 			switch o := obj.(type) {
 			case *corev1.Service:
@@ -74,17 +74,17 @@ func newCoreV1ClientMock(paths ...string) coreV1ClientMock {
 	return c
 }
 
-func (c coreV1ClientMock) GetService(namespace, name string) (*corev1.Service, error) {
+func (c coreV1ClientMock) GetService(namespace, name string) (*corev1.Service, bool, error) {
 	if c.apiServiceError != nil {
-		return nil, c.apiServiceError
+		return nil, false, c.apiServiceError
 	}
 
 	for _, service := range c.services {
 		if service.Namespace == namespace && service.Name == name {
-			return service, nil
+			return service, true, nil
 		}
 	}
-	return nil, c.apiServiceError
+	return nil, false, c.apiServiceError
 }
 
 func (c coreV1ClientMock) GetServices(namespace string) ([]*corev1.Service, error) {
@@ -119,32 +119,53 @@ func (c coreV1ClientMock) UpdateService(service *corev1.Service) (*corev1.Servic
 	panic("implement me")
 }
 
-func (c coreV1ClientMock) GetEndpoints(namespace, name string) (*corev1.Endpoints, error) {
+func (c coreV1ClientMock) GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error) {
 	if c.apiEndpointsError != nil {
-		return nil, c.apiEndpointsError
+		return nil, false, c.apiEndpointsError
 	}
 
 	for _, endpoint := range c.endpoints {
 		if endpoint.Namespace == namespace && endpoint.Name == name {
-			return endpoint, nil
+			return endpoint, true, nil
 		}
 	}
-	return nil, c.apiEndpointsError
+	return nil, false, c.apiEndpointsError
 }
 
-func (c coreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, error) {
+func (c coreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
 	if c.apiPodError != nil {
-		return nil, c.apiPodError
+		return nil, false, c.apiPodError
 	}
 
 	for _, pod := range c.pods {
 		if pod.Namespace == namespace && pod.Name == name {
-			return pod, nil
+			return pod, true, nil
 		}
 	}
-	return nil, c.apiPodError
+	return nil, false, c.apiPodError
 }
 
 func (c coreV1ClientMock) GetNamespaces() ([]*corev1.Namespace, error) {
 	return c.namespaces, c.apiNamespaceError
+}
+
+func (c coreV1ClientMock) GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error) {
+	if c.apiConfigmapError != nil {
+		return nil, false, c.apiConfigmapError
+	}
+
+	for _, configmap := range c.configmaps {
+		if configmap.Namespace == namespace && configmap.Name == name {
+			return configmap, true, nil
+		}
+	}
+	return nil, false, c.apiConfigmapError
+}
+
+func (c coreV1ClientMock) CreateConfigmap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+	panic("implement me")
+}
+
+func (c coreV1ClientMock) UpdateConfigmap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+	panic("implement me")
 }

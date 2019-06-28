@@ -192,9 +192,9 @@ func (s *BaseSuite) installTinyToolsI3o(c *check.C) {
 }
 
 func (s *BaseSuite) getToolsPodI3o(c *check.C) *corev1.Pod {
-	pod, err := s.client.GetPod(metav1.NamespaceDefault, "tiny-tools")
+	pod, exists, err := s.client.GetPod(metav1.NamespaceDefault, "tiny-tools")
 	c.Assert(err, checker.IsNil)
-	c.Assert(pod, checker.NotNil)
+	c.Assert(exists, checker.True)
 
 	return pod
 }

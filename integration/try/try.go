@@ -32,13 +32,15 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		d, err := t.client.GetDeployment(namespace, name)
+		d, exists, err := t.client.GetDeployment(namespace, name)
 		if err != nil {
 			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 		}
-
-		if d.Status.Replicas == 0 {
+		if !exists {
 			return fmt.Errorf("deployment %q has not been yet created", name)
+		}
+		if d.Status.Replicas == 0 {
+			return fmt.Errorf("deployment %q has no replicas", name)
 		}
 
 		if d.Status.ReadyReplicas == d.Status.Replicas {

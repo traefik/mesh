@@ -28,8 +28,9 @@ func (s *StartI3oSuite) TestSimpleStart(c *check.C) {
 	s.startWhoami(c)
 
 	// Get the whoami service in whoami namespace
-	service, err := s.client.GetService("whoami", "whoami")
+	service, exists, err := s.client.GetService("whoami", "whoami")
 	c.Assert(err, checker.IsNil)
+	c.Assert(exists, checker.True)
 	// Add a fake port to the service
 	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "test-update", Port: 90})
 	// Update the service
