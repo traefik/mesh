@@ -42,8 +42,7 @@ spec:
             - "--entryPoints.ingress-5007.address=:5007"
             - "--entryPoints.ingress-5008.address=:5008"
             - "--entryPoints.ingress-5009.address=:5009"
-            - "--providers.kubernetescrd"
-            - "--providers.kubernetescrd.labelselector=i3o-mesh=internal"
+            - "--providers.rest"
             {{- if .Values.tracing.enable }}
             - "--tracing.jaeger.localagenthostport=jaeger-agent.traefik-mesh.svc.cluster.local:6831"
             - "--tracing.jaeger.SamplingServerURL=http://jaeger-agent.traefik-mesh.svc.cluster.local:5778/sampling"

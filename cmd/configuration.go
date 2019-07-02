@@ -16,6 +16,7 @@ type I3oConfiguration struct {
 func NewI3oConfiguration() *I3oConfiguration {
 	return &I3oConfiguration{
 		ConfigFile: "",
+		KubeConfig: os.Getenv("KUBECONFIG"),
 	}
 }
 

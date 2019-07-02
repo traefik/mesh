@@ -10,23 +10,39 @@ import (
 )
 
 func TestBuildRouterFromService(t *testing.T) {
-	testService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "foo",
+	testCases := []struct {
+		desc     string
+		service  *corev1.Service
+		expected *config.Router
+	}{
+		{
+			desc: "",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "foo",
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "10.0.0.1",
+				},
+			},
+			expected: &config.Router{
+				Rule: "Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)",
+			},
 		},
-		Spec: corev1.ServiceSpec{
-			ClusterIP: "10.0.0.1",
-		},
-	}
-
-	expected := &config.Router{
-		Rule: "Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)",
 	}
 
 	provider := New(nil)
 
-	actual := provider.buildRouterFromService(testService)
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
 
-	assert.Equal(t, expected, actual)
+			actual := provider.buildRouterFromService(test.service)
+
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+
 }

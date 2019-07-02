@@ -187,7 +187,7 @@ func (p *Provider) buildRouterFromTrafficTarget(service *corev1.Service, traffic
 	var rule []string
 	for _, spec := range trafficTarget.Specs {
 		if spec.Kind != "HTTPRouteGroup" {
-			// TCP is unsupported for now.
+			log.Warn("TCP is unsupported for now.")
 			continue
 		}
 		var builtRule []string

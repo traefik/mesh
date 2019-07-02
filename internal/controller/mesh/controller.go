@@ -83,7 +83,7 @@ func (m *Controller) Init(clients *k8s.ClientWrapper) error {
 	// and deal with pushing them to mesh nodes
 	m.configurationQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
-	//Initialize the deployer
+	// Initialize the deployer.
 	m.deployer = deployer.New(clients, m.configurationQueue)
 
 	if m.smiEnabled {
@@ -112,7 +112,7 @@ func (m *Controller) Run(stopCh <-chan struct{}) error {
 	// run the service controller  to start listing and watching resources
 	go m.serviceController.Run(stopCh)
 
-	//run the deployer to deploy configurations
+	// run the deployer to deploy configurations
 	go m.deployer.Run(stopCh)
 
 	// run the runWorker method every second with a stop channel

@@ -34,10 +34,14 @@ rules:
       - configmaps
     verbs:
       - get
+      - create
+      - delete
+      - update
   - apiGroups:
       - ""
     resources:
       - services
+      - pods
     verbs:
       - get
       - list

@@ -34,6 +34,7 @@ type coreV1ClientMock struct {
 	services     []*corev1.Service
 	servicesList *corev1.ServiceList
 	pods         []*corev1.Pod
+	podsList     *corev1.PodList
 	endpoints    []*corev1.Endpoints
 	namespaces   []*corev1.Namespace
 	configmaps   []*corev1.ConfigMap
@@ -143,6 +144,14 @@ func (c coreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, bool, err
 		}
 	}
 	return nil, false, c.apiPodError
+}
+
+func (c coreV1ClientMock) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
+	if c.apiPodError != nil {
+		return nil, c.apiPodError
+	}
+
+	return c.podsList, nil
 }
 
 func (c coreV1ClientMock) GetNamespaces() ([]*corev1.Namespace, error) {

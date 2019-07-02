@@ -42,6 +42,7 @@ type CoreV1Client interface {
 	UpdateService(service *corev1.Service) (*corev1.Service, error)
 	GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error)
 	GetPod(namespace, name string) (*corev1.Pod, bool, error)
+	ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error)
 	GetNamespaces() ([]*corev1.Namespace, error)
 	GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error)
 	CreateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error)
@@ -396,6 +397,10 @@ func (w *ClientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error
 	pod, err := w.KubeClient.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
 	return pod, exists, err
+}
+
+func (w *ClientWrapper) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
+	return w.KubeClient.CoreV1().Pods(namespace).List(options)
 }
 
 // GetNamespaces returns a slice of all namespaces.

@@ -1,7 +1,11 @@
 package deployer
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	"github.com/containous/i3o/internal/k8s"
@@ -112,7 +116,7 @@ func (d *Deployer) deployConfigmap(c *config.Configuration) bool {
 
 	configmap, exists, err := d.client.GetConfigmap(k8s.MeshNamespace, "i3o-config")
 	if err != nil {
-		log.Errorf("Could not get configmap: %s", err)
+		log.Errorf("Could not get configmap: %v", err)
 		return false
 	}
 	if !exists {
@@ -129,7 +133,7 @@ func (d *Deployer) deployConfigmap(c *config.Configuration) bool {
 
 		_, err = d.client.CreateConfigmap(newConfigmap)
 		if err != nil {
-			log.Errorf("Could not create configmap: %s", err)
+			log.Errorf("Could not create configmap: %v", err)
 			return false
 		}
 		// Only return true on successful deployment,
@@ -141,9 +145,8 @@ func (d *Deployer) deployConfigmap(c *config.Configuration) bool {
 	newConfigmap := configmap.DeepCopy()
 	newConfigmap.Data["config.yml"] = jsonData
 
-	_, err = d.client.UpdateConfigmap(newConfigmap)
-	if err != nil {
-		log.Errorf("Could not update configmap: %s", err)
+	if _, err = d.client.UpdateConfigmap(newConfigmap); err != nil {
+		log.Errorf("Could not update configmap: %v", err)
 		return false
 	}
 	// Only return true on successful deployment,
@@ -153,8 +156,36 @@ func (d *Deployer) deployConfigmap(c *config.Configuration) bool {
 
 func (d *Deployer) deployAPI(c *config.Configuration) bool {
 
-	// Only return true on successful deployment,
-	// FIXME: This will need to be implemented when
-	// Traefik v2 has an api provider
+	podList, err := d.client.ListPodWithOptions(k8s.MeshNamespace, metav1.ListOptions{
+		LabelSelector: "component==i3o-mesh",
+	})
+	if err != nil {
+		log.Errorf("Could not retrieve pod list: %v", err)
+		return false
+	}
+
+	for _, pod := range podList.Items {
+		log.Debugf("Deploying configuration to pod %q with IP %s \n", pod.Name, pod.Status.PodIP)
+		b, err := json.Marshal(c)
+		if err != nil {
+			log.Errorf("unable to marshal configuration: %v", err)
+		}
+
+		url := fmt.Sprintf("http://%s:8080/api/providers/rest", pod.Status.PodIP)
+		resp, err := http.Post(url, "application/json", bytes.NewBuffer(b))
+		if err != nil {
+			log.Errorf("unable to deploy configuration: %v", err)
+		}
+		// FIXME: 404 when posting on the url to deploy configuration
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Errorf("unable to read body: %v", err)
+		}
+
+		log.Debug(string(body))
+	}
+
 	return true
 }
