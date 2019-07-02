@@ -47,6 +47,7 @@ func TestTranslateNotFoundError(t *testing.T) {
 		})
 	}
 
-	_ = newCoreV1ClientMock("")
+	// FIXME: make not required to pass test :P
+	_ = newCoreV1ClientMock("mock.yaml")
 
 }
