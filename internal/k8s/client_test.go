@@ -46,4 +46,7 @@ func TestTranslateNotFoundError(t *testing.T) {
 			assert.Equal(t, test.expectedError, err)
 		})
 	}
+
+	_ = newCoreV1ClientMock("")
+
 }
