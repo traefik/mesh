@@ -176,13 +176,13 @@ func (c *CoreV1ClientMock) UpdateConfigmap(service *corev1.ConfigMap) (*corev1.C
 }
 
 func (c *CoreV1ClientMock) EnableEndpointsError() {
-	c.apiEndpointsError = errors.New("Endpoint Error")
+	c.apiEndpointsError = errors.New("endpoint error")
 }
 
 func (c *CoreV1ClientMock) EnableNamespaceError() {
-	c.apiNamespaceError = errors.New("Namespace Error")
+	c.apiNamespaceError = errors.New("namespace error")
 }
 
 func (c *CoreV1ClientMock) EnableServiceError() {
-	c.apiServiceError = errors.New("Service Error")
+	c.apiServiceError = errors.New("service error")
 }
