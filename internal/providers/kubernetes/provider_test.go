@@ -41,11 +41,9 @@ func TestBuildRouterFromService(t *testing.T) {
 			t.Parallel()
 
 			actual := provider.buildRouterFromService(test.service)
-
 			assert.Equal(t, test.expected, actual)
 		})
 	}
-
 }
 
 func TestBuildConfiguration(t *testing.T) {
@@ -118,15 +116,12 @@ func TestBuildConfiguration(t *testing.T) {
 			if test.serviceErr {
 				clientMock.EnableServiceError()
 			}
+
 			provider := New(clientMock)
-
 			actual := provider.BuildConfiguration()
-
 			assert.Equal(t, test.expected, actual)
-
 		})
 	}
-
 }
 
 func TestBuildServiceFromService(t *testing.T) {
@@ -182,12 +177,9 @@ func TestBuildServiceFromService(t *testing.T) {
 				clientMock.EnableEndpointsError()
 			}
 			provider := New(clientMock)
-
 			actual := provider.buildServiceFromService(service)
-
 			assert.Equal(t, test.expected, actual)
 
 		})
 	}
-
 }
