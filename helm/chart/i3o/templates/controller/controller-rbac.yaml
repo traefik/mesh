@@ -24,6 +24,12 @@ rules:
   - apiGroups:
       - ""
     resources:
+      - pods
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
       - namespaces
     verbs:
       - get
@@ -41,7 +47,6 @@ rules:
       - ""
     resources:
       - services
-      - pods
     verbs:
       - get
       - list

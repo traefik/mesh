@@ -31,10 +31,12 @@ func (s *StartI3oSuite) TestSimpleStart(c *check.C) {
 	service, exists, err := s.client.GetService("whoami", "whoami")
 	c.Assert(err, checker.IsNil)
 	c.Assert(exists, checker.True)
+	newService := service.DeepCopy()
+
 	// Add a fake port to the service
-	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "test-update", Port: 90})
+	newService.Spec.Ports = append(newService.Spec.Ports, corev1.ServicePort{Name: "test-update", Port: 90})
 	// Update the service
-	_, err = s.client.UpdateService(service)
+	_, err = s.client.UpdateService(newService)
 	c.Assert(err, checker.IsNil)
 
 }

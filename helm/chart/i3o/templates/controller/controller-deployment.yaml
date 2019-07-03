@@ -47,7 +47,9 @@ spec:
           image: {{ include "i3o.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
+            {{- if .Values.debug }}
             - "--debug"
+            {{- end }}
           securityContext:
             capabilities:
               drop:
