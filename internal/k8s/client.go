@@ -124,7 +124,7 @@ func (w *ClientWrapper) InitCluster() error {
 	log.Infoln("Preparing Cluster...")
 
 	log.Debugln("Creating mesh namespace...")
-	if err := w.verifyNamespaceExists(MeshNamespace); err != nil {
+	if err := w.CreateNamespace(MeshNamespace); err != nil {
 		return err
 	}
 
@@ -134,26 +134,6 @@ func (w *ClientWrapper) InitCluster() error {
 	}
 
 	log.Infoln("Cluster Preparation Complete...")
-
-	return nil
-}
-
-func (w *ClientWrapper) verifyNamespaceExists(namespace string) error {
-	if _, err := w.KubeClient.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{}); err != nil {
-		ns := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-			},
-			Spec: corev1.NamespaceSpec{},
-		}
-
-		if _, err := w.KubeClient.CoreV1().Namespaces().Create(ns); err != nil {
-			return fmt.Errorf("unable to create namespace %q: %v", namespace, err)
-		}
-		log.Infof("Namespace %q created successfully", namespace)
-	} else {
-		log.Debugf("Namespace %q already exist", namespace)
-	}
 
 	return nil
 }
@@ -258,19 +238,19 @@ func (w *ClientWrapper) VerifyCluster() error {
 	defer log.Infoln("Cluster Verification Complete...")
 
 	log.Debugln("Verifying mesh namespace exists...")
-	if err := w.verifyNamespaceExists(MeshNamespace); err != nil {
+	if err := w.CreateNamespace(MeshNamespace); err != nil {
 		return err
 	}
 
 	log.Debugln("Verifying CoreDNS Patched...")
-	if err := w.verifyCoreDNSPatched("coredns", metav1.NamespaceSystem); err != nil {
+	if err := w.isCoreDNSPatched("coredns", metav1.NamespaceSystem); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (w *ClientWrapper) verifyCoreDNSPatched(deploymentName string, namespace string) error {
+func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string) error {
 	coreDeployment, err := w.KubeClient.AppsV1().Deployments(namespace).Get(deploymentName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -414,6 +394,27 @@ func (w *ClientWrapper) GetNamespaces() ([]*corev1.Namespace, error) {
 		result = append(result, &namespace)
 	}
 	return result, nil
+}
+
+// CreateNamespace creates a namespace if it doesn't exist.
+func (w *ClientWrapper) CreateNamespace(namespace string) error {
+	if _, err := w.KubeClient.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{}); err != nil {
+		ns := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace,
+			},
+			Spec: corev1.NamespaceSpec{},
+		}
+
+		if _, err := w.KubeClient.CoreV1().Namespaces().Create(ns); err != nil {
+			return fmt.Errorf("unable to create namespace %q: %v", namespace, err)
+		}
+		log.Infof("Namespace %q created successfully", namespace)
+	} else {
+		log.Debugf("Namespace %q already exist", namespace)
+	}
+
+	return nil
 }
 
 // GetDeployment retrieves the deployment from the specified namespace.
