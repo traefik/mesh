@@ -11,7 +11,6 @@ import (
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/traefik/pkg/safe"
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -20,56 +19,11 @@ const (
 )
 
 type Try struct {
-	clients *k8s.ClientWrapper
+	client *k8s.ClientWrapper
 }
 
-func NewTry(clients *k8s.ClientWrapper) *Try {
-	return &Try{clients: clients}
-}
-func (t *Try) ListIngressRoutes(namespace string, timeout time.Duration, conditions ...IngressRouteListCondition) error {
-	ebo := backoff.NewExponentialBackOff()
-	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
-	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-
-		ingressRouteList, err := t.clients.CrdClient.TraefikV1alpha1().IngressRoutes(namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return err
-		}
-
-		for _, condition := range conditions {
-			if err := condition(ingressRouteList); err != nil {
-				return err
-			}
-		}
-		return nil
-	}), ebo); err != nil {
-		return fmt.Errorf("unable to list ingressroutes in namespace %q: %v", namespace, err)
-	}
-
-	return nil
-}
-
-func (t *Try) ListIngressRouteTCPs(namespace string, timeout time.Duration, conditions ...IngressRouteTCPListCondition) error {
-	ebo := backoff.NewExponentialBackOff()
-	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
-	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		ingressRouteTCPList, err := t.clients.CrdClient.TraefikV1alpha1().IngressRouteTCPs(namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return err
-		}
-
-		for _, condition := range conditions {
-			if err := condition(ingressRouteTCPList); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}), ebo); err != nil {
-		return fmt.Errorf("unable to list ingressroutetcps in namespace %q: %v", namespace, err)
-	}
-
-	return nil
+func NewTry(client *k8s.ClientWrapper) *Try {
+	return &Try{client: client}
 }
 
 // WaitReadyDeployment wait until the deployment is ready.
@@ -78,13 +32,15 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		d, err := t.clients.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+		d, exists, err := t.client.GetDeployment(namespace, name)
 		if err != nil {
 			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 		}
-
-		if d.Status.Replicas == 0 {
+		if !exists {
 			return fmt.Errorf("deployment %q has not been yet created", name)
+		}
+		if d.Status.Replicas == 0 {
+			return fmt.Errorf("deployment %q has no replicas", name)
 		}
 
 		if d.Status.ReadyReplicas == d.Status.Replicas {

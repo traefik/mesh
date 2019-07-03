@@ -4,9 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
-	"github.com/containous/i3o/integration/try"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 )
@@ -23,14 +21,6 @@ func (s *CurlI3oSuite) SetUpSuite(c *check.C) {
 	s.waitForI3oControllerStarted(c)
 	s.startWhoami(c)
 	s.installTinyToolsI3o(c)
-
-	// Check that ingressroutetcps is created for the whoami service
-	err = s.try.ListIngressRouteTCPs("whoami", 20*time.Second, try.HasIngressRouteTCPListLength(1), try.HasNamesIngressRouteTCPList(try.List{"whoami-whoami"}))
-	c.Assert(err, checker.IsNil)
-
-	// Check that ingressroutes is created for the whoami-http service
-	err = s.try.ListIngressRoutes("whoami", 20*time.Second, try.HasIngressRouteListLength(1), try.HasNamesIngressRouteList(try.List{"whoami-http-whoami"}))
-	c.Assert(err, checker.IsNil)
 
 }
 

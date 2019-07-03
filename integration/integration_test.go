@@ -14,18 +14,14 @@ import (
 	"github.com/go-check/check"
 	log "github.com/sirupsen/logrus"
 	checker "github.com/vdemeester/shakers"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilpointer "k8s.io/utils/pointer"
 )
 
 var (
-	integration    = flag.Bool("integration", true, "run integration tests")
+	integration    = flag.Bool("integration", false, "run integration tests")
 	kubeConfigPath = "/tmp/k3s-output/kubeconfig.yaml"
 	masterURL      = "https://localhost:8443"
-	meshNamespace  = "traefik-mesh"
 )
 
 func Test(t *testing.T) {
@@ -47,7 +43,7 @@ type BaseSuite struct {
 	projectName    string
 	dir            string
 	try            *try.Try
-	clients        *k8s.ClientWrapper
+	client         *k8s.ClientWrapper
 }
 
 func (s *BaseSuite) startk3s(_ *check.C) error {
@@ -90,12 +86,12 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 		return err
 	}
 
-	s.clients, err = s.try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
+	s.client, err = s.try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
 	if err != nil {
 		return err
 	}
 
-	s.try = try.NewTry(s.clients)
+	s.try = try.NewTry(s.client)
 	return nil
 }
 
@@ -120,7 +116,7 @@ func (s *BaseSuite) waitForCoreDNSStarted(c *check.C) {
 }
 
 func (s *BaseSuite) waitForI3oControllerStarted(c *check.C) {
-	err := s.try.WaitReadyDeployment("i3o-controller", meshNamespace, 60*time.Second)
+	err := s.try.WaitReadyDeployment("i3o-controller", k8s.MeshNamespace, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -150,55 +146,25 @@ func (s *BaseSuite) startWhoami(c *check.C) {
 }
 
 func (s *BaseSuite) installHelmI3o(c *check.C) {
-	// Delete previous tiller service account.
-	err := s.clients.KubeClient.CoreV1().ServiceAccounts(metav1.NamespaceSystem).Delete("tiller", &metav1.DeleteOptions{})
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	// Create tiller service account.
-	_, err = s.clients.KubeClient.CoreV1().ServiceAccounts(metav1.NamespaceSystem).Create(&corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "tiller",
-			Namespace: metav1.NamespaceSystem,
-		},
-	})
+	// create tiller service account.
+	cmd := exec.Command("kubectl", "apply",
+		"-f", path.Join(s.dir, "resources/helm/serviceaccount.yaml"))
+	cmd.Env = os.Environ()
+	_, err := cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
 
-	// Delete previous tiller cluster role bindings.
-	err = s.clients.KubeClient.RbacV1().ClusterRoleBindings().Delete("tiller", &metav1.DeleteOptions{})
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	// Create tiller cluster role bindings.
-	_, err = s.clients.KubeClient.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "tiller",
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     "cluster-admin",
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      "tiller",
-				Namespace: metav1.NamespaceSystem,
-			},
-		},
-	})
+	// create tiller cluster role binding account.
+	cmd = exec.Command("kubectl", "apply",
+		"-f", path.Join(s.dir, "resources/helm/clusterrolebinding.yaml"))
+	cmd.Env = os.Environ()
+	_, err = cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
 
 	// Init helm with the service account created before.
-	cmd := exec.Command("helm", "init",
+	cmd = exec.Command("helm", "init",
 		"--service-account", "tiller", "--upgrade")
 	cmd.Env = os.Environ()
-
-	output, err := cmd.CombinedOutput()
-
-	fmt.Println(string(output))
+	_, err = cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
 
 	// Wait for tiller initialized.
@@ -208,44 +174,16 @@ func (s *BaseSuite) installHelmI3o(c *check.C) {
 	cmd = exec.Command("helm", "install",
 		"../helm/chart/i3o", "--values", "resources/values.yaml")
 	cmd.Env = os.Environ()
-
-	output, err = cmd.CombinedOutput()
-
-	fmt.Println(string(output))
+	_, err = cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
 }
 
 func (s *BaseSuite) installTinyToolsI3o(c *check.C) {
-	// Delete previous tiny tools deployment.
-	err := s.clients.KubeClient.AppsV1().Deployments(metav1.NamespaceDefault).Delete("tiny-tools", &metav1.DeleteOptions{})
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	// Create new tiny tools deployment.
-	_, err = s.clients.KubeClient.AppsV1().Deployments(metav1.NamespaceDefault).Create(&appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "tiny-tools",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: utilpointer.Int32Ptr(1),
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tiny-tools",
-					Namespace: metav1.NamespaceDefault,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{
-						Name:    "tinyTools",
-						Image:   "giantswarm/tiny-tools",
-						Command: []string{"sleep", "36000"},
-					},
-					},
-				},
-			},
-		},
-	})
+	cmd := exec.Command("kubectl", "apply",
+		"-f", path.Join(s.dir, "resources/tools/deployment.yaml"))
+	cmd.Env = os.Environ()
+	_, err := cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
 
 	// Wait for tools to be initialized.
@@ -253,9 +191,9 @@ func (s *BaseSuite) installTinyToolsI3o(c *check.C) {
 }
 
 func (s *BaseSuite) getToolsPodI3o(c *check.C) *corev1.Pod {
-	pod, err := s.clients.KubeClient.CoreV1().Pods(metav1.NamespaceDefault).Get("tiny-tools", metav1.GetOptions{})
+	pod, exists, err := s.client.GetPod(metav1.NamespaceDefault, "tiny-tools")
 	c.Assert(err, checker.IsNil)
-	c.Assert(pod, checker.NotNil)
+	c.Assert(exists, checker.True)
 
 	return pod
 }

@@ -1,10 +1,10 @@
-package cmd
+package version
 
 import (
 	"fmt"
 	"runtime"
 
-	"github.com/spf13/cobra"
+	"github.com/containous/traefik/pkg/cli"
 )
 
 var (
@@ -13,17 +13,17 @@ var (
 	date    = "I don't remember exactly"
 )
 
-// versionCmd represents the version command.
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Display version",
-	Run: func(cmd *cobra.Command, args []string) {
-		displayVersion(rootCmd.Name())
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(versionCmd)
+// NewCmd builds a new Version command.
+func NewCmd() *cli.Command {
+	return &cli.Command{
+		Name:          "version",
+		Description:   `Shows the current i3o version.`,
+		Configuration: nil,
+		Run: func(_ []string) error {
+			displayVersion("version")
+			return nil
+		},
+	}
 }
 
 func displayVersion(name string) {

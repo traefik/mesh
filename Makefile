@@ -19,10 +19,13 @@ DOCKER_INTEGRATION_TEST_OTPS := -v $(CURDIR):/i3o --privileged -e INTEGRATION_TE
 
 export GO111MODULE=on
 
-default: check build
+default: clean check test build
 
 $(DIST_DIR):
 	mkdir -p $(DIST_DIR)
+
+clean:
+	rm -rf dist/ cover.out
 
 # Static linting of source files. See .golangci.toml for options
 local-check: $(DIST_DIR)
@@ -35,6 +38,9 @@ local-build: $(DIST_DIR)
 	-X github.com/containous/$(BINARY_NAME)/cmd/version.commit=$(SHA) \
 	-X github.com/containous/$(BINARY_NAME)/cmd/version.date=$(BUILD_DATE)" \
 	$(CURDIR)/cmd/$(BINARY_NAME)/*.go
+
+local-test: clean
+	go test -v -cover ./...
 
 # Integration test
 local-test-integration: $(DIST_DIR) kubectl helm build
@@ -56,6 +62,9 @@ build: $(DIST_DIR)
 	docker cp build:/app/$(BINARY_NAME) $(DIST_DIR)/
 	docker rm build
 
+test: $(DIST_DIR)
+	docker build --tag "$(DOCKER_IMAGE_NAME):test" --target maker --build-arg="MAKE_TARGET=local-test" $(CURDIR)/
+
 check: $(DIST_DIR)
 	docker run -t --rm -v $(CURDIR):/go/src/$(PROJECT) -w /go/src/$(PROJECT) -e GO111MODULE golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run --config .golangci.toml
 
@@ -74,5 +83,5 @@ upgrade:
 helm-lint:
 	helm lint helm/chart/i3o
 
-.PHONY: local-check local-build check build push-docker \
+.PHONY: local-check local-build local-test check build test push-docker \
 		vendor helm-lint helm kubectl test-integration local-test-integration

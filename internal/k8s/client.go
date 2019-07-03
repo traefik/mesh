@@ -3,8 +3,12 @@ package k8s
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
 
-	crdClientset "github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/clientset/versioned"
+	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
+	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	smiAccessClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
 	smiSpecsClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
 	smiSplitClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
@@ -12,15 +16,62 @@ import (
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// ClusterInitClient is an interface that can be used for doing cluster initialization.
+type ClusterInitClient interface {
+	InitCluster() error
+	VerifyCluster() error
+}
+
+type CoreV1Client interface {
+	GetService(namespace, name string) (*corev1.Service, bool, error)
+	GetServices(namespace string) ([]*corev1.Service, error)
+	ListServicesWithOptions(namespace string, options metav1.ListOptions) (*corev1.ServiceList, error)
+	WatchServicesWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
+	DeleteService(namespace, name string) error
+	CreateService(service *corev1.Service) (*corev1.Service, error)
+	UpdateService(service *corev1.Service) (*corev1.Service, error)
+	GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error)
+	GetPod(namespace, name string) (*corev1.Pod, bool, error)
+	ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error)
+	GetNamespaces() ([]*corev1.Namespace, error)
+	GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error)
+	CreateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error)
+	UpdateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error)
+}
+
+type AppsV1Client interface {
+	GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error)
+}
+
+type SMIAccessV1Alpha1Client interface {
+	ListTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (*smiAccessv1alpha1.TrafficTargetList, error)
+	WatchTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
+	GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget, error)
+}
+
+type SMISpecsV1Alpha1Client interface {
+	ListHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (*smiSpecsv1alpha1.HTTPRouteGroupList, error)
+	WatchHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
+	GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error)
+}
+
+type SMISplitV1Alpha1Client interface {
+	ListTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (*smiSplitv1alpha1.TrafficSplitList, error)
+	WatchTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
+}
+
 // ClientWrapper holds the clients for the various resource controllers.
 type ClientWrapper struct {
-	CrdClient       *crdClientset.Clientset
 	KubeClient      *kubernetes.Clientset
 	SmiAccessClient *smiAccessClientset.Clientset
 	SmiSpecsClient  *smiSpecsClientset.Clientset
@@ -45,11 +96,6 @@ func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {
 		return nil, err
 	}
 
-	crdClient, err := buildKubernetesCRDClient(config)
-	if err != nil {
-		return nil, err
-	}
-
 	smiAccessClient, err := buildSmiAccessClient(config)
 	if err != nil {
 		return nil, err
@@ -66,7 +112,6 @@ func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {
 	}
 
 	return &ClientWrapper{
-		CrdClient:       crdClient,
 		KubeClient:      kubeClient,
 		SmiAccessClient: smiAccessClient,
 		SmiSpecsClient:  smiSpecsClient,
@@ -262,17 +307,6 @@ func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
 	return client, nil
 }
 
-// buildKubernetesCRDClient returns a client to manage CRD objects.
-func buildKubernetesCRDClient(config *rest.Config) (*crdClientset.Clientset, error) {
-	log.Infoln("Building Kubernetes CRD Client...")
-	client, err := crdClientset.NewForConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create CRD client: %v", err)
-	}
-
-	return client, nil
-}
-
 // buildSmiAccessClient returns a client to manage SMI Access objects.
 func buildSmiAccessClient(config *rest.Config) (*smiAccessClientset.Clientset, error) {
 	log.Infoln("Building SMI Access Client...")
@@ -304,4 +338,189 @@ func buildSmiSplitClient(config *rest.Config) (*smiSplitClientset.Clientset, err
 	}
 
 	return client, nil
+}
+
+// GetService retrieves the service from the specified namespace.
+func (w *ClientWrapper) GetService(namespace, name string) (*corev1.Service, bool, error) {
+	service, err := w.KubeClient.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return service, exists, err
+}
+
+// GetServices retrieves the services from the specified namespace.
+func (w *ClientWrapper) GetServices(namespace string) ([]*corev1.Service, error) {
+	var result []*corev1.Service
+	list, err := w.KubeClient.CoreV1().Services(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return result, err
+	}
+	for _, service := range list.Items {
+		result = append(result, &service)
+	}
+	return result, nil
+}
+
+// DeleteService deletes the service from the specified namespace.
+func (w *ClientWrapper) DeleteService(namespace, name string) error {
+	return w.KubeClient.CoreV1().Services(namespace).Delete(name, &metav1.DeleteOptions{})
+}
+
+// CreateService create the specified service.
+func (w *ClientWrapper) CreateService(service *corev1.Service) (*corev1.Service, error) {
+	return w.KubeClient.CoreV1().Services(service.Namespace).Create(service)
+}
+
+// UpdateService updates the specified service.
+func (w *ClientWrapper) UpdateService(service *corev1.Service) (*corev1.Service, error) {
+	return w.KubeClient.CoreV1().Services(service.Namespace).Update(service)
+}
+
+// ListServicesWithOptions lists services with the specified options.
+func (w *ClientWrapper) ListServicesWithOptions(namespace string, options metav1.ListOptions) (*corev1.ServiceList, error) {
+	return w.KubeClient.CoreV1().Services(namespace).List(options)
+}
+
+// WatchServicesWithOptions watches services with the specified options.
+func (w *ClientWrapper) WatchServicesWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
+	return w.KubeClient.CoreV1().Services(namespace).Watch(options)
+}
+
+// GetEndpoints retrieves the endpoints from the specified namespace.
+func (w *ClientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error) {
+	endpoints, err := w.KubeClient.CoreV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return endpoints, exists, err
+}
+
+// GetPod retrieves the pod from the specified namespace.
+func (w *ClientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
+	pod, err := w.KubeClient.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return pod, exists, err
+}
+
+func (w *ClientWrapper) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
+	return w.KubeClient.CoreV1().Pods(namespace).List(options)
+}
+
+// GetNamespaces returns a slice of all namespaces.
+func (w *ClientWrapper) GetNamespaces() ([]*corev1.Namespace, error) {
+	var result []*corev1.Namespace
+	list, err := w.KubeClient.CoreV1().Namespaces().List(metav1.ListOptions{})
+	if err != nil {
+		return result, err
+	}
+	for _, namespace := range list.Items {
+		result = append(result, &namespace)
+	}
+	return result, nil
+}
+
+// GetDeployment retrieves the deployment from the specified namespace.
+func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error) {
+	deployment, err := w.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return deployment, exists, err
+}
+
+// ListTrafficTargetsWithOptions lists trafficTargets with the specified options.
+func (w *ClientWrapper) ListTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (*smiAccessv1alpha1.TrafficTargetList, error) {
+	return w.SmiAccessClient.AccessV1alpha1().TrafficTargets(namespace).List(options)
+}
+
+// WatchTrafficTargetsWithOptions watches trafficTargets with the specified options.
+func (w *ClientWrapper) WatchTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
+	return w.SmiAccessClient.AccessV1alpha1().TrafficTargets(namespace).Watch(options)
+}
+
+// GetTrafficTargets returns a slice of all TrafficTargets.
+func (w *ClientWrapper) GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget, error) {
+	var result []*smiAccessv1alpha1.TrafficTarget
+	list, err := w.SmiAccessClient.AccessV1alpha1().TrafficTargets(metav1.NamespaceAll).List(metav1.ListOptions{})
+	if err != nil {
+		return result, err
+	}
+	for _, trafficTarget := range list.Items {
+		result = append(result, &trafficTarget)
+	}
+	return result, nil
+}
+
+// ListHTTPRouteGroupsWithOptions lists HTTPRouteGroups with the specified options.
+func (w *ClientWrapper) ListHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (*smiSpecsv1alpha1.HTTPRouteGroupList, error) {
+	return w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).List(options)
+}
+
+// WatchHTTPRouteGroupsWithOptions watches HTTPRouteGroups with the specified options.
+func (w *ClientWrapper) WatchHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
+	return w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).Watch(options)
+}
+
+// GetHTTPRouteGroup retrieves the HTTPRouteGroup from the specified namespace.
+func (w *ClientWrapper) GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error) {
+	group, err := w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return group, exists, err
+}
+
+// ListTrafficSplitsWithOptions lists TrafficSplits with the specified options.
+func (w *ClientWrapper) ListTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (*smiSplitv1alpha1.TrafficSplitList, error) {
+	return w.SmiSplitClient.SplitV1alpha1().TrafficSplits(namespace).List(options)
+}
+
+// WatchTrafficTargetsWithOptions watches trafficTargets with the specified options.
+func (w *ClientWrapper) WatchTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
+	return w.SmiSplitClient.SplitV1alpha1().TrafficSplits(namespace).Watch(options)
+}
+
+// GetConfigmap retrieves the named configmap in the specified namespace.
+func (w *ClientWrapper) GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error) {
+	configmap, err := w.KubeClient.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return configmap, exists, err
+}
+
+// UpdateConfigmap updates the specified service.
+func (w *ClientWrapper) UpdateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+	return w.KubeClient.CoreV1().ConfigMaps(configmap.Namespace).Update(configmap)
+}
+
+// CreateConfigmap creates the specified service.
+func (w *ClientWrapper) CreateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+	return w.KubeClient.CoreV1().ConfigMaps(configmap.Namespace).Create(configmap)
+}
+
+// translateNotFoundError will translate a "not found" error to a boolean return
+// value which indicates if the resource exists and a nil error.
+func translateNotFoundError(err error) (bool, error) {
+	if kubeerror.IsNotFound(err) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// MustParseYaml parses a YAML to objects.
+func MustParseYaml(content []byte) []runtime.Object {
+	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|IngressRoute|Middleware|Secret|TLSOption)`)
+
+	files := strings.Split(string(content), "---")
+	retVal := make([]runtime.Object, 0, len(files))
+	for _, file := range files {
+		if file == "\n" || file == "" {
+			continue
+		}
+
+		decode := scheme.Codecs.UniversalDeserializer().Decode
+		obj, groupVersionKind, err := decode([]byte(file), nil, nil)
+		if err != nil {
+			panic(fmt.Sprintf("Error while decoding YAML object. Err was: %s", err))
+		}
+
+		if !acceptedK8sTypes.MatchString(groupVersionKind.Kind) {
+			log.Debugf("The custom-roles configMap contained K8s object types which are not supported! Skipping object with type: %s", groupVersionKind.Kind)
+		} else {
+			retVal = append(retVal, obj)
+		}
+	}
+	return retVal
 }

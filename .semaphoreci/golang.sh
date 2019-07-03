@@ -10,7 +10,7 @@ rm -rf go1.12.linux-amd64.tar.gz
 sudo mkdir -p /usr/local/golang/1.12/go
 sudo mv go /usr/local/golang/1.12/
 
-sudo rm /usr/local/bin/go
+sudo rm -rf /usr/local/bin/go || exit 1
 sudo chmod +x /usr/local/golang/1.12/go/bin/go
 sudo ln -s /usr/local/golang/1.12/go/bin/go /usr/local/bin/go
 

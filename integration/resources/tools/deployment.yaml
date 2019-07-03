@@ -1,0 +1,18 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tiny-tools
+  namespace: default
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: tiny-tools
+      namespace: default
+    spec:
+      containers:
+      - name: tinyTools
+        image: giantswarm/tiny-tools
+        command:
+        - "sleep"
+        - "3600"

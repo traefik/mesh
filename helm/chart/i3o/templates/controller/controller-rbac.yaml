@@ -24,6 +24,12 @@ rules:
   - apiGroups:
       - ""
     resources:
+      - pods
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
       - namespaces
     verbs:
       - get
@@ -34,6 +40,9 @@ rules:
       - configmaps
     verbs:
       - get
+      - create
+      - delete
+      - update
   - apiGroups:
       - ""
     resources:
