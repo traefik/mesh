@@ -9,11 +9,7 @@ import (
 	"github.com/containous/i3o/internal/providers/kubernetes"
 	"github.com/containous/i3o/internal/providers/smi"
 	"github.com/containous/traefik/pkg/config"
-	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
-	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
-	smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -64,7 +60,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool) *Controller 
 		messageQueue:      messageQueue,
 		ignored:           ignored,
 		smiEnabled:        smiEnabled,
-		serviceController: i3o.NewController(nameService, lwService, objService, corev1.Service{}, ignored, handler),
+		serviceController: i3o.NewController(nameService, lwService, objService, ignored, handler),
 	}
 
 	if err := m.Init(clients); err != nil {
@@ -93,9 +89,9 @@ func (m *Controller) Init(clients *k8s.ClientWrapper) error {
 		nameHTTPGroup, lwHTTPGroup, objHTTPGroup := newHTTPRouteGroupListWatch(clients)
 		nameTrafficSplit, lwTrafficSplit, objTrafficSplit := newTrafficSplitListWatch(clients)
 
-		m.smiAccessController = i3o.NewController(nameTrafficTarget, lwTrafficTarget, objTrafficTarget, smiAccessv1alpha1.TrafficTarget{}, m.ignored, m.handler)
-		m.smiSpecsController = i3o.NewController(nameHTTPGroup, lwHTTPGroup, objHTTPGroup, smiSpecsv1alpha1.HTTPRouteGroup{}, m.ignored, m.handler)
-		m.smiSplitController = i3o.NewController(nameTrafficSplit, lwTrafficSplit, objTrafficSplit, smiSplitv1alpha1.TrafficSplit{}, m.ignored, m.handler)
+		m.smiAccessController = i3o.NewController(nameTrafficTarget, lwTrafficTarget, objTrafficTarget, m.ignored, m.handler)
+		m.smiSpecsController = i3o.NewController(nameHTTPGroup, lwHTTPGroup, objHTTPGroup, m.ignored, m.handler)
+		m.smiSplitController = i3o.NewController(nameTrafficSplit, lwTrafficSplit, objTrafficSplit, m.ignored, m.handler)
 
 	}
 
