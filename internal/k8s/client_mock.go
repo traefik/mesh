@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -10,17 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
-	//smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
-	//smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
-	//smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
-	//smiAccessClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
-	//smiSpecsClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
-	//smiSplitClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
-	//log "github.com/sirupsen/logrus"
-	//appsv1 "k8s.io/api/apps/v1"
 )
 
-var _ CoreV1Client = (*coreV1ClientMock)(nil)
+var _ CoreV1Client = (*CoreV1ClientMock)(nil)
 
 func init() {
 	// required by k8s.MustParseYaml
@@ -30,7 +23,7 @@ func init() {
 	}
 }
 
-type coreV1ClientMock struct {
+type CoreV1ClientMock struct {
 	services     []*corev1.Service
 	servicesList *corev1.ServiceList
 	pods         []*corev1.Pod
@@ -46,8 +39,8 @@ type coreV1ClientMock struct {
 	apiConfigmapError error
 }
 
-func newCoreV1ClientMock(paths ...string) coreV1ClientMock {
-	var c coreV1ClientMock
+func NewCoreV1ClientMock(paths ...string) *CoreV1ClientMock {
+	c := &CoreV1ClientMock{}
 
 	for _, path := range paths {
 		yamlContent, err := ioutil.ReadFile(filepath.FromSlash("./fixtures/" + path))
@@ -75,7 +68,7 @@ func newCoreV1ClientMock(paths ...string) coreV1ClientMock {
 	return c
 }
 
-func (c coreV1ClientMock) GetService(namespace, name string) (*corev1.Service, bool, error) {
+func (c *CoreV1ClientMock) GetService(namespace, name string) (*corev1.Service, bool, error) {
 	if c.apiServiceError != nil {
 		return nil, false, c.apiServiceError
 	}
@@ -88,7 +81,7 @@ func (c coreV1ClientMock) GetService(namespace, name string) (*corev1.Service, b
 	return nil, false, c.apiServiceError
 }
 
-func (c coreV1ClientMock) GetServices(namespace string) ([]*corev1.Service, error) {
+func (c *CoreV1ClientMock) GetServices(namespace string) ([]*corev1.Service, error) {
 	if c.apiServiceError != nil {
 		return nil, c.apiServiceError
 	}
@@ -96,7 +89,7 @@ func (c coreV1ClientMock) GetServices(namespace string) ([]*corev1.Service, erro
 	return c.services, nil
 }
 
-func (c coreV1ClientMock) ListServicesWithOptions(namespace string, options metav1.ListOptions) (*corev1.ServiceList, error) {
+func (c *CoreV1ClientMock) ListServicesWithOptions(namespace string, options metav1.ListOptions) (*corev1.ServiceList, error) {
 	if c.apiServiceError != nil {
 		return nil, c.apiServiceError
 	}
@@ -104,23 +97,23 @@ func (c coreV1ClientMock) ListServicesWithOptions(namespace string, options meta
 	return c.servicesList, nil
 }
 
-func (c coreV1ClientMock) WatchServicesWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
+func (c *CoreV1ClientMock) WatchServicesWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
 	panic("implement me")
 }
 
-func (c coreV1ClientMock) DeleteService(namespace, name string) error {
+func (c *CoreV1ClientMock) DeleteService(namespace, name string) error {
 	panic("implement me")
 }
 
-func (c coreV1ClientMock) CreateService(service *corev1.Service) (*corev1.Service, error) {
+func (c *CoreV1ClientMock) CreateService(service *corev1.Service) (*corev1.Service, error) {
 	panic("implement me")
 }
 
-func (c coreV1ClientMock) UpdateService(service *corev1.Service) (*corev1.Service, error) {
+func (c *CoreV1ClientMock) UpdateService(service *corev1.Service) (*corev1.Service, error) {
 	panic("implement me")
 }
 
-func (c coreV1ClientMock) GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error) {
+func (c *CoreV1ClientMock) GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error) {
 	if c.apiEndpointsError != nil {
 		return nil, false, c.apiEndpointsError
 	}
@@ -133,7 +126,7 @@ func (c coreV1ClientMock) GetEndpoints(namespace, name string) (*corev1.Endpoint
 	return nil, false, c.apiEndpointsError
 }
 
-func (c coreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
+func (c *CoreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
 	if c.apiPodError != nil {
 		return nil, false, c.apiPodError
 	}
@@ -146,7 +139,7 @@ func (c coreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, bool, err
 	return nil, false, c.apiPodError
 }
 
-func (c coreV1ClientMock) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
+func (c *CoreV1ClientMock) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
 	if c.apiPodError != nil {
 		return nil, c.apiPodError
 	}
@@ -154,11 +147,14 @@ func (c coreV1ClientMock) ListPodWithOptions(namespace string, options metav1.Li
 	return c.podsList, nil
 }
 
-func (c coreV1ClientMock) GetNamespaces() ([]*corev1.Namespace, error) {
-	return c.namespaces, c.apiNamespaceError
+func (c *CoreV1ClientMock) GetNamespaces() ([]*corev1.Namespace, error) {
+	if c.apiNamespaceError != nil {
+		return nil, c.apiNamespaceError
+	}
+	return c.namespaces, nil
 }
 
-func (c coreV1ClientMock) GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error) {
+func (c *CoreV1ClientMock) GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error) {
 	if c.apiConfigmapError != nil {
 		return nil, false, c.apiConfigmapError
 	}
@@ -171,10 +167,22 @@ func (c coreV1ClientMock) GetConfigmap(namespace, name string) (*corev1.ConfigMa
 	return nil, false, c.apiConfigmapError
 }
 
-func (c coreV1ClientMock) CreateConfigmap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+func (c *CoreV1ClientMock) CreateConfigmap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	panic("implement me")
 }
 
-func (c coreV1ClientMock) UpdateConfigmap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+func (c *CoreV1ClientMock) UpdateConfigmap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	panic("implement me")
+}
+
+func (c *CoreV1ClientMock) EnableEndpointsError() {
+	c.apiEndpointsError = errors.New("Endpoint Error")
+}
+
+func (c *CoreV1ClientMock) EnableNamespaceError() {
+	c.apiNamespaceError = errors.New("Namespace Error")
+}
+
+func (c *CoreV1ClientMock) EnableServiceError() {
+	c.apiServiceError = errors.New("Service Error")
 }
