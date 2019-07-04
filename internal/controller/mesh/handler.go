@@ -176,7 +176,6 @@ func (h *Handler) verifyMeshServiceDeleted(serviceName, serviceNamespace string)
 }
 
 // updateMeshService updates the mesh service based on an old/new user service, and returns the updated mesh service
-// for use to update the ingressRoutes[TCP]
 func (h *Handler) updateMeshService(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error) {
 	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 	meshServiceName := userServiceToMeshServiceName(oldUserService.Name, oldUserService.Namespace)
@@ -227,7 +226,7 @@ func (h *Handler) updateMeshService(oldUserService *corev1.Service, newUserServi
 
 }
 
-// userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh ingressroute name.
+// userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh service name.
 func userServiceToMeshServiceName(serviceName string, namespace string) string {
 	return fmt.Sprintf("traefik-%s-%s", serviceName, namespace)
 }

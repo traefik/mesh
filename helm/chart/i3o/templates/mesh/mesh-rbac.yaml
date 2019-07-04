@@ -40,17 +40,6 @@ rules:
       - get
       - list
       - watch
-  - apiGroups:
-      - traefik.containo.us
-    resources:
-      - ingressroutes
-      - ingressroutetcps
-      - middlewares
-      - tlsoptions
-    verbs:
-      - get
-      - list
-      - watch
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
