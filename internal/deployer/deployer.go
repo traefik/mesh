@@ -189,17 +189,22 @@ func (d *Deployer) deployConfigmap(m Message) bool {
 func (d *Deployer) deployAPI(m Message) bool {
 
 	log.Debugf("Deploying configuration to pod %q with IP %s \n", m.PodName, m.PodIP)
-	b, err := json.Marshal(m.Config)
+	b, err := json.Marshal(m.Config.HTTP)
 	if err != nil {
 		log.Errorf("unable to marshal configuration: %v", err)
 	}
 
+	log.Debugf("Posting configuration: %+v", m.Config.HTTP)
 	url := fmt.Sprintf("http://%s:8080/api/providers/rest", m.PodIP)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(b))
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(b))
+	if err != nil {
+		log.Errorf("could not create request: %v", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Errorf("unable to deploy configuration: %v", err)
 	}
-	// FIXME: 404 when posting on the url to deploy configuration
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
