@@ -58,7 +58,7 @@ func (h *Handler) ObjectCreated(event i3o.Message) {
 	log.Debugf("MeshControllerHandler ObjectCreated with type: *corev1.Service: %s/%s", userService.Namespace, userService.Name)
 
 	log.Debugf("Creating associated mesh service for service: %s/%s", userService.Namespace, userService.Name)
-	_, err := h.verifyMeshServiceExists(userService)
+	_, err := h.createMeshService(userService)
 	if err != nil {
 		log.Errorf("Could not create mesh service: %v", err)
 		return
@@ -83,8 +83,8 @@ func (h *Handler) ObjectDeleted(event i3o.Message) {
 
 	log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", userService.Namespace, userService.Name)
 
-	if err := h.verifyMeshServiceDeleted(userService.Name, userService.Namespace); err != nil {
-		log.Errorf("Could not verify mesh service deleted: %v", err)
+	if err := h.deleteMeshService(userService.Name, userService.Namespace); err != nil {
+		log.Errorf("Could not delete mesh service: %v", err)
 		return
 	}
 }
@@ -112,7 +112,7 @@ func (h *Handler) ObjectUpdated(event i3o.Message) {
 	}
 }
 
-func (h *Handler) verifyMeshServiceExists(service *corev1.Service) (*corev1.Service, error) {
+func (h *Handler) createMeshService(service *corev1.Service) (*corev1.Service, error) {
 	meshServiceName := userServiceToMeshServiceName(service.Name, service.Namespace)
 	meshServiceInstance, exists, err := h.Client.GetService(k8s.MeshNamespace, meshServiceName)
 	if err != nil {
@@ -157,7 +157,7 @@ func (h *Handler) verifyMeshServiceExists(service *corev1.Service) (*corev1.Serv
 	return meshServiceInstance, nil
 }
 
-func (h *Handler) verifyMeshServiceDeleted(serviceName, serviceNamespace string) error {
+func (h *Handler) deleteMeshService(serviceName, serviceNamespace string) error {
 	meshServiceName := userServiceToMeshServiceName(serviceName, serviceNamespace)
 	_, exists, err := h.Client.GetService(k8s.MeshNamespace, meshServiceName)
 	if err != nil {
