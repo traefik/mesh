@@ -114,7 +114,7 @@ func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
 	}
 
 	for _, pod := range podList.Items {
-		log.Debugf("Add configuration to deploy queue for pod %q with IP %s \n", pod.Name, pod.Status.PodIP)
+		log.Debugf("Add configuration to deploy queue for pod %s with IP %s", pod.Name, pod.Status.PodIP)
 
 		messge := Message{
 			PodName: pod.Name,
@@ -188,31 +188,31 @@ func (d *Deployer) deployConfigmap(m Message) bool {
 
 func (d *Deployer) deployAPI(m Message) bool {
 
-	log.Debugf("Deploying configuration to pod %q with IP %s \n", m.PodName, m.PodIP)
+	log.Debugf("Deploying configuration to pod %s with IP %s", m.PodName, m.PodIP)
 	b, err := json.Marshal(m.Config.HTTP)
 	if err != nil {
-		log.Errorf("unable to marshal configuration: %v", err)
+		log.Errorf("Unable to marshal configuration: %v", err)
 	}
 
-	log.Debugf("Posting configuration: %+v", m.Config.HTTP)
+	log.Debugf("Deploying configuration: %+v", m.Config.HTTP)
 	url := fmt.Sprintf("http://%s:8080/api/providers/rest", m.PodIP)
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(b))
 	if err != nil {
-		log.Errorf("could not create request: %v", err)
+		log.Errorf("Could not create request: %v", err)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Errorf("unable to deploy configuration: %v", err)
+		log.Errorf("Unable to deploy configuration: %v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorf("unable to read body: %v", err)
+		log.Errorf("Unable to read response body: %v", err)
 	}
 
-	log.Debug(string(body))
+	log.Debugf("Deployed configuration response: %s", string(body))
 
 	return true
 }
