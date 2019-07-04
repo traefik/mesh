@@ -113,6 +113,29 @@ func (m *Controller) Run(stopCh <-chan struct{}) error {
 		}
 	}
 
+	if m.smiEnabled {
+		m.smiAccessFactory.Start(stopCh)
+		for t, ok := range m.smiAccessFactory.WaitForCacheSync(stopCh) {
+			if !ok {
+				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			}
+		}
+
+		m.smiSpecsFactory.Start(stopCh)
+		for t, ok := range m.smiSpecsFactory.WaitForCacheSync(stopCh) {
+			if !ok {
+				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			}
+		}
+
+		m.smiSplitFactory.Start(stopCh)
+		for t, ok := range m.smiSplitFactory.WaitForCacheSync(stopCh) {
+			if !ok {
+				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			}
+		}
+	}
+
 	// run the deployer to deploy configurations
 	go m.deployer.Run(stopCh)
 
