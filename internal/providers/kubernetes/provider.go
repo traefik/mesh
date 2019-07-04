@@ -19,8 +19,8 @@ type Provider struct {
 }
 
 // Init the provider.
-func (p *Provider) Init() error {
-	return nil
+func (p *Provider) Init() {
+
 }
 
 // New creates a new provider.
@@ -29,9 +29,7 @@ func New(client k8s.CoreV1Client) *Provider {
 		client: client,
 	}
 
-	if err := p.Init(); err != nil {
-		log.Errorln("Could not initialize Kubernetes Provider")
-	}
+	p.Init()
 
 	return p
 }

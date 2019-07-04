@@ -46,8 +46,4 @@ func TestTranslateNotFoundError(t *testing.T) {
 			assert.Equal(t, test.expectedError, err)
 		})
 	}
-
-	// FIXME: make not required to pass test :P
-	_ = newCoreV1ClientMock("mock.yaml")
-
 }
