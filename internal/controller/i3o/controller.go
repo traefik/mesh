@@ -18,13 +18,12 @@ type Controller struct {
 	queue                workqueue.RateLimitingInterface
 	informer             cache.SharedIndexInformer
 	handler              Handler
-	controllerType       interface{}
 	controllerTypeString string
 }
 
 // New is used to build the informers and other required components of the controller,
 // and return an initialized controller object
-func NewController(printableType string, lw cache.ListerWatcher, ot runtime.Object, controllerType interface{}, ignored k8s.IgnoreWrapper, handler Handler) *Controller {
+func NewController(printableType string, lw cache.ListerWatcher, ot runtime.Object, ignored k8s.IgnoreWrapper, handler Handler) *Controller {
 	informer := cache.NewSharedIndexInformer(
 		// the ListWatch contains two different functions that our
 		// informer requires: ListFunc to take care of listing and watching
@@ -99,7 +98,6 @@ func NewController(printableType string, lw cache.ListerWatcher, ot runtime.Obje
 		informer:             informer,
 		queue:                queue,
 		handler:              handler,
-		controllerType:       controllerType,
 		controllerTypeString: printableType,
 	}
 
