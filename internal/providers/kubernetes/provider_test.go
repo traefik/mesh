@@ -4,85 +4,119 @@ import (
 	"testing"
 
 	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/i3o/internal/message"
 	"github.com/containous/traefik/pkg/config"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestBuildRouterFromService(t *testing.T) {
-	testCases := []struct {
-		desc     string
-		service  *corev1.Service
-		expected *config.Router
-	}{
-		{
-			desc: "",
-			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "foo",
-				},
-				Spec: corev1.ServiceSpec{
-					ClusterIP: "10.0.0.1",
-				},
-			},
-			expected: &config.Router{
-				Rule: "Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)",
-			},
-		},
+func TestBuildRouter(t *testing.T) {
+
+	expected := &config.Router{
+		Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)",
+		EntryPoints: []string{"ingress-80"},
+		Service:     "bar",
 	}
 
 	provider := New(nil)
 
-	for _, test := range testCases {
-		test := test
-		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
+	name := "test"
+	namespace := "foo"
+	ip := "10.0.0.1"
+	port := 80
+	associatedService := "bar"
 
-			actual := provider.buildRouter(test.service.Name, test.service.Namespace, test.service.Spec.ClusterIP, 50, "")
-			assert.Equal(t, test.expected, actual)
-		})
-	}
+	actual := provider.buildRouter(name, namespace, ip, port, associatedService)
+	assert.Equal(t, expected, actual)
 }
 
 func TestBuildConfiguration(t *testing.T) {
 	testCases := []struct {
-		desc         string
-		mockFile     string
-		expected     *config.Configuration
-		namespaceErr bool
-		serviceErr   bool
+		desc           string
+		mockFile       string
+		event          message.Message
+		provided       *config.Configuration
+		expected       *config.Configuration
+		endpointsError bool
 	}{
 		{
-			desc:     "simple configuration build",
+			desc:     "simple configuration build with empty event",
+			mockFile: "build_configuration_simple.yaml",
+			expected: &config.Configuration{
+				HTTP: &config.HTTPConfiguration{
+					Routers:  map[string]*config.Router{},
+					Services: map[string]*config.Service{},
+				},
+			},
+			provided: &config.Configuration{
+				HTTP: &config.HTTPConfiguration{
+					Routers:  map[string]*config.Router{},
+					Services: map[string]*config.Service{},
+				},
+			},
+		},
+		{
+			desc:     "simple configuration build with service event",
 			mockFile: "build_configuration_simple.yaml",
 			expected: &config.Configuration{
 				HTTP: &config.HTTPConfiguration{
 					Routers: map[string]*config.Router{
-						"00757dccfb93dcceecc29c6ed96bea635ec513f0665591c171b24ca767009643": {
-							Rule: "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
+						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+							EntryPoints: []string{"ingress-5000"},
+							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
+							Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*config.Service{
-						"00757dccfb93dcceecc29c6ed96bea635ec513f0665591c171b24ca767009643": {
+						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							LoadBalancer: &config.LoadBalancerService{
 								PassHostHeader: true,
 								Servers: []config.Server{
 									{
-										URL: "http://10.0.0.1:80",
+										URL:    "http://10.0.0.1:80",
+										Scheme: "",
+										Port:   "",
 									},
 									{
-										URL: "http://10.0.0.2:80",
+										URL:    "http://10.0.0.2:80",
+										Scheme: "",
+										Port:   "",
 									},
 								},
 							},
-						}},
+						},
+					},
 				},
+			},
+			provided: &config.Configuration{
+				HTTP: &config.HTTPConfiguration{
+					Routers:  map[string]*config.Router{},
+					Services: map[string]*config.Service{},
+				},
+			},
+			event: message.Message{
+				Object: &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "foo",
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "10.1.0.1",
+						Ports: []corev1.ServicePort{
+							{
+								Name:     "test",
+								Port:     80,
+								Protocol: "TCP",
+							},
+						},
+					},
+				},
+				Action: message.TypeCreated,
 			},
 		},
 		{
-			desc:     "namespace error",
+			desc:     "endpoints error",
 			mockFile: "build_configuration_simple.yaml",
 			expected: &config.Configuration{
 				HTTP: &config.HTTPConfiguration{
@@ -90,18 +124,14 @@ func TestBuildConfiguration(t *testing.T) {
 					Services: map[string]*config.Service{},
 				},
 			},
-			namespaceErr: true,
-		},
-		{
-			desc:     "service error",
-			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
+			provided: &config.Configuration{
 				HTTP: &config.HTTPConfiguration{
 					Routers:  map[string]*config.Router{},
 					Services: map[string]*config.Service{},
 				},
 			},
-			serviceErr: true,
+
+			endpointsError: true,
 		},
 	}
 
@@ -110,21 +140,18 @@ func TestBuildConfiguration(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			if test.namespaceErr {
-				clientMock.EnableNamespaceError()
-			}
-			if test.serviceErr {
-				clientMock.EnableServiceError()
+			if test.endpointsError {
+				clientMock.EnableEndpointsError()
 			}
 
-			//provider := New(clientMock)
-			actual := 10 //provider.BuildConfiguration()
-			assert.Equal(t, test.expected, actual)
+			provider := New(clientMock)
+			provider.BuildConfiguration(test.event, test.provided)
+			assert.Equal(t, test.expected, test.provided)
 		})
 	}
 }
 
-func TestBuildServiceFromService(t *testing.T) {
+func TestBuildService(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		mockFile string
@@ -133,7 +160,7 @@ func TestBuildServiceFromService(t *testing.T) {
 	}{
 		{
 			desc:     "two successful endpoints",
-			mockFile: "build_service_from_service_simple.yaml",
+			mockFile: "build_service_simple.yaml",
 			expected: &config.Service{
 				LoadBalancer: &config.LoadBalancerService{
 					PassHostHeader: true,
@@ -150,12 +177,12 @@ func TestBuildServiceFromService(t *testing.T) {
 		},
 		{
 			desc:     "missing endpoints found",
-			mockFile: "build_service_from_service_missing_endpoints.yaml",
+			mockFile: "build_service_missing_endpoints.yaml",
 			expected: nil,
 		},
 		{
 			desc:     "endpoints client error",
-			mockFile: "build_service_from_service_simple.yaml",
+			mockFile: "build_service_simple.yaml",
 			expected: nil,
 			err:      true,
 		},
