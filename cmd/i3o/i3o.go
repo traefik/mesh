@@ -5,11 +5,10 @@ import (
 	stdlog "log"
 	"os"
 
-	"github.com/containous/i3o/internal/controller/mesh"
-
 	"github.com/containous/i3o/cmd"
 	"github.com/containous/i3o/cmd/patch"
 	"github.com/containous/i3o/cmd/version"
+	"github.com/containous/i3o/internal/controller"
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/traefik/pkg/cli"
 	log "github.com/sirupsen/logrus"
@@ -68,7 +67,7 @@ func i3oCommand(iConfig *cmd.I3oConfiguration) error {
 	// Create a new stop Channel
 	stopCh := signals.SetupSignalHandler()
 	// Create a new controller.
-	controller := mesh.NewMeshController(clients, iConfig.SMI)
+	controller := controller.NewMeshController(clients, iConfig.SMI)
 
 	// run the controller loop to process items
 	if err = controller.Run(stopCh); err != nil {

@@ -1,4 +1,4 @@
-package i3o
+package controller
 
 const (
 	MessageTypeCreated = "created"

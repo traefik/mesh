@@ -1,5 +1,9 @@
 package k8s
 
+import (
+	"strings"
+)
+
 const (
 	MeshNamespace string = "traefik-mesh"
 )
@@ -15,4 +19,15 @@ func (n Namespaces) Contains(x string) bool {
 		}
 	}
 	return false
+}
+
+// ObjectKeyInNamespace returns true if the object key is in the namespace.
+func ObjectKeyInNamespace(key string, namespaces Namespaces) bool {
+	splitKey := strings.Split(key, "/")
+	if len(splitKey) == 1 {
+		// No namespace in the key
+		return false
+	}
+
+	return namespaces.Contains(splitKey[0])
 }

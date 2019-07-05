@@ -3,15 +3,22 @@ kind: Deployment
 metadata:
   name: tiny-tools
   namespace: default
+  labels:
+    app: tiny-tools
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: tiny-tools
   template:
     metadata:
       name: tiny-tools
       namespace: default
+      labels:
+        app: tiny-tools
     spec:
       containers:
-      - name: tinyTools
+      - name: tiny-tools
         image: giantswarm/tiny-tools
         command:
         - "sleep"
