@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -51,6 +52,7 @@ func (s *CurlI3oSuite) TestSimpleCURL(c *check.C) {
 	output, err := cmd.CombinedOutput()
 
 	stringOutput := string(output)
+	fmt.Println(stringOutput)
 
 	if !strings.Contains(stringOutput, "whoami") {
 		c.Errorf("Curl response did not contain: whoami, got: %s", stringOutput)

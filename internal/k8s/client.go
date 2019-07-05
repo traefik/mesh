@@ -283,7 +283,7 @@ func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string
 
 // buildClient returns a useable kubernetes client.
 func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
-	log.Infoln("Building Kubernetes Client...")
+	log.Debugln("Building Kubernetes Client...")
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create kubernetes client: %v", err)
@@ -294,7 +294,7 @@ func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
 
 // buildSmiAccessClient returns a client to manage SMI Access objects.
 func buildSmiAccessClient(config *rest.Config) (*smiAccessClientset.Clientset, error) {
-	log.Infoln("Building SMI Access Client...")
+	log.Debugln("Building SMI Access Client...")
 	client, err := smiAccessClientset.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Access Client: %v", err)
@@ -305,7 +305,7 @@ func buildSmiAccessClient(config *rest.Config) (*smiAccessClientset.Clientset, e
 
 // buildSmiSpecsClient returns a client to manage SMI Specs objects.
 func buildSmiSpecsClient(config *rest.Config) (*smiSpecsClientset.Clientset, error) {
-	log.Infoln("Building SMI Specs Client...")
+	log.Debugln("Building SMI Specs Client...")
 	client, err := smiSpecsClientset.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Specs Client: %v", err)
@@ -316,7 +316,7 @@ func buildSmiSpecsClient(config *rest.Config) (*smiSpecsClientset.Clientset, err
 
 // buildSmiSplitClient returns a client to manage SMI Split objects.
 func buildSmiSplitClient(config *rest.Config) (*smiSplitClientset.Clientset, error) {
-	log.Infoln("Building SMI Split Client...")
+	log.Debugln("Building SMI Split Client...")
 	client, err := smiSplitClientset.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Split Client: %v", err)
