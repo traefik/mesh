@@ -75,6 +75,8 @@ func (m *Controller) Init() error {
 	// Create a new SharedInformerFactory, and register the event handler to informers.
 	m.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(m.clients.KubeClient, k8s.ResyncPeriod)
 	m.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(m.handler)
+	m.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(m.handler)
+	m.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(m.handler)
 
 	m.kubernetesProvider = kubernetes.New(m.clients)
 
@@ -234,26 +236,35 @@ func buildIgnored() k8s.IgnoreWrapper {
 
 func (m *Controller) processCreatedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
-	userService := event.Object.(*corev1.Service)
-	if m.ignored.Namespaces.Contains(userService.Namespace) {
+	switch obj := event.Object.(type) {
+	case *corev1.Service:
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
+
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+
+		log.Debugf("MeshController ObjectCreated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+
+		log.Debugf("Creating associated mesh service for service: %s/%s", obj.Namespace, obj.Name)
+		_, err := m.createMeshService(obj)
+		if err != nil {
+			log.Errorf("Could not create mesh service: %v", err)
+			return
+		}
+
+	case *corev1.Endpoints:
+		log.Debugf("MeshController ObjectCreated with type: *corev1.Endpoints: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
-	}
 
-	if m.ignored.Services.Contains(userService.Name, userService.Namespace) {
-		return
-	}
-
-	log.Debugf("MeshController ObjectCreated with type: *corev1.Service: %s/%s", userService.Namespace, userService.Name)
-
-	log.Debugf("Creating associated mesh service for service: %s/%s", userService.Namespace, userService.Name)
-	_, err := m.createMeshService(userService)
-	if err != nil {
-		log.Errorf("Could not create mesh service: %v", err)
+	case *corev1.Pod:
+		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
 		return
 	}
 
 	m.buildConfigurationFromProviders(event)
-	log.Warnf("MeshController.processNextItem: Adding: %s to the configuration queue", event.Key)
 	m.configurationQueue.Add(message.Config{
 		Config: m.traefikConfig,
 	})

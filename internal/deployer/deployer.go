@@ -75,8 +75,10 @@ func (d *Deployer) runWorker() {
 // processNextItem retrieves each queued item and takes the
 // necessary handler action based off of the event type.
 func (d *Deployer) processNextItem() bool {
-	log.Debug("Deployer Waiting for next item to process...")
-
+	log.Debug("Deployer - Config Processing Waiting for next item to process...")
+	if d.configQueue.Len() > 0 {
+		log.Debugf("Config queue length: %d", d.configQueue.Len())
+	}
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
 	// processing
@@ -198,14 +200,16 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 	b, err := json.Marshal(m.Config.HTTP)
 	if err != nil {
 		log.Errorf("Unable to marshal configuration: %v", err)
+		return false
 	}
 
 	log.Debugf("Deploying configuration: %s", string(b))
 	url := fmt.Sprintf("http://%s:8080/api/providers/rest", m.PodIP)
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(b))
 	if err != nil {
 		log.Errorf("Could not create request: %v", err)
+		return false
 	}
 	resp, err := client.Do(req)
 	if resp != nil {
@@ -213,10 +217,10 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Errorf("Unable to read response body: %v", err)
+			return false
 		}
 
 		log.Debugf("Deployed configuration response: %s", string(body))
-
 		return true
 
 	}
@@ -252,7 +256,10 @@ func (d *Deployer) processDeployQueueWorker() {
 // processDeployQueueNextItem retrieves each queued item and takes the
 // necessary handler action based off of the event type.
 func (d *Deployer) processDeployQueueNextItem() bool {
-	log.Debug("Deployer Waiting for next item to process...")
+	log.Debug("Deployer - Deploy Processing Waiting for next item to process...")
+	if d.deployQueue.Len() > 0 {
+		log.Debugf("Deploy queue length: %d", d.deployQueue.Len())
+	}
 
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
@@ -273,17 +280,23 @@ func (d *Deployer) processDeployQueueNextItem() bool {
 	if deployConfig.ConfigmapDeploy {
 		log.Debug("Deploying Configmap...")
 		if d.deployConfigmap(deployConfig) {
-			// Only remove item from queue on successful deploy
+			// Only remove item from queue on successful deploy.
 			d.deployQueue.Forget(item)
+			return d.deployQueue.Len() > 0
 		}
-	} else {
-		log.Debug("Deploying configuration to pod...")
-		if d.deployAPI(deployConfig) {
-			// Only remove item from queue on successful deploy
-			d.deployQueue.Forget(item)
-		}
+		// Deploy configmap failed, so re-add to the queue.
+		d.deployQueue.AddRateLimited(item)
 	}
 
-	// keep the worker loop running by returning true if there are queue objects remaining
-	return d.configQueue.Len() > 0
+	log.Debug("Deploying configuration to pod...")
+	if d.deployAPI(deployConfig) {
+		// Only remove item from queue on successful deploy.
+		d.deployQueue.Forget(item)
+		return d.deployQueue.Len() > 0
+	}
+
+	// Deploy to API failed, re-add to the queue.
+	d.deployQueue.AddRateLimited(item)
+	// Keep the worker loop running by returning true if there are queue objects remaining.
+	return d.deployQueue.Len() > 0
 }
