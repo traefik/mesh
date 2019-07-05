@@ -214,9 +214,9 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Errorf("Unable to read response body: %v", err)
+		body, bodyErr := ioutil.ReadAll(resp.Body)
+		if bodyErr != nil {
+			log.Errorf("Unable to read response body: %v", bodyErr)
 			return false
 		}
 
