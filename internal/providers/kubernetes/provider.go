@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/i3o/internal/message"
 	"github.com/containous/traefik/pkg/config"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -36,59 +37,39 @@ func New(client k8s.CoreV1Client) *Provider {
 
 // BuildConfiguration builds the configuration for routing
 // from a native kubernetes environment.
-func (p *Provider) BuildConfiguration() *config.Configuration {
-	configRouters := make(map[string]*config.Router)
-	configServices := make(map[string]*config.Service)
-	namespaces, err := p.client.GetNamespaces()
-	if err != nil {
-		log.Error("Could not get a list of all namespaces")
-	}
+func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *config.Configuration) {
+	switch obj := event.Object.(type) {
+	case *corev1.Service:
+		switch event.Action {
+		case message.TypeCreated:
+			p.addServiceToConfig(obj, traefikConfig)
+		case message.TypeUpdated:
 
-	for _, namespace := range namespaces {
-		services, err := p.client.GetServices(namespace.Name)
-		if err != nil {
-			log.Errorf("Could not get a list of all services in namespace: %s", namespace.Name)
+		case message.TypeDeleted:
 		}
-
-		for _, service := range services {
-			// Use the hash of the service name/namespace as the key
-			// So that we can update services based on their name
-			// and not have to worry about duplicates on merges.
-			sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s", service.Name, service.Namespace)))
-			dst := make([]byte, hex.EncodedLen(len(sum)))
-			hex.Encode(dst, sum[:])
-			key := string(dst)
-
-			configRouters[key] = p.buildRouterFromService(service)
-			configServices[key] = p.buildServiceFromService(service)
-
-		}
+	case *corev1.Endpoints:
 	}
 
-	return &config.Configuration{
-		HTTP: &config.HTTPConfiguration{
-			Routers:  configRouters,
-			Services: configServices,
-		},
-	}
 }
 
-func (p *Provider) buildRouterFromService(service *corev1.Service) *config.Router {
+func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string) *config.Router {
 	return &config.Router{
-		Rule: fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", service.Name, service.Namespace, service.Spec.ClusterIP),
+		Rule:        fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", name, namespace, ip),
+		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
+		Service:     serviceName,
 	}
 }
 
-func (p *Provider) buildServiceFromService(service *corev1.Service) *config.Service {
+func (p *Provider) buildService(name, namespace string) *config.Service {
 	var servers []config.Server
 
-	endpoint, exists, err := p.client.GetEndpoints(service.Namespace, service.Name)
+	endpoint, exists, err := p.client.GetEndpoints(namespace, name)
 	if err != nil {
-		log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
+		log.Errorf("Could not get endpoints for service %s/%s: %v", namespace, name, err)
 		return nil
 	}
 	if !exists {
-		log.Errorf("endpoints for service %s/%s do not exist", service.Namespace, service.Name)
+		log.Errorf("endpoints for service %s/%s do not exist", namespace, name)
 		return nil
 	}
 	for _, subset := range endpoint.Subsets {
@@ -109,5 +90,22 @@ func (p *Provider) buildServiceFromService(service *corev1.Service) *config.Serv
 
 	return &config.Service{
 		LoadBalancer: lb,
+	}
+}
+
+func (p *Provider) addServiceToConfig(service *corev1.Service, config *config.Configuration) {
+
+	for id, sp := range service.Spec.Ports {
+
+		// Use the hash of the servicename.namespace.port as the key
+		// So that we can update services based on their name
+		// and not have to worry about duplicates on merges.
+		sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s.%d", service.Name, service.Namespace, sp.Port)))
+		dst := make([]byte, hex.EncodedLen(len(sum)))
+		hex.Encode(dst, sum[:])
+		key := string(dst)
+
+		config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, (5000 + id), key)
+		config.HTTP.Services[key] = p.buildService(service.Name, service.Namespace)
 	}
 }

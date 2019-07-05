@@ -6,6 +6,7 @@ import (
 
 	"github.com/containous/i3o/internal/deployer"
 	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/i3o/internal/message"
 	"github.com/containous/i3o/internal/providers/kubernetes"
 	"github.com/containous/i3o/internal/providers/smi"
 	"github.com/containous/traefik/pkg/config"
@@ -37,6 +38,7 @@ type Controller struct {
 	deployer           *deployer.Deployer
 	ignored            k8s.IgnoreWrapper
 	smiEnabled         bool
+	traefikConfig      *config.Configuration
 }
 
 // New is used to build the informers and other required components of the mesh controller,
@@ -93,6 +95,14 @@ func (m *Controller) Init() error {
 
 		m.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(m.clients.SmiSplitClient, k8s.ResyncPeriod)
 		m.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(m.handler)
+	}
+
+	// Initialize an empty configuration
+	m.traefikConfig = &config.Configuration{
+		HTTP: &config.HTTPConfiguration{
+			Routers:  map[string]*config.Router{},
+			Services: map[string]*config.Service{},
+		},
 	}
 
 	return nil
@@ -180,16 +190,16 @@ func (m *Controller) processNextMessage() bool {
 
 	defer m.messageQueue.Done(item)
 
-	event := item.(Message)
+	event := item.(message.Message)
 
 	switch event.Action {
-	case MessageTypeCreated:
+	case message.TypeCreated:
 		log.Infof("MeshController.processNextItem: created: %s", event.Key)
 		m.processCreatedMessage(event)
-	case MessageTypeUpdated:
+	case message.TypeUpdated:
 		log.Infof("MeshController.processNextItem: updated: %s", event.Key)
 		m.processUpdatedMessage(event)
-	case MessageTypeDeleted:
+	case message.TypeDeleted:
 		log.Infof("MeshController.processNextItem: deleted: %s", event.Key)
 		m.processDeletedMessage(event)
 	}
@@ -200,13 +210,11 @@ func (m *Controller) processNextMessage() bool {
 	return m.messageQueue.Len() > 0
 }
 
-func (m *Controller) buildConfigurationFromProviders() *config.Configuration {
-	result := m.kubernetesProvider.BuildConfiguration()
+func (m *Controller) buildConfigurationFromProviders(event message.Message) {
+	m.kubernetesProvider.BuildConfiguration(event, m.traefikConfig)
 	if m.smiEnabled {
-		result = mergeConfigurations(result, m.smiProvider.BuildConfiguration())
+		m.smiProvider.BuildConfiguration()
 	}
-
-	return result
 }
 
 func buildIgnored() k8s.IgnoreWrapper {
@@ -225,7 +233,7 @@ func buildIgnored() k8s.IgnoreWrapper {
 
 }
 
-func (m *Controller) processCreatedMessage(event Message) {
+func (m *Controller) processCreatedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
 	userService := event.Object.(*corev1.Service)
 	if m.ignored.Namespaces.Contains(userService.Namespace) {
@@ -245,13 +253,15 @@ func (m *Controller) processCreatedMessage(event Message) {
 		return
 	}
 
-	config := m.buildConfigurationFromProviders()
+	m.buildConfigurationFromProviders(event)
 	log.Warnf("MeshController.processNextItem: Adding: %s to the configuration queue", event.Key)
-	m.configurationQueue.Add(config)
+	m.configurationQueue.Add(message.Config{
+		Config: m.traefikConfig,
+	})
 
 }
 
-func (m *Controller) processUpdatedMessage(event Message) {
+func (m *Controller) processUpdatedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
 	newService := event.Object.(*corev1.Service)
 	oldService := event.OldObject.(*corev1.Service)
@@ -274,7 +284,7 @@ func (m *Controller) processUpdatedMessage(event Message) {
 
 }
 
-func (m *Controller) processDeletedMessage(event Message) {
+func (m *Controller) processDeletedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
 	userService := event.Object.(*corev1.Service)
 	if m.ignored.Namespaces.Contains(userService.Namespace) {
@@ -410,28 +420,4 @@ func (m *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 // userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh service name.
 func userServiceToMeshServiceName(serviceName string, namespace string) string {
 	return fmt.Sprintf("traefik-%s-%s", serviceName, namespace)
-}
-
-func mergeConfigurations(a *config.Configuration, b *config.Configuration) *config.Configuration {
-	if a == nil {
-		return b
-	}
-	if b == nil {
-		return a
-	}
-
-	result := a
-
-	for key, value := range b.HTTP.Middlewares {
-		result.HTTP.Middlewares[key] = value
-	}
-	for key, value := range b.HTTP.Routers {
-		result.HTTP.Routers[key] = value
-	}
-	for key, value := range b.HTTP.Services {
-		result.HTTP.Services[key] = value
-	}
-
-	// FIXME: Add rest of values to merge
-	return result
 }
