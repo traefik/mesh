@@ -14,7 +14,6 @@ type Handler struct {
 }
 
 func NewHandler(ignored k8s.IgnoreWrapper, messageQueue workqueue.RateLimitingInterface) *Handler {
-
 	h := &Handler{
 		ignored:      ignored,
 		messageQueue: messageQueue,
@@ -38,32 +37,36 @@ func (h *Handler) OnAdd(obj interface{}) {
 	// convert the resource object into a key (in this case
 	// we are just doing it in the format of 'namespace/name')
 	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err == nil {
-		// add the key to the queue for the handler to get
-		// If object key is not in our list of ignored namespaces
-		if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
-			event := Message{
-				Key:    key,
-				Object: obj,
-				Action: MessageTypeCreated,
-			}
-			h.messageQueue.Add(event)
+	if err != nil {
+		return
+	}
+
+	// add the key to the queue for the handler to get
+	// If object key is not in our list of ignored namespaces
+	if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
+		event := Message{
+			Key:    key,
+			Object: obj,
+			Action: MessageTypeCreated,
 		}
+		h.messageQueue.Add(event)
 	}
 }
 
 func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(newObj)
-	if err == nil {
-		if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
-			event := Message{
-				Key:       key,
-				Object:    newObj,
-				OldObject: oldObj,
-				Action:    MessageTypeUpdated,
-			}
-			h.messageQueue.Add(event)
+	if err != nil {
+		return
+	}
+
+	if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
+		event := Message{
+			Key:       key,
+			Object:    newObj,
+			OldObject: oldObj,
+			Action:    MessageTypeUpdated,
 		}
+		h.messageQueue.Add(event)
 	}
 }
 
@@ -74,14 +77,16 @@ func (h *Handler) OnDelete(obj interface{}) {
 	//
 	// this then in turn calls MetaNamespaceKeyFunc
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err == nil {
-		if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
-			event := Message{
-				Key:    key,
-				Object: obj,
-				Action: MessageTypeDeleted,
-			}
-			h.messageQueue.Add(event)
+	if err != nil {
+		return
+	}
+
+	if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
+		event := Message{
+			Key:    key,
+			Object: obj,
+			Action: MessageTypeDeleted,
 		}
+		h.messageQueue.Add(event)
 	}
 }

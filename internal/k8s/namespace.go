@@ -21,7 +21,7 @@ func (n Namespaces) Contains(x string) bool {
 	return false
 }
 
-// ObjectKeyInNamespace returns true if the object key is in the namespace
+// ObjectKeyInNamespace returns true if the object key is in the namespace.
 func ObjectKeyInNamespace(key string, namespaces Namespaces) bool {
 	splitKey := strings.Split(key, "/")
 	if len(splitKey) == 1 {

@@ -5,11 +5,10 @@ import (
 	stdlog "log"
 	"os"
 
-	"github.com/containous/i3o/internal/controller"
-
 	"github.com/containous/i3o/cmd"
 	"github.com/containous/i3o/cmd/patch"
 	"github.com/containous/i3o/cmd/version"
+	"github.com/containous/i3o/internal/controller"
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/traefik/pkg/cli"
 	log "github.com/sirupsen/logrus"
