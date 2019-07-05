@@ -39,11 +39,12 @@ type Controller struct {
 	ignored            k8s.IgnoreWrapper
 	smiEnabled         bool
 	traefikConfig      *config.Configuration
+	defaultMode        string
 }
 
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool) *Controller {
+func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string) *Controller {
 
 	ignored := buildIgnored()
 
@@ -59,6 +60,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool) *Controller 
 		messageQueue: messageQueue,
 		ignored:      ignored,
 		smiEnabled:   smiEnabled,
+		defaultMode:  defaultMode,
 	}
 
 	if err := m.Init(); err != nil {
@@ -194,13 +196,10 @@ func (m *Controller) processNextMessage() bool {
 
 	switch event.Action {
 	case message.TypeCreated:
-		log.Infof("MeshController.processNextItem: created: %s", event.Key)
 		m.processCreatedMessage(event)
 	case message.TypeUpdated:
-		log.Infof("MeshController.processNextItem: updated: %s", event.Key)
 		m.processUpdatedMessage(event)
 	case message.TypeDeleted:
-		log.Infof("MeshController.processNextItem: deleted: %s", event.Key)
 		m.processDeletedMessage(event)
 	}
 
