@@ -107,7 +107,6 @@ func (d *Deployer) processNextItem() bool {
 // deployConfiguration takes the configuration, and adds it into the deploy queue for each affected
 // mesh node. This allows nodes to retry individually.
 func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
-
 	podList, err := d.client.ListPodWithOptions(k8s.MeshNamespace, metav1.ListOptions{
 		LabelSelector: "component==i3o-mesh",
 	})
@@ -134,17 +133,16 @@ func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
 	}
 
 	// Add the configmap update to the deploy queue
-	message := message.Deploy{
+	msg := message.Deploy{
 		ConfigmapDeploy: true,
 		Config:          c,
 	}
-	d.deployQueue.Add(message)
+	d.deployQueue.Add(msg)
 
 	return true
 }
 
 func (d *Deployer) deployConfigmap(m message.Deploy) bool {
-
 	var jsonDataRaw []byte
 	jsonDataRaw, err := json.Marshal(m.Config)
 	if err != nil {

@@ -62,7 +62,6 @@ func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName
 
 func (p *Provider) buildService(name, namespace string) *config.Service {
 	var servers []config.Server
-
 	endpoint, exists, err := p.client.GetEndpoints(namespace, name)
 	if err != nil {
 		log.Errorf("Could not get endpoints for service %s/%s: %v", namespace, name, err)
@@ -94,7 +93,6 @@ func (p *Provider) buildService(name, namespace string) *config.Service {
 }
 
 func (p *Provider) addServiceToConfig(service *corev1.Service, config *config.Configuration) {
-
 	for id, sp := range service.Spec.Ports {
 
 		// Use the hash of the servicename.namespace.port as the key
@@ -105,7 +103,7 @@ func (p *Provider) addServiceToConfig(service *corev1.Service, config *config.Co
 		hex.Encode(dst, sum[:])
 		key := string(dst)
 
-		config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, (5000 + id), key)
+		config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key)
 		config.HTTP.Services[key] = p.buildService(service.Name, service.Namespace)
 	}
 }

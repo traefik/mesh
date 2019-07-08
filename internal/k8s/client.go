@@ -196,7 +196,7 @@ traefik.mesh.svc.cluster.local:53 {
     kubernetes cluster.local in-addr.arpa ip6.arpa {
         pods insecure
         upstream
-    fallthrough in-addr.arpa ip6.arpa
+    	fallthrough in-addr.arpa ip6.arpa
     }
     forward . /etc/resolv.conf
     cache 30

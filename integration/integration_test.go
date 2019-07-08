@@ -36,7 +36,7 @@ func init() {
 	}
 
 	check.Suite(&StartI3oSuite{})
-	// check.Suite(&CurlI3oSuite{})
+	check.Suite(&CurlI3oSuite{})
 }
 
 type BaseSuite struct {

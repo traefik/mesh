@@ -45,7 +45,6 @@ type Controller struct {
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
 func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string) *Controller {
-
 	ignored := buildIgnored()
 
 	// messageQueue is used to process messages from the sub-controllers
@@ -249,8 +248,7 @@ func (m *Controller) processCreatedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectCreated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
 		log.Debugf("Creating associated mesh service for service: %s/%s", obj.Namespace, obj.Name)
-		_, err := m.createMeshService(obj)
-		if err != nil {
+		if _, err := m.createMeshService(obj); err != nil {
 			log.Errorf("Could not create mesh service: %v", err)
 			return
 		}
@@ -268,47 +266,65 @@ func (m *Controller) processCreatedMessage(event message.Message) {
 	m.configurationQueue.Add(message.Config{
 		Config: m.traefikConfig,
 	})
-
 }
 
 func (m *Controller) processUpdatedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
-	newService := event.Object.(*corev1.Service)
-	oldService := event.OldObject.(*corev1.Service)
+	switch obj := event.Object.(type) {
+	case *corev1.Service:
+		oldService := event.OldObject.(*corev1.Service)
 
-	if m.ignored.Namespaces.Contains(newService.Namespace) {
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
+
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+
+		log.Debugf("MeshController ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+
+		if _, err := m.updateMeshService(oldService, obj); err != nil {
+			log.Errorf("Could not update mesh service: %v", err)
+			return
+		}
+
+	case *corev1.Endpoints:
+		log.Debugf("MeshController ObjectUpdated with type: *corev1.Endpoints: %s/%s, skipping...", obj.Namespace, obj.Name)
+		return
+
+	case *corev1.Pod:
+		log.Debugf("MeshController ObjectUpdated with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 	}
-
-	if m.ignored.Services.Contains(newService.Name, newService.Namespace) {
-		return
-	}
-
-	log.Debugf("MeshController ObjectUdated with type: *corev1.Service: %s/%s", newService.Namespace, newService.Name)
-
-	_, err := m.updateMeshService(oldService, newService)
-	if err != nil {
-		log.Errorf("Could not update mesh service: %v", err)
-		return
-	}
-
 }
 
 func (m *Controller) processDeletedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
-	userService := event.Object.(*corev1.Service)
-	if m.ignored.Namespaces.Contains(userService.Namespace) {
+	switch obj := event.Object.(type) {
+	case *corev1.Service:
+		// assert the type to an object to pull out relevant data
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
+
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+
+		log.Debugf("MeshController ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+
+		if err := m.deleteMeshService(obj.Name, obj.Namespace); err != nil {
+			log.Errorf("Could not delete mesh service: %v", err)
+			return
+		}
+
+	case *corev1.Endpoints:
+		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
-	}
 
-	if m.ignored.Services.Contains(userService.Name, userService.Namespace) {
-		return
-	}
-
-	log.Debugf("MeshController ObjectDeleted with type: *corev1.Service: %s/%s", userService.Namespace, userService.Name)
-
-	if err := m.deleteMeshService(userService.Name, userService.Namespace); err != nil {
-		log.Errorf("Could not delete mesh service: %v", err)
+	case *corev1.Pod:
+		log.Debugf("MeshController ObjectDeleted with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 	}
 
