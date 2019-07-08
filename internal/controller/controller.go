@@ -258,7 +258,7 @@ func (m *Controller) processCreatedMessage(event message.Message) {
 		return
 
 	case *corev1.Pod:
-		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
+		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 	}
 
@@ -290,13 +290,26 @@ func (m *Controller) processUpdatedMessage(event message.Message) {
 		}
 
 	case *corev1.Endpoints:
-		log.Debugf("MeshController ObjectUpdated with type: *corev1.Endpoints: %s/%s, skipping...", obj.Namespace, obj.Name)
-		return
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
+
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+		log.Debugf("MeshController ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 
 	case *corev1.Pod:
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
+
 	}
+
+	m.buildConfigurationFromProviders(event)
+	m.configurationQueue.Add(message.Config{
+		Config: m.traefikConfig,
+	})
+
 }
 
 func (m *Controller) processDeletedMessage(event message.Message) {
@@ -320,13 +333,24 @@ func (m *Controller) processDeletedMessage(event message.Message) {
 		}
 
 	case *corev1.Endpoints:
-		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s, skipping...", obj.Namespace, obj.Name)
-		return
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
+
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 
 	case *corev1.Pod:
 		log.Debugf("MeshController ObjectDeleted with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 	}
+
+	m.buildConfigurationFromProviders(event)
+	m.configurationQueue.Add(message.Config{
+		Config: m.traefikConfig,
+	})
 
 }
 
