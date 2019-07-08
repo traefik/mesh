@@ -77,7 +77,7 @@ func (m *Controller) Init() error {
 	m.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(m.handler)
 	m.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(m.handler)
 
-	m.kubernetesProvider = kubernetes.New(m.clients)
+	m.kubernetesProvider = kubernetes.New(m.clients, m.defaultMode)
 
 	// configurationQueue is used to process configurations from the providers
 	// and deal with pushing them to mesh nodes
@@ -105,6 +105,10 @@ func (m *Controller) Init() error {
 		HTTP: &config.HTTPConfiguration{
 			Routers:  map[string]*config.Router{},
 			Services: map[string]*config.Service{},
+		},
+		TCP: &config.TCPConfiguration{
+			Routers:  map[string]*config.TCPRouter{},
+			Services: map[string]*config.TCPService{},
 		},
 	}
 

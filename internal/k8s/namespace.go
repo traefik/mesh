@@ -4,10 +4,6 @@ import (
 	"strings"
 )
 
-const (
-	MeshNamespace string = "traefik-mesh"
-)
-
 // Namespaces holds namespace name.
 type Namespaces []string
 

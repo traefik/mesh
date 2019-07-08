@@ -16,7 +16,8 @@ import (
 
 // Provider holds a client to access the provider.
 type Provider struct {
-	client k8s.CoreV1Client
+	client      k8s.CoreV1Client
+	defaultMode string
 }
 
 // Init the provider.
@@ -25,9 +26,10 @@ func (p *Provider) Init() {
 }
 
 // New creates a new provider.
-func New(client k8s.CoreV1Client) *Provider {
+func New(client k8s.CoreV1Client, defaultMode string) *Provider {
 	p := &Provider{
-		client: client,
+		client:      client,
+		defaultMode: defaultMode,
 	}
 
 	p.Init()
@@ -69,6 +71,14 @@ func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName
 	}
 }
 
+func (p *Provider) buildTCPRouter(port int, serviceName string) *config.TCPRouter {
+	return &config.TCPRouter{
+		Rule:        "HostSNI(`*`)",
+		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
+		Service:     serviceName,
+	}
+}
+
 func (p *Provider) buildService(endpoints *corev1.Endpoints) *config.Service {
 	var servers []config.Server
 	for _, subset := range endpoints.Subsets {
@@ -88,6 +98,28 @@ func (p *Provider) buildService(endpoints *corev1.Endpoints) *config.Service {
 	}
 
 	return &config.Service{
+		LoadBalancer: lb,
+	}
+}
+
+func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *config.TCPService {
+	var servers []config.TCPServer
+	for _, subset := range endpoints.Subsets {
+		for _, endpointPort := range subset.Ports {
+			for _, address := range subset.Addresses {
+				server := config.TCPServer{
+					Address: net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
+				}
+				servers = append(servers, server)
+			}
+		}
+	}
+
+	lb := &config.TCPLoadBalancerService{
+		Servers: servers,
+	}
+
+	return &config.TCPService{
 		LoadBalancer: lb,
 	}
 }
@@ -120,21 +152,45 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 		}
 	}
 
+	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
+
 	for id, sp := range service.Spec.Ports {
 		key := buildKey(service.Name, service.Namespace, sp.Port)
 
-		config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key)
-		config.HTTP.Services[key] = p.buildService(endpoints)
+		if serviceMode == k8s.ServiceTypeHTTP {
+			config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key)
+			config.HTTP.Services[key] = p.buildService(endpoints)
+			continue
+		}
+
+		config.TCP.Routers[key] = p.buildTCPRouter(5000+id, key)
+		config.TCP.Services[key] = p.buildTCPService(endpoints)
 	}
 }
 
 func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *config.Configuration) {
+
+	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
+
 	for _, sp := range service.Spec.Ports {
 		key := buildKey(service.Name, service.Namespace, sp.Port)
 
-		delete(config.HTTP.Routers, key)
-		delete(config.HTTP.Services, key)
+		if serviceMode == k8s.ServiceTypeHTTP {
+			delete(config.HTTP.Routers, key)
+			delete(config.HTTP.Services, key)
+			continue
+		}
+
+		delete(config.TCP.Routers, key)
+		delete(config.TCP.Services, key)
 	}
+}
+
+func (p *Provider) getServiceMode(mode string) string {
+	if mode == "" {
+		return p.defaultMode
+	}
+	return mode
 }
 
 func buildKey(name, namespace string, port int32) string {
