@@ -2,6 +2,7 @@ package controller
 
 import (
 	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/i3o/internal/message"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -44,10 +45,10 @@ func (h *Handler) OnAdd(obj interface{}) {
 	// add the key to the queue for the handler to get
 	// If object key is not in our list of ignored namespaces
 	if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
-		event := Message{
+		event := message.Message{
 			Key:    key,
 			Object: obj,
-			Action: MessageTypeCreated,
+			Action: message.TypeCreated,
 		}
 		h.messageQueue.Add(event)
 	}
@@ -60,11 +61,11 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 	}
 
 	if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
-		event := Message{
+		event := message.Message{
 			Key:       key,
 			Object:    newObj,
 			OldObject: oldObj,
-			Action:    MessageTypeUpdated,
+			Action:    message.TypeUpdated,
 		}
 		h.messageQueue.Add(event)
 	}
@@ -82,10 +83,10 @@ func (h *Handler) OnDelete(obj interface{}) {
 	}
 
 	if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
-		event := Message{
+		event := message.Message{
 			Key:    key,
 			Object: obj,
-			Action: MessageTypeDeleted,
+			Action: message.TypeDeleted,
 		}
 		h.messageQueue.Add(event)
 	}

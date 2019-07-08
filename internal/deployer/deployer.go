@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/i3o/internal/message"
 	"github.com/containous/traefik/pkg/config"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -74,8 +75,10 @@ func (d *Deployer) runWorker() {
 // processNextItem retrieves each queued item and takes the
 // necessary handler action based off of the event type.
 func (d *Deployer) processNextItem() bool {
-	log.Debug("Deployer Waiting for next item to process...")
-
+	log.Debug("Deployer - Config Processing Waiting for next item to process...")
+	if d.configQueue.Len() > 0 {
+		log.Debugf("Config queue length: %d", d.configQueue.Len())
+	}
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
 	// processing
@@ -90,9 +93,9 @@ func (d *Deployer) processNextItem() bool {
 
 	defer d.configQueue.Done(item)
 
-	event := item.(*config.Configuration)
+	event := item.(message.Config)
 
-	if d.deployConfiguration(event) {
+	if d.deployConfiguration(event.Config) {
 		// Only remove the configuration if the config was successfully added to the deploy queue
 		d.configQueue.Forget(item)
 	}
@@ -104,7 +107,6 @@ func (d *Deployer) processNextItem() bool {
 // deployConfiguration takes the configuration, and adds it into the deploy queue for each affected
 // mesh node. This allows nodes to retry individually.
 func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
-
 	podList, err := d.client.ListPodWithOptions(k8s.MeshNamespace, metav1.ListOptions{
 		LabelSelector: "component==i3o-mesh",
 	})
@@ -113,10 +115,15 @@ func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
 		return false
 	}
 
+	if len(podList.Items) == 0 {
+		log.Errorf("Could not find any active mesh pods to deploy config : %+v", c.HTTP)
+		return false
+	}
+
 	for _, pod := range podList.Items {
 		log.Debugf("Add configuration to deploy queue for pod %s with IP %s", pod.Name, pod.Status.PodIP)
 
-		messge := Message{
+		messge := message.Deploy{
 			PodName: pod.Name,
 			PodIP:   pod.Status.PodIP,
 			Config:  c,
@@ -126,17 +133,16 @@ func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
 	}
 
 	// Add the configmap update to the deploy queue
-	message := Message{
+	msg := message.Deploy{
 		ConfigmapDeploy: true,
 		Config:          c,
 	}
-	d.deployQueue.Add(message)
+	d.deployQueue.Add(msg)
 
 	return true
 }
 
-func (d *Deployer) deployConfigmap(m Message) bool {
-
+func (d *Deployer) deployConfigmap(m message.Deploy) bool {
 	var jsonDataRaw []byte
 	jsonDataRaw, err := json.Marshal(m.Config)
 	if err != nil {
@@ -186,35 +192,41 @@ func (d *Deployer) deployConfigmap(m Message) bool {
 	return true
 }
 
-func (d *Deployer) deployAPI(m Message) bool {
+func (d *Deployer) deployAPI(m message.Deploy) bool {
 
 	log.Debugf("Deploying configuration to pod %s with IP %s", m.PodName, m.PodIP)
 	b, err := json.Marshal(m.Config.HTTP)
 	if err != nil {
 		log.Errorf("Unable to marshal configuration: %v", err)
+		return false
 	}
 
-	log.Debugf("Deploying configuration: %+v", m.Config.HTTP)
+	log.Debugf("Deploying configuration: %s", string(b))
 	url := fmt.Sprintf("http://%s:8080/api/providers/rest", m.PodIP)
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(b))
 	if err != nil {
 		log.Errorf("Could not create request: %v", err)
+		return false
 	}
 	resp, err := client.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+		body, bodyErr := ioutil.ReadAll(resp.Body)
+		if bodyErr != nil {
+			log.Errorf("Unable to read response body: %v", bodyErr)
+			return false
+		}
+
+		log.Debugf("Deployed configuration response: %s", string(body))
+		return true
+
+	}
 	if err != nil {
 		log.Errorf("Unable to deploy configuration: %v", err)
 	}
-	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Errorf("Unable to read response body: %v", err)
-	}
-
-	log.Debugf("Deployed configuration response: %s", string(body))
-
-	return true
+	return false
 }
 
 // processDeployQueue is the main entrypoint for the deployer to deploy configurations.
@@ -242,7 +254,10 @@ func (d *Deployer) processDeployQueueWorker() {
 // processDeployQueueNextItem retrieves each queued item and takes the
 // necessary handler action based off of the event type.
 func (d *Deployer) processDeployQueueNextItem() bool {
-	log.Debug("Deployer Waiting for next item to process...")
+	log.Debug("Deployer - Deploy Processing Waiting for next item to process...")
+	if d.deployQueue.Len() > 0 {
+		log.Debugf("Deploy queue length: %d", d.deployQueue.Len())
+	}
 
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
@@ -258,22 +273,28 @@ func (d *Deployer) processDeployQueueNextItem() bool {
 
 	defer d.deployQueue.Done(item)
 
-	deployConfig := item.(Message)
+	deployConfig := item.(message.Deploy)
 
 	if deployConfig.ConfigmapDeploy {
 		log.Debug("Deploying Configmap...")
 		if d.deployConfigmap(deployConfig) {
-			// Only remove item from queue on successful deploy
+			// Only remove item from queue on successful deploy.
 			d.deployQueue.Forget(item)
+			return d.deployQueue.Len() > 0
 		}
-	} else {
-		log.Debug("Deploying configuration to pod...")
-		if d.deployAPI(deployConfig) {
-			// Only remove item from queue on successful deploy
-			d.deployQueue.Forget(item)
-		}
+		// Deploy configmap failed, so re-add to the queue.
+		d.deployQueue.AddRateLimited(item)
 	}
 
-	// keep the worker loop running by returning true if there are queue objects remaining
-	return d.configQueue.Len() > 0
+	log.Debug("Deploying configuration to pod...")
+	if d.deployAPI(deployConfig) {
+		// Only remove item from queue on successful deploy.
+		d.deployQueue.Forget(item)
+		return d.deployQueue.Len() > 0
+	}
+
+	// Deploy to API failed, re-add to the queue.
+	d.deployQueue.AddRateLimited(item)
+	// Keep the worker loop running by returning true if there are queue objects remaining.
+	return d.deployQueue.Len() > 0
 }

@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/i3o/internal/message"
 	"github.com/containous/traefik/pkg/config"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -36,62 +37,41 @@ func New(client k8s.CoreV1Client) *Provider {
 
 // BuildConfiguration builds the configuration for routing
 // from a native kubernetes environment.
-func (p *Provider) BuildConfiguration() *config.Configuration {
-	configRouters := make(map[string]*config.Router)
-	configServices := make(map[string]*config.Service)
-	namespaces, err := p.client.GetNamespaces()
-	if err != nil {
-		log.Error("Could not get a list of all namespaces")
-	}
-
-	for _, namespace := range namespaces {
-		services, err := p.client.GetServices(namespace.Name)
-		if err != nil {
-			log.Errorf("Could not get a list of all services in namespace: %s", namespace.Name)
+func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *config.Configuration) {
+	switch obj := event.Object.(type) {
+	case *corev1.Service:
+		switch event.Action {
+		case message.TypeCreated:
+			p.buildServiceIntoConfig(obj, nil, traefikConfig)
+		case message.TypeUpdated:
+			//FIXME: We will need to delete the old references in the config, and create the new service.
+		case message.TypeDeleted:
+			p.deleteServiceFromConfig(obj, traefikConfig)
 		}
-
-		for _, service := range services {
-			// Use the hash of the service name/namespace as the key
-			// So that we can update services based on their name
-			// and not have to worry about duplicates on merges.
-			sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s", service.Name, service.Namespace)))
-			dst := make([]byte, hex.EncodedLen(len(sum)))
-			hex.Encode(dst, sum[:])
-			key := string(dst)
-
-			configRouters[key] = p.buildRouterFromService(service)
-			configServices[key] = p.buildServiceFromService(service)
-
+	case *corev1.Endpoints:
+		switch event.Action {
+		case message.TypeCreated:
+			// We don't process created endpoint events, processing is done under service creation.
+		case message.TypeUpdated:
+			p.buildServiceIntoConfig(nil, obj, traefikConfig)
+		case message.TypeDeleted:
+			// We don't precess deleted endpoint events, processig is done under service deletion.
 		}
 	}
 
-	return &config.Configuration{
-		HTTP: &config.HTTPConfiguration{
-			Routers:  configRouters,
-			Services: configServices,
-		},
-	}
 }
 
-func (p *Provider) buildRouterFromService(service *corev1.Service) *config.Router {
+func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string) *config.Router {
 	return &config.Router{
-		Rule: fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", service.Name, service.Namespace, service.Spec.ClusterIP),
+		Rule:        fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", name, namespace, ip),
+		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
+		Service:     serviceName,
 	}
 }
 
-func (p *Provider) buildServiceFromService(service *corev1.Service) *config.Service {
+func (p *Provider) buildService(endpoints *corev1.Endpoints) *config.Service {
 	var servers []config.Server
-
-	endpoint, exists, err := p.client.GetEndpoints(service.Namespace, service.Name)
-	if err != nil {
-		log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
-		return nil
-	}
-	if !exists {
-		log.Errorf("endpoints for service %s/%s do not exist", service.Namespace, service.Name)
-		return nil
-	}
-	for _, subset := range endpoint.Subsets {
+	for _, subset := range endpoints.Subsets {
 		for _, endpointPort := range subset.Ports {
 			for _, address := range subset.Addresses {
 				server := config.Server{
@@ -110,4 +90,59 @@ func (p *Provider) buildServiceFromService(service *corev1.Service) *config.Serv
 	return &config.Service{
 		LoadBalancer: lb,
 	}
+}
+
+func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *config.Configuration) {
+	var exists bool
+	var err error
+	if service == nil {
+		service, exists, err = p.client.GetService(endpoints.Namespace, endpoints.Name)
+		if err != nil {
+			log.Errorf("Could not get service %s/%s: %v", endpoints.Namespace, endpoints.Name, err)
+			return
+		}
+		if !exists {
+			log.Errorf("endpoints for service %s/%s do not exist", endpoints.Namespace, endpoints.Name)
+			return
+		}
+
+	}
+
+	if endpoints == nil {
+		endpoints, exists, err = p.client.GetEndpoints(service.Namespace, service.Name)
+		if err != nil {
+			log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
+			return
+		}
+		if !exists {
+			log.Errorf("endpoints for service %s/%s do not exist", service.Namespace, service.Name)
+			return
+		}
+	}
+
+	for id, sp := range service.Spec.Ports {
+		key := buildKey(service.Name, service.Namespace, sp.Port)
+
+		config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key)
+		config.HTTP.Services[key] = p.buildService(endpoints)
+	}
+}
+
+func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *config.Configuration) {
+	for _, sp := range service.Spec.Ports {
+		key := buildKey(service.Name, service.Namespace, sp.Port)
+
+		delete(config.HTTP.Routers, key)
+		delete(config.HTTP.Services, key)
+	}
+}
+
+func buildKey(name, namespace string, port int32) string {
+	// Use the hash of the servicename.namespace.port as the key
+	// So that we can update services based on their name
+	// and not have to worry about duplicates on merges.
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s.%d", name, namespace, port)))
+	dst := make([]byte, hex.EncodedLen(len(sum)))
+	hex.Encode(dst, sum[:])
+	return string(dst)
 }

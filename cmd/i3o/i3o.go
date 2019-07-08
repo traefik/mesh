@@ -66,12 +66,12 @@ func i3oCommand(iConfig *cmd.I3oConfiguration) error {
 
 	// Create a new stop Channel
 	stopCh := signals.SetupSignalHandler()
-	// Create a new controller.
-	controller := controller.NewMeshController(clients, iConfig.SMI)
+	// Create a new ctr.
+	ctr := controller.NewMeshController(clients, iConfig.SMI, iConfig.DefaultMode)
 
-	// run the controller loop to process items
-	if err = controller.Run(stopCh); err != nil {
-		log.Fatalf("Error running controller: %v", err)
+	// run the ctr loop to process items
+	if err = ctr.Run(stopCh); err != nil {
+		log.Fatalf("Error running ctr: %v", err)
 	}
 	return nil
 }

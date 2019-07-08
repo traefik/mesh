@@ -50,6 +50,9 @@ spec:
             {{- if .Values.debug }}
             - "--debug"
             {{- end }}
+            {{- if .Values.mesh }}
+            - "--defaultMode {{ .Values.mesh.defaultMode }}"
+            {{- end }}
           securityContext:
             capabilities:
               drop:

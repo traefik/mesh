@@ -6,6 +6,7 @@ import (
 
 	"github.com/containous/i3o/internal/deployer"
 	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/i3o/internal/message"
 	"github.com/containous/i3o/internal/providers/kubernetes"
 	"github.com/containous/i3o/internal/providers/smi"
 	"github.com/containous/traefik/pkg/config"
@@ -37,12 +38,13 @@ type Controller struct {
 	deployer           *deployer.Deployer
 	ignored            k8s.IgnoreWrapper
 	smiEnabled         bool
+	traefikConfig      *config.Configuration
+	defaultMode        string
 }
 
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool) *Controller {
-
+func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string) *Controller {
 	ignored := buildIgnored()
 
 	// messageQueue is used to process messages from the sub-controllers
@@ -57,6 +59,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool) *Controller 
 		messageQueue: messageQueue,
 		ignored:      ignored,
 		smiEnabled:   smiEnabled,
+		defaultMode:  defaultMode,
 	}
 
 	if err := m.Init(); err != nil {
@@ -71,6 +74,8 @@ func (m *Controller) Init() error {
 	// Create a new SharedInformerFactory, and register the event handler to informers.
 	m.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(m.clients.KubeClient, k8s.ResyncPeriod)
 	m.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(m.handler)
+	m.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(m.handler)
+	m.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(m.handler)
 
 	m.kubernetesProvider = kubernetes.New(m.clients)
 
@@ -93,6 +98,14 @@ func (m *Controller) Init() error {
 
 		m.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(m.clients.SmiSplitClient, k8s.ResyncPeriod)
 		m.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(m.handler)
+	}
+
+	// Initialize an empty configuration
+	m.traefikConfig = &config.Configuration{
+		HTTP: &config.HTTPConfiguration{
+			Routers:  map[string]*config.Router{},
+			Services: map[string]*config.Service{},
+		},
 	}
 
 	return nil
@@ -180,17 +193,14 @@ func (m *Controller) processNextMessage() bool {
 
 	defer m.messageQueue.Done(item)
 
-	event := item.(Message)
+	event := item.(message.Message)
 
 	switch event.Action {
-	case MessageTypeCreated:
-		log.Infof("MeshController.processNextItem: created: %s", event.Key)
+	case message.TypeCreated:
 		m.processCreatedMessage(event)
-	case MessageTypeUpdated:
-		log.Infof("MeshController.processNextItem: updated: %s", event.Key)
+	case message.TypeUpdated:
 		m.processUpdatedMessage(event)
-	case MessageTypeDeleted:
-		log.Infof("MeshController.processNextItem: deleted: %s", event.Key)
+	case message.TypeDeleted:
 		m.processDeletedMessage(event)
 	}
 
@@ -200,13 +210,11 @@ func (m *Controller) processNextMessage() bool {
 	return m.messageQueue.Len() > 0
 }
 
-func (m *Controller) buildConfigurationFromProviders() *config.Configuration {
-	result := m.kubernetesProvider.BuildConfiguration()
+func (m *Controller) buildConfigurationFromProviders(event message.Message) {
+	m.kubernetesProvider.BuildConfiguration(event, m.traefikConfig)
 	if m.smiEnabled {
-		result = mergeConfigurations(result, m.smiProvider.BuildConfiguration())
+		m.smiProvider.BuildConfiguration()
 	}
-
-	return result
 }
 
 func buildIgnored() k8s.IgnoreWrapper {
@@ -225,72 +233,124 @@ func buildIgnored() k8s.IgnoreWrapper {
 
 }
 
-func (m *Controller) processCreatedMessage(event Message) {
+func (m *Controller) processCreatedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
-	userService := event.Object.(*corev1.Service)
-	if m.ignored.Namespaces.Contains(userService.Namespace) {
+	switch obj := event.Object.(type) {
+	case *corev1.Service:
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
+
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+
+		log.Debugf("MeshController ObjectCreated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+
+		log.Debugf("Creating associated mesh service for service: %s/%s", obj.Namespace, obj.Name)
+		if _, err := m.createMeshService(obj); err != nil {
+			log.Errorf("Could not create mesh service: %v", err)
+			return
+		}
+
+	case *corev1.Endpoints:
+		log.Debugf("MeshController ObjectCreated with type: *corev1.Endpoints: %s/%s, skipping...", obj.Namespace, obj.Name)
+		return
+
+	case *corev1.Pod:
+		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 	}
 
-	if m.ignored.Services.Contains(userService.Name, userService.Namespace) {
+	m.buildConfigurationFromProviders(event)
+	m.configurationQueue.Add(message.Config{
+		Config: m.traefikConfig,
+	})
+}
+
+func (m *Controller) processUpdatedMessage(event message.Message) {
+	// assert the type to an object to pull out relevant data
+	switch obj := event.Object.(type) {
+	case *corev1.Service:
+		oldService := event.OldObject.(*corev1.Service)
+
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
+
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+
+		log.Debugf("MeshController ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+
+		if _, err := m.updateMeshService(oldService, obj); err != nil {
+			log.Errorf("Could not update mesh service: %v", err)
+			return
+		}
+
+	case *corev1.Endpoints:
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
+
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+		log.Debugf("MeshController ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
+
+	case *corev1.Pod:
+		log.Debugf("MeshController ObjectUpdated with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
+
 	}
 
-	log.Debugf("MeshController ObjectCreated with type: *corev1.Service: %s/%s", userService.Namespace, userService.Name)
-
-	log.Debugf("Creating associated mesh service for service: %s/%s", userService.Namespace, userService.Name)
-	_, err := m.createMeshService(userService)
-	if err != nil {
-		log.Errorf("Could not create mesh service: %v", err)
-		return
-	}
-
-	config := m.buildConfigurationFromProviders()
-	log.Warnf("MeshController.processNextItem: Adding: %s to the configuration queue", event.Key)
-	m.configurationQueue.Add(config)
+	m.buildConfigurationFromProviders(event)
+	m.configurationQueue.Add(message.Config{
+		Config: m.traefikConfig,
+	})
 
 }
 
-func (m *Controller) processUpdatedMessage(event Message) {
+func (m *Controller) processDeletedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
-	newService := event.Object.(*corev1.Service)
-	oldService := event.OldObject.(*corev1.Service)
+	switch obj := event.Object.(type) {
+	case *corev1.Service:
+		// assert the type to an object to pull out relevant data
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
 
-	if m.ignored.Namespaces.Contains(newService.Namespace) {
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+
+		log.Debugf("MeshController ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+
+		if err := m.deleteMeshService(obj.Name, obj.Namespace); err != nil {
+			log.Errorf("Could not delete mesh service: %v", err)
+			return
+		}
+
+	case *corev1.Endpoints:
+		if m.ignored.Namespaces.Contains(obj.Namespace) {
+			return
+		}
+
+		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+			return
+		}
+		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
+
+	case *corev1.Pod:
+		log.Debugf("MeshController ObjectDeleted with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 	}
 
-	if m.ignored.Services.Contains(newService.Name, newService.Namespace) {
-		return
-	}
-
-	log.Debugf("MeshController ObjectUdated with type: *corev1.Service: %s/%s", newService.Namespace, newService.Name)
-
-	_, err := m.updateMeshService(oldService, newService)
-	if err != nil {
-		log.Errorf("Could not update mesh service: %v", err)
-		return
-	}
-
-}
-
-func (m *Controller) processDeletedMessage(event Message) {
-	// assert the type to an object to pull out relevant data
-	userService := event.Object.(*corev1.Service)
-	if m.ignored.Namespaces.Contains(userService.Namespace) {
-		return
-	}
-
-	if m.ignored.Services.Contains(userService.Name, userService.Namespace) {
-		return
-	}
-
-	log.Debugf("MeshController ObjectDeleted with type: *corev1.Service: %s/%s", userService.Namespace, userService.Name)
-
-	if err := m.deleteMeshService(userService.Name, userService.Namespace); err != nil {
-		log.Errorf("Could not delete mesh service: %v", err)
-		return
-	}
+	m.buildConfigurationFromProviders(event)
+	m.configurationQueue.Add(message.Config{
+		Config: m.traefikConfig,
+	})
 
 }
 
@@ -410,28 +470,4 @@ func (m *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 // userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh service name.
 func userServiceToMeshServiceName(serviceName string, namespace string) string {
 	return fmt.Sprintf("traefik-%s-%s", serviceName, namespace)
-}
-
-func mergeConfigurations(a *config.Configuration, b *config.Configuration) *config.Configuration {
-	if a == nil {
-		return b
-	}
-	if b == nil {
-		return a
-	}
-
-	result := a
-
-	for key, value := range b.HTTP.Middlewares {
-		result.HTTP.Middlewares[key] = value
-	}
-	for key, value := range b.HTTP.Routers {
-		result.HTTP.Routers[key] = value
-	}
-	for key, value := range b.HTTP.Services {
-		result.HTTP.Services[key] = value
-	}
-
-	// FIXME: Add rest of values to merge
-	return result
 }

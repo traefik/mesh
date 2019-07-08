@@ -11,6 +11,9 @@ image:
 
 debug: true
 
+# mesh:
+#   defaultMode: http
+
 #
 # addon jaeger tracing configuration
 #

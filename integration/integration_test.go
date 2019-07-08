@@ -36,6 +36,7 @@ func init() {
 	}
 
 	check.Suite(&StartI3oSuite{})
+	check.Suite(&CurlI3oSuite{})
 }
 
 type BaseSuite struct {
@@ -191,9 +192,11 @@ func (s *BaseSuite) installTinyToolsI3o(c *check.C) {
 }
 
 func (s *BaseSuite) getToolsPodI3o(c *check.C) *corev1.Pod {
-	pod, exists, err := s.client.GetPod(metav1.NamespaceDefault, "tiny-tools")
+	podlist, err := s.client.ListPodWithOptions(metav1.NamespaceDefault, metav1.ListOptions{
+		LabelSelector: "app=tiny-tools",
+	})
 	c.Assert(err, checker.IsNil)
-	c.Assert(exists, checker.True)
+	c.Assert(len(podlist.Items), checker.Equals, 1)
 
-	return pod
+	return &podlist.Items[0]
 }
