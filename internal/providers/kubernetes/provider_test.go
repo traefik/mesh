@@ -153,14 +153,37 @@ func TestBuildConfiguration(t *testing.T) {
 
 func TestBuildService(t *testing.T) {
 	testCases := []struct {
-		desc     string
-		mockFile string
-		expected *config.Service
-		err      bool
+		desc      string
+		mockFile  string
+		endpoints *corev1.Endpoints
+		expected  *config.Service
 	}{
 		{
 			desc:     "two successful endpoints",
 			mockFile: "build_service_simple.yaml",
+			endpoints: &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "foo",
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.0.0.1",
+							},
+							{
+								IP: "10.0.0.2",
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 80,
+							},
+						},
+					},
+				},
+			},
 			expected: &config.Service{
 				LoadBalancer: &config.LoadBalancerService{
 					PassHostHeader: true,
@@ -175,24 +198,6 @@ func TestBuildService(t *testing.T) {
 				},
 			},
 		},
-		{
-			desc:     "missing endpoints found",
-			mockFile: "build_service_missing_endpoints.yaml",
-			expected: nil,
-		},
-		{
-			desc:     "endpoints client error",
-			mockFile: "build_service_simple.yaml",
-			expected: nil,
-			err:      true,
-		},
-	}
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "foo",
-		},
 	}
 
 	for _, test := range testCases {
@@ -200,11 +205,8 @@ func TestBuildService(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			if test.err {
-				clientMock.EnableEndpointsError()
-			}
 			provider := New(clientMock)
-			actual := provider.buildService(service.Name, service.Namespace)
+			actual := provider.buildService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
 
 		})

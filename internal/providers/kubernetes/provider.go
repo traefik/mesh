@@ -121,13 +121,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 	}
 
 	for id, sp := range service.Spec.Ports {
-		// Use the hash of the servicename.namespace.port as the key
-		// So that we can update services based on their name
-		// and not have to worry about duplicates on merges.
-		sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s.%d", service.Name, service.Namespace, sp.Port)))
-		dst := make([]byte, hex.EncodedLen(len(sum)))
-		hex.Encode(dst, sum[:])
-		key := string(dst)
+		key := buildKey(service.Name, service.Namespace, sp.Port)
 
 		config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key)
 		config.HTTP.Services[key] = p.buildService(endpoints)
@@ -136,15 +130,19 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 
 func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *config.Configuration) {
 	for _, sp := range service.Spec.Ports {
-		// Use the hash of the servicename.namespace.port as the key
-		// So that we can update services based on their name
-		// and not have to worry about duplicates on merges.
-		sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s.%d", service.Name, service.Namespace, sp.Port)))
-		dst := make([]byte, hex.EncodedLen(len(sum)))
-		hex.Encode(dst, sum[:])
-		key := string(dst)
+		key := buildKey(service.Name, service.Namespace, sp.Port)
 
 		delete(config.HTTP.Routers, key)
 		delete(config.HTTP.Services, key)
 	}
+}
+
+func buildKey(name, namespace string, port int32) string {
+	// Use the hash of the servicename.namespace.port as the key
+	// So that we can update services based on their name
+	// and not have to worry about duplicates on merges.
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s.%d", name, namespace, port)))
+	dst := make([]byte, hex.EncodedLen(len(sum)))
+	hex.Encode(dst, sum[:])
+	return string(dst)
 }
