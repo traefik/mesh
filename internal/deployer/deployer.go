@@ -138,13 +138,11 @@ func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
 
 // DeployToPod takes the configuration, and adds it into the deploy queue for the pod.
 func (d *Deployer) DeployToPod(name, ip string, c *config.Configuration) {
-	messge := message.Deploy{
+	d.deployQueue.Add(message.Deploy{
 		PodName: name,
 		PodIP:   ip,
 		Config:  c,
-	}
-
-	d.deployQueue.Add(messge)
+	})
 }
 
 func (d *Deployer) deployConfigmap(m message.Deploy) bool {
@@ -198,7 +196,6 @@ func (d *Deployer) deployConfigmap(m message.Deploy) bool {
 }
 
 func (d *Deployer) deployAPI(m message.Deploy) bool {
-
 	log.Debugf("Deploying configuration to pod %s with IP %s", m.PodName, m.PodIP)
 	b, err := json.Marshal(m.Config.HTTP)
 	if err != nil {

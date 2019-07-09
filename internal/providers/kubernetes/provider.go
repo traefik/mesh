@@ -169,7 +169,6 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 }
 
 func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *config.Configuration) {
-
 	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
 
 	for _, sp := range service.Spec.Ports {

@@ -12,7 +12,6 @@ import (
 )
 
 func TestBuildRouter(t *testing.T) {
-
 	expected := &config.Router{
 		Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)",
 		EntryPoints: []string{"ingress-80"},
