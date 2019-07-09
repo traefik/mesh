@@ -226,7 +226,7 @@ func (m *Controller) processNextMessage() bool {
 }
 
 func (m *Controller) buildConfigurationFromProviders(event message.Message) {
-	m.kubernetesProvider.BuildConfiguration(event, m.traefikConfig)
+	m.kubernetesProvider.BuildConfiguration(event, m.traefikConfig.DeepCopy())
 	if m.smiEnabled {
 		m.smiProvider.BuildConfiguration()
 	}
@@ -256,14 +256,14 @@ func (m *Controller) processCreatedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
 		if isMeshPod(obj) {
 			// Re-Deploy configuration to the created mesh pod.
-			m.deployer.DeployToPod(obj.Name, obj.Status.PodIP, m.traefikConfig)
+			m.deployer.DeployToPod(obj.Name, obj.Status.PodIP, m.traefikConfig.DeepCopy())
 		}
 		return
 	}
 
 	m.buildConfigurationFromProviders(event)
 	m.configurationQueue.Add(message.Config{
-		Config: m.traefikConfig,
+		Config: m.traefikConfig.DeepCopy(),
 	})
 }
 
@@ -297,7 +297,7 @@ func (m *Controller) processUpdatedMessage(event message.Message) {
 
 	m.buildConfigurationFromProviders(event)
 	m.configurationQueue.Add(message.Config{
-		Config: m.traefikConfig,
+		Config: m.traefikConfig.DeepCopy(),
 	})
 
 }
@@ -332,7 +332,7 @@ func (m *Controller) processDeletedMessage(event message.Message) {
 
 	m.buildConfigurationFromProviders(event)
 	m.configurationQueue.Add(message.Config{
-		Config: m.traefikConfig,
+		Config: m.traefikConfig.DeepCopy(),
 	})
 
 }
