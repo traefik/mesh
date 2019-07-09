@@ -123,13 +123,7 @@ func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
 	for _, pod := range podList.Items {
 		log.Debugf("Add configuration to deploy queue for pod %s with IP %s", pod.Name, pod.Status.PodIP)
 
-		messge := message.Deploy{
-			PodName: pod.Name,
-			PodIP:   pod.Status.PodIP,
-			Config:  c,
-		}
-
-		d.deployQueue.Add(messge)
+		d.DeployToPod(pod.Name, pod.Status.PodIP, c)
 	}
 
 	// Add the configmap update to the deploy queue
@@ -140,6 +134,15 @@ func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
 	d.deployQueue.Add(msg)
 
 	return true
+}
+
+// DeployToPod takes the configuration, and adds it into the deploy queue for the pod.
+func (d *Deployer) DeployToPod(name, ip string, c *config.Configuration) {
+	d.deployQueue.Add(message.Deploy{
+		PodName: name,
+		PodIP:   ip,
+		Config:  c,
+	})
 }
 
 func (d *Deployer) deployConfigmap(m message.Deploy) bool {
@@ -193,7 +196,6 @@ func (d *Deployer) deployConfigmap(m message.Deploy) bool {
 }
 
 func (d *Deployer) deployAPI(m message.Deploy) bool {
-
 	log.Debugf("Deploying configuration to pod %s with IP %s", m.PodName, m.PodIP)
 	b, err := json.Marshal(m.Config.HTTP)
 	if err != nil {

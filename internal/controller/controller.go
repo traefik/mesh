@@ -27,6 +27,7 @@ import (
 type Controller struct {
 	clients            *k8s.ClientWrapper
 	kubernetesFactory  informers.SharedInformerFactory
+	meshFactory        informers.SharedInformerFactory
 	smiAccessFactory   smiAccessExternalversions.SharedInformerFactory
 	smiSpecsFactory    smiSpecsExternalversions.SharedInformerFactory
 	smiSplitFactory    smiSplitExternalversions.SharedInformerFactory
@@ -45,7 +46,7 @@ type Controller struct {
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
 func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string) *Controller {
-	ignored := buildIgnored()
+	ignored := k8s.NewIgnored()
 
 	// messageQueue is used to process messages from the sub-controllers
 	// if cross-controller logic is required
@@ -75,7 +76,10 @@ func (m *Controller) Init() error {
 	m.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(m.clients.KubeClient, k8s.ResyncPeriod)
 	m.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(m.handler)
 	m.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(m.handler)
-	m.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(m.handler)
+
+	// Create a new SharedInformerFactory, and register the event handler to informers.
+	m.meshFactory = informers.NewSharedInformerFactoryWithOptions(m.clients.KubeClient, k8s.ResyncPeriod, informers.WithNamespace(k8s.MeshNamespace))
+	m.meshFactory.Core().V1().Pods().Informer().AddEventHandler(m.handler)
 
 	m.kubernetesProvider = kubernetes.New(m.clients, m.defaultMode)
 
@@ -125,6 +129,13 @@ func (m *Controller) Run(stopCh <-chan struct{}) error {
 	// Start the informers
 	m.kubernetesFactory.Start(stopCh)
 	for t, ok := range m.kubernetesFactory.WaitForCacheSync(stopCh) {
+		if !ok {
+			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+		}
+	}
+
+	m.meshFactory.Start(stopCh)
+	for t, ok := range m.meshFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
@@ -221,31 +232,11 @@ func (m *Controller) buildConfigurationFromProviders(event message.Message) {
 	}
 }
 
-func buildIgnored() k8s.IgnoreWrapper {
-	ignoredNamespaces := k8s.Namespaces{metav1.NamespaceSystem, k8s.MeshNamespace}
-	ignoredServices := k8s.Services{
-		{
-			Name:      "kubernetes",
-			Namespace: metav1.NamespaceDefault,
-		},
-	}
-
-	return k8s.IgnoreWrapper{
-		Namespaces: ignoredNamespaces,
-		Services:   ignoredServices,
-	}
-
-}
-
 func (m *Controller) processCreatedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
 	switch obj := event.Object.(type) {
 	case *corev1.Service:
-		if m.ignored.Namespaces.Contains(obj.Namespace) {
-			return
-		}
-
-		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+		if m.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
@@ -262,7 +253,11 @@ func (m *Controller) processCreatedMessage(event message.Message) {
 		return
 
 	case *corev1.Pod:
-		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
+		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
+		if isMeshPod(obj) {
+			// Re-Deploy configuration to the created mesh pod.
+			m.deployer.DeployToPod(obj.Name, obj.Status.PodIP, m.traefikConfig)
+		}
 		return
 	}
 
@@ -276,31 +271,22 @@ func (m *Controller) processUpdatedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
 	switch obj := event.Object.(type) {
 	case *corev1.Service:
-		oldService := event.OldObject.(*corev1.Service)
-
-		if m.ignored.Namespaces.Contains(obj.Namespace) {
-			return
-		}
-
-		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+		if m.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
-
+		oldService := event.OldObject.(*corev1.Service)
 		if _, err := m.updateMeshService(oldService, obj); err != nil {
 			log.Errorf("Could not update mesh service: %v", err)
 			return
 		}
 
 	case *corev1.Endpoints:
-		if m.ignored.Namespaces.Contains(obj.Namespace) {
+		if m.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
-		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
-			return
-		}
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 
 	case *corev1.Pod:
@@ -321,11 +307,7 @@ func (m *Controller) processDeletedMessage(event message.Message) {
 	switch obj := event.Object.(type) {
 	case *corev1.Service:
 		// assert the type to an object to pull out relevant data
-		if m.ignored.Namespaces.Contains(obj.Namespace) {
-			return
-		}
-
-		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
+		if m.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
@@ -337,13 +319,10 @@ func (m *Controller) processDeletedMessage(event message.Message) {
 		}
 
 	case *corev1.Endpoints:
-		if m.ignored.Namespaces.Contains(obj.Namespace) {
+		if m.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
-		if m.ignored.Services.Contains(obj.Name, obj.Namespace) {
-			return
-		}
 		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 
 	case *corev1.Pod:
@@ -469,6 +448,11 @@ func (m *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 	log.Debugf("Updated service: %s/%s", k8s.MeshNamespace, meshServiceName)
 	return updatedSvc, nil
 
+}
+
+// isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
+func isMeshPod(pod *corev1.Pod) bool {
+	return pod.Labels["component"] == "i3o-mesh"
 }
 
 // userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh service name.
