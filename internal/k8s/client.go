@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
@@ -84,10 +83,6 @@ type IgnoreWrapper struct {
 	Namespaces Namespaces
 	Services   Services
 }
-
-const (
-	ResyncPeriod = 5 * time.Minute
-)
 
 // NewClientWrapper creates and returns both a kubernetes client, and a CRD client.
 func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {

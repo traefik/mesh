@@ -16,8 +16,11 @@ type I3oConfiguration struct {
 // NewI3oConfiguration creates a I3oConfiguration with default values.
 func NewI3oConfiguration() *I3oConfiguration {
 	return &I3oConfiguration{
-		ConfigFile: "",
-		KubeConfig: os.Getenv("KUBECONFIG"),
+		ConfigFile:  "",
+		KubeConfig:  os.Getenv("KUBECONFIG"),
+		Debug:       false,
+		SMI:         false,
+		DefaultMode: "http",
 	}
 }
 
@@ -31,5 +34,6 @@ type PatchConfig struct {
 func NewPatchConfig() *PatchConfig {
 	return &PatchConfig{
 		KubeConfig: os.Getenv("KUBECONFIG"),
+		Debug:      false,
 	}
 }
