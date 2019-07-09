@@ -374,9 +374,6 @@ func getDeployedVersion(ip string) (time.Time, bool, error) {
 
 		var version int64
 		var timeError error
-		if data == nil {
-			return time.Now(), false, nil
-		}
 
 		if len(data.Services) == 0 {
 			return time.Now(), false, nil
