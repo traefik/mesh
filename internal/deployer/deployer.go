@@ -254,9 +254,9 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 		}
 
 		// Configuration should have deployed successfully, confirm version match.
-		newVersion, exists, err := getDeployedVersion(m.PodIP)
-		if err != nil {
-			log.Errorf("Could not get newly deployed configuration version: %v", err)
+		newVersion, exists, newErr := getDeployedVersion(m.PodIP)
+		if newErr != nil {
+			log.Errorf("Could not get newly deployed configuration version: %v", newErr)
 			return false
 		}
 		if exists {

@@ -41,7 +41,7 @@ func (d *Deploy) GetVersion() (time.Time, error) {
 			return time.Unix(0, nano), err
 		}
 	}
-	return time.Now(), errors.New("Could not parse version from Deploy")
+	return time.Now(), errors.New("could not parse version from Deploy")
 }
 
 // Config holds a message for processing in the config queue.
@@ -74,5 +74,5 @@ func (c *Config) GetVersion() (time.Time, error) {
 			return time.Unix(0, nano), err
 		}
 	}
-	return time.Now(), errors.New("Could not parse version from Config")
+	return time.Now(), errors.New("could not parse version from Config")
 }
