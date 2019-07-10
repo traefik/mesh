@@ -54,6 +54,50 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 	return nil
 }
 
+// WaitDeleteDeployment wait until the deployment is delete.
+func (t *Try) WaitDeleteDeployment(name string, namespace string, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		_, exists, err := t.client.GetDeployment(namespace, name)
+		if err != nil {
+			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
+		}
+		if exists {
+			return fmt.Errorf("deployment %q exist", name)
+		}
+
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
+	}
+
+	return nil
+}
+
+// WaitDeleteNamespace wait until the namespace is delete.
+func (t *Try) WaitDeleteNamespace(name string, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		_, exists, err := t.client.GetNamespace(name)
+		if err != nil {
+			return fmt.Errorf("unable get the namesapce %q: %v", name, err)
+		}
+		if exists {
+			return fmt.Errorf("namesapce %q exist", name)
+		}
+
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable get the namesapce %q: %v", name, err)
+	}
+
+	return nil
+}
+
 // WaitClientCreated wait until the file is created.
 func (t *Try) WaitClientCreated(url string, kubeConfigPath string, timeout time.Duration) (*k8s.ClientWrapper, error) {
 	ebo := backoff.NewExponentialBackOff()

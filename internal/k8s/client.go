@@ -26,6 +26,14 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var (
+	supportedCoreDNSVersions = []string{
+		"1.3",
+		"1.4",
+		"1.5",
+	}
+)
+
 // ClusterInitClient is an interface that can be used for doing cluster initialization.
 type ClusterInitClient interface {
 	InitCluster() error
@@ -43,6 +51,7 @@ type CoreV1Client interface {
 	GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error)
 	GetPod(namespace, name string) (*corev1.Pod, bool, error)
 	ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error)
+	GetNamespace(name string) (*corev1.Namespace, bool, error)
 	GetNamespaces() ([]*corev1.Namespace, error)
 	GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error)
 	CreateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error)
@@ -111,6 +120,53 @@ func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {
 		SmiSpecsClient:  smiSpecsClient,
 		SmiSplitClient:  smiSplitClient,
 	}, nil
+}
+
+// CheckCluster is used to check the cluster.
+func (w *ClientWrapper) CheckCluster() error {
+	log.Infoln("Checking Cluster...")
+
+	log.Debugln("Creating CoreDNS version...")
+	deployment, exists, err := w.GetDeployment(metav1.NamespaceSystem, "coredns")
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("%s does not exist in namespace %s", "coredns", metav1.NamespaceSystem)
+	}
+
+	var version string
+
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		if c.Name != "coredns" {
+			continue
+		}
+
+		split := strings.Split(c.Image, ":")
+		if len(split) == 2 {
+			version = split[1]
+		}
+	}
+
+	if !isCoreDNSVersionSupported(version) {
+		return fmt.Errorf("unsupported CoreDNS version %q, (supported versions are: %s)", version, strings.Join(supportedCoreDNSVersions, ","))
+	}
+
+	log.Infoln("Cluster check Complete...")
+
+	return nil
+}
+
+// isCoreDNSVersionSupported returns true if the provided string contains a supported CoreDNS version.
+func isCoreDNSVersionSupported(versionLine string) bool {
+	for _, v := range supportedCoreDNSVersions {
+		if strings.Contains(versionLine, v) || strings.Contains(versionLine, "v"+v) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // InitCluster is used to initialize a kubernetes cluster with a variety of configuration options.
@@ -375,6 +431,13 @@ func (w *ClientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error
 
 func (w *ClientWrapper) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
 	return w.KubeClient.CoreV1().Pods(namespace).List(options)
+}
+
+// GetNamespace returns a namespace.
+func (w *ClientWrapper) GetNamespace(name string) (*corev1.Namespace, bool, error) {
+	pod, err := w.KubeClient.CoreV1().Namespaces().Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
+	return pod, exists, err
 }
 
 // GetNamespaces returns a slice of all namespaces.

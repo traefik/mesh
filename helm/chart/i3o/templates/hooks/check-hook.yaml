@@ -1,0 +1,103 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: i3o-check
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote}}
+    chart: {{ include "i3o.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: i3o-check-role
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote}}
+    chart: {{ include "i3o.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "2"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+rules:
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: i3o-check
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote}}
+    chart: {{ include "i3o.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "3"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: i3o-check-role
+subjects:
+  - kind: ServiceAccount
+    name: i3o-check
+    namespace: traefik-mesh
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: i3o-check
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote}}
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote}}
+    heritage: {{ .Release.Service | quote}}
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "4"
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 30
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | quote}}
+        component: check
+        release: {{ .Release.Name | quote}}
+    spec:
+      serviceAccountName: i3o-check
+      restartPolicy: Never
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      {{- end }}
+      containers:
+        - name: i3o-check
+          image: {{ include "i3o.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent"}}
+          args:
+            - "check"
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE

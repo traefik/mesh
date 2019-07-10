@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: i3o-patch
-  namespace: {{ .Release.Namespace }}
+  namespace: traefik-mesh
   labels:
     app: {{ .Release.Name | quote}}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -13,6 +13,8 @@ metadata:
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
 spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 60
   template:
     metadata:
       labels:

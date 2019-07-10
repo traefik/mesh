@@ -5,6 +5,8 @@ import (
 	stdlog "log"
 	"os"
 
+	"github.com/containous/i3o/cmd/check"
+
 	"github.com/containous/i3o/cmd"
 	"github.com/containous/i3o/cmd/patch"
 	"github.com/containous/i3o/cmd/version"
@@ -27,6 +29,12 @@ func main() {
 		Run: func(_ []string) error {
 			return i3oCommand(iConfig)
 		},
+	}
+
+	cConfig := cmd.NewCheckConfig()
+	if err := cmdI3o.AddCommand(check.NewCmd(cConfig, loaders)); err != nil {
+		stdlog.Println(err)
+		os.Exit(1)
 	}
 
 	pConfig := cmd.NewPatchConfig()
@@ -62,6 +70,10 @@ func i3oCommand(iConfig *cmd.I3oConfiguration) error {
 	clients, err := k8s.NewClientWrapper(iConfig.MasterURL, iConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
+	}
+
+	if err = clients.CheckCluster(); err != nil {
+		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
 	// Create a new stop Channel
