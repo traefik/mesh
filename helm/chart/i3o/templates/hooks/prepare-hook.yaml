@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: i3o-check
+  name: i3o-prepare
   namespace: traefik-mesh
   labels:
     app: {{ .Release.Name | quote}}
@@ -17,7 +17,7 @@ metadata:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: i3o-check-role
+  name: i3o-prepare-role
   namespace: traefik-mesh
   labels:
     app: {{ .Release.Name | quote}}
@@ -39,7 +39,7 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: i3o-check
+  name: i3o-prepare
   namespace: traefik-mesh
   labels:
     app: {{ .Release.Name | quote}}
@@ -53,16 +53,16 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: i3o-check-role
+  name: i3o-prepare-role
 subjects:
   - kind: ServiceAccount
-    name: i3o-check
+    name: i3o-prepare
     namespace: traefik-mesh
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: i3o-check
+  name: i3o-prepare
   namespace: traefik-mesh
   labels:
     app: {{ .Release.Name | quote}}
@@ -80,21 +80,21 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name | quote}}
-        component: check
+        component: prepare
         release: {{ .Release.Name | quote}}
     spec:
-      serviceAccountName: i3o-check
+      serviceAccountName: i3o-prepare
       restartPolicy: Never
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret }}
       {{- end }}
       containers:
-        - name: i3o-check
+        - name: i3o-prepare
           image: {{ include "i3o.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent"}}
           args:
-            - "check"
+            - "prepare"
           securityContext:
             capabilities:
               drop:

@@ -1,4 +1,4 @@
-package check
+package prepare
 
 import (
 	"fmt"
@@ -11,26 +11,26 @@ import (
 )
 
 // NewCmd builds a new Patch command.
-func NewCmd(cConfig *cmd.CheckConfig, loaders []cli.ResourceLoader) *cli.Command {
+func NewCmd(pConfig *cmd.PrepareConfig, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
-		Name:          "check",
-		Description:   `Check command.`,
-		Configuration: cConfig,
+		Name:          "prepare",
+		Description:   `Prepare command.`,
+		Configuration: pConfig,
 		Run: func(_ []string) error {
-			return checkCommand(cConfig)
+			return patchCommand(pConfig)
 		},
 		Resources: loaders,
 	}
 }
 
-func checkCommand(pConfig *cmd.CheckConfig) error {
+func patchCommand(pConfig *cmd.PrepareConfig) error {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
 	if pConfig.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	log.Debugln("Starting i3o check...")
+	log.Debugln("Starting i3o prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
@@ -41,6 +41,10 @@ func checkCommand(pConfig *cmd.CheckConfig) error {
 
 	if err = clients.CheckCluster(); err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)
+	}
+
+	if err = clients.InitCluster(); err != nil {
+		return fmt.Errorf("error initializing cluster: %v", err)
 	}
 
 	return nil
