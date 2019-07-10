@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,13 +20,19 @@ import (
 )
 
 var (
-	integration    = flag.Bool("integration", true, "run integration tests")
+	integration    = flag.Bool("integration", false, "run integration tests")
 	kubeConfigPath = "/tmp/k3s-output/kubeconfig.yaml"
 	masterURL      = "https://localhost:8443"
+	images         []image
 )
 
 func Test(t *testing.T) {
 	check.TestingT(t)
+}
+
+type image struct {
+	name string
+	pull bool
 }
 
 func init() {
@@ -34,6 +41,14 @@ func init() {
 		log.Info("Integration tests disabled.")
 		return
 	}
+
+	images = append(images, image{"containous/i3o:latest", false})
+	images = append(images, image{"containous/whoami:latest", true})
+	images = append(images, image{"coredns/coredns:1.2.6", true})
+	images = append(images, image{"coredns/coredns:1.3.1", true})
+	images = append(images, image{"coredns/coredns:1.4.0", true})
+	images = append(images, image{"coredns/coredns:1.5.2", true})
+	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.1", true})
 
 	check.Suite(&CurlI3oSuite{})
 	check.Suite(&CoreDNSSuite{})
@@ -47,7 +62,7 @@ type BaseSuite struct {
 	client         *k8s.ClientWrapper
 }
 
-func (s *BaseSuite) startk3s(_ *check.C) error {
+func (s *BaseSuite) startk3s(_ *check.C, coreDNSDeploy bool) error {
 	var err error
 	s.dir, err = os.Getwd()
 	if err != nil {
@@ -57,16 +72,16 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 	if err = os.MkdirAll(path.Join(s.dir, "resources/compose/images"), 0755); err != nil {
 		return err
 	}
-	// Save i3o image in k3s.
-	cmd := exec.Command("docker",
-		"save", "containous/i3o:latest", "-o", path.Join(s.dir, "resources/compose/images/i3o.tar"))
-	cmd.Env = os.Environ()
 
-	output, err := cmd.CombinedOutput()
-
-	fmt.Println(string(output))
-	if err != nil {
-		return err
+	for _, image := range images {
+		name := strings.ReplaceAll(image.name, "/", "-")
+		name = strings.ReplaceAll(name, ":", "-")
+		name = strings.ReplaceAll(name, ".", "-")
+		p := path.Join(s.dir, fmt.Sprintf("resources/compose/images/%s.tar", name))
+		err = saveDockerImage(image.name, p, image.pull)
+		if err != nil {
+			return err
+		}
 	}
 
 	s.composeProject = path.Join(s.dir, "resources/compose/k3s.yaml")
@@ -75,12 +90,15 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 	s.stopComposeProject()
 
 	// Start k3s stack.
-	cmd = exec.Command("docker-compose",
+	cmd := exec.Command("docker-compose",
 		"--file", s.composeProject, "--project-name", s.projectName,
-		"up", "-d", "--scale", "node=2")
+		"up", "-d", "--scale", "node=0")
+	if !coreDNSDeploy {
+		_ = os.Setenv("K3S_OPTS", "--no-deploy coredns")
+	}
 	cmd.Env = os.Environ()
 
-	output, err = cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 
 	fmt.Println(string(output))
 	if err != nil {
@@ -93,6 +111,29 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 	}
 
 	s.try = try.NewTry(s.client)
+	return nil
+}
+
+func saveDockerImage(image string, p string, pull bool) error {
+	if pull {
+		cmd := exec.Command("docker", "pull", image)
+		cmd.Env = os.Environ()
+
+		output, err := cmd.CombinedOutput()
+		fmt.Println(string(output))
+		if err != nil {
+			return err
+		}
+	}
+	cmd := exec.Command("docker", "save", image, "-o", p)
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
+	fmt.Println(string(output))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -141,14 +182,9 @@ func (s *BaseSuite) waitForTools(c *check.C) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) waitUntilKubectlCommand(c *check.C, argSlice []string, data string) {
-	cmd := exec.Command("kubectl", argSlice...)
-	cmd.Env = os.Environ()
-
-	output, err := cmd.CombinedOutput()
+func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data string) {
+	err := s.try.WaitCommandExecute("kubectl", argSlice, data, 60*time.Second)
 	c.Assert(err, checker.IsNil)
-
-	c.Assert(string(output), checker.Contains, data)
 }
 
 func (s *BaseSuite) startWhoami(c *check.C) {
@@ -192,7 +228,7 @@ func (s *BaseSuite) installTiller(c *check.C) {
 	s.waitForTiller(c)
 }
 
-func (s *BaseSuite) installHelmI3o(c *check.C) error {
+func (s *BaseSuite) installHelmI3o(_ *check.C) error {
 	// Install the helm chart.
 	cmd := exec.Command("helm", "install",
 		"../helm/chart/i3o", "--values", "resources/values.yaml", "--name", "powpow")

@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -71,6 +73,27 @@ func (t *Try) WaitDeleteDeployment(name string, namespace string, timeout time.D
 		return nil
 	}), ebo); err != nil {
 		return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
+	}
+
+	return nil
+}
+
+// WaitCommandExecute wait until the command is executed.
+func (t *Try) WaitCommandExecute(command string, argSlice []string, expected string, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		cmd := exec.Command(command, argSlice...)
+		cmd.Env = os.Environ()
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("unable execute command %s %s - output %s: %v", command, strings.Join(argSlice, " "), output, err)
+		}
+
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable execute command %s %s: %v", command, strings.Join(argSlice, " "), err)
 	}
 
 	return nil

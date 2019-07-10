@@ -2,7 +2,7 @@ version: '3.7'
 services:
   server:
     image: rancher/k3s:v0.7.0-rc4
-    command: server --disable-agent --no-deploy traefik --https-listen-port=8443
+    command: server --disable-agent --no-deploy traefik ${K3S_OPTS} --https-listen-port=8443
     environment:
       - K3S_CLUSTER_SECRET=somethingtotallyrandom
       - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml

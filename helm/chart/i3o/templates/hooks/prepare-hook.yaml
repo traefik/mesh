@@ -30,11 +30,26 @@ metadata:
     "helm.sh/hook-delete-policy": "before-hook-creation"
 rules:
   - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - update
+  - apiGroups:
       - apps
     resources:
       - deployments
     verbs:
       - get
+      - update
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1

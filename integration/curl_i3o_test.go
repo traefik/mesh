@@ -11,7 +11,7 @@ import (
 type CurlI3oSuite struct{ BaseSuite }
 
 func (s *CurlI3oSuite) SetUpSuite(c *check.C) {
-	err := s.startk3s(c)
+	err := s.startk3s(c, true)
 	c.Assert(err, checker.IsNil)
 	s.waitForCoreDNSStarted(c)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
@@ -21,7 +21,6 @@ func (s *CurlI3oSuite) SetUpSuite(c *check.C) {
 	s.waitForI3oControllerStarted(c)
 	s.startWhoami(c)
 	s.installTinyToolsI3o(c)
-
 }
 
 func (s *CurlI3oSuite) TearDownSuite(c *check.C) {
@@ -36,5 +35,10 @@ func (s *CurlI3oSuite) TestSimpleCURL(c *check.C) {
 	argSlice := []string{
 		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami.whoami.traefik.mesh",
 	}
-	s.waitUntilKubectlCommand(c, argSlice, "whoami")
+	s.waitKubectlExecCommand(c, argSlice, "whoami")
+
+	argSlice = []string{
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami-http.whoami.traefik.mesh",
+	}
+	s.waitKubectlExecCommand(c, argSlice, "whoami-http")
 }
