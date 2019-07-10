@@ -24,15 +24,29 @@ func NewI3oConfiguration() *I3oConfiguration {
 	}
 }
 
-// PatchConfig .
-type PatchConfig struct {
+// PrepareConfig .
+type PrepareConfig struct {
 	KubeConfig string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	Debug      bool   `description:"Debug mode" export:"true"`
 }
 
-func NewPatchConfig() *PatchConfig {
-	return &PatchConfig{
+func NewPrepareConfig() *PrepareConfig {
+	return &PrepareConfig{
+		KubeConfig: os.Getenv("KUBECONFIG"),
+		Debug:      false,
+	}
+}
+
+// CheckConfig .
+type CheckConfig struct {
+	KubeConfig string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
+	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
+	Debug      bool   `description:"Debug mode" export:"true"`
+}
+
+func NewCheckConfig() *CheckConfig {
+	return &CheckConfig{
 		KubeConfig: os.Getenv("KUBECONFIG"),
 		Debug:      false,
 	}

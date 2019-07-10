@@ -1,4 +1,4 @@
-package patch
+package prepare
 
 import (
 	"fmt"
@@ -11,10 +11,10 @@ import (
 )
 
 // NewCmd builds a new Patch command.
-func NewCmd(pConfig *cmd.PatchConfig, loaders []cli.ResourceLoader) *cli.Command {
+func NewCmd(pConfig *cmd.PrepareConfig, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
-		Name:          "patch",
-		Description:   `Patch command.`,
+		Name:          "prepare",
+		Description:   `Prepare command.`,
 		Configuration: pConfig,
 		Run: func(_ []string) error {
 			return patchCommand(pConfig)
@@ -23,20 +23,24 @@ func NewCmd(pConfig *cmd.PatchConfig, loaders []cli.ResourceLoader) *cli.Command
 	}
 }
 
-func patchCommand(pConfig *cmd.PatchConfig) error {
+func patchCommand(pConfig *cmd.PrepareConfig) error {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
 	if pConfig.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	log.Debugln("Starting i3o patch...")
+	log.Debugln("Starting i3o prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
 	clients, err := k8s.NewClientWrapper(pConfig.MasterURL, pConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
+	}
+
+	if err = clients.CheckCluster(); err != nil {
+		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
 	if err = clients.InitCluster(); err != nil {

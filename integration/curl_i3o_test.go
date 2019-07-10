@@ -1,10 +1,7 @@
 package integration
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
-	"strings"
 
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
@@ -14,15 +11,16 @@ import (
 type CurlI3oSuite struct{ BaseSuite }
 
 func (s *CurlI3oSuite) SetUpSuite(c *check.C) {
-	err := s.startk3s(c)
+	err := s.startk3s(c, true)
 	c.Assert(err, checker.IsNil)
 	s.waitForCoreDNSStarted(c)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
-	s.installHelmI3o(c)
+	s.installTiller(c)
+	err = s.installHelmI3o(c)
+	c.Assert(err, checker.IsNil)
 	s.waitForI3oControllerStarted(c)
 	s.startWhoami(c)
 	s.installTinyToolsI3o(c)
-
 }
 
 func (s *CurlI3oSuite) TearDownSuite(c *check.C) {
@@ -35,28 +33,12 @@ func (s *CurlI3oSuite) TestSimpleCURL(c *check.C) {
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec",
-		"-it",
-		pod.Name,
-		"-n",
-		pod.Namespace,
-		"-c",
-		pod.Spec.Containers[0].Name,
-		"curl",
-		"whoami.whoami.traefik.mesh",
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami.whoami.traefik.mesh",
 	}
+	s.waitKubectlExecCommand(c, argSlice, "whoami")
 
-	cmd := exec.Command("kubectl", argSlice...)
-	cmd.Env = os.Environ()
-
-	output, err := cmd.CombinedOutput()
-
-	stringOutput := string(output)
-	fmt.Println(stringOutput)
-
-	if !strings.Contains(stringOutput, "whoami") {
-		c.Errorf("Curl response did not contain: whoami, got: %s", stringOutput)
+	argSlice = []string{
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami-http.whoami.traefik.mesh",
 	}
-	c.Assert(err, checker.IsNil)
-
+	s.waitKubectlExecCommand(c, argSlice, "whoami-http")
 }

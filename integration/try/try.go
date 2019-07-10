@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -49,6 +51,71 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 		return errors.New("deployment not ready")
 	}), ebo); err != nil {
 		return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
+	}
+
+	return nil
+}
+
+// WaitDeleteDeployment wait until the deployment is delete.
+func (t *Try) WaitDeleteDeployment(name string, namespace string, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		_, exists, err := t.client.GetDeployment(namespace, name)
+		if err != nil {
+			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
+		}
+		if exists {
+			return fmt.Errorf("deployment %q exist", name)
+		}
+
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
+	}
+
+	return nil
+}
+
+// WaitCommandExecute wait until the command is executed.
+func (t *Try) WaitCommandExecute(command string, argSlice []string, expected string, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		cmd := exec.Command(command, argSlice...)
+		cmd.Env = os.Environ()
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("unable execute command %s %s - output %s: %v", command, strings.Join(argSlice, " "), output, err)
+		}
+
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable execute command %s %s: %v", command, strings.Join(argSlice, " "), err)
+	}
+
+	return nil
+}
+
+// WaitDeleteNamespace wait until the namespace is delete.
+func (t *Try) WaitDeleteNamespace(name string, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		_, exists, err := t.client.GetNamespace(name)
+		if err != nil {
+			return fmt.Errorf("unable get the namesapce %q: %v", name, err)
+		}
+		if exists {
+			return fmt.Errorf("namesapce %q exist", name)
+		}
+
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable get the namesapce %q: %v", name, err)
 	}
 
 	return nil

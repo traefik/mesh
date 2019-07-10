@@ -147,6 +147,19 @@ func (c *CoreV1ClientMock) ListPodWithOptions(namespace string, options metav1.L
 	return c.podsList, nil
 }
 
+func (c *CoreV1ClientMock) GetNamespace(name string) (*corev1.Namespace, bool, error) {
+	if c.apiNamespaceError != nil {
+		return nil, false, c.apiNamespaceError
+	}
+
+	for _, ns := range c.namespaces {
+		if ns.Name == name {
+			return ns, true, nil
+		}
+	}
+	return nil, false, c.apiNamespaceError
+}
+
 func (c *CoreV1ClientMock) GetNamespaces() ([]*corev1.Namespace, error) {
 	if c.apiNamespaceError != nil {
 		return nil, c.apiNamespaceError

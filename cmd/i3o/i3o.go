@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/containous/i3o/cmd"
-	"github.com/containous/i3o/cmd/patch"
+	"github.com/containous/i3o/cmd/prepare"
 	"github.com/containous/i3o/cmd/version"
 	"github.com/containous/i3o/internal/controller"
 	"github.com/containous/i3o/internal/k8s"
@@ -29,8 +29,8 @@ func main() {
 		},
 	}
 
-	pConfig := cmd.NewPatchConfig()
-	if err := cmdI3o.AddCommand(patch.NewCmd(pConfig, loaders)); err != nil {
+	pConfig := cmd.NewPrepareConfig()
+	if err := cmdI3o.AddCommand(prepare.NewCmd(pConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
@@ -55,13 +55,17 @@ func i3oCommand(iConfig *cmd.I3oConfiguration) error {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	log.Debugln("Starting i3o patch...")
+	log.Debugln("Starting i3o prepare...")
 	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)
 
 	clients, err := k8s.NewClientWrapper(iConfig.MasterURL, iConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
+	}
+
+	if err = clients.CheckCluster(); err != nil {
+		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
 	// Create a new stop Channel
