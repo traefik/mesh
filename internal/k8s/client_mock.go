@@ -7,6 +7,10 @@ import (
 	"path/filepath"
 
 	"github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
+	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	splitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -14,6 +18,22 @@ import (
 )
 
 var _ CoreV1Client = (*CoreV1ClientMock)(nil)
+
+func init() {
+	// required by k8s.MustParseYaml
+	err := accessv1alpha1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		panic(err)
+	}
+	err = specsv1alpha1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		panic(err)
+	}
+	err = splitv1alpha1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func init() {
 	// required by k8s.MustParseYaml
@@ -37,6 +57,28 @@ type CoreV1ClientMock struct {
 	apiEndpointsError error
 	apiNamespaceError error
 	apiConfigmapError error
+}
+
+type AppsV1ClientMock struct {
+	deployments []*appsv1.Deployment
+
+	apiDeploymentError error
+}
+
+type SMIClientMock struct {
+	trafficTargets  []*accessv1alpha1.TrafficTarget
+	httpRouteGroups []*specsv1alpha1.HTTPRouteGroup
+	trafficSplits   []*splitv1alpha1.TrafficSplit
+
+	apiTrafficTargetError  error
+	apiHttpRouteGroupError error
+	apiTrafficSplitError   error
+}
+
+type ClientMock struct {
+	CoreV1ClientMock
+	SMIClientMock
+	AppsV1ClientMock
 }
 
 func NewCoreV1ClientMock(paths ...string) *CoreV1ClientMock {
@@ -65,6 +107,67 @@ func NewCoreV1ClientMock(paths ...string) *CoreV1ClientMock {
 		}
 	}
 
+	return c
+}
+
+func NewSMIClientMock(paths ...string) *SMIClientMock {
+	s := &SMIClientMock{}
+
+	for _, path := range paths {
+		yamlContent, err := ioutil.ReadFile(filepath.FromSlash("./fixtures/" + path))
+		if err != nil {
+			panic(err)
+		}
+
+		k8sObjects := MustParseYaml(yamlContent)
+		for _, obj := range k8sObjects {
+			switch o := obj.(type) {
+			case *accessv1alpha1.TrafficTarget:
+				s.trafficTargets = append(s.trafficTargets, o)
+			case *specsv1alpha1.HTTPRouteGroup:
+				s.httpRouteGroups = append(s.httpRouteGroups, o)
+			case *splitv1alpha1.TrafficSplit:
+				s.trafficSplits = append(s.trafficSplits, o)
+			default:
+				panic(fmt.Sprintf("Unknown runtime object %+v %T", o, o))
+			}
+		}
+	}
+
+	return s
+}
+
+func NewClientMock(paths ...string) *ClientMock {
+	c := &ClientMock{}
+
+	for _, path := range paths {
+		yamlContent, err := ioutil.ReadFile(filepath.FromSlash("./fixtures/" + path))
+		if err != nil {
+			panic(err)
+		}
+
+		k8sObjects := MustParseYaml(yamlContent)
+		for _, obj := range k8sObjects {
+			switch o := obj.(type) {
+			case *corev1.Service:
+				c.services = append(c.services, o)
+			case *corev1.Pod:
+				c.pods = append(c.pods, o)
+			case *corev1.Endpoints:
+				c.endpoints = append(c.endpoints, o)
+			case *corev1.Namespace:
+				c.namespaces = append(c.namespaces, o)
+			case *accessv1alpha1.TrafficTarget:
+				c.trafficTargets = append(c.trafficTargets, o)
+			case *specsv1alpha1.HTTPRouteGroup:
+				c.httpRouteGroups = append(c.httpRouteGroups, o)
+			case *splitv1alpha1.TrafficSplit:
+				c.trafficSplits = append(c.trafficSplits, o)
+			default:
+				panic(fmt.Sprintf("Unknown runtime object %+v %T", o, o))
+			}
+		}
+	}
 	return c
 }
 
@@ -198,4 +301,50 @@ func (c *CoreV1ClientMock) EnableNamespaceError() {
 
 func (c *CoreV1ClientMock) EnableServiceError() {
 	c.apiServiceError = errors.New("service error")
+}
+
+func (a *AppsV1ClientMock) GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error) {
+	if a.apiDeploymentError != nil {
+		return nil, false, a.apiDeploymentError
+	}
+
+	for _, deployment := range a.deployments {
+		if deployment.Name == name && deployment.Namespace == namespace {
+			return deployment, true, nil
+		}
+	}
+	return nil, false, a.apiDeploymentError
+}
+
+func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha1.HTTPRouteGroup, bool, error) {
+	if s.apiHttpRouteGroupError != nil {
+		return nil, false, s.apiHttpRouteGroupError
+	}
+
+	for _, hrg := range s.httpRouteGroups {
+		if hrg.Name == name && hrg.Namespace == namespace {
+			return hrg, true, nil
+		}
+	}
+	return nil, false, s.apiHttpRouteGroupError
+}
+
+func (s *SMIClientMock) GetTrafficTargets() ([]*accessv1alpha1.TrafficTarget, error) {
+	if s.apiTrafficTargetError != nil {
+		return nil, s.apiTrafficTargetError
+	}
+
+	return s.trafficTargets, nil
+}
+
+func (s *SMIClientMock) EnableTrafficTargetError() {
+	s.apiTrafficTargetError = errors.New("trafficTarget error")
+}
+
+func (s *SMIClientMock) EnableHTTPRouteGroupError() {
+	s.apiHttpRouteGroupError = errors.New("httpRouteGroup error")
+}
+
+func (s *SMIClientMock) EnableTrafficSplitError() {
+	s.apiTrafficSplitError = errors.New("trafficSplit error")
 }

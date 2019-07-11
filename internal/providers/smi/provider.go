@@ -19,7 +19,7 @@ import (
 
 // Provider holds a client to access the provider.
 type Provider struct {
-	client      *k8s.ClientWrapper
+	client      k8s.Client
 	defaultMode string
 }
 
@@ -35,7 +35,7 @@ func (p *Provider) Init() {
 }
 
 // New creates a new provider.
-func New(client *k8s.ClientWrapper, defaultMode string) *Provider {
+func New(client k8s.Client, defaultMode string) *Provider {
 	p := &Provider{
 		client:      client,
 		defaultMode: defaultMode,
@@ -268,7 +268,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 		result = append(result, fmt.Sprintf("Methods(%s)", methods))
 	}
 
-	result = append(result, fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", name, namespace, ip))
+	result = append(result, fmt.Sprintf("(Host(`%s.%s.traefik.mesh`) || Host(`%s`))", name, namespace, ip))
 
 	return "(" + strings.Join(result, " && ") + ")"
 }

@@ -1,0 +1,143 @@
+apiVersion: specs.smi-spec.io/v1alpha1
+kind: HTTPRouteGroup
+metadata:
+  name: api-service-routes
+matches:
+- name: api
+  pathRegex: /api
+  methods: ["*"]
+- name: metrics
+  pathRegex: /metrics
+  methods: ["GET"]
+
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: api-service-metrics
+  namespace: default
+destination:
+  kind: ServiceAccount
+  name: api-service
+  namespace: default
+specs:
+- kind: HTTPRouteGroup
+  name: api-service-routes
+  matches:
+  - metrics
+sources:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: default
+
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: api-service-api
+  namespace: default
+destination:
+  kind: ServiceAccount
+  name: api-service
+  namespace: default
+  port: "8080"
+specs:
+- kind: HTTPRouteGroup
+  name: api-service-routes
+  matches:
+  - api
+sources:
+- kind: ServiceAccount
+  name: website-service
+  namespace: default
+- kind: ServiceAccount
+  name: payments-service
+  namespace: default
+
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: api-service-metrics-2
+  namespace: default
+destination:
+  kind: ServiceAccount
+  name: api-service
+  namespace: foo
+specs:
+- kind: HTTPRouteGroup
+  name: api-service-routes
+  matches:
+  - metrics
+sources:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: default
+
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: api-service-api-2
+  namespace: default
+destination:
+  kind: ServiceAccount
+  name: api-service
+  namespace: foo
+  port: "8080"
+specs:
+- kind: HTTPRouteGroup
+  name: api-service-routes
+  matches:
+  - api
+sources:
+- kind: ServiceAccount
+  name: website-service
+  namespace: default
+- kind: ServiceAccount
+  name: payments-service
+  namespace: default
+
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: api-service-metrics-3
+  namespace: default
+destination:
+  kind: ServiceAccount
+  name: api-service
+  namespace: bar
+specs:
+- kind: HTTPRouteGroup
+  name: api-service-routes
+  matches:
+  - metrics
+sources:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: default
+
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: api-service-api-3
+  namespace: default
+destination:
+  kind: ServiceAccount
+  name: api-service
+  namespace: bar
+  port: "8080"
+specs:
+- kind: HTTPRouteGroup
+  name: api-service-routes
+  matches:
+  - api
+sources:
+- kind: ServiceAccount
+  name: website-service
+  namespace: default
+- kind: ServiceAccount
+  name: payments-service
+  namespace: default
