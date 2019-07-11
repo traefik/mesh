@@ -10,9 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/i3o/internal/message"
 	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/safe"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -253,23 +255,33 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 			return false
 		}
 
-		// Configuration should have deployed successfully, confirm version match.
-		newVersion, exists, newErr := getDeployedVersion(m.PodIP)
-		if newErr != nil {
-			log.Errorf("Could not get newly deployed configuration version: %v", newErr)
-			return false
-		}
-		if exists {
+		ebo := backoff.NewExponentialBackOff()
+		ebo.MaxElapsedTime = 10 * time.Second
 
-			if currentVersion.Equal(activeVersion) {
-				// The version we are trying to deploy is confirmed.
-				// Return true, so that it will be removed from the deploy queue.
-				log.Debugf("Successfully deployed version for pod %s: %s", m.PodName, newVersion)
-				return true
-
+		deployError := backoff.Retry(safe.OperationWithRecover(func() error {
+			// Configuration should have deployed successfully, confirm version match.
+			newVersion, exists, newErr := getDeployedVersion(m.PodIP)
+			if newErr != nil {
+				return fmt.Errorf("could not get newly deployed configuration version: %v", newErr)
 			}
-		}
+			if exists {
 
+				if currentVersion.Equal(newVersion) {
+					// The version we are trying to deploy is confirmed.
+					// Return nil, to break out of the ebo.
+					return nil
+
+				}
+			}
+			return fmt.Errorf("deployment was not successful")
+		}), ebo)
+
+		if deployError == nil {
+			// The version we are trying to deploy is confirmed.
+			// Return true, so that it will be removed from the deploy queue.
+			log.Debugf("Successfully deployed version for pod %s: %s", m.PodName, currentVersion)
+			return true
+		}
 	}
 	if err != nil {
 		log.Errorf("Unable to deploy configuration: %v", err)
