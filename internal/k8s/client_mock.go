@@ -13,6 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -33,14 +34,11 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func init() {
-	// required by k8s.MustParseYaml
-	err := v1alpha1.AddToScheme(scheme.Scheme)
+	err = v1alpha1.AddToScheme(scheme.Scheme)
 	if err != nil {
 		panic(err)
 	}
+
 }
 
 type CoreV1ClientMock struct {
@@ -90,7 +88,7 @@ func NewCoreV1ClientMock(paths ...string) *CoreV1ClientMock {
 			panic(err)
 		}
 
-		k8sObjects := MustParseYaml(yamlContent)
+		k8sObjects := ensureNamespace(MustParseYaml(yamlContent))
 		for _, obj := range k8sObjects {
 			switch o := obj.(type) {
 			case *corev1.Service:
@@ -119,7 +117,7 @@ func NewSMIClientMock(paths ...string) *SMIClientMock {
 			panic(err)
 		}
 
-		k8sObjects := MustParseYaml(yamlContent)
+		k8sObjects := ensureNamespace(MustParseYaml(yamlContent))
 		for _, obj := range k8sObjects {
 			switch o := obj.(type) {
 			case *accessv1alpha1.TrafficTarget:
@@ -146,7 +144,7 @@ func NewClientMock(paths ...string) *ClientMock {
 			panic(err)
 		}
 
-		k8sObjects := MustParseYaml(yamlContent)
+		k8sObjects := ensureNamespace(MustParseYaml(yamlContent))
 		for _, obj := range k8sObjects {
 			switch o := obj.(type) {
 			case *corev1.Service:
@@ -169,6 +167,50 @@ func NewClientMock(paths ...string) *ClientMock {
 		}
 	}
 	return c
+}
+
+func ensureNamespace(k8sObjects []runtime.Object) []runtime.Object {
+	objects := []runtime.Object{}
+	for _, obj := range k8sObjects {
+		switch o := obj.(type) {
+		case *corev1.Service:
+			if o.Namespace == "" {
+				o.Namespace = metav1.NamespaceDefault
+			}
+			objects = append(objects, o)
+		case *corev1.Pod:
+			if o.Namespace == "" {
+				o.Namespace = metav1.NamespaceDefault
+			}
+			objects = append(objects, o)
+		case *corev1.Endpoints:
+			if o.Namespace == "" {
+				o.Namespace = metav1.NamespaceDefault
+			}
+			objects = append(objects, o)
+		case *corev1.Namespace:
+			if o.Namespace == "" {
+				o.Namespace = metav1.NamespaceDefault
+			}
+			objects = append(objects, o)
+		case *accessv1alpha1.TrafficTarget:
+			if o.Namespace == "" {
+				o.Namespace = metav1.NamespaceDefault
+			}
+			objects = append(objects, o)
+		case *specsv1alpha1.HTTPRouteGroup:
+			if o.Namespace == "" {
+				o.Namespace = metav1.NamespaceDefault
+			}
+			objects = append(objects, o)
+		case *splitv1alpha1.TrafficSplit:
+			if o.Namespace == "" {
+				o.Namespace = metav1.NamespaceDefault
+			}
+			objects = append(objects, o)
+		}
+	}
+	return objects
 }
 
 func (c *CoreV1ClientMock) GetService(namespace, name string) (*corev1.Service, bool, error) {
@@ -326,6 +368,8 @@ func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha
 			return hrg, true, nil
 		}
 	}
+
+	fmt.Printf("S: %+v\n", s.httpRouteGroups[0])
 	return nil, false, s.apiHttpRouteGroupError
 }
 

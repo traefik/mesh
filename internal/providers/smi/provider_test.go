@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/traefik/pkg/config"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	// splitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
@@ -62,7 +63,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 }
 
 func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
-	clientMock := k8s.NewClientMock("get_traffic_targets.yaml")
+	clientMock := k8s.NewClientMock("mock.yaml")
 	provider := New(clientMock, k8s.ServiceTypeHTTP)
 
 	expected := []*accessv1alpha1.TrafficTarget{
@@ -139,5 +140,73 @@ func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 	var newExpected []*accessv1alpha1.TrafficTarget
 	newActual := provider.getTrafficTargetsWithDestinationInNamespace("foo")
 	assert.Equal(t, newExpected, newActual)
+}
 
+func TestBuildRouterFromTrafficTarget(t *testing.T) {
+	testCases := []struct {
+		desc             string
+		serviceName      string
+		serviceNamespace string
+		serviceIP        string
+		port             int
+		key              string
+		trafficTarget    *accessv1alpha1.TrafficTarget
+		expected         *config.Router
+	}{
+		{
+			desc:             "simple router",
+			serviceName:      "test",
+			serviceNamespace: metav1.NamespaceDefault,
+			serviceIP:        "10.0.0.1",
+			port:             81,
+			key:              "example",
+			trafficTarget: &accessv1alpha1.TrafficTarget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "api-service-metrics-2",
+					Namespace: metav1.NamespaceDefault,
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TrafficTarget",
+					APIVersion: "access.smi-spec.io/v1alpha1",
+				},
+				Destination: accessv1alpha1.IdentityBindingSubject{
+					Kind:      "ServiceAccount",
+					Name:      "api-service",
+					Namespace: "foo",
+				},
+				Sources: []accessv1alpha1.IdentityBindingSubject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      "prometheus",
+						Namespace: metav1.NamespaceDefault,
+					},
+				},
+				Specs: []accessv1alpha1.TrafficTargetSpec{
+					{
+						Kind:    "HTTPRouteGroup",
+						Name:    "api-service-routes",
+						Matches: []string{"metrics"},
+					},
+				},
+			},
+			expected: &config.Router{
+				EntryPoints: []string{"ingress-81"},
+				Service:     "example",
+				Rule:        "((PathPrefix(`/metrics`) && Methods(GET) && (Host(`test.default.traefik.mesh`) || Host(`10.0.0.1`))))",
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+			clientMock := k8s.NewClientMock("mock.yaml")
+			provider := New(clientMock, k8s.ServiceTypeHTTP)
+
+			actual := provider.buildRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key)
+			assert.Equal(t, test.expected, actual)
+
+		})
+	}
 }
