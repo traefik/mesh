@@ -157,11 +157,6 @@ func (s *BaseSuite) waitForCoreDNSStarted(c *check.C) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) waitForCoreDNSDeleted(c *check.C) {
-	err := s.try.WaitDeleteDeployment("coredns", metav1.NamespaceSystem, 60*time.Second)
-	c.Assert(err, checker.IsNil)
-}
-
 func (s *BaseSuite) waitForI3oControllerStarted(c *check.C) {
 	err := s.try.WaitReadyDeployment("i3o-controller", k8s.MeshNamespace, 60*time.Second)
 	c.Assert(err, checker.IsNil)
@@ -169,11 +164,6 @@ func (s *BaseSuite) waitForI3oControllerStarted(c *check.C) {
 
 func (s *BaseSuite) waitForTiller(c *check.C) {
 	err := s.try.WaitReadyDeployment("tiller-deploy", metav1.NamespaceSystem, 60*time.Second)
-	c.Assert(err, checker.IsNil)
-}
-
-func (s *BaseSuite) waitUntilNamespaceDeleted(c *check.C, ns string) {
-	err := s.try.WaitDeleteNamespace(ns, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -230,25 +220,8 @@ func (s *BaseSuite) installTiller(c *check.C) {
 
 func (s *BaseSuite) installHelmI3o(_ *check.C) error {
 	// Install the helm chart.
-	cmd := exec.Command("helm", "install",
-		"../helm/chart/i3o", "--values", "resources/values.yaml", "--name", "powpow")
-	cmd.Env = os.Environ()
-	output, err := cmd.CombinedOutput()
-	fmt.Println(string(output))
-	return err
-}
-
-func (s *BaseSuite) uninstallI3o(c *check.C) {
-	// uninstall the helm chart.
-	cmd := exec.Command("helm", "del", "--purge", "powpow")
-	cmd.Env = os.Environ()
-	_, _ = cmd.CombinedOutput() // Ignore the error
-
-	cmd = exec.Command("kubectl", "delete", "namespace", "traefik-mesh")
-	cmd.Env = os.Environ()
-	_, _ = cmd.CombinedOutput() // Ignore the error
-
-	s.waitUntilNamespaceDeleted(c, "traefik-mesh")
+	argSlice := []string{"install", "../helm/chart/i3o", "--values", "resources/values.yaml", "--name", "powpow"}
+	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 60*time.Second)
 }
 
 func (s *BaseSuite) installCoreDNS(c *check.C, version string) {
@@ -262,19 +235,6 @@ func (s *BaseSuite) installCoreDNS(c *check.C, version string) {
 	// Wait for tools to be initialized.
 	s.waitForCoreDNSStarted(c)
 }
-
-func (s *BaseSuite) uninstallCoreDNS(c *check.C, version string) {
-	// Create new tiny tools deployment.
-	cmd := exec.Command("kubectl", "delete",
-		"-f", path.Join(s.dir, fmt.Sprintf("resources/coredns/coredns-v%s.yaml", version)))
-	cmd.Env = os.Environ()
-	_, err := cmd.CombinedOutput()
-	c.Assert(err, checker.IsNil)
-
-	// Wait for CoreDns deleted.
-	s.waitForCoreDNSDeleted(c)
-}
-
 func (s *BaseSuite) installTinyToolsI3o(c *check.C) {
 	// Create new tiny tools deployment.
 	cmd := exec.Command("kubectl", "apply",
