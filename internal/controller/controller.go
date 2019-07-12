@@ -226,10 +226,11 @@ func (m *Controller) processNextMessage() bool {
 }
 
 func (m *Controller) buildConfigurationFromProviders(event message.Message) {
-	m.kubernetesProvider.BuildConfiguration(event, m.traefikConfig)
 	if m.smiEnabled {
 		m.smiProvider.BuildConfiguration(event, m.traefikConfig)
+		return
 	}
+	m.kubernetesProvider.BuildConfiguration(event, m.traefikConfig)
 }
 
 func (m *Controller) processCreatedMessage(event message.Message) {

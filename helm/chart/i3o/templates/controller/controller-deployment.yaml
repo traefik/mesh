@@ -53,7 +53,10 @@ spec:
             {{- if .Values.mesh }}
             - "--defaultMode {{ .Values.mesh.defaultMode }}"
             {{- end }}
-          securityContext:
+            {{- if .Values.smi }}
+            - "--smi"
+            {{- end }}
+         securityContext:
             capabilities:
               drop:
                 - ALL
