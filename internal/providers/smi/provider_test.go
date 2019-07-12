@@ -376,18 +376,38 @@ func TestGetServiceMode(t *testing.T) {
 
 func TestGetApplicableTrafficTargets(t *testing.T) {
 	testCases := []struct {
-		desc             string
-		serviceName      string
-		serviceNamespace string
-		trafficTargets   []*accessv1alpha1.TrafficTarget
-		expected         []*accessv1alpha1.TrafficTarget
-		endpointsError   bool
-		podError         bool
+		desc           string
+		endpoints      *corev1.Endpoints
+		trafficTargets []*accessv1alpha1.TrafficTarget
+		expected       []*accessv1alpha1.TrafficTarget
+		podError       bool
 	}{
 		{
-			desc:             "traffictarget destination in different namespace",
-			serviceName:      "demo-service",
-			serviceNamespace: metav1.NamespaceDefault,
+			desc: "traffictarget destination in different namespace",
+			endpoints: &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "demo-service",
+					Namespace: metav1.NamespaceDefault,
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.1.1.50",
+								TargetRef: &corev1.ObjectReference{
+									Name:      "example",
+									Namespace: metav1.NamespaceDefault,
+								},
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 50,
+							},
+						},
+					},
+				},
+			},
 			trafficTargets: []*accessv1alpha1.TrafficTarget{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -422,9 +442,31 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 			expected: nil,
 		},
 		{
-			desc:             "valid traffictarget found",
-			serviceName:      "demo-service",
-			serviceNamespace: metav1.NamespaceDefault,
+			desc: "valid traffictarget found",
+			endpoints: &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "demo-service",
+					Namespace: metav1.NamespaceDefault,
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.1.1.50",
+								TargetRef: &corev1.ObjectReference{
+									Name:      "example",
+									Namespace: metav1.NamespaceDefault,
+								},
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 50,
+							},
+						},
+					},
+				},
+			},
 			trafficTargets: []*accessv1alpha1.TrafficTarget{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -489,84 +531,31 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 			},
 		},
 		{
-			desc:             "endpoints error",
-			serviceName:      "demo-service",
-			serviceNamespace: metav1.NamespaceDefault,
-			trafficTargets: []*accessv1alpha1.TrafficTarget{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "api-foo",
-						Namespace: metav1.NamespaceDefault,
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "TrafficTarget",
-						APIVersion: "access.smi-spec.io/v1alpha1",
-					},
-					Destination: accessv1alpha1.IdentityBindingSubject{
-						Kind:      "ServiceAccount",
-						Name:      "api-service",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Sources: []accessv1alpha1.IdentityBindingSubject{
-						{
-							Kind:      "ServiceAccount",
-							Name:      "prometheus",
-							Namespace: metav1.NamespaceDefault,
+			desc: "no subset match",
+			endpoints: &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "demo-service",
+					Namespace: metav1.NamespaceDefault,
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.1.1.50",
+								TargetRef: &corev1.ObjectReference{
+									Name:      "example",
+									Namespace: metav1.NamespaceDefault,
+								},
+							},
 						},
-					},
-					Specs: []accessv1alpha1.TrafficTargetSpec{
-						{
-							Kind:    "HTTPRouteGroup",
-							Name:    "api-service-routes",
-							Matches: []string{"metrics"},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 50,
+							},
 						},
 					},
 				},
 			},
-			expected:       nil,
-			endpointsError: true,
-		},
-		{
-			desc:             "endpoints don't exist",
-			serviceName:      "demo-api",
-			serviceNamespace: metav1.NamespaceDefault,
-			trafficTargets: []*accessv1alpha1.TrafficTarget{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "api-foo",
-						Namespace: metav1.NamespaceDefault,
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "TrafficTarget",
-						APIVersion: "access.smi-spec.io/v1alpha1",
-					},
-					Destination: accessv1alpha1.IdentityBindingSubject{
-						Kind:      "ServiceAccount",
-						Name:      "api-service",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Sources: []accessv1alpha1.IdentityBindingSubject{
-						{
-							Kind:      "ServiceAccount",
-							Name:      "prometheus",
-							Namespace: metav1.NamespaceDefault,
-						},
-					},
-					Specs: []accessv1alpha1.TrafficTargetSpec{
-						{
-							Kind:    "HTTPRouteGroup",
-							Name:    "api-service-routes",
-							Matches: []string{"metrics"},
-						},
-					},
-				},
-			},
-			expected: nil,
-		},
-		{
-			desc:             "no subset match",
-			serviceName:      "demo-service",
-			serviceNamespace: metav1.NamespaceDefault,
 			trafficTargets: []*accessv1alpha1.TrafficTarget{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -602,9 +591,31 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 			expected: nil,
 		},
 		{
-			desc:             "pod error",
-			serviceName:      "demo-service",
-			serviceNamespace: metav1.NamespaceDefault,
+			desc: "pod error",
+			endpoints: &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "demo-service",
+					Namespace: metav1.NamespaceDefault,
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.1.1.50",
+								TargetRef: &corev1.ObjectReference{
+									Name:      "example",
+									Namespace: metav1.NamespaceDefault,
+								},
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 50,
+							},
+						},
+					},
+				},
+			},
 			trafficTargets: []*accessv1alpha1.TrafficTarget{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -640,9 +651,31 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 			podError: true,
 		},
 		{
-			desc:             "pod doesnt exist error",
-			serviceName:      "demo-service-missing-pod",
-			serviceNamespace: metav1.NamespaceDefault,
+			desc: "pod doesnt exist error",
+			endpoints: &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "demo-service",
+					Namespace: metav1.NamespaceDefault,
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.1.1.50",
+								TargetRef: &corev1.ObjectReference{
+									Name:      "foo",
+									Namespace: metav1.NamespaceDefault,
+								},
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 50,
+							},
+						},
+					},
+				},
+			},
 			trafficTargets: []*accessv1alpha1.TrafficTarget{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -684,16 +717,13 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 			t.Parallel()
 			clientMock := k8s.NewClientMock("mock.yaml")
 
-			if test.endpointsError {
-				clientMock.EnableEndpointsError()
-			}
 			if test.podError {
 				clientMock.EnablePodError()
 			}
 
 			provider := New(clientMock, k8s.ServiceTypeHTTP)
 
-			actual := provider.getApplicableTrafficTargets(test.serviceName, test.serviceNamespace, test.trafficTargets)
+			actual := provider.getApplicableTrafficTargets(test.endpoints, test.trafficTargets)
 			assert.Equal(t, test.expected, actual)
 
 		})

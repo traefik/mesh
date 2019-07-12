@@ -105,7 +105,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 	trafficTargets := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace)
 	fmt.Printf("Found traffictargets: %+v\n", trafficTargets)
 	// Find all traffic targets that are applicable to the service in question.
-	applicableTrafficTargets := p.getApplicableTrafficTargets(service.Name, service.Namespace, trafficTargets)
+	applicableTrafficTargets := p.getApplicableTrafficTargets(endpoints, trafficTargets)
 	log.Debugf("Found applicable traffictargets: %+v\n", applicableTrafficTargets)
 	// Group the traffic targets by destination, so that they can be built separately.
 	groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
@@ -145,21 +145,11 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 	return result
 }
 
-func (p *Provider) getApplicableTrafficTargets(serviceName, serviceNamespace string, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
+func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
 	var result []*accessv1alpha1.TrafficTarget
-
-	endpoint, exists, err := p.client.GetEndpoints(serviceNamespace, serviceName)
-	if err != nil {
-		log.Errorf("Could not get endpoints for service %s/%s: %v", serviceName, serviceNamespace, err)
-		return nil
-	}
-	if !exists {
-		log.Errorf("endpoints for service %s/%s do not exist", serviceName, serviceNamespace)
-		return nil
-	}
-	for _, subset := range endpoint.Subsets {
+	for _, subset := range endpoints.Subsets {
 		for _, trafficTarget := range trafficTargets {
-			if serviceNamespace != trafficTarget.Destination.Namespace {
+			if endpoints.Namespace != trafficTarget.Destination.Namespace {
 				// Destination not in service namespace, skip.
 				continue
 			}

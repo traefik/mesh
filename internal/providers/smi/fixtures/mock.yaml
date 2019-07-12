@@ -164,20 +164,6 @@ spec:
 
 ---
 apiVersion: v1
-kind: Endpoints
-metadata:
-  name: demo-service-missing-pod
-subsets:
-- addresses:
-  - ip: 10.1.1.50
-    targetRef:
-      name: foo
-      namespace: default
-  ports:
-  - port: 50
-
----
-apiVersion: v1
 kind: Service
 metadata:
   name: demo-test
@@ -187,17 +173,3 @@ spec:
   - protocol: TCP
     port: 80
     name: web
-
----
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: demo-test
-subsets:
-- addresses:
-  - ip: 10.1.1.50
-    targetRef:
-      name: example
-      namespace: default
-  ports:
-  - port: 50
