@@ -352,7 +352,6 @@ func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha
 		}
 	}
 
-	fmt.Printf("S: %+v\n", s.httpRouteGroups[0])
 	return nil, false, s.apiHTTPRouteGroupError
 }
 

@@ -82,7 +82,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 			return
 		}
 		if !exists {
-			log.Errorf("endpoints for service %s/%s do not exist", endpoints.Namespace, endpoints.Name)
+			log.Errorf("service %s/%s does not exist", endpoints.Namespace, endpoints.Name)
 			return
 		}
 
@@ -103,10 +103,13 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
 	// Get all traffic targets in the service's namespace.
 	trafficTargets := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace)
+	fmt.Printf("Found traffictargets: %+v\n", trafficTargets)
 	// Find all traffic targets that are applicable to the service in question.
 	applicableTrafficTargets := p.getApplicableTrafficTargets(service.Name, service.Namespace, trafficTargets)
+	log.Debugf("Found applicable traffictargets: %+v\n", applicableTrafficTargets)
 	// Group the traffic targets by destination, so that they can be built separately.
 	groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
+	log.Debugf("Found grouped traffictargets: %+v\n", groupedByDestinationTrafficTargets)
 
 	for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 		for _, groupedTrafficTarget := range groupedTrafficTargets {
@@ -290,7 +293,7 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 	for _, subset := range endpoints.Subsets {
 		var subsetMatch bool
 		for _, endpointPort := range subset.Ports {
-			if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port {
+			if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port || trafficTarget.Destination.Port == "" {
 				subsetMatch = true
 				break
 			}
@@ -301,15 +304,22 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 			continue
 		}
 
-		for _, address := range subset.Addresses {
-			if pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name); err != nil {
-				if exists {
-					if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
-						server := config.Server{
-							URL: "http://" + net.JoinHostPort(address.IP, trafficTarget.Destination.Port),
-						}
-						servers = append(servers, server)
+		for _, endpointPort := range subset.Ports {
+			for _, address := range subset.Addresses {
+				pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name)
+				if err != nil {
+					log.Errorf("Could not get pod %s/%s: %v", address.TargetRef.Namespace, address.TargetRef.Name, err)
+					continue
+				}
+				if !exists {
+					log.Errorf("pod %s/%s do not exist", address.TargetRef.Namespace, address.TargetRef.Name)
+					continue
+				}
+				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
+					server := config.Server{
+						URL: "http://" + net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
 					}
+					servers = append(servers, server)
 				}
 			}
 		}
