@@ -16,7 +16,6 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-metrics
-  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -36,7 +35,6 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-api
-  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -60,7 +58,6 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-metrics-2
-  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -80,7 +77,6 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-api-2
-  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -104,7 +100,6 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-metrics-3
-  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -124,7 +119,6 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-api-3
-  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -142,3 +136,43 @@ sources:
 - kind: ServiceAccount
   name: payments-service
   namespace: default
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: demo-service
+subsets:
+- addresses:
+  - ip: 10.1.1.50
+    targetRef:
+      name: example
+      namespace: default
+  ports:
+  - port: 50
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example
+spec:
+  serviceAccountName: api-service
+  containers:
+    - name: example
+      image: busybox
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: demo-service-missing-pod
+subsets:
+- addresses:
+  - ip: 10.1.1.50
+    targetRef:
+      name: foo
+      namespace: default
+  ports:
+  - port: 50
+

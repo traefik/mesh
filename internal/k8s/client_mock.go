@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	splitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -345,6 +348,10 @@ func (c *CoreV1ClientMock) EnableServiceError() {
 	c.apiServiceError = errors.New("service error")
 }
 
+func (c *CoreV1ClientMock) EnablePodError() {
+	c.apiPodError = errors.New("pod error")
+}
+
 func (a *AppsV1ClientMock) GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error) {
 	if a.apiDeploymentError != nil {
 		return nil, false, a.apiDeploymentError
@@ -391,4 +398,30 @@ func (s *SMIClientMock) EnableHTTPRouteGroupError() {
 
 func (s *SMIClientMock) EnableTrafficSplitError() {
 	s.apiTrafficSplitError = errors.New("trafficSplit error")
+}
+
+// MustParseYaml parses a YAML to objects.
+func MustParseYaml(content []byte) []runtime.Object {
+	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|Middleware|Secret|TLSOption|Namespace|TrafficTarget|HTTPRouteGroup|TrafficSplit|Pod)`)
+
+	files := strings.Split(string(content), "---")
+	retVal := make([]runtime.Object, 0, len(files))
+	for _, file := range files {
+		if file == "\n" || file == "" {
+			continue
+		}
+
+		decode := scheme.Codecs.UniversalDeserializer().Decode
+		obj, groupVersionKind, err := decode([]byte(file), nil, nil)
+		if err != nil {
+			panic(fmt.Sprintf("Error while decoding YAML object. Err was: %s", err))
+		}
+
+		if !acceptedK8sTypes.MatchString(groupVersionKind.Kind) {
+			log.Debugf("The custom-roles configMap contained K8s object types which are not supported! Skipping object with type: %s", groupVersionKind.Kind)
+		} else {
+			retVal = append(retVal, obj)
+		}
+	}
+	return retVal
 }

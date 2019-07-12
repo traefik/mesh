@@ -3,7 +3,6 @@ package k8s
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
@@ -18,10 +17,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -532,30 +529,4 @@ func translateNotFoundError(err error) (bool, error) {
 		return false, nil
 	}
 	return err == nil, err
-}
-
-// MustParseYaml parses a YAML to objects.
-func MustParseYaml(content []byte) []runtime.Object {
-	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|Middleware|Secret|TLSOption|Namespace|TrafficTarget|HTTPRouteGroup|TrafficSplit)`)
-
-	files := strings.Split(string(content), "---")
-	retVal := make([]runtime.Object, 0, len(files))
-	for _, file := range files {
-		if file == "\n" || file == "" {
-			continue
-		}
-
-		decode := scheme.Codecs.UniversalDeserializer().Decode
-		obj, groupVersionKind, err := decode([]byte(file), nil, nil)
-		if err != nil {
-			panic(fmt.Sprintf("Error while decoding YAML object. Err was: %s", err))
-		}
-
-		if !acceptedK8sTypes.MatchString(groupVersionKind.Kind) {
-			log.Debugf("The custom-roles configMap contained K8s object types which are not supported! Skipping object with type: %s", groupVersionKind.Kind)
-		} else {
-			retVal = append(retVal, obj)
-		}
-	}
-	return retVal
 }

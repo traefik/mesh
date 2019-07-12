@@ -145,7 +145,7 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 func (p *Provider) getApplicableTrafficTargets(serviceName, serviceNamespace string, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
 	var result []*accessv1alpha1.TrafficTarget
 
-	endpoint, exists, err := p.client.GetEndpoints(serviceName, serviceNamespace)
+	endpoint, exists, err := p.client.GetEndpoints(serviceNamespace, serviceName)
 	if err != nil {
 		log.Errorf("Could not get endpoints for service %s/%s: %v", serviceName, serviceNamespace, err)
 		return nil
@@ -163,7 +163,7 @@ func (p *Provider) getApplicableTrafficTargets(serviceName, serviceNamespace str
 
 			var subsetMatch bool
 			for _, endpointPort := range subset.Ports {
-				if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port {
+				if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port || trafficTarget.Destination.Port == "" {
 					subsetMatch = true
 					break
 				}
@@ -176,13 +176,18 @@ func (p *Provider) getApplicableTrafficTargets(serviceName, serviceNamespace str
 
 			var validPodFound bool
 			for _, address := range subset.Addresses {
-				if pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name); err != nil {
-					if exists {
-						if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
-							validPodFound = true
-							break
-						}
-					}
+				pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name)
+				if err != nil {
+					log.Errorf("Could not get pod %s/%s: %v", address.TargetRef.Namespace, address.TargetRef.Name, err)
+					continue
+				}
+				if !exists {
+					log.Errorf("pod %s/%s do not exist", address.TargetRef.Namespace, address.TargetRef.Name)
+					continue
+				}
+				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
+					validPodFound = true
+					break
 				}
 			}
 
