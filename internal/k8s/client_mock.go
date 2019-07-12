@@ -72,7 +72,7 @@ type SMIClientMock struct {
 	trafficSplits   []*splitv1alpha1.TrafficSplit
 
 	apiTrafficTargetError  error
-	apiHttpRouteGroupError error
+	apiHTTPRouteGroupError error
 	apiTrafficSplitError   error
 }
 
@@ -91,16 +91,20 @@ func NewCoreV1ClientMock(paths ...string) *CoreV1ClientMock {
 			panic(err)
 		}
 
-		k8sObjects := ensureNamespace(MustParseYaml(yamlContent))
+		k8sObjects := MustParseYaml(yamlContent)
 		for _, obj := range k8sObjects {
 			switch o := obj.(type) {
 			case *corev1.Service:
+				setNamespaceIfNot(o)
 				c.services = append(c.services, o)
 			case *corev1.Pod:
+				setNamespaceIfNot(o)
 				c.pods = append(c.pods, o)
 			case *corev1.Endpoints:
+				setNamespaceIfNot(o)
 				c.endpoints = append(c.endpoints, o)
 			case *corev1.Namespace:
+				setNamespaceIfNot(o)
 				c.namespaces = append(c.namespaces, o)
 			default:
 				panic(fmt.Sprintf("Unknown runtime object %+v %T", o, o))
@@ -120,14 +124,17 @@ func NewSMIClientMock(paths ...string) *SMIClientMock {
 			panic(err)
 		}
 
-		k8sObjects := ensureNamespace(MustParseYaml(yamlContent))
+		k8sObjects := MustParseYaml(yamlContent)
 		for _, obj := range k8sObjects {
 			switch o := obj.(type) {
 			case *accessv1alpha1.TrafficTarget:
+				setNamespaceIfNot(o)
 				s.trafficTargets = append(s.trafficTargets, o)
 			case *specsv1alpha1.HTTPRouteGroup:
+				setNamespaceIfNot(o)
 				s.httpRouteGroups = append(s.httpRouteGroups, o)
 			case *splitv1alpha1.TrafficSplit:
+				setNamespaceIfNot(o)
 				s.trafficSplits = append(s.trafficSplits, o)
 			default:
 				panic(fmt.Sprintf("Unknown runtime object %+v %T", o, o))
@@ -147,22 +154,29 @@ func NewClientMock(paths ...string) *ClientMock {
 			panic(err)
 		}
 
-		k8sObjects := ensureNamespace(MustParseYaml(yamlContent))
+		k8sObjects := MustParseYaml(yamlContent)
 		for _, obj := range k8sObjects {
 			switch o := obj.(type) {
 			case *corev1.Service:
+				setNamespaceIfNot(o)
 				c.services = append(c.services, o)
 			case *corev1.Pod:
+				setNamespaceIfNot(o)
 				c.pods = append(c.pods, o)
 			case *corev1.Endpoints:
+				setNamespaceIfNot(o)
 				c.endpoints = append(c.endpoints, o)
 			case *corev1.Namespace:
+				setNamespaceIfNot(o)
 				c.namespaces = append(c.namespaces, o)
 			case *accessv1alpha1.TrafficTarget:
+				setNamespaceIfNot(o)
 				c.trafficTargets = append(c.trafficTargets, o)
 			case *specsv1alpha1.HTTPRouteGroup:
+				setNamespaceIfNot(o)
 				c.httpRouteGroups = append(c.httpRouteGroups, o)
 			case *splitv1alpha1.TrafficSplit:
+				setNamespaceIfNot(o)
 				c.trafficSplits = append(c.trafficSplits, o)
 			default:
 				panic(fmt.Sprintf("Unknown runtime object %+v %T", o, o))
@@ -172,48 +186,10 @@ func NewClientMock(paths ...string) *ClientMock {
 	return c
 }
 
-func ensureNamespace(k8sObjects []runtime.Object) []runtime.Object {
-	objects := []runtime.Object{}
-	for _, obj := range k8sObjects {
-		switch o := obj.(type) {
-		case *corev1.Service:
-			if o.Namespace == "" {
-				o.Namespace = metav1.NamespaceDefault
-			}
-			objects = append(objects, o)
-		case *corev1.Pod:
-			if o.Namespace == "" {
-				o.Namespace = metav1.NamespaceDefault
-			}
-			objects = append(objects, o)
-		case *corev1.Endpoints:
-			if o.Namespace == "" {
-				o.Namespace = metav1.NamespaceDefault
-			}
-			objects = append(objects, o)
-		case *corev1.Namespace:
-			if o.Namespace == "" {
-				o.Namespace = metav1.NamespaceDefault
-			}
-			objects = append(objects, o)
-		case *accessv1alpha1.TrafficTarget:
-			if o.Namespace == "" {
-				o.Namespace = metav1.NamespaceDefault
-			}
-			objects = append(objects, o)
-		case *specsv1alpha1.HTTPRouteGroup:
-			if o.Namespace == "" {
-				o.Namespace = metav1.NamespaceDefault
-			}
-			objects = append(objects, o)
-		case *splitv1alpha1.TrafficSplit:
-			if o.Namespace == "" {
-				o.Namespace = metav1.NamespaceDefault
-			}
-			objects = append(objects, o)
-		}
+func setNamespaceIfNot(obj metav1.Object) {
+	if obj.GetNamespace() == "" {
+		obj.SetNamespace(metav1.NamespaceDefault)
 	}
-	return objects
 }
 
 func (c *CoreV1ClientMock) GetService(namespace, name string) (*corev1.Service, bool, error) {
@@ -366,8 +342,8 @@ func (a *AppsV1ClientMock) GetDeployment(namespace, name string) (*appsv1.Deploy
 }
 
 func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha1.HTTPRouteGroup, bool, error) {
-	if s.apiHttpRouteGroupError != nil {
-		return nil, false, s.apiHttpRouteGroupError
+	if s.apiHTTPRouteGroupError != nil {
+		return nil, false, s.apiHTTPRouteGroupError
 	}
 
 	for _, hrg := range s.httpRouteGroups {
@@ -377,7 +353,7 @@ func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha
 	}
 
 	fmt.Printf("S: %+v\n", s.httpRouteGroups[0])
-	return nil, false, s.apiHttpRouteGroupError
+	return nil, false, s.apiHTTPRouteGroupError
 }
 
 func (s *SMIClientMock) GetTrafficTargets() ([]*accessv1alpha1.TrafficTarget, error) {
@@ -393,7 +369,7 @@ func (s *SMIClientMock) EnableTrafficTargetError() {
 }
 
 func (s *SMIClientMock) EnableHTTPRouteGroupError() {
-	s.apiHttpRouteGroupError = errors.New("httpRouteGroup error")
+	s.apiHTTPRouteGroupError = errors.New("httpRouteGroup error")
 }
 
 func (s *SMIClientMock) EnableTrafficSplitError() {
