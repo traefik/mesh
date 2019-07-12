@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/i3o/internal/message"
 	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/safe"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -136,8 +140,9 @@ func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
 	return true
 }
 
-// DeployToPod takes the configuration, and adds it into the deploy queue for the pod.
+// DeployToPod takes the configuration, and adds it into the deploy queue for a pod.
 func (d *Deployer) DeployToPod(name, ip string, c *config.Configuration) {
+	log.Infof("Adding configuration to deploy queue for pod %s, with IP: %s", name, ip)
 	d.deployQueue.Add(message.Deploy{
 		PodName: name,
 		PodIP:   ip,
@@ -203,7 +208,37 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 		return false
 	}
 
-	log.Debugf("Deploying configuration: %s", string(b))
+	currentVersion, err := m.GetVersion()
+	if err != nil {
+		log.Errorf("Could not get current configuration version: %v", err)
+		return false
+	}
+
+	activeVersion, exists, err := getDeployedVersion(m.PodIP)
+	if err != nil {
+		log.Errorf("Could not get deployed configuration version: %v", err)
+		return false
+	}
+	if exists {
+		log.Debugf("Currently deployed version for pod %s: %s", m.PodName, activeVersion)
+
+		if currentVersion.Before(activeVersion) {
+			// The version we are trying to deploy is outdated.
+			// Return true, so that it will be removed from the deploy queue.
+			log.Debugf("Skipping outdated configuration: %v", currentVersion)
+			return true
+
+		}
+		if currentVersion.Equal(activeVersion) {
+			// The version we are trying to deploy is already deployed.
+			// Return true, so that it will be removed from the deploy queue.
+			log.Debugf("Skipping already deployed configuration: %v", currentVersion)
+			return true
+
+		}
+		log.Debugf("Deploying configuration version for pod %s: %s", m.PodName, currentVersion)
+	}
+
 	url := fmt.Sprintf("http://%s:8080/api/providers/rest", m.PodIP)
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(b))
@@ -214,15 +249,39 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
-		body, bodyErr := ioutil.ReadAll(resp.Body)
+		_, bodyErr := ioutil.ReadAll(resp.Body)
 		if bodyErr != nil {
 			log.Errorf("Unable to read response body: %v", bodyErr)
 			return false
 		}
 
-		log.Debugf("Deployed configuration response: %s", string(body))
-		return true
+		ebo := backoff.NewExponentialBackOff()
+		ebo.MaxElapsedTime = 10 * time.Second
 
+		deployError := backoff.Retry(safe.OperationWithRecover(func() error {
+			// Configuration should have deployed successfully, confirm version match.
+			newVersion, exists, newErr := getDeployedVersion(m.PodIP)
+			if newErr != nil {
+				return fmt.Errorf("could not get newly deployed configuration version: %v", newErr)
+			}
+			if exists {
+
+				if currentVersion.Equal(newVersion) {
+					// The version we are trying to deploy is confirmed.
+					// Return nil, to break out of the ebo.
+					return nil
+
+				}
+			}
+			return fmt.Errorf("deployment was not successful")
+		}), ebo)
+
+		if deployError == nil {
+			// The version we are trying to deploy is confirmed.
+			// Return true, so that it will be removed from the deploy queue.
+			log.Debugf("Successfully deployed version for pod %s: %s", m.PodName, currentVersion)
+			return true
+		}
 	}
 	if err != nil {
 		log.Errorf("Unable to deploy configuration: %v", err)
@@ -299,4 +358,50 @@ func (d *Deployer) processDeployQueueNextItem() bool {
 	d.deployQueue.AddRateLimited(item)
 	// Keep the worker loop running by returning true if there are queue objects remaining.
 	return d.deployQueue.Len() > 0
+}
+
+func getDeployedVersion(ip string) (time.Time, bool, error) {
+	url := fmt.Sprintf("http://%s:8080/api/rawdata", ip)
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		log.Errorf("Could not create request: %v", err)
+		return time.Now(), false, err
+	}
+	resp, err := client.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+		body, bodyErr := ioutil.ReadAll(resp.Body)
+		if bodyErr != nil {
+			log.Errorf("Unable to read response body: %v", bodyErr)
+			return time.Now(), false, bodyErr
+		}
+
+		trimmedBody := strings.TrimRight(string(body), "\n")
+		data := new(config.HTTPConfiguration)
+		if unmarshalErr := json.Unmarshal([]byte(trimmedBody), data); err != nil {
+			log.Errorf("Unable to parse response body: %v", unmarshalErr)
+			return time.Now(), false, unmarshalErr
+		}
+
+		var version int64
+		var timeError error
+
+		if len(data.Services) == 0 {
+			return time.Now(), false, nil
+		}
+
+		versionKey := message.ConfigServiceVersionKey + "@rest"
+		if value, exists := data.Services[versionKey]; exists {
+			version, timeError = strconv.ParseInt(value.LoadBalancer.Servers[0].URL, 10, 64)
+			if timeError != nil {
+				return time.Now(), false, timeError
+			}
+			return time.Unix(0, version), true, nil
+		}
+		return time.Now(), false, nil
+
+	}
+	log.Errorf("Got no response: %v", err)
+	return time.Now(), false, err
 }
