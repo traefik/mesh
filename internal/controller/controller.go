@@ -9,7 +9,7 @@ import (
 	"github.com/containous/i3o/internal/message"
 	"github.com/containous/i3o/internal/providers/kubernetes"
 	"github.com/containous/i3o/internal/providers/smi"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	smiAccessExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	smiSpecsExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	smiSplitExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
@@ -39,7 +39,7 @@ type Controller struct {
 	deployer           *deployer.Deployer
 	ignored            k8s.IgnoreWrapper
 	smiEnabled         bool
-	traefikConfig      *config.Configuration
+	traefikConfig      *dynamic.Configuration
 	defaultMode        string
 }
 
@@ -105,14 +105,14 @@ func (m *Controller) Init() error {
 	}
 
 	// Initialize an empty configuration
-	m.traefikConfig = &config.Configuration{
-		HTTP: &config.HTTPConfiguration{
-			Routers:  map[string]*config.Router{},
-			Services: map[string]*config.Service{},
+	m.traefikConfig = &dynamic.Configuration{
+		HTTP: &dynamic.HTTPConfiguration{
+			Routers:  map[string]*dynamic.Router{},
+			Services: map[string]*dynamic.Service{},
 		},
-		TCP: &config.TCPConfiguration{
-			Routers:  map[string]*config.TCPRouter{},
-			Services: map[string]*config.TCPService{},
+		TCP: &dynamic.TCPConfiguration{
+			Routers:  map[string]*dynamic.TCPRouter{},
+			Services: map[string]*dynamic.TCPService{},
 		},
 	}
 

@@ -10,7 +10,7 @@ import (
 
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/i3o/internal/message"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -47,7 +47,7 @@ func New(client k8s.Client, defaultMode string) *Provider {
 
 // BuildConfiguration builds the configuration for routing
 // from a native kubernetes environment.
-func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *config.Configuration) {
+func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dynamic.Configuration) {
 	switch obj := event.Object.(type) {
 	case *corev1.Service:
 		switch event.Action {
@@ -70,7 +70,7 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *conf
 	}
 }
 
-func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *config.Configuration) {
+func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *dynamic.Configuration) {
 	var exists bool
 	var err error
 	if service == nil {
@@ -217,7 +217,7 @@ func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1al
 	return result
 }
 
-func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *config.Router {
+func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *dynamic.Router {
 	var rule []string
 	for _, spec := range trafficTarget.Specs {
 		if spec.Kind != "HTTPRouteGroup" {
@@ -246,7 +246,7 @@ func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, s
 		rule = append(rule, "("+strings.Join(builtRule, " || ")+")")
 	}
 
-	return &config.Router{
+	return &dynamic.Router{
 		Rule:        strings.Join(rule, " || "),
 		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
 		Service:     key,
@@ -269,8 +269,8 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 	return "(" + strings.Join(result, " && ") + ")"
 }
 
-func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *config.Service {
-	var servers []config.Server
+func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *dynamic.Service {
+	var servers []dynamic.Server
 
 	if endpoints.Namespace != trafficTarget.Destination.Namespace {
 		// Destination not in service namespace log error.
@@ -304,7 +304,7 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 					continue
 				}
 				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
-					server := config.Server{
+					server := dynamic.Server{
 						URL: "http://" + net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
 					}
 					servers = append(servers, server)
@@ -313,12 +313,12 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 		}
 	}
 
-	lb := &config.LoadBalancerService{
+	lb := &dynamic.LoadBalancerService{
 		PassHostHeader: true,
 		Servers:        servers,
 	}
 
-	return &config.Service{
+	return &dynamic.Service{
 		LoadBalancer: lb,
 	}
 }

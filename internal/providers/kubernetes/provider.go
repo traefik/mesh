@@ -9,7 +9,7 @@ import (
 
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/i3o/internal/message"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -39,7 +39,7 @@ func New(client k8s.CoreV1Client, defaultMode string) *Provider {
 
 // BuildConfiguration builds the configuration for routing
 // from a native kubernetes environment.
-func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *config.Configuration) {
+func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dynamic.Configuration) {
 	switch obj := event.Object.(type) {
 	case *corev1.Service:
 		switch event.Action {
@@ -63,28 +63,28 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *conf
 
 }
 
-func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string) *config.Router {
-	return &config.Router{
+func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string) *dynamic.Router {
+	return &dynamic.Router{
 		Rule:        fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", name, namespace, ip),
 		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
 		Service:     serviceName,
 	}
 }
 
-func (p *Provider) buildTCPRouter(port int, serviceName string) *config.TCPRouter {
-	return &config.TCPRouter{
+func (p *Provider) buildTCPRouter(port int, serviceName string) *dynamic.TCPRouter {
+	return &dynamic.TCPRouter{
 		Rule:        "HostSNI(`*`)",
 		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
 		Service:     serviceName,
 	}
 }
 
-func (p *Provider) buildService(endpoints *corev1.Endpoints) *config.Service {
-	var servers []config.Server
+func (p *Provider) buildService(endpoints *corev1.Endpoints) *dynamic.Service {
+	var servers []dynamic.Server
 	for _, subset := range endpoints.Subsets {
 		for _, endpointPort := range subset.Ports {
 			for _, address := range subset.Addresses {
-				server := config.Server{
+				server := dynamic.Server{
 					URL: "http://" + net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
 				}
 				servers = append(servers, server)
@@ -92,22 +92,22 @@ func (p *Provider) buildService(endpoints *corev1.Endpoints) *config.Service {
 		}
 	}
 
-	lb := &config.LoadBalancerService{
+	lb := &dynamic.LoadBalancerService{
 		PassHostHeader: true,
 		Servers:        servers,
 	}
 
-	return &config.Service{
+	return &dynamic.Service{
 		LoadBalancer: lb,
 	}
 }
 
-func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *config.TCPService {
-	var servers []config.TCPServer
+func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *dynamic.TCPService {
+	var servers []dynamic.TCPServer
 	for _, subset := range endpoints.Subsets {
 		for _, endpointPort := range subset.Ports {
 			for _, address := range subset.Addresses {
-				server := config.TCPServer{
+				server := dynamic.TCPServer{
 					Address: net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
 				}
 				servers = append(servers, server)
@@ -115,16 +115,16 @@ func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *config.TCPServi
 		}
 	}
 
-	lb := &config.TCPLoadBalancerService{
+	lb := &dynamic.TCPLoadBalancerService{
 		Servers: servers,
 	}
 
-	return &config.TCPService{
+	return &dynamic.TCPService{
 		LoadBalancer: lb,
 	}
 }
 
-func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *config.Configuration) {
+func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *dynamic.Configuration) {
 	var exists bool
 	var err error
 	if service == nil {
@@ -168,7 +168,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 	}
 }
 
-func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *config.Configuration) {
+func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *dynamic.Configuration) {
 	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
 
 	for _, sp := range service.Spec.Ports {

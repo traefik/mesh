@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 )
 
 const (
@@ -30,7 +30,7 @@ type Deploy struct {
 	PodName         string
 	PodIP           string
 	ConfigmapDeploy bool
-	Config          *config.Configuration
+	Config          *dynamic.Configuration
 }
 
 // GetVersion gets the version of a deploy message.
@@ -46,15 +46,15 @@ func (d *Deploy) GetVersion() (time.Time, error) {
 
 // Config holds a message for processing in the config queue.
 type Config struct {
-	Config *config.Configuration
+	Config *dynamic.Configuration
 }
 
-func BuildNewConfigWithVersion(conf *config.Configuration) Config {
+func BuildNewConfigWithVersion(conf *dynamic.Configuration) Config {
 	t := time.Now().UnixNano()
 	c := conf.DeepCopy()
-	c.HTTP.Services[ConfigServiceVersionKey] = &config.Service{
-		LoadBalancer: &config.LoadBalancerService{
-			Servers: []config.Server{
+	c.HTTP.Services[ConfigServiceVersionKey] = &dynamic.Service{
+		LoadBalancer: &dynamic.LoadBalancerService{
+			Servers: []dynamic.Server{
 				{
 					URL: fmt.Sprintf("%d", t),
 				},
