@@ -23,7 +23,7 @@ ARG MAKE_TARGET=local-build
 RUN make ${MAKE_TARGET}
 
 ## IMAGE
-FROM alpine:3.9
+FROM alpine:3.10
 
 RUN addgroup -g 1000 -S app && \
     adduser -u 1000 -S app -G app
