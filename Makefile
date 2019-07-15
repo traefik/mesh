@@ -43,7 +43,7 @@ local-test: clean
 	go test -v -cover ./...
 
 # Integration test
-local-test-integration: $(DIST_DIR) kubectl helm build
+local-test-integration: $(DIST_DIR) kubectl helm
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.v
 
 test-integration:
