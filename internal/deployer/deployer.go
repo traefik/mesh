@@ -13,7 +13,7 @@ import (
 	"github.com/cenkalti/backoff"
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/i3o/internal/message"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/safe"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -110,7 +110,7 @@ func (d *Deployer) processNextItem() bool {
 
 // deployConfiguration takes the configuration, and adds it into the deploy queue for each affected
 // mesh node. This allows nodes to retry individually.
-func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
+func (d *Deployer) deployConfiguration(c *dynamic.Configuration) bool {
 	podList, err := d.client.ListPodWithOptions(k8s.MeshNamespace, metav1.ListOptions{
 		LabelSelector: "component==i3o-mesh",
 	})
@@ -141,7 +141,7 @@ func (d *Deployer) deployConfiguration(c *config.Configuration) bool {
 }
 
 // DeployToPod takes the configuration, and adds it into the deploy queue for a pod.
-func (d *Deployer) DeployToPod(name, ip string, c *config.Configuration) {
+func (d *Deployer) DeployToPod(name, ip string, c *dynamic.Configuration) {
 	log.Infof("Adding configuration to deploy queue for pod %s, with IP: %s", name, ip)
 	d.deployQueue.Add(message.Deploy{
 		PodName: name,
@@ -378,7 +378,7 @@ func getDeployedVersion(ip string) (time.Time, bool, error) {
 		}
 
 		trimmedBody := strings.TrimRight(string(body), "\n")
-		data := new(config.HTTPConfiguration)
+		data := new(dynamic.HTTPConfiguration)
 		if unmarshalErr := json.Unmarshal([]byte(trimmedBody), data); err != nil {
 			log.Errorf("Unable to parse response body: %v", unmarshalErr)
 			return time.Now(), false, unmarshalErr

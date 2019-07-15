@@ -5,14 +5,14 @@ import (
 
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/i3o/internal/message"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestBuildRouter(t *testing.T) {
-	expected := &config.Router{
+	expected := &dynamic.Router{
 		Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)",
 		EntryPoints: []string{"ingress-80"},
 		Service:     "bar",
@@ -31,7 +31,7 @@ func TestBuildRouter(t *testing.T) {
 }
 
 func TestBuildTCPRouter(t *testing.T) {
-	expected := &config.TCPRouter{
+	expected := &dynamic.TCPRouter{
 		Rule:        "HostSNI(`*`)",
 		EntryPoints: []string{"ingress-80"},
 		Service:     "bar",
@@ -52,52 +52,52 @@ func TestBuildConfiguration(t *testing.T) {
 		desc           string
 		mockFile       string
 		event          message.Message
-		provided       *config.Configuration
-		expected       *config.Configuration
+		provided       *dynamic.Configuration
+		expected       *dynamic.Configuration
 		endpointsError bool
 		serviceError   bool
 	}{
 		{
 			desc:     "simple configuration build with empty event",
 			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
-			provided: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			provided: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
 		},
 		{
 			desc:     "simple configuration build with HTTP service event",
 			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							LoadBalancer: &config.LoadBalancerService{
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
 										URL:    "http://10.0.0.1:80",
 										Scheme: "",
@@ -113,19 +113,19 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
-			provided: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			provided: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
 			event: message.Message{
@@ -151,23 +151,23 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			desc:     "simple configuration build with TCP service event",
 			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers: map[string]*config.TCPRouter{
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "HostSNI(`*`)",
 						},
 					},
-					Services: map[string]*config.TCPService{
+					Services: map[string]*dynamic.TCPService{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							LoadBalancer: &config.TCPLoadBalancerService{
-								Servers: []config.TCPServer{
+							LoadBalancer: &dynamic.TCPLoadBalancerService{
+								Servers: []dynamic.TCPServer{
 									{
 										Address: "10.0.0.1:80",
 									},
@@ -180,14 +180,14 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 			},
-			provided: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			provided: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
 			event: message.Message{
@@ -216,24 +216,24 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			desc:     "endpoints error",
 			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
-			provided: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			provided: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
 			event: message.Message{
@@ -251,24 +251,24 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			desc:     "endpoints not exist error",
 			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
-			provided: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			provided: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
 			event: message.Message{
@@ -284,24 +284,24 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			desc:     "service error",
 			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
-			provided: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			provided: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
 			event: message.Message{
@@ -319,24 +319,24 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			desc:     "service not exist error",
 			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
-			provided: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			provided: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
 			event: message.Message{
@@ -352,23 +352,23 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			desc:     "simple configuration delete HTTP service event",
 			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers:  map[string]*config.Router{},
-					Services: map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers: map[string]*config.TCPRouter{
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "HostSNI(`*`)",
 						},
 					},
-					Services: map[string]*config.TCPService{
+					Services: map[string]*dynamic.TCPService{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							LoadBalancer: &config.TCPLoadBalancerService{
-								Servers: []config.TCPServer{
+							LoadBalancer: &dynamic.TCPLoadBalancerService{
+								Servers: []dynamic.TCPServer{
 									{
 										Address: "10.0.0.1:80",
 									},
@@ -381,20 +381,20 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 			},
-			provided: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers: map[string]*config.Router{
+			provided: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							LoadBalancer: &config.LoadBalancerService{
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
 										URL:    "http://10.0.0.1:80",
 										Scheme: "",
@@ -410,18 +410,18 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers: map[string]*config.TCPRouter{
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "HostSNI(`*`)",
 						},
 					},
-					Services: map[string]*config.TCPService{
+					Services: map[string]*dynamic.TCPService{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							LoadBalancer: &config.TCPLoadBalancerService{
-								Servers: []config.TCPServer{
+							LoadBalancer: &dynamic.TCPLoadBalancerService{
+								Servers: []dynamic.TCPServer{
 									{
 										Address: "10.0.0.1:80",
 									},
@@ -457,20 +457,20 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			desc:     "simple configuration delete TCP service event",
 			mockFile: "build_configuration_simple.yaml",
-			expected: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							LoadBalancer: &config.LoadBalancerService{
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
 										URL:    "http://10.0.0.1:80",
 										Scheme: "",
@@ -486,25 +486,25 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers:  map[string]*config.TCPRouter{},
-					Services: map[string]*config.TCPService{},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
 				},
 			},
-			provided: &config.Configuration{
-				HTTP: &config.HTTPConfiguration{
-					Routers: map[string]*config.Router{
+			provided: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							LoadBalancer: &config.LoadBalancerService{
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
 										URL:    "http://10.0.0.1:80",
 										Scheme: "",
@@ -520,18 +520,18 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				TCP: &config.TCPConfiguration{
-					Routers: map[string]*config.TCPRouter{
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "HostSNI(`*`)",
 						},
 					},
-					Services: map[string]*config.TCPService{
+					Services: map[string]*dynamic.TCPService{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							LoadBalancer: &config.TCPLoadBalancerService{
-								Servers: []config.TCPServer{
+							LoadBalancer: &dynamic.TCPLoadBalancerService{
+								Servers: []dynamic.TCPServer{
 									{
 										Address: "10.0.0.1:80",
 									},
@@ -593,7 +593,7 @@ func TestBuildService(t *testing.T) {
 		desc      string
 		mockFile  string
 		endpoints *corev1.Endpoints
-		expected  *config.Service
+		expected  *dynamic.Service
 	}{
 		{
 			desc:     "two successful endpoints",
@@ -621,10 +621,10 @@ func TestBuildService(t *testing.T) {
 					},
 				},
 			},
-			expected: &config.Service{
-				LoadBalancer: &config.LoadBalancerService{
+			expected: &dynamic.Service{
+				LoadBalancer: &dynamic.LoadBalancerService{
 					PassHostHeader: true,
-					Servers: []config.Server{
+					Servers: []dynamic.Server{
 						{
 							URL: "http://10.0.0.1:80",
 						},
@@ -655,7 +655,7 @@ func TestBuildTCPService(t *testing.T) {
 		desc      string
 		mockFile  string
 		endpoints *corev1.Endpoints
-		expected  *config.TCPService
+		expected  *dynamic.TCPService
 	}{
 		{
 			desc:     "two successful endpoints",
@@ -683,9 +683,9 @@ func TestBuildTCPService(t *testing.T) {
 					},
 				},
 			},
-			expected: &config.TCPService{
-				LoadBalancer: &config.TCPLoadBalancerService{
-					Servers: []config.TCPServer{
+			expected: &dynamic.TCPService{
+				LoadBalancer: &dynamic.TCPLoadBalancerService{
+					Servers: []dynamic.TCPServer{
 						{
 							Address: "10.0.0.1:80",
 						},
