@@ -17,6 +17,10 @@
     max-width: 30em;
 }
 
+.md-typeset h2 {
+    border-bottom: .05rem solid rgba(0,0,0,.26);
+}
+
 body {
     font-family: 'Noto Sans', sans-serif;
 }
