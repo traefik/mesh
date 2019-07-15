@@ -31,8 +31,7 @@ type destinationKey struct {
 }
 
 // Init the provider.
-func (p *Provider) Init() {
-}
+func (p *Provider) Init() {}
 
 // New creates a new provider.
 func New(client k8s.Client, defaultMode string) *Provider {
@@ -69,7 +68,6 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *conf
 			// We don't precess deleted endpoint events, processig is done under service deletion.
 		}
 	}
-
 }
 
 func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *config.Configuration) {
@@ -332,11 +330,11 @@ func (p *Provider) getServiceMode(mode string) string {
 	return mode
 }
 
-func buildKey(name, namespace string, port int32, ttname, ttnamespace string) string {
+func buildKey(serviceName, namespace string, port int32, ttName, ttNamespace string) string {
 	// Use the hash of the servicename.namespace.port.traffictargetname.traffictargetnamespace as the key
 	// So that we can update services based on their name
 	// and not have to worry about duplicates on merges.
-	sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s.%d.%s.%s", name, namespace, port, ttname, ttnamespace)))
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s.%d.%s.%s", serviceName, namespace, port, ttName, ttNamespace)))
 	dst := make([]byte, hex.EncodedLen(len(sum)))
 	hex.Encode(dst, sum[:])
 	return string(dst)
