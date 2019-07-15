@@ -19,3 +19,5 @@ debug: true
 #
 tracing:
   enabled: true
+
+smi: false

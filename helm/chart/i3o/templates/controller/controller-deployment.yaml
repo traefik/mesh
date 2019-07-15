@@ -53,6 +53,9 @@ spec:
             {{- if .Values.mesh }}
             - "--defaultMode {{ .Values.mesh.defaultMode }}"
             {{- end }}
+            {{- if .Values.smi }}
+            - "--smi"
+            {{- end }}
           securityContext:
             capabilities:
               drop:

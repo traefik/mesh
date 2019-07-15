@@ -3,12 +3,10 @@ package k8s
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
-	smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	smiAccessClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
 	smiSpecsClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
 	smiSplitClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
@@ -18,10 +16,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -33,6 +29,13 @@ var (
 		"1.5",
 	}
 )
+
+// Client is an interface that represents a full-featured kubernetes client wrapper
+type Client interface {
+	CoreV1Client
+	AppsV1Client
+	SMIClient
+}
 
 // ClusterInitClient is an interface that can be used for doing cluster initialization.
 type ClusterInitClient interface {
@@ -62,21 +65,21 @@ type AppsV1Client interface {
 	GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error)
 }
 
+type SMIClient interface {
+	SMIAccessV1Alpha1Client
+	SMISpecsV1Alpha1Client
+	SMISplitV1Alpha1Client
+}
+
 type SMIAccessV1Alpha1Client interface {
-	ListTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (*smiAccessv1alpha1.TrafficTargetList, error)
-	WatchTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
 	GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget, error)
 }
 
 type SMISpecsV1Alpha1Client interface {
-	ListHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (*smiSpecsv1alpha1.HTTPRouteGroupList, error)
-	WatchHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
 	GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error)
 }
 
 type SMISplitV1Alpha1Client interface {
-	ListTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (*smiSplitv1alpha1.TrafficSplitList, error)
-	WatchTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
 }
 
 // ClientWrapper holds the clients for the various resource controllers.
@@ -481,16 +484,6 @@ func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deploymen
 	return deployment, exists, err
 }
 
-// ListTrafficTargetsWithOptions lists trafficTargets with the specified options.
-func (w *ClientWrapper) ListTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (*smiAccessv1alpha1.TrafficTargetList, error) {
-	return w.SmiAccessClient.AccessV1alpha1().TrafficTargets(namespace).List(options)
-}
-
-// WatchTrafficTargetsWithOptions watches trafficTargets with the specified options.
-func (w *ClientWrapper) WatchTrafficTargetsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
-	return w.SmiAccessClient.AccessV1alpha1().TrafficTargets(namespace).Watch(options)
-}
-
 // GetTrafficTargets returns a slice of all TrafficTargets.
 func (w *ClientWrapper) GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget, error) {
 	var result []*smiAccessv1alpha1.TrafficTarget
@@ -504,31 +497,11 @@ func (w *ClientWrapper) GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget,
 	return result, nil
 }
 
-// ListHTTPRouteGroupsWithOptions lists HTTPRouteGroups with the specified options.
-func (w *ClientWrapper) ListHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (*smiSpecsv1alpha1.HTTPRouteGroupList, error) {
-	return w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).List(options)
-}
-
-// WatchHTTPRouteGroupsWithOptions watches HTTPRouteGroups with the specified options.
-func (w *ClientWrapper) WatchHTTPRouteGroupsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
-	return w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).Watch(options)
-}
-
 // GetHTTPRouteGroup retrieves the HTTPRouteGroup from the specified namespace.
 func (w *ClientWrapper) GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error) {
 	group, err := w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
 	return group, exists, err
-}
-
-// ListTrafficSplitsWithOptions lists TrafficSplits with the specified options.
-func (w *ClientWrapper) ListTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (*smiSplitv1alpha1.TrafficSplitList, error) {
-	return w.SmiSplitClient.SplitV1alpha1().TrafficSplits(namespace).List(options)
-}
-
-// WatchTrafficTargetsWithOptions watches trafficTargets with the specified options.
-func (w *ClientWrapper) WatchTrafficSplitsWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
-	return w.SmiSplitClient.SplitV1alpha1().TrafficSplits(namespace).Watch(options)
 }
 
 // GetConfigmap retrieves the named configmap in the specified namespace.
@@ -555,30 +528,4 @@ func translateNotFoundError(err error) (bool, error) {
 		return false, nil
 	}
 	return err == nil, err
-}
-
-// MustParseYaml parses a YAML to objects.
-func MustParseYaml(content []byte) []runtime.Object {
-	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|Middleware|Secret|TLSOption|Namespace)`)
-
-	files := strings.Split(string(content), "---")
-	retVal := make([]runtime.Object, 0, len(files))
-	for _, file := range files {
-		if file == "\n" || file == "" {
-			continue
-		}
-
-		decode := scheme.Codecs.UniversalDeserializer().Decode
-		obj, groupVersionKind, err := decode([]byte(file), nil, nil)
-		if err != nil {
-			panic(fmt.Sprintf("Error while decoding YAML object. Err was: %s", err))
-		}
-
-		if !acceptedK8sTypes.MatchString(groupVersionKind.Kind) {
-			log.Debugf("The custom-roles configMap contained K8s object types which are not supported! Skipping object with type: %s", groupVersionKind.Kind)
-		} else {
-			retVal = append(retVal, obj)
-		}
-	}
-	return retVal
 }

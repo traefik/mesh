@@ -11,5 +11,7 @@ image:
 
 debug: true
 
+smi: false
+
 tracing:
   enabled: false

@@ -63,6 +63,20 @@ rules:
       - deployments
     verbs:
       - get
+  - apiGroups:
+      - access.smi-spec.io
+      - specs.smi-spec.io
+      - split.smi-spec.io
+    resources:
+      - traffictargets
+      - tcproutes
+      - httproutegroups
+      - trafficsplits
+      - events
+    verbs:
+      - get
+      - list
+      - watch
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1

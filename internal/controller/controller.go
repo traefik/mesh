@@ -91,7 +91,7 @@ func (m *Controller) Init() error {
 	m.deployer = deployer.New(m.clients, m.configurationQueue)
 
 	if m.smiEnabled {
-		m.smiProvider = smi.New(m.clients)
+		m.smiProvider = smi.New(m.clients, m.defaultMode)
 
 		// Create new SharedInformerFactories, and register the event handler to informers.
 		m.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(m.clients.SmiAccessClient, k8s.ResyncPeriod)
@@ -226,10 +226,11 @@ func (m *Controller) processNextMessage() bool {
 }
 
 func (m *Controller) buildConfigurationFromProviders(event message.Message) {
-	m.kubernetesProvider.BuildConfiguration(event, m.traefikConfig)
 	if m.smiEnabled {
-		m.smiProvider.BuildConfiguration()
+		m.smiProvider.BuildConfiguration(event, m.traefikConfig)
+		return
 	}
+	m.kubernetesProvider.BuildConfiguration(event, m.traefikConfig)
 }
 
 func (m *Controller) processCreatedMessage(event message.Message) {
