@@ -201,8 +201,13 @@ func (d *Deployer) deployConfigmap(m message.Deploy) bool {
 }
 
 func (d *Deployer) deployAPI(m message.Deploy) bool {
+	if m.PodIP == "" {
+		// Invalid deployment message, return true so that the deploy message doesn't get retried.
+		return true
+	}
+
 	log.Debugf("Deploying configuration to pod %s with IP %s", m.PodName, m.PodIP)
-	b, err := json.Marshal(m.Config.HTTP)
+	b, err := json.Marshal(m.Config)
 	if err != nil {
 		log.Errorf("Unable to marshal configuration: %v", err)
 		return false
