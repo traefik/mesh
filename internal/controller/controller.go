@@ -114,17 +114,8 @@ func (m *Controller) Init() error {
 		m.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(m.handler)
 	}
 
-	// Initialize an empty configuration
-	m.traefikConfig = &dynamic.Configuration{
-		HTTP: &dynamic.HTTPConfiguration{
-			Routers:  map[string]*dynamic.Router{},
-			Services: map[string]*dynamic.Service{},
-		},
-		TCP: &dynamic.TCPConfiguration{
-			Routers:  map[string]*dynamic.TCPRouter{},
-			Services: map[string]*dynamic.TCPService{},
-		},
-	}
+	// Initialize an empty configuration with a readinesscheck so that configs deployed to nodes mark them as ready.
+	m.traefikConfig = createBaseConfigWithReadiness()
 
 	return nil
 }
@@ -475,4 +466,33 @@ func isMeshPod(pod *corev1.Pod) bool {
 // userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh service name.
 func userServiceToMeshServiceName(serviceName string, namespace string) string {
 	return fmt.Sprintf("traefik-%s-%s", serviceName, namespace)
+}
+
+func createBaseConfigWithReadiness() *dynamic.Configuration {
+	return &dynamic.Configuration{
+		HTTP: &dynamic.HTTPConfiguration{
+			Routers: map[string]*dynamic.Router{
+				"readiness": {
+					Rule:        "Path(`/ping`)",
+					EntryPoints: []string{"readiness"},
+					Service:     "readiness",
+				},
+			},
+			Services: map[string]*dynamic.Service{
+				"readiness": {
+					LoadBalancer: &dynamic.LoadBalancerService{
+						Servers: []dynamic.Server{
+							{
+								URL: "http://127.0.0.1:1080",
+							},
+						},
+					},
+				},
+			},
+		},
+		TCP: &dynamic.TCPConfiguration{
+			Routers:  map[string]*dynamic.TCPRouter{},
+			Services: map[string]*dynamic.TCPService{},
+		},
+	}
 }
