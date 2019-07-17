@@ -1,4 +1,4 @@
-site_name: i3o
+site_name: I3o
 site_description: i3o Documentation
 site_author: containo.us
 site_url: https://docs.i3o.io
@@ -66,3 +66,6 @@ markdown_extensions:
 # Page tree
 nav:
   - 'Welcome': 'index.md'
+  - 'Quickstart': 'quickstart.md'
+  - 'Installation': 'install.md'
+  - 'Configuration': 'configuration.md'
