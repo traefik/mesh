@@ -12,7 +12,7 @@ SHA := $(shell git rev-parse --short HEAD)
 VERSION := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
 BUILD_DATE := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 
-INTEGRATION_TEST_OPTS := -timeout 20m
+INTEGRATION_TEST_OPTS := -timeout 30m
 
 DOCKER_INTEGRATION_TEST_NAME := $(DOCKER_IMAGE_NAME)-integration-tests
 DOCKER_INTEGRATION_TEST_OTPS := -v $(CURDIR):/i3o --privileged -e INTEGRATION_TEST_OPTS
