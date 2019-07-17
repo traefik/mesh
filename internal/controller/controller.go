@@ -100,6 +100,9 @@ func (m *Controller) Init() error {
 	// Initialize the deployer.
 	m.deployer = deployer.New(m.clients, m.configurationQueue)
 
+	// Initialize an empty configuration with a readinesscheck so that configs deployed to nodes mark them as ready.
+	m.traefikConfig = createBaseConfigWithReadiness()
+
 	if m.smiEnabled {
 		m.smiProvider = smi.New(m.clients, m.defaultMode)
 
@@ -112,10 +115,10 @@ func (m *Controller) Init() error {
 
 		m.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(m.clients.SmiSplitClient, k8s.ResyncPeriod)
 		m.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(m.handler)
-	}
 
-	// Initialize an empty configuration with a readinesscheck so that configs deployed to nodes mark them as ready.
-	m.traefikConfig = createBaseConfigWithReadiness()
+		// Initialize the base configuration with the base SMI middleware
+		addBaseSMIMiddlewares(m.traefikConfig)
+	}
 
 	return nil
 }
@@ -489,10 +492,21 @@ func createBaseConfigWithReadiness() *dynamic.Configuration {
 					},
 				},
 			},
+			Middlewares: map[string]*dynamic.Middleware{},
 		},
 		TCP: &dynamic.TCPConfiguration{
 			Routers:  map[string]*dynamic.TCPRouter{},
 			Services: map[string]*dynamic.TCPService{},
 		},
 	}
+}
+
+func addBaseSMIMiddlewares(config *dynamic.Configuration) {
+	blockAll := &dynamic.Middleware{
+		IPWhiteList: &dynamic.IPWhiteList{
+			SourceRange: []string{"255.255.255.255"},
+		},
+	}
+
+	config.HTTP.Middlewares[k8s.BlockAllMiddlewareKey] = blockAll
 }

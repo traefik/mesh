@@ -161,6 +161,8 @@ spec:
   containers:
     - name: example
       image: busybox
+status:
+  podIP: "10.4.3.2"
 
 ---
 apiVersion: v1
