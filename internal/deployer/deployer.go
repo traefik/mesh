@@ -23,6 +23,8 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
+const maxRetry = 3
+
 // Deployer holds a client to access the provider.
 type Deployer struct {
 	client      k8s.CoreV1Client
@@ -363,8 +365,11 @@ func (d *Deployer) processDeployQueueNextItem() bool {
 		return d.deployQueue.Len() > 0
 	}
 
-	// Deploy to API failed, re-add to the queue.
-	d.deployQueue.AddRateLimited(item)
+	if d.deployQueue.NumRequeues(item) < maxRetry {
+		// Deploy to API failed, re-add to the queue.
+		d.deployQueue.AddRateLimited(item)
+	}
+
 	// Keep the worker loop running by returning true if there are queue objects remaining.
 	return d.deployQueue.Len() > 0
 }
