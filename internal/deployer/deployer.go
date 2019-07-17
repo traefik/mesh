@@ -201,8 +201,13 @@ func (d *Deployer) deployConfigmap(m message.Deploy) bool {
 }
 
 func (d *Deployer) deployAPI(m message.Deploy) bool {
+	if m.PodIP == "" {
+		// Invalid deployment message, return true so that the deploy message doesn't get retried.
+		return true
+	}
+
 	log.Debugf("Deploying configuration to pod %s with IP %s", m.PodName, m.PodIP)
-	b, err := json.Marshal(m.Config.HTTP)
+	b, err := json.Marshal(m.Config)
 	if err != nil {
 		log.Errorf("Unable to marshal configuration: %v", err)
 		return false
@@ -254,39 +259,43 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 			log.Errorf("Unable to read response body: %v", bodyErr)
 			return false
 		}
-
-		ebo := backoff.NewExponentialBackOff()
-		ebo.MaxElapsedTime = 10 * time.Second
-
-		deployError := backoff.Retry(safe.OperationWithRecover(func() error {
-			// Configuration should have deployed successfully, confirm version match.
-			newVersion, exists, newErr := getDeployedVersion(m.PodIP)
-			if newErr != nil {
-				return fmt.Errorf("could not get newly deployed configuration version: %v", newErr)
-			}
-			if exists {
-
-				if currentVersion.Equal(newVersion) {
-					// The version we are trying to deploy is confirmed.
-					// Return nil, to break out of the ebo.
-					return nil
-
-				}
-			}
-			return fmt.Errorf("deployment was not successful")
-		}), ebo)
-
-		if deployError == nil {
-			// The version we are trying to deploy is confirmed.
-			// Return true, so that it will be removed from the deploy queue.
-			log.Debugf("Successfully deployed version for pod %s: %s", m.PodName, currentVersion)
-			return true
-		}
+		return waitForDeployToProcess(currentVersion, m.PodName, m.PodIP)
 	}
 	if err != nil {
 		log.Errorf("Unable to deploy configuration: %v", err)
 	}
 
+	return false
+}
+
+// waitForDeployToProcess loops until the deployed version is reported
+func waitForDeployToProcess(currentVersion time.Time, name, ip string) bool {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = 10 * time.Second
+	deployError := backoff.Retry(safe.OperationWithRecover(func() error {
+		// Configuration should have deployed successfully, confirm version match.
+		newVersion, exists, newErr := getDeployedVersion(ip)
+		if newErr != nil {
+			return fmt.Errorf("could not get newly deployed configuration version: %v", newErr)
+		}
+		if exists {
+
+			if currentVersion.Equal(newVersion) {
+				// The version we are trying to deploy is confirmed.
+				// Return nil, to break out of the ebo.
+				return nil
+
+			}
+		}
+		return fmt.Errorf("deployment was not successful")
+	}), ebo)
+
+	if deployError == nil {
+		// The version we are trying to deploy is confirmed.
+		// Return true, so that it will be removed from the deploy queue.
+		log.Debugf("Successfully deployed version for pod %s: %s", name, currentVersion)
+		return true
+	}
 	return false
 }
 

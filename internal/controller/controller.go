@@ -32,6 +32,7 @@ type Controller struct {
 	smiSpecsFactory    smiSpecsExternalversions.SharedInformerFactory
 	smiSplitFactory    smiSplitExternalversions.SharedInformerFactory
 	handler            *Handler
+	meshHandler        *Handler
 	messageQueue       workqueue.RateLimitingInterface
 	configurationQueue workqueue.RateLimitingInterface
 	kubernetesProvider *kubernetes.Provider
@@ -53,10 +54,13 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 	messageQueue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	handler := NewHandler(ignored, messageQueue)
+	// Create a new mesh handler to handle mesh events (pods)
+	meshHandler := NewHandler(ignored.WithoutMesh(), messageQueue)
 
 	m := &Controller{
 		clients:      clients,
 		handler:      handler,
+		meshHandler:  meshHandler,
 		messageQueue: messageQueue,
 		ignored:      ignored,
 		smiEnabled:   smiEnabled,
@@ -78,8 +82,14 @@ func (m *Controller) Init() error {
 	m.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(m.handler)
 
 	// Create a new SharedInformerFactory, and register the event handler to informers.
-	m.meshFactory = informers.NewSharedInformerFactoryWithOptions(m.clients.KubeClient, k8s.ResyncPeriod, informers.WithNamespace(k8s.MeshNamespace))
-	m.meshFactory.Core().V1().Pods().Informer().AddEventHandler(m.handler)
+	m.meshFactory = informers.NewSharedInformerFactoryWithOptions(m.clients.KubeClient,
+		k8s.ResyncPeriod,
+		informers.WithNamespace(k8s.MeshNamespace),
+		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+			options.LabelSelector = "component==i3o-mesh"
+		}),
+	)
+	m.meshFactory.Core().V1().Pods().Informer().AddEventHandler(m.meshHandler)
 
 	m.kubernetesProvider = kubernetes.New(m.clients, m.defaultMode)
 
@@ -258,7 +268,10 @@ func (m *Controller) processCreatedMessage(event message.Message) {
 		if isMeshPod(obj) {
 			// Re-Deploy configuration to the created mesh pod.
 			msg := message.BuildNewConfigWithVersion(m.traefikConfig)
-			m.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
+			// Don't deploy if name or IP are unassigned.
+			if obj.Name != "" && obj.Status.PodIP != "" {
+				m.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
+			}
 		}
 		return
 	}
@@ -290,7 +303,15 @@ func (m *Controller) processUpdatedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 
 	case *corev1.Pod:
-		log.Debugf("MeshController ObjectUpdated with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
+		log.Debugf("MeshController ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
+		if isMeshPod(obj) {
+			// Re-Deploy configuration to the updated mesh pod.
+			msg := message.BuildNewConfigWithVersion(m.traefikConfig)
+			// Don't deploy if name or IP are unassigned.
+			if obj.Name != "" && obj.Status.PodIP != "" {
+				m.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
+			}
+		}
 		return
 
 	}
