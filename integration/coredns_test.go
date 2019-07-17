@@ -67,20 +67,3 @@ func (s *CoreDNSSuite) TestCoreDNS14Version(c *check.C) {
 	s.waitForI3oControllerStarted(c)
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
 }
-
-func (s *CoreDNSSuite) TestCoreDNS15Version(c *check.C) {
-	// Get the tools pod service in whoami namespace
-	pod := s.getToolsPodI3o(c)
-	c.Assert(pod, checker.NotNil)
-
-	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami.whoami.traefik.mesh",
-	}
-
-	// Test on CoreDNS 1.5
-	s.installCoreDNS(c, "1.5")
-	err := s.installHelmI3o(c)
-	c.Assert(err, checker.IsNil)
-	s.waitForI3oControllerStarted(c)
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-}

@@ -47,7 +47,6 @@ func init() {
 	images = append(images, image{"coredns/coredns:1.2.6", true})
 	images = append(images, image{"coredns/coredns:1.3.1", true})
 	images = append(images, image{"coredns/coredns:1.4.0", true})
-	images = append(images, image{"coredns/coredns:1.5.2", true})
 	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.1", true})
 
 	check.Suite(&CurlI3oSuite{})
