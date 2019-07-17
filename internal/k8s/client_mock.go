@@ -51,13 +51,13 @@ type CoreV1ClientMock struct {
 	podsList     *corev1.PodList
 	endpoints    []*corev1.Endpoints
 	namespaces   []*corev1.Namespace
-	configmaps   []*corev1.ConfigMap
+	configMaps   []*corev1.ConfigMap
 
 	apiServiceError   error
 	apiPodError       error
 	apiEndpointsError error
 	apiNamespaceError error
-	apiConfigmapError error
+	apiConfigMapError error
 }
 
 type AppsV1ClientMock struct {
@@ -291,24 +291,24 @@ func (c *CoreV1ClientMock) GetNamespaces() ([]*corev1.Namespace, error) {
 	return c.namespaces, nil
 }
 
-func (c *CoreV1ClientMock) GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error) {
-	if c.apiConfigmapError != nil {
-		return nil, false, c.apiConfigmapError
+func (c *CoreV1ClientMock) GetConfigMap(namespace, name string) (*corev1.ConfigMap, bool, error) {
+	if c.apiConfigMapError != nil {
+		return nil, false, c.apiConfigMapError
 	}
 
-	for _, configmap := range c.configmaps {
+	for _, configmap := range c.configMaps {
 		if configmap.Namespace == namespace && configmap.Name == name {
 			return configmap, true, nil
 		}
 	}
-	return nil, false, c.apiConfigmapError
+	return nil, false, c.apiConfigMapError
 }
 
 func (c *CoreV1ClientMock) CreateConfigmap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	panic("implement me")
 }
 
-func (c *CoreV1ClientMock) UpdateConfigmap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+func (c *CoreV1ClientMock) UpdateConfigMap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	panic("implement me")
 }
 

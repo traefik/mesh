@@ -16,7 +16,6 @@ import (
 	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/safe"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -130,13 +129,6 @@ func (d *Deployer) deployConfiguration(c *dynamic.Configuration) bool {
 		d.DeployToPod(pod.Name, pod.Status.PodIP, c)
 	}
 
-	// Add the configmap update to the deploy queue
-	msg := message.Deploy{
-		ConfigmapDeploy: true,
-		Config:          c,
-	}
-	d.deployQueue.Add(msg)
-
 	return true
 }
 
@@ -148,56 +140,6 @@ func (d *Deployer) DeployToPod(name, ip string, c *dynamic.Configuration) {
 		PodIP:   ip,
 		Config:  c,
 	})
-}
-
-func (d *Deployer) deployConfigmap(m message.Deploy) bool {
-	var jsonDataRaw []byte
-	jsonDataRaw, err := json.Marshal(m.Config)
-	if err != nil {
-		log.Errorf("Could not marshal configuration: %s", err)
-		return false
-	}
-
-	jsonData := string(jsonDataRaw)
-
-	configmap, exists, err := d.client.GetConfigmap(k8s.MeshNamespace, "i3o-config")
-	if err != nil {
-		log.Errorf("Could not get configmap: %v", err)
-		return false
-	}
-	if !exists {
-		// Does not exist, create
-		newConfigmap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "i3o-config",
-				Namespace: k8s.MeshNamespace,
-			},
-			Data: map[string]string{
-				"config.yml": jsonData,
-			},
-		}
-
-		_, err = d.client.CreateConfigmap(newConfigmap)
-		if err != nil {
-			log.Errorf("Could not create configmap: %v", err)
-			return false
-		}
-		// Only return true on successful deployment,
-		// or else the configuration will be removed from the queue
-		return true
-	}
-
-	// Configmap exists, deep copy then update
-	newConfigmap := configmap.DeepCopy()
-	newConfigmap.Data["config.yml"] = jsonData
-
-	if _, err = d.client.UpdateConfigmap(newConfigmap); err != nil {
-		log.Errorf("Could not update configmap: %v", err)
-		return false
-	}
-	// Only return true on successful deployment,
-	// or else the configuration will be removed from the queue
-	return true
 }
 
 func (d *Deployer) deployAPI(m message.Deploy) bool {
@@ -344,18 +286,6 @@ func (d *Deployer) processDeployQueueNextItem() bool {
 	defer d.deployQueue.Done(item)
 
 	deployConfig := item.(message.Deploy)
-
-	if deployConfig.ConfigmapDeploy {
-		log.Debug("Deploying Configmap...")
-		if d.deployConfigmap(deployConfig) {
-			// Only remove item from queue on successful deploy.
-			d.deployQueue.Forget(item)
-			return d.deployQueue.Len() > 0
-		}
-		// Deploy configmap failed, so re-add to the queue.
-		d.deployQueue.AddRateLimited(item)
-	}
-
 	log.Debug("Deploying configuration to pod...")
 	if d.deployAPI(deployConfig) {
 		// Only remove item from queue on successful deploy.
