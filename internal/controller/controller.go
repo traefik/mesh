@@ -248,9 +248,14 @@ func (m *Controller) processCreatedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectCreated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
 		log.Debugf("Creating associated mesh service for service: %s/%s", obj.Namespace, obj.Name)
-		if _, err := m.createMeshService(obj); err != nil {
+		service, err := m.createMeshService(obj)
+		if err != nil {
 			log.Errorf("Could not create mesh service: %v", err)
 			return
+		}
+		err = m.setUserServiceExternalIP(obj, service.Spec.ClusterIP)
+		if err != nil {
+			log.Errorf("Could not update user service with externalIP: %v", err)
 		}
 
 	case *corev1.Endpoints:
@@ -459,6 +464,20 @@ func (m *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 	log.Debugf("Updated service: %s/%s", k8s.MeshNamespace, meshServiceName)
 	return updatedSvc, nil
 
+}
+
+// setUserServiceExternalIP sets the externalIP of the user's service to provide a DNS record.
+func (m *Controller) setUserServiceExternalIP(userService *corev1.Service, ip string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		newService := userService.DeepCopy()
+		newService.Spec.ExternalIPs = []string{ip}
+
+		_, err := m.clients.UpdateService(newService)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 // isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
