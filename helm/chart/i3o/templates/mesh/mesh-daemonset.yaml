@@ -32,6 +32,8 @@ spec:
           image: {{ .Values.image.traefik | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
+            - "--entryPoints.ping.address=:1080"
+            - "--entryPoints.readiness.address=:1081"
             - "--entryPoints.ingress-5000.address=:5000"
             - "--entryPoints.ingress-5001.address=:5001"
             - "--entryPoints.ingress-5002.address=:5002"
@@ -49,10 +51,16 @@ spec:
             {{- end }}
             - "--api.dashboard"
             - "--accesslog"
+            - "--ping.entrypoint=ping"
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 1081
+            initialDelaySeconds: 3
+            periodSeconds: 1
           securityContext:
             capabilities:
               drop:
                 - ALL
               add:
                 - NET_BIND_SERVICE
-          
