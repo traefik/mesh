@@ -55,9 +55,8 @@ type CoreV1Client interface {
 	ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error)
 	GetNamespace(name string) (*corev1.Namespace, bool, error)
 	GetNamespaces() ([]*corev1.Namespace, error)
-	GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error)
-	CreateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error)
-	UpdateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error)
+	GetConfigMap(namespace, name string) (*corev1.ConfigMap, bool, error)
+	UpdateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
 }
 
 type AppsV1Client interface {
@@ -314,13 +313,13 @@ func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string
 
 	coreConfigMapName := coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
 
-	coreConfigmap, err := w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
+	coreConfigMap, err := w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
-	if len(coreConfigmap.ObjectMeta.Labels) > 0 {
-		if _, ok := coreConfigmap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
+	if len(coreConfigMap.ObjectMeta.Labels) > 0 {
+		if _, ok := coreConfigMap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
 			return nil
 		}
 	}
@@ -503,21 +502,16 @@ func (w *ClientWrapper) GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1al
 	return group, exists, err
 }
 
-// GetConfigmap retrieves the named configmap in the specified namespace.
-func (w *ClientWrapper) GetConfigmap(namespace, name string) (*corev1.ConfigMap, bool, error) {
-	configmap, err := w.KubeClient.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+// GetConfigMap retrieves the named configMap in the specified namespace.
+func (w *ClientWrapper) GetConfigMap(namespace, name string) (*corev1.ConfigMap, bool, error) {
+	configMap, err := w.KubeClient.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
-	return configmap, exists, err
+	return configMap, exists, err
 }
 
-// UpdateConfigmap updates the specified service.
-func (w *ClientWrapper) UpdateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
-	return w.KubeClient.CoreV1().ConfigMaps(configmap.Namespace).Update(configmap)
-}
-
-// CreateConfigmap creates the specified service.
-func (w *ClientWrapper) CreateConfigmap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
-	return w.KubeClient.CoreV1().ConfigMaps(configmap.Namespace).Create(configmap)
+// UpdateConfigMap updates the specified service.
+func (w *ClientWrapper) UpdateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+	return w.KubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(configMap)
 }
 
 // translateNotFoundError will translate a "not found" error to a boolean return

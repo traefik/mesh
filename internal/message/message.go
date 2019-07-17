@@ -27,10 +27,9 @@ type Message struct {
 
 // Deploy holds a message for processing in the deploy queue.
 type Deploy struct {
-	PodName         string
-	PodIP           string
-	ConfigmapDeploy bool
-	Config          *dynamic.Configuration
+	PodName string
+	PodIP   string
+	Config  *dynamic.Configuration
 }
 
 // GetVersion gets the version of a deploy message.
