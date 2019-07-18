@@ -194,6 +194,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 				EntryPoints: []string{"ingress-81"},
 				Service:     "example",
 				Rule:        "((PathPrefix(`/metrics`) && Methods(GET) && (Host(`test.default.traefik.mesh`) || Host(`10.0.0.1`))))",
+				Middlewares: []string{"block-all"},
 			},
 		},
 		{
@@ -235,6 +236,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 			expected: &dynamic.Router{
 				EntryPoints: []string{"ingress-81"},
 				Service:     "example",
+				Middlewares: []string{"block-all"},
 			},
 		},
 		{
@@ -276,6 +278,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 			expected: &dynamic.Router{
 				EntryPoints: []string{"ingress-81"},
 				Service:     "example",
+				Middlewares: []string{"block-all"},
 			},
 		},
 		{
@@ -317,6 +320,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 			expected: &dynamic.Router{
 				EntryPoints: []string{"ingress-81"},
 				Service:     "example",
+				Middlewares: []string{"block-all"},
 			},
 			httpError: true,
 		},
@@ -331,8 +335,8 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 				clientMock.EnableHTTPRouteGroupError()
 			}
 			provider := New(clientMock, k8s.ServiceTypeHTTP)
-
-			actual := provider.buildRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key)
+			middleware := "block-all"
+			actual := provider.buildRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
 			assert.Equal(t, test.expected, actual)
 
 		})
@@ -1228,8 +1232,9 @@ func TestBuildConfiguration(t *testing.T) {
 			desc: "simple configuration build with empty event",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1238,8 +1243,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1256,6 +1262,7 @@ func TestBuildConfiguration(t *testing.T) {
 							EntryPoints: []string{"ingress-5000"},
 							Rule:        "((PathPrefix(`/metrics`) && Methods(GET) && (Host(`demo-service.default.traefik.mesh`) || Host(`10.1.0.1`))))",
 							Service:     "5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9",
+							Middlewares: []string{"api-service-metrics-default-5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9-whitelist"},
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -1270,6 +1277,13 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 					},
+					Middlewares: map[string]*dynamic.Middleware{
+						"api-service-metrics-default-5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9-whitelist": {
+							IPWhiteList: &dynamic.IPWhiteList{
+								SourceRange: []string{"10.4.3.2"},
+							},
+						},
+					},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1278,8 +1292,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1315,6 +1330,7 @@ func TestBuildConfiguration(t *testing.T) {
 							EntryPoints: []string{"ingress-5000"},
 							Rule:        "((PathPrefix(`/metrics`) && Methods(GET) && (Host(`demo-test.default.traefik.mesh`) || Host(`10.1.0.1`))))",
 							Service:     "7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952",
+							Middlewares: []string{"api-service-metrics-default-7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952-whitelist"},
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -1329,6 +1345,13 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 					},
+					Middlewares: map[string]*dynamic.Middleware{
+						"api-service-metrics-default-7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952-whitelist": {
+							IPWhiteList: &dynamic.IPWhiteList{
+								SourceRange: []string{"10.4.3.2"},
+							},
+						},
+					},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1337,8 +1360,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1377,8 +1401,9 @@ func TestBuildConfiguration(t *testing.T) {
 			desc: "simple configuration build with endpoint error",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1387,8 +1412,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1420,8 +1446,9 @@ func TestBuildConfiguration(t *testing.T) {
 			desc: "simple configuration build with endpoints don't exist",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1430,8 +1457,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1462,8 +1490,9 @@ func TestBuildConfiguration(t *testing.T) {
 			desc: "simple configuration build with service error",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1472,8 +1501,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1513,8 +1543,9 @@ func TestBuildConfiguration(t *testing.T) {
 			desc: "simple configuration build with service doesn't exist",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -1523,8 +1554,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},

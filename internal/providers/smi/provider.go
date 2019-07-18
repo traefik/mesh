@@ -15,6 +15,7 @@ import (
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Provider holds a client to access the provider.
@@ -101,7 +102,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
 	// Get all traffic targets in the service's namespace.
 	trafficTargets := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace)
-	fmt.Printf("Found traffictargets: %+v\n", trafficTargets)
+	log.Debugf("Found traffictargets: %+v\n", trafficTargets)
 	// Find all traffic targets that are applicable to the service in question.
 	applicableTrafficTargets := p.getApplicableTrafficTargets(endpoints, trafficTargets)
 	log.Debugf("Found applicable traffictargets: %+v\n", applicableTrafficTargets)
@@ -111,11 +112,35 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 
 	for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 		for _, groupedTrafficTarget := range groupedTrafficTargets {
+
 			for id, sp := range service.Spec.Ports {
 				key := buildKey(service.Name, service.Namespace, sp.Port, groupedTrafficTarget.Name, groupedTrafficTarget.Namespace)
 
+				//	For each source in the trafficTarget, get a list of IPs to whitelist.
+				var sourceIPs []string
+				for _, source := range groupedTrafficTarget.Sources {
+					fieldSelector := fmt.Sprintf("spec.serviceAccountName=%s", source.Name)
+					// Get all pods with the associated source serviceAccount (can only be in the source namespaces).
+					podList, err := p.client.ListPodWithOptions(source.Namespace, metav1.ListOptions{FieldSelector: fieldSelector})
+					if err != nil {
+						log.Errorf("Could not list pods: %v", err)
+						return
+					}
+
+					// Retrieve a list of sourceIPs from the list of pods.
+					for _, pod := range podList.Items {
+						sourceIPs = append(sourceIPs, pod.Status.PodIP)
+					}
+				}
+
+				whitelistKey := groupedTrafficTarget.Name + "-" + groupedTrafficTarget.Namespace + "-" + key + "-whitelist"
+				whitelistMiddleware := k8s.BlockAllMiddlewareKey
 				if serviceMode == k8s.ServiceTypeHTTP {
-					config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key)
+					if len(sourceIPs) > 0 {
+						config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
+						whitelistMiddleware = whitelistKey
+					}
+					config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
 					config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(endpoints, groupedTrafficTarget)
 					continue
 				}
@@ -217,7 +242,7 @@ func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1al
 	return result
 }
 
-func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *dynamic.Router {
+func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key, middleware string) *dynamic.Router {
 	var rule []string
 	for _, spec := range trafficTarget.Specs {
 		if spec.Kind != "HTTPRouteGroup" {
@@ -250,6 +275,7 @@ func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, s
 		Rule:        strings.Join(rule, " || "),
 		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
 		Service:     key,
+		Middlewares: []string{middleware},
 	}
 }
 
@@ -338,4 +364,13 @@ func buildKey(serviceName, namespace string, port int32, ttName, ttNamespace str
 	dst := make([]byte, hex.EncodedLen(len(sum)))
 	hex.Encode(dst, sum[:])
 	return string(dst)
+}
+
+func createWhitelistMiddleware(sourceIPs []string) *dynamic.Middleware {
+	// Create middleware.
+	return &dynamic.Middleware{
+		IPWhiteList: &dynamic.IPWhiteList{
+			SourceRange: sourceIPs,
+		},
+	}
 }

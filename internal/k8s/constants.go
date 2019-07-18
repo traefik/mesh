@@ -11,4 +11,5 @@ const (
 	AnnotationServiceType        = baseAnnotation + "i3o-traffic-type"
 	ServiceTypeHTTP       string = "http"
 	ServiceTypeTCP        string = "tcp"
+	BlockAllMiddlewareKey string = "smi-block-all-middleware"
 )
