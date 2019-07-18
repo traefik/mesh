@@ -1,0 +1,57 @@
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: a-b
+destination:
+  kind: ServiceAccount
+  name: b
+  namespace: default
+specs:
+- kind: HTTPRouteGroup
+  name: app-routes
+  matches:
+  - foo
+sources:
+- kind: ServiceAccount
+  name: a
+  namespace: default
+
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: c-b
+destination:
+  kind: ServiceAccount
+  name: b
+  namespace: default
+specs:
+- kind: HTTPRouteGroup
+  name: app-routes
+  matches:
+  - foo
+sources:
+- kind: ServiceAccount
+  name: c
+  namespace: default
+
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: c-d
+destination:
+  kind: ServiceAccount
+  name: d
+  namespace: default
+specs:
+- kind: HTTPRouteGroup
+  name: app-routes
+  matches:
+  - bar
+sources:
+- kind: ServiceAccount
+  name: c
+  namespace: default
+

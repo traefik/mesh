@@ -51,6 +51,7 @@ func init() {
 
 	check.Suite(&CurlI3oSuite{})
 	check.Suite(&CoreDNSSuite{})
+	check.Suite(&SMISuite{})
 
 	dir, _ := os.Getwd()
 	err := os.RemoveAll(path.Join(dir, fmt.Sprintf("resources/compose/images")))
@@ -269,4 +270,12 @@ func (s *BaseSuite) getToolsPodI3o(c *check.C) *corev1.Pod {
 	c.Assert(len(podList.Items), checker.Equals, 1)
 
 	return &podList.Items[0]
+}
+
+func (s *BaseSuite) getPodByNamespaceAndName(c *check.C, namespace, name string) *corev1.Pod {
+	pod, exists, err := s.client.GetPod(namespace, name)
+	c.Assert(err, checker.IsNil)
+	c.Assert(exists, checker.True)
+
+	return pod
 }

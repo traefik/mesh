@@ -1,0 +1,116 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: a
+spec:
+  serviceAccountName: a
+  containers:
+    - name: a
+      image: containous/whoami
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: a-tools
+spec:
+  serviceAccountName: a
+  containers:
+    - name: a-tools
+      image: giantswarm/tiny-tools
+      command:
+      - "sleep"
+      - "3600"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: b
+  labels:
+    app: b
+spec:
+  serviceAccountName: b
+  containers:
+    - name: example
+      image: containous/whoami
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: b-tools
+spec:
+  serviceAccountName: b
+  containers:
+    - name: b-tools
+      image: giantswarm/tiny-tools
+      command:
+      - "sleep"
+      - "3600"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: c
+spec:
+  serviceAccountName: c
+  containers:
+    - name: example
+      image: containous/whoami
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: c-tools
+spec:
+  serviceAccountName: c
+  containers:
+    - name: c-tools
+      image: giantswarm/tiny-tools
+      command:
+      - "sleep"
+      - "3600"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: d
+  labels:
+    app: d
+spec:
+  serviceAccountName: d
+  containers:
+    - name: example
+      image: containous/whoami
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: d-tools
+spec:
+  serviceAccountName: d
+  containers:
+    - name: d-tools
+      image: giantswarm/tiny-tools
+      command:
+      - "sleep"
+      - "3600"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: e
+  labels:
+    app: e
+spec:
+  serviceAccountName: e
+  containers:
+    - name: example
+      image: containous/whoami

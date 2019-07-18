@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: b
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    name: web
+  selector:
+    app: b
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: d
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    name: web
+  selector:
+    app: d
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: e
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    name: web
+  selector:
+    app: e
