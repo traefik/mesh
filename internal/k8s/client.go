@@ -233,22 +233,9 @@ func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (b
 
 	serverBlock :=
 		`
-traefik.mesh.svc.cluster.local:53 {
-    errors
-    rewrite continue {
-        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.traefik\.mesh traefik-{1}-{2}.traefik-mesh.svc.cluster.local
-        answer name traefik-([a-zA-Z0-9-_]*)-([a-zA-Z0-9-_]*)\.traefik-mesh\.svc\.cluster\.local {1}.{2}.traefik.mesh
-    }
-    kubernetes cluster.local in-addr.arpa ip6.arpa {
-        pods insecure
-        upstream
-    	fallthrough in-addr.arpa ip6.arpa
-    }
-    forward . /etc/resolv.conf
-    cache 30
-    loop
-    reload
-    loadbalance
+traefik.mesh:53 {
+	kubernetes cluster.local
+	k8s_external traefik.mesh
 }
 `
 	originalBlock := coreConfigMap.Data["Corefile"]
