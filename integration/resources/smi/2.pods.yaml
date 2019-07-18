@@ -7,7 +7,7 @@ spec:
   serviceAccountName: a
   containers:
     - name: a
-      image: containous/whoami:v1.0.1
+      image: containous/whoami
 
 ---
 apiVersion: v1
@@ -18,7 +18,7 @@ spec:
   serviceAccountName: a
   containers:
     - name: a-tools
-      image: giantswarm/tiny-tools:3.9
+      image: giantswarm/tiny-tools
       command:
       - "sleep"
       - "3600"
@@ -33,8 +33,8 @@ metadata:
 spec:
   serviceAccountName: b
   containers:
-    - name: b
-      image: containous/whoami:v1.0.1
+    - name: example
+      image: containous/whoami
 
 ---
 apiVersion: v1
@@ -45,7 +45,7 @@ spec:
   serviceAccountName: b
   containers:
     - name: b-tools
-      image: giantswarm/tiny-tools:3.9
+      image: giantswarm/tiny-tools
       command:
       - "sleep"
       - "3600"
@@ -58,8 +58,8 @@ metadata:
 spec:
   serviceAccountName: c
   containers:
-    - name: c
-      image: containous/whoami:v1.0.1
+    - name: example
+      image: containous/whoami
 
 ---
 apiVersion: v1
@@ -70,7 +70,7 @@ spec:
   serviceAccountName: c
   containers:
     - name: c-tools
-      image: giantswarm/tiny-tools:3.9
+      image: giantswarm/tiny-tools
       command:
       - "sleep"
       - "3600"
@@ -85,8 +85,8 @@ metadata:
 spec:
   serviceAccountName: d
   containers:
-    - name: d
-      image: containous/whoami:v1.0.1
+    - name: example
+      image: containous/whoami
 
 ---
 apiVersion: v1
@@ -97,7 +97,7 @@ spec:
   serviceAccountName: d
   containers:
     - name: d-tools
-      image: giantswarm/tiny-tools:3.9
+      image: giantswarm/tiny-tools
       command:
       - "sleep"
       - "3600"
@@ -112,5 +112,5 @@ metadata:
 spec:
   serviceAccountName: e
   containers:
-    - name: e
-      image: containous/whoami:v1.0.1
+    - name: example
+      image: containous/whoami

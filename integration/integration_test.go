@@ -278,3 +278,11 @@ func (s *BaseSuite) getToolsPodI3o(c *check.C) *corev1.Pod {
 
 	return &podList.Items[0]
 }
+
+func (s *BaseSuite) getPodByNamespaceAndName(c *check.C, namespace, name string) *corev1.Pod {
+	pod, exists, err := s.client.GetPod(namespace, name)
+	c.Assert(err, checker.IsNil)
+	c.Assert(exists, checker.True)
+
+	return pod
+}
