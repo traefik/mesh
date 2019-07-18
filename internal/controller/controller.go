@@ -57,7 +57,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 	// Create a new mesh handler to handle mesh events (pods)
 	meshHandler := NewHandler(ignored.WithoutMesh(), messageQueue)
 
-	m := &Controller{
+	c := &Controller{
 		clients:      clients,
 		handler:      handler,
 		meshHandler:  meshHandler,
@@ -67,101 +67,101 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 		defaultMode:  defaultMode,
 	}
 
-	if err := m.Init(); err != nil {
+	if err := c.Init(); err != nil {
 		log.Errorln("Could not initialize MeshController")
 	}
 
-	return m
+	return c
 }
 
 // Init the Controller.
-func (m *Controller) Init() error {
+func (c *Controller) Init() error {
 	// Create a new SharedInformerFactory, and register the event handler to informers.
-	m.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(m.clients.KubeClient, k8s.ResyncPeriod)
-	m.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(m.handler)
-	m.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(m.handler)
+	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient, k8s.ResyncPeriod)
+	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
+	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
 
 	// Create a new SharedInformerFactory, and register the event handler to informers.
-	m.meshFactory = informers.NewSharedInformerFactoryWithOptions(m.clients.KubeClient,
+	c.meshFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient,
 		k8s.ResyncPeriod,
 		informers.WithNamespace(k8s.MeshNamespace),
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = "component==i3o-mesh"
 		}),
 	)
-	m.meshFactory.Core().V1().Pods().Informer().AddEventHandler(m.meshHandler)
+	c.meshFactory.Core().V1().Pods().Informer().AddEventHandler(c.meshHandler)
 
-	m.kubernetesProvider = kubernetes.New(m.clients, m.defaultMode)
+	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode)
 
 	// configurationQueue is used to process configurations from the providers
 	// and deal with pushing them to mesh nodes
-	m.configurationQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+	c.configurationQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	// Initialize the deployer.
-	m.deployer = deployer.New(m.clients, m.configurationQueue)
+	c.deployer = deployer.New(c.clients, c.configurationQueue)
 
 	// Initialize an empty configuration with a readinesscheck so that configs deployed to nodes mark them as ready.
-	m.traefikConfig = createBaseConfigWithReadiness()
+	c.traefikConfig = createBaseConfigWithReadiness()
 
-	if m.smiEnabled {
-		m.smiProvider = smi.New(m.clients, m.defaultMode)
+	if c.smiEnabled {
+		c.smiProvider = smi.New(c.clients, c.defaultMode)
 
 		// Create new SharedInformerFactories, and register the event handler to informers.
-		m.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(m.clients.SmiAccessClient, k8s.ResyncPeriod)
-		m.smiAccessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(m.handler)
+		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
+		c.smiAccessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
 
-		m.smiSpecsFactory = smiSpecsExternalversions.NewSharedInformerFactoryWithOptions(m.clients.SmiSpecsClient, k8s.ResyncPeriod)
-		m.smiSpecsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(m.handler)
+		c.smiSpecsFactory = smiSpecsExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiSpecsClient, k8s.ResyncPeriod)
+		c.smiSpecsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
 
-		m.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(m.clients.SmiSplitClient, k8s.ResyncPeriod)
-		m.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(m.handler)
+		c.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiSplitClient, k8s.ResyncPeriod)
+		c.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(c.handler)
 
 		// Initialize the base configuration with the base SMI middleware
-		addBaseSMIMiddlewares(m.traefikConfig)
+		addBaseSMIMiddlewares(c.traefikConfig)
 	}
 
 	return nil
 }
 
 // Run is the main entrypoint for the controller.
-func (m *Controller) Run(stopCh <-chan struct{}) error {
+func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// handle a panic with logging and exiting
 	defer utilruntime.HandleCrash()
 
 	log.Debug("Initializing Mesh controller")
 
 	// Start the informers
-	m.kubernetesFactory.Start(stopCh)
-	for t, ok := range m.kubernetesFactory.WaitForCacheSync(stopCh) {
+	c.kubernetesFactory.Start(stopCh)
+	for t, ok := range c.kubernetesFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
 	}
 
-	m.meshFactory.Start(stopCh)
-	for t, ok := range m.meshFactory.WaitForCacheSync(stopCh) {
+	c.meshFactory.Start(stopCh)
+	for t, ok := range c.meshFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
 	}
 
-	if m.smiEnabled {
-		m.smiAccessFactory.Start(stopCh)
-		for t, ok := range m.smiAccessFactory.WaitForCacheSync(stopCh) {
+	if c.smiEnabled {
+		c.smiAccessFactory.Start(stopCh)
+		for t, ok := range c.smiAccessFactory.WaitForCacheSync(stopCh) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
 
-		m.smiSpecsFactory.Start(stopCh)
-		for t, ok := range m.smiSpecsFactory.WaitForCacheSync(stopCh) {
+		c.smiSpecsFactory.Start(stopCh)
+		for t, ok := range c.smiSpecsFactory.WaitForCacheSync(stopCh) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
 
-		m.smiSplitFactory.Start(stopCh)
-		for t, ok := range m.smiSplitFactory.WaitForCacheSync(stopCh) {
+		c.smiSplitFactory.Start(stopCh)
+		for t, ok := range c.smiSplitFactory.WaitForCacheSync(stopCh) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
@@ -169,10 +169,10 @@ func (m *Controller) Run(stopCh <-chan struct{}) error {
 	}
 
 	// run the deployer to deploy configurations
-	go m.deployer.Run(stopCh)
+	go c.deployer.Run(stopCh)
 
 	// run the runWorker method every second with a stop channel
-	wait.Until(m.runWorker, time.Second, stopCh)
+	wait.Until(c.runWorker, time.Second, stopCh)
 
 	<-stopCh
 	log.Info("Shutting down workers")
@@ -181,12 +181,12 @@ func (m *Controller) Run(stopCh <-chan struct{}) error {
 }
 
 // runWorker executes the loop to process new items added to the queue
-func (m *Controller) runWorker() {
+func (c *Controller) runWorker() {
 	log.Debug("MeshController.runWorker: starting")
 
 	// invoke processNextMessage to fetch and consume the next
 	// message put in the queue
-	for m.processNextMessage() {
+	for c.processNextMessage() {
 		log.Debugf("MeshController.runWorker: processing next item")
 	}
 
@@ -195,13 +195,13 @@ func (m *Controller) runWorker() {
 
 // processNextConfiguration retrieves each queued item and takes the
 // necessary handler action.
-func (m *Controller) processNextMessage() bool {
+func (c *Controller) processNextMessage() bool {
 	log.Debugf("MeshController Waiting for next item to process...")
 
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
 	// processing
-	item, quit := m.messageQueue.Get()
+	item, quit := c.messageQueue.Get()
 
 	// stop the worker loop from running as this indicates we
 	// have sent a shutdown message that the queue has indicated
@@ -210,51 +210,51 @@ func (m *Controller) processNextMessage() bool {
 		return false
 	}
 
-	defer m.messageQueue.Done(item)
+	defer c.messageQueue.Done(item)
 
 	event := item.(message.Message)
 
 	switch event.Action {
 	case message.TypeCreated:
-		m.processCreatedMessage(event)
+		c.processCreatedMessage(event)
 	case message.TypeUpdated:
-		m.processUpdatedMessage(event)
+		c.processUpdatedMessage(event)
 	case message.TypeDeleted:
-		m.processDeletedMessage(event)
+		c.processDeletedMessage(event)
 	}
 
-	m.messageQueue.Forget(item)
+	c.messageQueue.Forget(item)
 
 	// keep the worker loop running by returning true if there are queue objects remaining
-	return m.messageQueue.Len() > 0
+	return c.messageQueue.Len() > 0
 }
 
-func (m *Controller) buildConfigurationFromProviders(event message.Message) {
-	if m.smiEnabled {
-		m.smiProvider.BuildConfiguration(event, m.traefikConfig)
+func (c *Controller) buildConfigurationFromProviders(event message.Message) {
+	if c.smiEnabled {
+		c.smiProvider.BuildConfiguration(event, c.traefikConfig)
 		return
 	}
-	m.kubernetesProvider.BuildConfiguration(event, m.traefikConfig)
+	c.kubernetesProvider.BuildConfiguration(event, c.traefikConfig)
 }
 
-func (m *Controller) processCreatedMessage(event message.Message) {
+func (c *Controller) processCreatedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
 	switch obj := event.Object.(type) {
 	case *corev1.Service:
-		if m.ignored.Ignored(obj.Name, obj.Namespace) {
+		if c.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
 		log.Debugf("MeshController ObjectCreated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
 		log.Debugf("Creating associated mesh service for service: %s/%s", obj.Namespace, obj.Name)
-		service, err := m.createMeshService(obj)
+		service, err := c.createMeshService(obj)
 		if err != nil {
 			log.Errorf("Could not create mesh service: %v", err)
 			return
 		}
-		err = m.setUserServiceExternalIP(obj, service.Spec.ClusterIP)
-		if err != nil {
+
+		if err = c.setUserServiceExternalIP(obj, service.Spec.ClusterIP); err != nil {
 			log.Errorf("Could not update user service with externalIP: %v", err)
 		}
 
@@ -266,36 +266,36 @@ func (m *Controller) processCreatedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
 		if isMeshPod(obj) {
 			// Re-Deploy configuration to the created mesh pod.
-			msg := message.BuildNewConfigWithVersion(m.traefikConfig)
+			msg := message.BuildNewConfigWithVersion(c.traefikConfig)
 			// Don't deploy if name or IP are unassigned.
 			if obj.Name != "" && obj.Status.PodIP != "" {
-				m.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
+				c.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
 			}
 		}
 		return
 	}
 
-	m.buildConfigurationFromProviders(event)
-	m.configurationQueue.Add(message.BuildNewConfigWithVersion(m.traefikConfig))
+	c.buildConfigurationFromProviders(event)
+	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
 }
 
-func (m *Controller) processUpdatedMessage(event message.Message) {
+func (c *Controller) processUpdatedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
 	switch obj := event.Object.(type) {
 	case *corev1.Service:
-		if m.ignored.Ignored(obj.Name, obj.Namespace) {
+		if c.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 		oldService := event.OldObject.(*corev1.Service)
-		if _, err := m.updateMeshService(oldService, obj); err != nil {
+		if _, err := c.updateMeshService(oldService, obj); err != nil {
 			log.Errorf("Could not update mesh service: %v", err)
 			return
 		}
 
 	case *corev1.Endpoints:
-		if m.ignored.Ignored(obj.Name, obj.Namespace) {
+		if c.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
@@ -305,39 +305,39 @@ func (m *Controller) processUpdatedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
 		if isMeshPod(obj) {
 			// Re-Deploy configuration to the updated mesh pod.
-			msg := message.BuildNewConfigWithVersion(m.traefikConfig)
+			msg := message.BuildNewConfigWithVersion(c.traefikConfig)
 			// Don't deploy if name or IP are unassigned.
 			if obj.Name != "" && obj.Status.PodIP != "" {
-				m.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
+				c.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
 			}
 		}
 		return
 
 	}
 
-	m.buildConfigurationFromProviders(event)
-	m.configurationQueue.Add(message.BuildNewConfigWithVersion(m.traefikConfig))
+	c.buildConfigurationFromProviders(event)
+	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
 
 }
 
-func (m *Controller) processDeletedMessage(event message.Message) {
+func (c *Controller) processDeletedMessage(event message.Message) {
 	// assert the type to an object to pull out relevant data
 	switch obj := event.Object.(type) {
 	case *corev1.Service:
 		// assert the type to an object to pull out relevant data
-		if m.ignored.Ignored(obj.Name, obj.Namespace) {
+		if c.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
 		log.Debugf("MeshController ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
-		if err := m.deleteMeshService(obj.Name, obj.Namespace); err != nil {
+		if err := c.deleteMeshService(obj.Name, obj.Namespace); err != nil {
 			log.Errorf("Could not delete mesh service: %v", err)
 			return
 		}
 
 	case *corev1.Endpoints:
-		if m.ignored.Ignored(obj.Name, obj.Namespace) {
+		if c.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
@@ -348,14 +348,14 @@ func (m *Controller) processDeletedMessage(event message.Message) {
 		return
 	}
 
-	m.buildConfigurationFromProviders(event)
-	m.configurationQueue.Add(message.BuildNewConfigWithVersion(m.traefikConfig))
+	c.buildConfigurationFromProviders(event)
+	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
 
 }
 
-func (m *Controller) createMeshService(service *corev1.Service) (*corev1.Service, error) {
+func (c *Controller) createMeshService(service *corev1.Service) (*corev1.Service, error) {
 	meshServiceName := userServiceToMeshServiceName(service.Name, service.Namespace)
-	meshServiceInstance, exists, err := m.clients.GetService(k8s.MeshNamespace, meshServiceName)
+	meshServiceInstance, exists, err := c.clients.GetService(k8s.MeshNamespace, meshServiceName)
 	if err != nil {
 		return nil, err
 	}
@@ -392,22 +392,22 @@ func (m *Controller) createMeshService(service *corev1.Service) (*corev1.Service
 			},
 		}
 
-		return m.clients.CreateService(svc)
+		return c.clients.CreateService(svc)
 	}
 
 	return meshServiceInstance, nil
 }
 
-func (m *Controller) deleteMeshService(serviceName, serviceNamespace string) error {
+func (c *Controller) deleteMeshService(serviceName, serviceNamespace string) error {
 	meshServiceName := userServiceToMeshServiceName(serviceName, serviceNamespace)
-	_, exists, err := m.clients.GetService(k8s.MeshNamespace, meshServiceName)
+	_, exists, err := c.clients.GetService(k8s.MeshNamespace, meshServiceName)
 	if err != nil {
 		return err
 	}
 
 	if exists {
 		// Service exists, delete
-		if err := m.clients.DeleteService(k8s.MeshNamespace, meshServiceName); err != nil {
+		if err := c.clients.DeleteService(k8s.MeshNamespace, meshServiceName); err != nil {
 			return err
 		}
 		log.Debugf("Deleted service: %s/%s", k8s.MeshNamespace, meshServiceName)
@@ -417,13 +417,13 @@ func (m *Controller) deleteMeshService(serviceName, serviceNamespace string) err
 }
 
 // updateMeshService updates the mesh service based on an old/new user service, and returns the updated mesh service
-func (m *Controller) updateMeshService(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error) {
+func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error) {
 	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 	meshServiceName := userServiceToMeshServiceName(oldUserService.Name, oldUserService.Namespace)
 
 	var updatedSvc *corev1.Service
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		service, exists, err := m.clients.GetService(k8s.MeshNamespace, meshServiceName)
+		service, exists, err := c.clients.GetService(k8s.MeshNamespace, meshServiceName)
 		if err != nil {
 			return err
 		}
@@ -449,7 +449,7 @@ func (m *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 			newService := service.DeepCopy()
 			newService.Spec.Ports = ports
 
-			updatedSvc, err = m.clients.UpdateService(newService)
+			updatedSvc, err = c.clients.UpdateService(newService)
 			if err != nil {
 				return err
 			}
@@ -467,16 +467,13 @@ func (m *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 }
 
 // setUserServiceExternalIP sets the externalIP of the user's service to provide a DNS record.
-func (m *Controller) setUserServiceExternalIP(userService *corev1.Service, ip string) error {
+func (c *Controller) setUserServiceExternalIP(userService *corev1.Service, ip string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		newService := userService.DeepCopy()
 		newService.Spec.ExternalIPs = []string{ip}
 
-		_, err := m.clients.UpdateService(newService)
-		if err != nil {
-			return err
-		}
-		return nil
+		_, err := c.clients.UpdateService(newService)
+		return err
 	})
 }
 
