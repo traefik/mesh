@@ -112,6 +112,9 @@ func (d *Deployer) processNextItem() bool {
 // deployConfiguration takes the configuration, and adds it into the deploy queue for each affected
 // mesh node. This allows nodes to retry individually.
 func (d *Deployer) deployConfiguration(c *dynamic.Configuration) bool {
+	// Make a copy to deploy, so changes to the main configuration don't propagate
+	deployConfig := c.DeepCopy()
+
 	podList, err := d.client.ListPodWithOptions(k8s.MeshNamespace, metav1.ListOptions{
 		LabelSelector: "component==i3o-mesh",
 	})
@@ -128,7 +131,7 @@ func (d *Deployer) deployConfiguration(c *dynamic.Configuration) bool {
 	for _, pod := range podList.Items {
 		log.Debugf("Add configuration to deploy queue for pod %s with IP %s", pod.Name, pod.Status.PodIP)
 
-		d.DeployToPod(pod.Name, pod.Status.PodIP, c)
+		d.DeployToPod(pod.Name, pod.Status.PodIP, deployConfig)
 	}
 
 	return true
@@ -136,11 +139,14 @@ func (d *Deployer) deployConfiguration(c *dynamic.Configuration) bool {
 
 // DeployToPod takes the configuration, and adds it into the deploy queue for a pod.
 func (d *Deployer) DeployToPod(name, ip string, c *dynamic.Configuration) {
+	// Make a copy to deploy, so changes to the main configuration don't propagate
+	deployConfig := c.DeepCopy()
+
 	log.Infof("Adding configuration to deploy queue for pod %s, with IP: %s", name, ip)
 	d.deployQueue.Add(message.Deploy{
 		PodName: name,
 		PodIP:   ip,
-		Config:  c,
+		Config:  deployConfig,
 	})
 }
 
