@@ -106,7 +106,6 @@ func (t *Try) WaitCommandExecute(command string, argSlice []string, expected str
 		if err != nil {
 			return fmt.Errorf("unable execute command %s %s - output %s: %v", command, strings.Join(argSlice, " "), output, err)
 		}
-
 		return nil
 	}), ebo); err != nil {
 		return fmt.Errorf("unable execute command %s %s: %v", command, strings.Join(argSlice, " "), err)

@@ -34,7 +34,7 @@ run `make` to build the binary and build/tag the local image.
 
 To deploy the helm chart, run:
 
-`helm install helm/chart/i3o --set image.pullPolicy=IfNotPresent --set image.tag=latest`
+`helm install helm/chart/i3o --namespace traefik-mesh --set image.pullPolicy=IfNotPresent --set image.tag=latest`
 
 ## Usage
 

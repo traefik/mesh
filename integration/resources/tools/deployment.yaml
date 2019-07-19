@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: tiny-tools
-        image: giantswarm/tiny-tools
+        image: giantswarm/tiny-tools:3.9
         command:
         - "sleep"
         - "3600"

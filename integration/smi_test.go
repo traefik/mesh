@@ -73,6 +73,48 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			path:        "/test",
 			expected:    200,
 		},
+		{
+			desc:        "Pod C -> Service B.mesh /test returns 401",
+			source:      "c-tools",
+			destination: "b.default.traefik.mesh",
+			path:        "/test",
+			expected:    401,
+		},
+		{
+			desc:        "Pod C -> Service B.mesh /foo returns 200",
+			source:      "c-tools",
+			destination: "b.default.traefik.mesh",
+			path:        "/foo",
+			expected:    200,
+		},
+		{
+			desc:        "Pod A -> Service B /test returns 200",
+			source:      "a-tools",
+			destination: "b.default",
+			path:        "/test",
+			expected:    200,
+		},
+		{
+			desc:        "Pod A -> Service B.mesh /test returns 401",
+			source:      "a-tools",
+			destination: "b.default.traefik.mesh",
+			path:        "/test",
+			expected:    401,
+		},
+		{
+			desc:        "Pod A -> Service B.mesh /foo returns 200",
+			source:      "a-tools",
+			destination: "b.default.traefik.mesh",
+			path:        "/foo",
+			expected:    200,
+		},
+		{
+			desc:        "Pod A -> Service D.mesh /bar returns 401",
+			source:      "a-tools",
+			destination: "d.default.traefik.mesh",
+			path:        "/bar",
+			expected:    401,
+		},
 	}
 
 	for _, test := range testCases {
