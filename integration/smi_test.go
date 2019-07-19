@@ -22,12 +22,6 @@ func (s *SMISuite) SetUpSuite(c *check.C) {
 	err = s.installHelmI3o(c)
 	c.Assert(err, checker.IsNil)
 	s.waitForI3oControllerStarted(c)
-	// Create the required objects from the smi directory
-	cmd := exec.Command("kubectl", "create",
-		"-f", path.Join(s.dir, "resources/smi"))
-	cmd.Env = os.Environ()
-	_, err = cmd.CombinedOutput()
-	c.Assert(err, checker.IsNil)
 
 }
 
@@ -57,6 +51,13 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 	// Pod B -> Service E.mesh /test returns 401
 	// Pod C -> Service E.mesh /test returns 401
 	// Pod D -> Service E.mesh /test returns 401
+
+	// Create the required objects from the smi directory
+	cmd := exec.Command("kubectl", "apply",
+		"-f", path.Join(s.dir, "resources/smi"))
+	cmd.Env = os.Environ()
+	_, err := cmd.CombinedOutput()
+	c.Assert(err, checker.IsNil)
 
 	testCases := []struct {
 		desc        string
