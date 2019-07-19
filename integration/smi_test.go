@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"time"
 
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
@@ -58,6 +59,8 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 	cmd.Env = os.Environ()
 	_, err := cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
+
+	time.Sleep(10 * time.Second)
 
 	testCases := []struct {
 		desc        string
@@ -113,6 +116,83 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			source:      "a-tools",
 			destination: "d.default.traefik.mesh",
 			path:        "/bar",
+			expected:    401,
+		},
+		{
+			desc:        "Pod C -> Service D /test returns 200",
+			source:      "c-tools",
+			destination: "d.default",
+			path:        "/test",
+			expected:    200,
+		},
+		{
+			desc:        "Pod C -> Service D.mesh /test returns 401",
+			source:      "c-tools",
+			destination: "d.default.traefik.mesh",
+			path:        "/test",
+			expected:    401,
+		},
+		{
+			desc:        "Pod C -> Service D.mesh /bar returns 200",
+			source:      "c-tools",
+			destination: "d.default.traefik.mesh",
+			path:        "/bar",
+			expected:    200,
+		},
+		{
+			desc:        "Pod A -> Service E /test returns 200",
+			source:      "a-tools",
+			destination: "e.default",
+			path:        "/test",
+			expected:    200,
+		},
+		{
+			desc:        "Pod B -> Service E /test returns 200",
+			source:      "b-tools",
+			destination: "e.default",
+			path:        "/test",
+			expected:    200,
+		},
+		{
+			desc:        "Pod C -> Service E /test returns 200",
+			source:      "c-tools",
+			destination: "e.default",
+			path:        "/test",
+			expected:    200,
+		},
+		{
+			desc:        "Pod D -> Service E /test returns 200",
+			source:      "d-tools",
+			destination: "e.default",
+			path:        "/test",
+			expected:    200,
+		},
+		{
+			desc:        "Pod A -> Service E.mesh /test returns 401",
+			source:      "a-tools",
+			destination: "e.default.traefik.mesh",
+			path:        "/test",
+			expected:    401,
+		},
+		{
+			desc:        "Pod B -> Service E.mesh /test returns 401",
+			source:      "b-tools",
+			destination: "e.default.traefik.mesh",
+			path:        "/test",
+			expected:    401,
+		},
+		{
+			desc:        "Pod C -> Service E.mesh /test returns 401",
+			source:      "c-tools",
+			destination: "e.default.traefik.mesh",
+			path:        "/test",
+			expected:    401,
+		},
+		{
+			desc:        "Pod D -> Service E.mesh /test returns 401",
+			source:      "d-tools",
+			destination: "e.default.traefik.mesh",
+			path:        "/test",
 			expected:    401,
 		},
 	}

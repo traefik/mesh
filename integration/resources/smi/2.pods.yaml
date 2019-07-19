@@ -7,7 +7,7 @@ spec:
   serviceAccountName: a
   containers:
     - name: a
-      image: containous/whoami
+      image: containous/whoami:v1.0.1
 
 ---
 apiVersion: v1
@@ -34,7 +34,7 @@ spec:
   serviceAccountName: b
   containers:
     - name: example
-      image: containous/whoami
+      image: containous/whoami:v1.0.1
 
 ---
 apiVersion: v1
@@ -59,7 +59,7 @@ spec:
   serviceAccountName: c
   containers:
     - name: example
-      image: containous/whoami
+      image: containous/whoami:v1.0.1
 
 ---
 apiVersion: v1
@@ -86,7 +86,7 @@ spec:
   serviceAccountName: d
   containers:
     - name: example
-      image: containous/whoami
+      image: containous/whoami:v1.0.1
 
 ---
 apiVersion: v1
@@ -113,4 +113,4 @@ spec:
   serviceAccountName: e
   containers:
     - name: example
-      image: containous/whoami
+      image: containous/whoami:v1.0.1
