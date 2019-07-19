@@ -483,7 +483,8 @@ func (w *ClientWrapper) GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget,
 		return result, err
 	}
 	for _, trafficTarget := range list.Items {
-		result = append(result, &trafficTarget)
+		t := trafficTarget.DeepCopy()
+		result = append(result, t)
 	}
 	return result, nil
 }

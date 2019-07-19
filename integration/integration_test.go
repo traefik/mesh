@@ -223,9 +223,14 @@ func (s *BaseSuite) installTiller(c *check.C) {
 	s.waitForTiller(c)
 }
 
-func (s *BaseSuite) installHelmI3o(_ *check.C) error {
+func (s *BaseSuite) installHelmI3o(_ *check.C, smi bool) error {
 	// Install the helm chart.
 	argSlice := []string{"install", "../helm/chart/i3o", "--values", "resources/values.yaml", "--name", "powpow", "--namespace", "traefik-mesh"}
+
+	if smi {
+		argSlice = append(argSlice, "--set", "smi=true")
+	}
+
 	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 30*time.Second)
 }
 

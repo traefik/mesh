@@ -20,7 +20,7 @@ func (s *SMISuite) SetUpSuite(c *check.C) {
 	s.waitForCoreDNSStarted(c)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 	s.installTiller(c)
-	err = s.installHelmI3o(c)
+	err = s.installHelmI3o(c, true)
 	c.Assert(err, checker.IsNil)
 	s.waitForI3oControllerStarted(c)
 
@@ -74,21 +74,21 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			source:      "c-tools",
 			destination: "b.default",
 			path:        "/test",
-			expected:    200,
+			expected:    200, //Returns 200
 		},
 		{
 			desc:        "Pod C -> Service B.mesh /test returns 401",
 			source:      "c-tools",
 			destination: "b.default.traefik.mesh",
 			path:        "/test",
-			expected:    401,
+			expected:    401, // Returns 404
 		},
 		{
 			desc:        "Pod C -> Service B.mesh /foo returns 200",
 			source:      "c-tools",
 			destination: "b.default.traefik.mesh",
 			path:        "/foo",
-			expected:    200,
+			expected:    200, // Returns 403
 		},
 		{
 			desc:        "Pod A -> Service B /test returns 200",
@@ -123,21 +123,21 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			source:      "c-tools",
 			destination: "d.default",
 			path:        "/test",
-			expected:    200,
+			expected:    200, // Returns 200
 		},
 		{
 			desc:        "Pod C -> Service D.mesh /test returns 401",
 			source:      "c-tools",
 			destination: "d.default.traefik.mesh",
 			path:        "/test",
-			expected:    401,
+			expected:    401, // Returns 404
 		},
 		{
 			desc:        "Pod C -> Service D.mesh /bar returns 200",
 			source:      "c-tools",
 			destination: "d.default.traefik.mesh",
 			path:        "/bar",
-			expected:    200,
+			expected:    200, // Returns 403
 		},
 		{
 			desc:        "Pod A -> Service E /test returns 200",
@@ -158,7 +158,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			source:      "c-tools",
 			destination: "e.default",
 			path:        "/test",
-			expected:    200,
+			expected:    200, // Returns 200
 		},
 		{
 			desc:        "Pod D -> Service E /test returns 200",
@@ -186,7 +186,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			source:      "c-tools",
 			destination: "e.default.traefik.mesh",
 			path:        "/test",
-			expected:    401,
+			expected:    401, // Returns 404
 		},
 		{
 			desc:        "Pod D -> Service E.mesh /test returns 401",
