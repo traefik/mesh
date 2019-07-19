@@ -51,6 +51,12 @@ func init() {
 
 	check.Suite(&CurlI3oSuite{})
 	check.Suite(&CoreDNSSuite{})
+
+	dir, _ := os.Getwd()
+	err := os.RemoveAll(path.Join(dir, fmt.Sprintf("resources/compose/images")))
+	if err != nil {
+		fmt.Printf("unable to cleanup: %v", err)
+	}
 }
 
 type BaseSuite struct {
