@@ -51,9 +51,9 @@ func init() {
 	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
 	images = append(images, image{"containous/traefik:experimental-v2.0", true})
 
+	check.Suite(&SMISuite{})
 	check.Suite(&CurlI3oSuite{})
 	check.Suite(&CoreDNSSuite{})
-	check.Suite(&SMISuite{})
 
 	dir, _ := os.Getwd()
 	err := os.RemoveAll(path.Join(dir, fmt.Sprintf("resources/compose/images")))
