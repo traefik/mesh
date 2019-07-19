@@ -33,7 +33,7 @@ metadata:
 spec:
   serviceAccountName: b
   containers:
-    - name: example
+    - name: b
       image: containous/whoami:v1.0.1
 
 ---
@@ -58,7 +58,7 @@ metadata:
 spec:
   serviceAccountName: c
   containers:
-    - name: example
+    - name: c
       image: containous/whoami:v1.0.1
 
 ---
@@ -85,7 +85,7 @@ metadata:
 spec:
   serviceAccountName: d
   containers:
-    - name: example
+    - name: d
       image: containous/whoami:v1.0.1
 
 ---
@@ -112,5 +112,5 @@ metadata:
 spec:
   serviceAccountName: e
   containers:
-    - name: example
+    - name: e
       image: containous/whoami:v1.0.1
