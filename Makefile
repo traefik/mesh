@@ -71,6 +71,7 @@ check: $(DIST_DIR)
 push-docker: build
 	docker tag "$(DOCKER_IMAGE_NAME):latest" ${DOCKER_IMAGE_NAME}:${VERSION}
 	docker push ${DOCKER_IMAGE_NAME}:${VERSION}
+	docker push $(DOCKER_IMAGE_NAME):latest
 
 # Update vendor directory
 vendor:

@@ -502,7 +502,7 @@ func createBaseConfigWithReadiness() *dynamic.Configuration {
 					LoadBalancer: &dynamic.LoadBalancerService{
 						Servers: []dynamic.Server{
 							{
-								URL: "http://127.0.0.1:1080",
+								URL: "http://127.0.0.1:8080",
 							},
 						},
 					},
