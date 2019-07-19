@@ -32,7 +32,6 @@ spec:
           image: {{ .Values.image.traefik | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
-            - "--entryPoints.ping.address=:1080"
             - "--entryPoints.readiness.address=:1081"
             - "--entryPoints.ingress-5000.address=:5000"
             - "--entryPoints.ingress-5001.address=:5001"
@@ -51,7 +50,7 @@ spec:
             {{- end }}
             - "--api.dashboard"
             - "--accesslog"
-            - "--ping.entrypoint=ping"
+            - "--ping"
           readinessProbe:
             httpGet:
               path: /ping
