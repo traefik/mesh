@@ -18,7 +18,7 @@ spec:
   serviceAccountName: a
   containers:
     - name: a-tools
-      image: giantswarm/tiny-tools
+      image: giantswarm/tiny-tools:3.9
       command:
       - "sleep"
       - "3600"
@@ -45,7 +45,7 @@ spec:
   serviceAccountName: b
   containers:
     - name: b-tools
-      image: giantswarm/tiny-tools
+      image: giantswarm/tiny-tools:3.9
       command:
       - "sleep"
       - "3600"
@@ -70,7 +70,7 @@ spec:
   serviceAccountName: c
   containers:
     - name: c-tools
-      image: giantswarm/tiny-tools
+      image: giantswarm/tiny-tools:3.9
       command:
       - "sleep"
       - "3600"
@@ -97,7 +97,7 @@ spec:
   serviceAccountName: d
   containers:
     - name: d-tools
-      image: giantswarm/tiny-tools
+      image: giantswarm/tiny-tools:3.9
       command:
       - "sleep"
       - "3600"

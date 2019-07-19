@@ -13,6 +13,7 @@ VERSION := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
 BUILD_DATE := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 
 INTEGRATION_TEST_OPTS := -timeout 30m
+INTEGRATION_IMAGE_CACHE_DIR = $(CURDIR)/integration/resources/compose/images
 
 DOCKER_INTEGRATION_TEST_NAME := $(DOCKER_IMAGE_NAME)-integration-tests
 DOCKER_INTEGRATION_TEST_OTPS := -v $(CURDIR):/i3o --privileged -e INTEGRATION_TEST_OPTS
@@ -44,6 +45,8 @@ local-test: clean
 
 # Integration test
 local-test-integration: $(DIST_DIR) kubectl helm build
+	# Delete image cache to ensure using latest built images
+	rm -rf $(INTEGRATION_IMAGE_CACHE_DIR)
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.v -v
 
 test-integration:
