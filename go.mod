@@ -8,7 +8,7 @@ require (
 	github.com/Masterminds/sprig v2.20.0+incompatible // indirect
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/containous/mux v0.0.0-20181024131434-c33f32e26898 // indirect
-	github.com/containous/traefik v2.0.0-alpha8.0.20190715150404-6fdd48509ebf+incompatible
+	github.com/containous/traefik v2.0.0-beta1+incompatible
 	github.com/deislabs/smi-sdk-go v0.0.0-20190621175932-114e91dce170
 	github.com/go-acme/lego v2.6.0+incompatible // indirect
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
