@@ -68,7 +68,43 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dyna
 		case message.TypeDeleted:
 			// We don't precess deleted endpoint events, processig is done under service deletion.
 		}
+	case *accessv1alpha1.TrafficTarget:
+		p.buildAffectedServicesIntoConfig(obj, nil, traefikConfig)
+	case *specsv1alpha1.HTTPRouteGroup:
+		p.buildAffectedServicesIntoConfig(nil, obj, traefikConfig)
 	}
+
+}
+
+func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1.TrafficTarget, httpRouteGroup *specsv1alpha1.HTTPRouteGroup, config *dynamic.Configuration) {
+	namespaces := k8s.Namespaces{}
+
+	if httpRouteGroup != nil {
+		tts := p.getTrafficTargetsWithHTTPRouteGroup(httpRouteGroup)
+		for _, tt := range tts {
+			if !namespaces.Contains(tt.Destination.Namespace) {
+				namespaces = append(namespaces, tt.Destination.Namespace)
+			}
+		}
+	}
+
+	if trafficTarget != nil {
+		if !namespaces.Contains(trafficTarget.Destination.Namespace) {
+			namespaces = append(namespaces, trafficTarget.Destination.Namespace)
+		}
+	}
+
+	for _, namespace := range namespaces {
+		allServices, err := p.client.GetServices(namespace)
+		if err != nil {
+			log.Errorf("Could not get services in namespace %s: %v", namespace, err)
+		}
+
+		for _, service := range allServices {
+			p.buildServiceIntoConfig(service, nil, config)
+		}
+	}
+
 }
 
 func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *dynamic.Configuration) {
@@ -168,6 +204,27 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 
 	if len(result) == 0 {
 		log.Debugf("No TrafficTargets with destination in namespace: %s", namespace)
+	}
+	return result
+}
+
+func (p *Provider) getTrafficTargetsWithHTTPRouteGroup(httpRouteGroup *specsv1alpha1.HTTPRouteGroup) []*accessv1alpha1.TrafficTarget {
+	var result []*accessv1alpha1.TrafficTarget
+	allTrafficTargets, err := p.client.GetTrafficTargets()
+	if err != nil {
+		log.Error("Could not get a list of all TrafficTargets")
+	}
+
+	for _, trafficTarget := range allTrafficTargets {
+		for _, spec := range trafficTarget.Specs {
+			if spec.Kind == "HTTPRouteGroup" && spec.Name == httpRouteGroup.Name {
+				result = append(result, trafficTarget)
+			}
+		}
+	}
+
+	if len(result) == 0 {
+		log.Debugf("No TrafficTargets with HTTPRouteGroup: %s", httpRouteGroup.Name)
 	}
 	return result
 }
