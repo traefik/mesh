@@ -11,7 +11,7 @@ import (
 type CoreDNSSuite struct{ BaseSuite }
 
 func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
-	err := s.startk3s(c, false)
+	err := s.startk3s(c)
 	c.Assert(err, checker.IsNil)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 	s.startWhoami(c)
@@ -23,33 +23,41 @@ func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
 	s.stopComposeProject()
 }
 
-func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
-	// Get the tools pod service in whoami namespace
-	pod := s.getToolsPodI3o(c)
-	c.Assert(pod, checker.NotNil)
-
+func (s *CoreDNSSuite) TestCoreDNSVersion126Fail(c *check.C) {
 	// Test on CoreDNS 1.2
-	s.installCoreDNS(c, "1.2")
+	s.setCoreDNSVersion(c, "1.2.6")
 	err := s.installHelmI3o(c)
 	c.Assert(err, checker.NotNil)
-	s.unInstallCoreDNS(c, "1.2")
+}
+
+func (s *CoreDNSSuite) TestCoreDNSVersion131(c *check.C) {
+	pod := s.getToolsPodI3o(c)
+	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
 		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami.whoami.traefik.mesh",
 	}
 
-	// Test on CoreDNS 1.3
-	s.installCoreDNS(c, "1.3")
-	err = s.installHelmI3o(c)
+	// Test on CoreDNS 1.3.1
+	s.setCoreDNSVersion(c, "1.3.1")
+	err := s.installHelmI3o(c)
 	c.Assert(err, checker.IsNil)
 	s.waitForI3oControllerStarted(c)
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallCoreDNS(c, "1.3")
 	s.unInstallHelmI3o(c)
+}
 
-	// Test on CoreDNS 1.4
-	s.installCoreDNS(c, "1.4")
-	err = s.installHelmI3o(c)
+func (s *CoreDNSSuite) TestCoreDNSVersion140(c *check.C) {
+	pod := s.getToolsPodI3o(c)
+	c.Assert(pod, checker.NotNil)
+
+	argSlice := []string{
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami.whoami.traefik.mesh",
+	}
+
+	// Test on CoreDNS 1.4.0
+	s.setCoreDNSVersion(c, "1.4.0")
+	err := s.installHelmI3o(c)
 	c.Assert(err, checker.IsNil)
 	s.waitForI3oControllerStarted(c)
 	s.waitKubectlExecCommand(c, argSlice, "whoami")

@@ -61,6 +61,7 @@ type CoreV1Client interface {
 
 type AppsV1Client interface {
 	GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error)
+	UpdateDeployment(deployment *appsv1.Deployment) (*appsv1.Deployment, error)
 }
 
 type SMIClient interface {
@@ -467,6 +468,11 @@ func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deploymen
 	deployment, err := w.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
 	return deployment, exists, err
+}
+
+// UpdateDeployment updates the specified deployment.
+func (w *ClientWrapper) UpdateDeployment(deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
+	return w.KubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
 }
 
 // GetTrafficTargets returns a slice of all TrafficTargets.

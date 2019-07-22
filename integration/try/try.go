@@ -13,6 +13,8 @@ import (
 	"github.com/containous/i3o/internal/k8s"
 	"github.com/containous/traefik/pkg/safe"
 	log "github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -54,6 +56,20 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 	}
 
 	return nil
+}
+
+// WaitUpdateDeployment waits until the deployment is successfully updated and ready.
+func (t *Try) WaitUpdateDeployment(deployment *appsv1.Deployment, timeout time.Duration) error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		_, err := t.client.UpdateDeployment(deployment)
+		return err
+	})
+
+	if retryErr != nil {
+		return fmt.Errorf("unable to update deployment %q: %v", deployment.Name, retryErr)
+	}
+
+	return t.WaitReadyDeployment(deployment.Name, deployment.Namespace, timeout)
 }
 
 // WaitDeleteDeployment wait until the deployment is delete.
