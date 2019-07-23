@@ -51,12 +51,12 @@ spec:
             - "--debug"
             {{- end }}
             {{- if .Values.mesh }}
-            - "--defaultMode {{ .Values.mesh.defaultMode }}"
+            - "--defaultMode={{ .Values.mesh.defaultMode }}"
             {{- end }}
             {{- if .Values.smi }}
             - "--smi"
             {{- end }}
-            - "--namespace $(POD_NAMESPACE)"
+            - "--namespace=$(POD_NAMESPACE)"
           env:
             - name: POD_IP
               valueFrom:

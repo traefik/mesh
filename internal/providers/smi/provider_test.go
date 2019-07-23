@@ -16,7 +16,7 @@ import (
 const meshNamespace string = "i3o"
 
 func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace)
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace))
 
 	testCases := []struct {
 		desc     string
@@ -66,7 +66,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 
 func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 	clientMock := k8s.NewClientMock("mock.yaml")
-	provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
+	provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace))
 
 	expected := []*accessv1alpha1.TrafficTarget{
 		{
@@ -336,7 +336,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 			if test.httpError {
 				clientMock.EnableHTTPRouteGroupError()
 			}
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace))
 			middleware := "block-all"
 			actual := provider.buildRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
 			assert.Equal(t, test.expected, actual)
@@ -346,7 +346,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 }
 
 func TestGetServiceMode(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace)
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace))
 
 	testCases := []struct {
 		desc     string
@@ -727,7 +727,7 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 				clientMock.EnablePodError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace))
 
 			actual := provider.getApplicableTrafficTargets(test.endpoints, test.trafficTargets)
 			assert.Equal(t, test.expected, actual)
@@ -1067,7 +1067,7 @@ func TestBuildServiceFromTrafficTarget(t *testing.T) {
 				clientMock.EnablePodError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace))
 
 			actual := provider.buildServiceFromTrafficTarget(test.endpoints, test.trafficTarget)
 			assert.Equal(t, test.expected, actual)
@@ -1077,7 +1077,7 @@ func TestBuildServiceFromTrafficTarget(t *testing.T) {
 }
 
 func TestGroupTrafficTargetsByDestination(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace)
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace))
 
 	trafficTargets := []*accessv1alpha1.TrafficTarget{
 		{
@@ -1607,7 +1607,7 @@ func TestBuildConfiguration(t *testing.T) {
 				clientMock.EnableServiceError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace))
 			provider.BuildConfiguration(test.event, test.provided)
 			assert.Equal(t, test.expected, test.provided)
 		})

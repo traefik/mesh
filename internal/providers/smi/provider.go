@@ -23,6 +23,7 @@ type Provider struct {
 	client        k8s.Client
 	defaultMode   string
 	meshNamespace string
+	ignored       k8s.IgnoreWrapper
 }
 
 // destinationKey is used to key a grouped map of trafficTargets.
@@ -36,11 +37,12 @@ type destinationKey struct {
 func (p *Provider) Init() {}
 
 // New creates a new provider.
-func New(client k8s.Client, defaultMode string, meshNamespace string) *Provider {
+func New(client k8s.Client, defaultMode string, meshNamespace string, ignored k8s.IgnoreWrapper) *Provider {
 	p := &Provider{
 		client:        client,
 		defaultMode:   defaultMode,
 		meshNamespace: meshNamespace,
+		ignored:       ignored,
 	}
 
 	p.Init()
@@ -103,6 +105,9 @@ func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1
 		}
 
 		for _, service := range allServices {
+			if p.ignored.Ignored(service.Name, service.Namespace) {
+				continue
+			}
 			p.buildServiceIntoConfig(service, nil, config)
 		}
 	}

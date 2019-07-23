@@ -106,7 +106,7 @@ func (c *Controller) Init() error {
 	c.traefikConfig = createBaseConfigWithReadiness()
 
 	if c.smiEnabled {
-		c.smiProvider = smi.New(c.clients, c.defaultMode, c.meshNamespace)
+		c.smiProvider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.ignored)
 
 		// Create new SharedInformerFactories, and register the event handler to informers.
 		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)

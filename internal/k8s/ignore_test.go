@@ -67,7 +67,19 @@ func TestWithoutMesh(t *testing.T) {
 			expected:  false,
 		},
 		{
-			desc:      "mesh service",
+			desc:      "ignored namespace",
+			name:      "foo",
+			namespace: metav1.NamespaceSystem,
+			expected:  true,
+		},
+		{
+			desc:      "ignored service",
+			name:      "kubernetes",
+			namespace: metav1.NamespaceDefault,
+			expected:  true,
+		},
+		{
+			desc:      "ignored mesh service",
 			name:      "omg",
 			namespace: "i3o",
 			expected:  false,
