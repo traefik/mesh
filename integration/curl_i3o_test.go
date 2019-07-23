@@ -16,7 +16,7 @@ func (s *CurlI3oSuite) SetUpSuite(c *check.C) {
 	s.waitForCoreDNSStarted(c)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 	s.installTiller(c)
-	err = s.installHelmI3o(c)
+	err = s.installHelmI3o(c, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForI3oControllerStarted(c)
 	s.startWhoami(c)

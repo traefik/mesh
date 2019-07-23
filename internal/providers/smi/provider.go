@@ -68,7 +68,43 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dyna
 		case message.TypeDeleted:
 			// We don't precess deleted endpoint events, processig is done under service deletion.
 		}
+	case *accessv1alpha1.TrafficTarget:
+		p.buildAffectedServicesIntoConfig(obj, nil, traefikConfig)
+	case *specsv1alpha1.HTTPRouteGroup:
+		p.buildAffectedServicesIntoConfig(nil, obj, traefikConfig)
 	}
+
+}
+
+func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1.TrafficTarget, httpRouteGroup *specsv1alpha1.HTTPRouteGroup, config *dynamic.Configuration) {
+	namespaces := k8s.Namespaces{}
+
+	if httpRouteGroup != nil {
+		tts := p.getTrafficTargetsWithHTTPRouteGroup(httpRouteGroup)
+		for _, tt := range tts {
+			if !namespaces.Contains(tt.Destination.Namespace) {
+				namespaces = append(namespaces, tt.Destination.Namespace)
+			}
+		}
+	}
+
+	if trafficTarget != nil {
+		if !namespaces.Contains(trafficTarget.Destination.Namespace) {
+			namespaces = append(namespaces, trafficTarget.Destination.Namespace)
+		}
+	}
+
+	for _, namespace := range namespaces {
+		allServices, err := p.client.GetServices(namespace)
+		if err != nil {
+			log.Errorf("Could not get services in namespace %s: %v", namespace, err)
+		}
+
+		for _, service := range allServices {
+			p.buildServiceIntoConfig(service, nil, config)
+		}
+	}
+
 }
 
 func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *dynamic.Configuration) {
@@ -102,13 +138,13 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
 	// Get all traffic targets in the service's namespace.
 	trafficTargets := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace)
-	log.Debugf("Found traffictargets: %+v\n", trafficTargets)
+	log.Debugf("Found traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, trafficTargets)
 	// Find all traffic targets that are applicable to the service in question.
 	applicableTrafficTargets := p.getApplicableTrafficTargets(endpoints, trafficTargets)
-	log.Debugf("Found applicable traffictargets: %+v\n", applicableTrafficTargets)
+	log.Debugf("Found applicable traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, applicableTrafficTargets)
 	// Group the traffic targets by destination, so that they can be built separately.
 	groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
-	log.Debugf("Found grouped traffictargets: %+v\n", groupedByDestinationTrafficTargets)
+	log.Debugf("Found grouped traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
 
 	for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 		for _, groupedTrafficTarget := range groupedTrafficTargets {
@@ -129,7 +165,9 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 
 					// Retrieve a list of sourceIPs from the list of pods.
 					for _, pod := range podList.Items {
-						sourceIPs = append(sourceIPs, pod.Status.PodIP)
+						if pod.Status.PodIP != "" {
+							sourceIPs = append(sourceIPs, pod.Status.PodIP)
+						}
 					}
 				}
 
@@ -159,21 +197,49 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 	}
 
 	for _, trafficTarget := range allTrafficTargets {
-		if trafficTarget.Destination.Namespace != namespace {
-			continue
+		if trafficTarget.Destination.Namespace == namespace {
+			result = append(result, trafficTarget)
 		}
-		result = append(result, trafficTarget)
 	}
 
+	if len(result) == 0 {
+		log.Debugf("No TrafficTargets with destination in namespace: %s", namespace)
+	}
+	return result
+}
+
+func (p *Provider) getTrafficTargetsWithHTTPRouteGroup(httpRouteGroup *specsv1alpha1.HTTPRouteGroup) []*accessv1alpha1.TrafficTarget {
+	var result []*accessv1alpha1.TrafficTarget
+	allTrafficTargets, err := p.client.GetTrafficTargets()
+	if err != nil {
+		log.Error("Could not get a list of all TrafficTargets")
+	}
+
+	for _, trafficTarget := range allTrafficTargets {
+		for _, spec := range trafficTarget.Specs {
+			if spec.Kind == "HTTPRouteGroup" && spec.Name == httpRouteGroup.Name {
+				result = append(result, trafficTarget)
+			}
+		}
+	}
+
+	if len(result) == 0 {
+		log.Debugf("No TrafficTargets with HTTPRouteGroup: %s", httpRouteGroup.Name)
+	}
 	return result
 }
 
 func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
 	var result []*accessv1alpha1.TrafficTarget
+	if len(endpoints.Subsets) == 0 {
+		log.Debugf("No applicable TrafficTargets for service %s/%s: No endpoint subsets", endpoints.Namespace, endpoints.Name)
+	}
+
 	for _, subset := range endpoints.Subsets {
 		for _, trafficTarget := range trafficTargets {
 			if endpoints.Namespace != trafficTarget.Destination.Namespace {
 				// Destination not in service namespace, skip.
+				log.Debugf("Destination namespace for TrafficTarget: %s not in service namespace: %s", trafficTarget.Destination.Name, endpoints.Namespace)
 				continue
 			}
 
@@ -187,6 +253,7 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 
 			if !subsetMatch {
 				// No subset port match on destination port, so subset is not affected
+				log.Debugf("TrafficTarget: %s does not match destination ports for endpoints %s/%s", trafficTarget.Destination.Name, endpoints.Namespace, endpoints.Name)
 				continue
 			}
 
@@ -209,6 +276,7 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 
 			if !validPodFound {
 				// No valid pods with serviceAccound found on the subset, so it is not affected
+				log.Debugf("Endpoints %s/%s has no valid pods with destination service account: %s", endpoints.Namespace, endpoints.Name, trafficTarget.Destination.Name)
 				continue
 			}
 
@@ -225,6 +293,7 @@ func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1al
 	result := make(map[destinationKey][]*accessv1alpha1.TrafficTarget)
 
 	for _, trafficTarget := range trafficTargets {
+		t := trafficTarget.DeepCopy()
 		key := destinationKey{
 			name:      trafficTarget.Destination.Name,
 			namespace: trafficTarget.Destination.Namespace,
@@ -236,7 +305,7 @@ func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1al
 			result[key] = []*accessv1alpha1.TrafficTarget{}
 		}
 
-		result[key] = append(result[key], trafficTarget)
+		result[key] = append(result[key], t)
 	}
 
 	return result
@@ -285,9 +354,9 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 		result = append(result, fmt.Sprintf("PathPrefix(`%s`)", match.PathRegex))
 	}
 
-	if len(match.Methods) > 0 {
-		methods := strings.Join(match.Methods, ",")
-		result = append(result, fmt.Sprintf("Methods(%s)", methods))
+	if len(match.Methods) > 0 && match.Methods[0] != "*" {
+		methods := strings.Join(match.Methods, "`,`")
+		result = append(result, fmt.Sprintf("Method(`%s`)", methods))
 	}
 
 	result = append(result, fmt.Sprintf("(Host(`%s.%s.traefik.mesh`) || Host(`%s`))", name, namespace, ip))

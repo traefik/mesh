@@ -44,7 +44,7 @@ local-test: clean
 
 # Integration test
 local-test-integration: $(DIST_DIR) kubectl helm build
-	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.v
+	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.v -v
 
 test-integration:
 	docker build -t $(DOCKER_INTEGRATION_TEST_NAME) integration/resources/build

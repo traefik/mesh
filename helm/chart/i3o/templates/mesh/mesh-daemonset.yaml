@@ -51,6 +51,7 @@ spec:
             - "--api.dashboard"
             - "--accesslog"
             - "--ping"
+            - "--log.level=DEBUG"
           readinessProbe:
             httpGet:
               path: /ping

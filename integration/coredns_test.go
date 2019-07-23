@@ -26,7 +26,7 @@ func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
 func (s *CoreDNSSuite) TestCoreDNSVersion126Fail(c *check.C) {
 	// Test on CoreDNS 1.2
 	s.setCoreDNSVersion(c, "1.2.6")
-	err := s.installHelmI3o(c)
+	err := s.installHelmI3o(c, false)
 	c.Assert(err, checker.NotNil)
 }
 
@@ -40,7 +40,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion131(c *check.C) {
 
 	// Test on CoreDNS 1.3.1
 	s.setCoreDNSVersion(c, "1.3.1")
-	err := s.installHelmI3o(c)
+	err := s.installHelmI3o(c, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForI3oControllerStarted(c)
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
@@ -57,7 +57,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion140(c *check.C) {
 
 	// Test on CoreDNS 1.4.0
 	s.setCoreDNSVersion(c, "1.4.0")
-	err := s.installHelmI3o(c)
+	err := s.installHelmI3o(c, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForI3oControllerStarted(c)
 	s.waitKubectlExecCommand(c, argSlice, "whoami")

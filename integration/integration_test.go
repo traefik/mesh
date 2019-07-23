@@ -43,12 +43,15 @@ func init() {
 	}
 
 	images = append(images, image{"containous/i3o:latest", false})
-	images = append(images, image{"containous/whoami:latest", true})
+	images = append(images, image{"containous/whoami:v1.0.1", true})
 	images = append(images, image{"coredns/coredns:1.2.6", true})
 	images = append(images, image{"coredns/coredns:1.3.1", true})
 	images = append(images, image{"coredns/coredns:1.4.0", true})
 	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.1", true})
+	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
+	images = append(images, image{"containous/traefik:experimental-v2.0", true})
 
+	check.Suite(&SMISuite{})
 	check.Suite(&CurlI3oSuite{})
 	check.Suite(&CoreDNSSuite{})
 
@@ -220,16 +223,21 @@ func (s *BaseSuite) installTiller(c *check.C) {
 	s.waitForTiller(c)
 }
 
-func (s *BaseSuite) installHelmI3o(_ *check.C) error {
+func (s *BaseSuite) installHelmI3o(_ *check.C, smi bool) error {
 	// Install the helm chart.
-	argSlice := []string{"install", "../helm/chart/i3o", "--values", "resources/values.yaml", "--name", "powpow"}
+	argSlice := []string{"install", "../helm/chart/i3o", "--values", "resources/values.yaml", "--name", "powpow", "--namespace", "traefik-mesh"}
+
+	if smi {
+		argSlice = append(argSlice, "--set", "smi=true")
+	}
+
 	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 30*time.Second)
 }
 
 func (s *BaseSuite) unInstallHelmI3o(c *check.C) {
 	// Install the helm chart.
 	argSlice := []string{"delete", "--purge", "powpow"}
-	err := s.try.WaitCommandExecute("helm", argSlice, "", 30*time.Second)
+	err := s.try.WaitCommandExecute("helm", argSlice, "deleted", 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 

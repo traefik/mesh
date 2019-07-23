@@ -27,7 +27,7 @@ make
 To deploy the helm chart, run:
 
 ```shell
-helm install helm/chart/i3o --set image.pullPolicy=IfNotPresent --set image.tag=latest
+helm install helm/chart/i3o --namespace traefik-mesh --set image.pullPolicy=IfNotPresent --set image.tag=latest
 ```
 
 ## Post-release installation
@@ -35,7 +35,7 @@ helm install helm/chart/i3o --set image.pullPolicy=IfNotPresent --set image.tag=
 Once i3o has been publically released, it will be a simple helm install:
 
 ```shell
-helm install helm/chart/i3o
+helm install helm/chart/i3o --namespace traefik-mesh
 ```
 
 ## Usage
