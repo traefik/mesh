@@ -3,8 +3,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: i3o-controller
-  namespace: traefik-mesh
-  labels:
+  namespace: {{ .Release.Namespace }}
     app: {{ .Release.Name | quote}}
     chart: {{ include "i3o.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
@@ -14,7 +13,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: i3o-controller-role
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote}}
     chart: {{ include "i3o.chartLabel" . | quote}}
@@ -82,7 +81,7 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: i3o-controller
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote}}
     chart: {{ include "i3o.chartLabel" . | quote}}
@@ -95,4 +94,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: i3o-controller
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}

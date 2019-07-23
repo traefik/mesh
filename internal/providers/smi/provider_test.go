@@ -13,8 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const meshNamespace string = "i3o"
+
 func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP)
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace)
 
 	testCases := []struct {
 		desc     string
@@ -23,7 +25,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 	}{
 		{
 			desc:     "method and regex in match",
-			expected: "(PathPrefix(`/foo`) && Method(`GET`,`POST`) && (Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)))",
+			expected: "(PathPrefix(`/foo`) && Method(`GET`,`POST`) && (Host(`test.foo.i3o`) || Host(`10.0.0.1`)))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:      "test",
 				Methods:   []string{"GET", "POST"},
@@ -32,7 +34,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 		},
 		{
 			desc:     "method only in match",
-			expected: "(Method(`GET`,`POST`) && (Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)))",
+			expected: "(Method(`GET`,`POST`) && (Host(`test.foo.i3o`) || Host(`10.0.0.1`)))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:    "test",
 				Methods: []string{"GET", "POST"},
@@ -40,7 +42,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 		},
 		{
 			desc:     "prefix only in match",
-			expected: "(PathPrefix(`/foo`) && (Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)))",
+			expected: "(PathPrefix(`/foo`) && (Host(`test.foo.i3o`) || Host(`10.0.0.1`)))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:      "test",
 				PathRegex: "/foo",
@@ -64,7 +66,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 
 func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 	clientMock := k8s.NewClientMock("mock.yaml")
-	provider := New(clientMock, k8s.ServiceTypeHTTP)
+	provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
 
 	expected := []*accessv1alpha1.TrafficTarget{
 		{
@@ -193,7 +195,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 			expected: &dynamic.Router{
 				EntryPoints: []string{"ingress-81"},
 				Service:     "example",
-				Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`test.default.traefik.mesh`) || Host(`10.0.0.1`))))",
+				Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`test.default.i3o`) || Host(`10.0.0.1`))))",
 				Middlewares: []string{"block-all"},
 			},
 		},
@@ -334,7 +336,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 			if test.httpError {
 				clientMock.EnableHTTPRouteGroupError()
 			}
-			provider := New(clientMock, k8s.ServiceTypeHTTP)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
 			middleware := "block-all"
 			actual := provider.buildRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
 			assert.Equal(t, test.expected, actual)
@@ -344,7 +346,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 }
 
 func TestGetServiceMode(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP)
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace)
 
 	testCases := []struct {
 		desc     string
@@ -725,7 +727,7 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 				clientMock.EnablePodError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
 
 			actual := provider.getApplicableTrafficTargets(test.endpoints, test.trafficTargets)
 			assert.Equal(t, test.expected, actual)
@@ -1065,7 +1067,7 @@ func TestBuildServiceFromTrafficTarget(t *testing.T) {
 				clientMock.EnablePodError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
 
 			actual := provider.buildServiceFromTrafficTarget(test.endpoints, test.trafficTarget)
 			assert.Equal(t, test.expected, actual)
@@ -1075,7 +1077,7 @@ func TestBuildServiceFromTrafficTarget(t *testing.T) {
 }
 
 func TestGroupTrafficTargetsByDestination(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP)
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace)
 
 	trafficTargets := []*accessv1alpha1.TrafficTarget{
 		{
@@ -1260,7 +1262,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Routers: map[string]*dynamic.Router{
 						"5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9": {
 							EntryPoints: []string{"ingress-5000"},
-							Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-service.default.traefik.mesh`) || Host(`10.1.0.1`))))",
+							Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-service.default.i3o`) || Host(`10.1.0.1`))))",
 							Service:     "5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9",
 							Middlewares: []string{"api-service-metrics-default-5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9-whitelist"},
 						},
@@ -1328,7 +1330,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Routers: map[string]*dynamic.Router{
 						"7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952": {
 							EntryPoints: []string{"ingress-5000"},
-							Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-test.default.traefik.mesh`) || Host(`10.1.0.1`))))",
+							Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-test.default.i3o`) || Host(`10.1.0.1`))))",
 							Service:     "7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952",
 							Middlewares: []string{"api-service-metrics-default-7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952-whitelist"},
 						},
@@ -1605,7 +1607,7 @@ func TestBuildConfiguration(t *testing.T) {
 				clientMock.EnableServiceError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
 			provider.BuildConfiguration(test.event, test.provided)
 			assert.Equal(t, test.expected, test.provided)
 		})

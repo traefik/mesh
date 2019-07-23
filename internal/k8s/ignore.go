@@ -6,8 +6,9 @@ import (
 
 // IgnoreWrapper holds namespaces and services to ignore.
 type IgnoreWrapper struct {
-	Namespaces Namespaces
-	Services   Services
+	Namespaces    Namespaces
+	Services      Services
+	MeshNamespace string
 }
 
 // Ignored returns if the selected name or namespace combo should be ignored.
@@ -19,27 +20,25 @@ func (i *IgnoreWrapper) Ignored(name, namespace string) bool {
 	if i.Services.Contains(name, namespace) {
 		return true
 	}
+
+	if i.MeshNamespace != "" && namespace == i.MeshNamespace {
+		return true
+	}
+
 	return false
 }
 
 // WithoutMesh returns an IgnoreWrapper without the mesh namespace.
 func (i *IgnoreWrapper) WithoutMesh() IgnoreWrapper {
-	namespaces := Namespaces{}
-	for _, ns := range i.Namespaces {
-		if ns != MeshNamespace {
-			namespaces = append(namespaces, ns)
-		}
-	}
-
 	return IgnoreWrapper{
-		Namespaces: namespaces,
+		Namespaces: i.Namespaces,
 		Services:   i.Services,
 	}
 }
 
 // NewIgnored returns a new IgnoreWrapper.
-func NewIgnored() IgnoreWrapper {
-	ignoredNamespaces := Namespaces{metav1.NamespaceSystem, MeshNamespace}
+func NewIgnored(meshNamespace string) IgnoreWrapper {
+	ignoredNamespaces := Namespaces{metav1.NamespaceSystem}
 	ignoredServices := Services{
 		{
 			Name:      "kubernetes",
@@ -48,8 +47,9 @@ func NewIgnored() IgnoreWrapper {
 	}
 
 	return IgnoreWrapper{
-		Namespaces: ignoredNamespaces,
-		Services:   ignoredServices,
+		Namespaces:    ignoredNamespaces,
+		Services:      ignoredServices,
+		MeshNamespace: meshNamespace,
 	}
 
 }

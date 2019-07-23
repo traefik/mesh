@@ -71,7 +71,7 @@ func i3oCommand(iConfig *cmd.I3oConfiguration) error {
 	// Create a new stop Channel
 	stopCh := signals.SetupSignalHandler()
 	// Create a new ctr.
-	ctr := controller.NewMeshController(clients, iConfig.SMI, iConfig.DefaultMode)
+	ctr := controller.NewMeshController(clients, iConfig.SMI, iConfig.DefaultMode, iConfig.Namespace)
 
 	// run the ctr loop to process items
 	if err = ctr.Run(stopCh); err != nil {

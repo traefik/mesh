@@ -175,11 +175,6 @@ func isCoreDNSVersionSupported(versionLine string) bool {
 func (w *ClientWrapper) InitCluster() error {
 	log.Infoln("Preparing Cluster...")
 
-	log.Debugln("Creating mesh namespace...")
-	if err := w.CreateNamespace(MeshNamespace); err != nil {
-		return err
-	}
-
 	log.Debugln("Patching CoreDNS...")
 	if err := w.patchCoreDNS("coredns", metav1.NamespaceSystem); err != nil {
 		return err
@@ -226,7 +221,7 @@ func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (b
 	}
 
 	if len(coreConfigMap.ObjectMeta.Labels) > 0 {
-		if _, ok := coreConfigMap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
+		if _, ok := coreConfigMap.ObjectMeta.Labels["i3o-patched"]; ok {
 			log.Debugln("Configmap already patched...")
 			return true, nil
 		}
@@ -234,9 +229,9 @@ func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (b
 
 	serverBlock :=
 		`
-traefik.mesh:53 {
+i3o:53 {
 	kubernetes cluster.local
-	k8s_external traefik.mesh
+	k8s_external i3o
 }
 `
 	originalBlock := coreConfigMap.Data["Corefile"]
@@ -245,7 +240,7 @@ traefik.mesh:53 {
 	if len(coreConfigMap.ObjectMeta.Labels) == 0 {
 		coreConfigMap.ObjectMeta.Labels = make(map[string]string)
 	}
-	coreConfigMap.ObjectMeta.Labels["traefik-mesh-patched"] = "true"
+	coreConfigMap.ObjectMeta.Labels["i3o-patched"] = "true"
 
 	if _, err = w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Update(coreConfigMap); err != nil {
 		return false, err
@@ -276,11 +271,6 @@ func (w *ClientWrapper) VerifyCluster() error {
 	log.Infoln("Verifying Cluster...")
 	defer log.Infoln("Cluster Verification Complete...")
 
-	log.Debugln("Verifying mesh namespace exists...")
-	if err := w.CreateNamespace(MeshNamespace); err != nil {
-		return err
-	}
-
 	log.Debugln("Verifying CoreDNS Patched...")
 	if err := w.isCoreDNSPatched("coredns", metav1.NamespaceSystem); err != nil {
 		return err
@@ -307,7 +297,7 @@ func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string
 	}
 
 	if len(coreConfigMap.ObjectMeta.Labels) > 0 {
-		if _, ok := coreConfigMap.ObjectMeta.Labels["traefik-mesh-patched"]; ok {
+		if _, ok := coreConfigMap.ObjectMeta.Labels["i3o-patched"]; ok {
 			return nil
 		}
 	}

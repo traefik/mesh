@@ -20,8 +20,9 @@ import (
 
 // Provider holds a client to access the provider.
 type Provider struct {
-	client      k8s.Client
-	defaultMode string
+	client        k8s.Client
+	defaultMode   string
+	meshNamespace string
 }
 
 // destinationKey is used to key a grouped map of trafficTargets.
@@ -35,10 +36,11 @@ type destinationKey struct {
 func (p *Provider) Init() {}
 
 // New creates a new provider.
-func New(client k8s.Client, defaultMode string) *Provider {
+func New(client k8s.Client, defaultMode string, meshNamespace string) *Provider {
 	p := &Provider{
-		client:      client,
-		defaultMode: defaultMode,
+		client:        client,
+		defaultMode:   defaultMode,
+		meshNamespace: meshNamespace,
 	}
 
 	p.Init()
@@ -359,7 +361,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 		result = append(result, fmt.Sprintf("Method(`%s`)", methods))
 	}
 
-	result = append(result, fmt.Sprintf("(Host(`%s.%s.traefik.mesh`) || Host(`%s`))", name, namespace, ip))
+	result = append(result, fmt.Sprintf("(Host(`%s.%s.%s`) || Host(`%s`))", name, namespace, p.meshNamespace, ip))
 
 	return "(" + strings.Join(result, " && ") + ")"
 }

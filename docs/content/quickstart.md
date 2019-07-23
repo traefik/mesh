@@ -6,5 +6,5 @@ It will safely install itself via the helm chart, and will be ready for use imme
 It can be installed by running:
 
 ```shell
-helm install helm/chart/i3o --namespace traefik-mesh
+helm install helm/chart/i3o --namespace i3o
 ```

@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: {{ .Release.Name }}-{{ .Values.provider }}-test
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Values.provider }}-test
     chart: {{ template "tracing.chart" . }}
