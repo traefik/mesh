@@ -35,7 +35,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion131(c *check.C) {
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami.whoami.i3o",
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.i3o", "--max-time", "5",
 	}
 
 	// Test on CoreDNS 1.3.1
@@ -52,7 +52,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion140(c *check.C) {
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami.whoami.i3o",
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.i3o", "--max-time", "5",
 	}
 
 	// Test on CoreDNS 1.4.0

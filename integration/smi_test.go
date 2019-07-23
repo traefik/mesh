@@ -199,7 +199,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 
 	for _, test := range testCases {
 		argSlice := []string{
-			"exec", "-it", test.source, "--", "curl", "-v", test.destination + test.path,
+			"exec", "-it", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
 		}
 		s.waitKubectlExecCommand(c, argSlice, fmt.Sprintf("HTTP/1.1 %d", test.expected))
 
