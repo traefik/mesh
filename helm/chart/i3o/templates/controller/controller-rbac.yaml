@@ -4,6 +4,7 @@ kind: ServiceAccount
 metadata:
   name: i3o-controller
   namespace: {{ .Release.Namespace }}
+  labels:
     app: {{ .Release.Name | quote}}
     chart: {{ include "i3o.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}

@@ -22,7 +22,7 @@ func NewI3oConfiguration() *I3oConfiguration {
 		Debug:       false,
 		SMI:         false,
 		DefaultMode: "http",
-		Namespace:   "",
+		Namespace:   "i3o",
 	}
 }
 
