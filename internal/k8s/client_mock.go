@@ -349,6 +349,10 @@ func (a *AppsV1ClientMock) GetDeployment(namespace, name string) (*appsv1.Deploy
 	return nil, false, a.apiDeploymentError
 }
 
+func (a *AppsV1ClientMock) UpdateDeployment(deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
+	panic("implement me")
+}
+
 func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha1.HTTPRouteGroup, bool, error) {
 	if s.apiHTTPRouteGroupError != nil {
 		return nil, false, s.apiHTTPRouteGroupError

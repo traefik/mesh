@@ -11,7 +11,7 @@ import (
 type CurlI3oSuite struct{ BaseSuite }
 
 func (s *CurlI3oSuite) SetUpSuite(c *check.C) {
-	err := s.startk3s(c, true)
+	err := s.startk3s(c)
 	c.Assert(err, checker.IsNil)
 	s.waitForCoreDNSStarted(c)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
