@@ -20,7 +20,7 @@ debug: true
 tracing:
   enabled: true
 
-monitoring:
+metrics:
   enabled: true
 
 smi: false

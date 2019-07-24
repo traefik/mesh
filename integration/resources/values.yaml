@@ -15,5 +15,5 @@ smi: false
 
 tracing:
   enabled: false
-monitoring:
+metrics:
   enabled: false

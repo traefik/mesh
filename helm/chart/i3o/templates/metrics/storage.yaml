@@ -1,9 +1,9 @@
-{{- if .Values.monitoring.enabled }}
+{{- if .Values.metrics.enabled }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: monitoring-storage
+  name: metrics-storage
   namespace: traefik-mesh
   labels:
     chart: {{ include "i3o.chartLabel" . | quote }}

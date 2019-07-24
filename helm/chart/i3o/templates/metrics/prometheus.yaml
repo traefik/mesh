@@ -1,4 +1,4 @@
-{{- if .Values.monitoring.enabled }}
+{{- if .Values.metrics.enabled }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -47,11 +47,9 @@ data:
     scrape_configs:
       - job_name: 'traefik-mesh'
         relabel_configs:
-            # Only scape pods with annotation containo.us/monitoring_enable: "true".
           - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
             action: keep
             regex: true
-            # Use port given in annotation containo.us/monitoring_port.
           - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
             action: replace
             regex: ([^:]+)(?::\d+)?;(\d+)

@@ -1,4 +1,4 @@
-{{- if .Values.monitoring.enabled }}
+{{- if .Values.metrics.enabled }}
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -41,7 +41,7 @@ spec:
             path: /login
             port: 3000
         volumeMounts:
-        - name: monitoring-storage
+        - name: metrics-storage
           mountPath: /var/lib/grafana
         {{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
         {{- $filename := trimSuffix (ext $path) (base $path) }}
@@ -54,9 +54,9 @@ spec:
           mountPath: /etc/grafana
           readOnly: true
       volumes:
-      - name: monitoring-storage
+      - name: metrics-storage
         persistentVolumeClaim:
-          claimName: monitoring-storage
+          claimName: metrics-storage
       {{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
       {{- $filename := trimSuffix (ext $path) (base $path) }}
       - name: dashboards-grafana-{{ $filename }}
