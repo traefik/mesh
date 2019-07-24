@@ -65,7 +65,7 @@ build: $(DIST_DIR)
 test: $(DIST_DIR)
 	docker build --tag "$(DOCKER_IMAGE_NAME):test" --target maker --build-arg="MAKE_TARGET=local-test" $(CURDIR)/
 
-check: $(DIST_DIR)
+check: $(DIST_DIR) helm-lint
 	docker run -t --rm -v $(CURDIR):/go/src/$(PROJECT) -w /go/src/$(PROJECT) -e GO111MODULE golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run --config .golangci.toml
 
 push-docker: build
@@ -84,7 +84,7 @@ upgrade:
 tidy:
 	go mod tidy
 
-helm-lint:
+helm-lint: helm
 	helm lint helm/chart/i3o
 
 .PHONY: local-check local-build local-test check build test push-docker \
