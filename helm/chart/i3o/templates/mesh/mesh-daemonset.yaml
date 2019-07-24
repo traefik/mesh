@@ -51,6 +51,7 @@ spec:
             - "--api.dashboard"
             - "--accesslog"
             - "--ping"
+            - "--log.level=DEBUG"
             - "--metrics.prometheus"
           readinessProbe:
             httpGet:
