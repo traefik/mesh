@@ -1,0 +1,167 @@
+{{- if .Values.metrics.enabled }}
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: grafana-core
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    component: grafana
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: grafana
+        component: core
+    spec:
+      securityContext:
+        runAsUser: 472
+        fsGroup: 472
+      containers:
+      - image: grafana/grafana:6.2.5
+        name: grafana-core
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        # env:
+        #   - name: GF_PATHS_CONFIG
+        #     value: /var/grafana/grafana.ini
+        readinessProbe:
+          httpGet:
+            path: /login
+            port: 3000
+        volumeMounts:
+        - name: metrics-storage
+          mountPath: /var/lib/grafana
+        {{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
+        {{- $filename := trimSuffix (ext $path) (base $path) }}
+        - name: dashboards-grafana-{{ $filename }}
+          mountPath: "/var/lib/grafana/dashboards/{{ base $path }}"
+          subPath: {{ base $path }}
+          readOnly: false
+        {{- end }}
+        - name: grafana-config
+          mountPath: /etc/grafana
+          readOnly: true
+      volumes:
+      - name: metrics-storage
+        persistentVolumeClaim:
+          claimName: metrics-storage
+      {{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
+      {{- $filename := trimSuffix (ext $path) (base $path) }}
+      - name: dashboards-grafana-{{ $filename }}
+        configMap:
+          name:  grafana-dashboard-{{ $filename }}
+      {{- end }}
+      - name: grafana-config
+        configMap:
+          name: grafana-config
+          items:
+          - key: grafana.ini
+            path: grafana.ini
+          - key: datasources.yaml
+            path: provisioning/datasources/datasources.yaml
+          - key: dashboards.yaml
+            path: provisioning/dashboards/dashboards.yaml
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: grafana-config
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    component: grafana
+data:
+  grafana.ini: |-
+    instance_name = containous-grafana
+
+    [auth]
+    disable_login_form = true
+
+    [auth.anonymous]
+    enabled = true
+    org_role = Admin
+
+    [auth.basic]
+    enabled = false
+
+    [analytics]
+    check_for_updates = false
+  datasources.yaml: |-
+    apiVersion: 1
+    datasources:
+    - name: prometheus
+      type: prometheus
+      orgId: 1
+      url: http://prometheus.traefik-mesh.svc.cluster.local:9090
+      isDefault: true
+      access: proxy
+      jsonData:
+        timeInterval: "5s"
+      version: 1
+      editable: true
+
+  dashboards.yaml: |-
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: true
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards
+        homeDashboardId: traefik-mesh
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    component: grafana
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+  selector:
+    app: {{ .Release.Name | quote }}
+    component: grafana
+
+---
+{{- $files := .Files }}
+{{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
+{{- $filename := trimSuffix (ext $path) (base $path) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-{{ $filename }}
+  namespace: traefik-mesh
+  labels:
+    component: grafana
+data:
+  {{ base $path }}: '{{ $files.Get $path }}'
+---
+{{- end }}
+{{- end }}

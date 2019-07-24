@@ -1,0 +1,59 @@
+{{- if .Values.metrics.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+  labels:
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus-k8s
+  namespace: traefik-mesh
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: prometheus
+  labels:
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["get"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+- apiGroups: ["extensions"]
+  resources:
+    - ingresses
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-k8s
+  namespace: traefik-mesh
+  labels:
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+
+{{- end }}

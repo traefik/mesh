@@ -52,6 +52,7 @@ spec:
             - "--accesslog"
             - "--ping"
             - "--log.level=DEBUG"
+            - "--metrics.prometheus"
           readinessProbe:
             httpGet:
               path: /ping

@@ -1,0 +1,174 @@
+{{- if .Values.metrics.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: prometheus-rules
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    component: prometheus
+data:
+  general.yaml: |
+    groups:
+      - name: general
+        rules:
+          - record: job:http_duration_seconds:p99:5m
+            expr: histogram_quantile(0.99, sum(rate(http_duration_seconds_bucket[5m])) by (job, le))
+          - record: job:http_duration_seconds:p90:5m
+            expr: histogram_quantile(0.90, sum(rate(http_duration_seconds_bucket[5m])) by (job, le))
+          - record: job:http_duration_seconds:p50:5m
+            expr: histogram_quantile(0.50, sum(rate(http_duration_seconds_bucket[5m])) by (job, le))
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-core
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    component: prometheus
+data:
+  prometheus.yaml: |
+    global:
+      scrape_interval: 10s
+      scrape_timeout: 10s
+      evaluation_interval: 10s
+    rule_files:
+      - "/prometheus/rules/*.yaml"
+
+    scrape_configs:
+      - job_name: 'traefik-mesh'
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+            # Add the version label extracted from the pod label version.
+          - source_labels: [__meta_kubernetes_pod_label_version]
+            action: replace
+            replacement: $1
+            target_label: version
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - traefik-mesh
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: prometheus-core
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    component: prometheus
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: prometheus-main
+      labels:
+        app: prometheus
+        component: core
+    spec:
+      serviceAccountName: prometheus-k8s
+      securityContext:
+        fsGroup: 2000
+        runAsUser: 1000
+        runAsNonRoot: true
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v2.11.1
+        args:
+          - '--storage.tsdb.retention=60d'
+          - '--storage.tsdb.path="/prometheus/data/"'
+          - '--web.enable-lifecycle'
+          - '--config.file=/prometheus/config/prometheus.yaml'
+        ports:
+        - name: webui
+          containerPort: 9090
+        resources:
+          requests:
+            cpu: 500m
+            memory: 500M
+          limits:
+            cpu: 500m
+            memory: 500M
+        volumeMounts:
+        - name: config-volume
+          mountPath: /prometheus/config
+        - name: rules-volume
+          mountPath: /prometheus/rules
+        - name: prometheus-storage
+          mountPath: /prometheus
+      - name: configmap-reload
+        image: jimmidyson/configmap-reload:v0.2.2
+        imagePullPolicy: IfNotPresent
+        args:
+          - --volume-dir=/etc/config
+          - --volume-dir=/etc/rules
+          - --webhook-url=http://localhost:9090/-/reload
+        volumeMounts:
+          - name: config-volume
+            mountPath: /etc/config
+            readOnly: true
+          - name: rules-volume
+            mountPath: /etc/rules
+            readOnly: true
+        resources:
+          limits:
+            cpu: 10m
+            memory: 10Mi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+      volumes:
+      - name: prometheus-storage
+        persistentVolumeClaim:
+          claimName: prometheus-storage
+      - name: config-volume
+        configMap:
+          name: prometheus-core
+      - name: rules-volume
+        configMap:
+          name: prometheus-rules
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: traefik-mesh
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "i3o.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    component: prometheus
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  type: NodePort
+  ports:
+    - port: 9090
+      protocol: TCP
+      name: webui
+  selector:
+    app: {{ .Release.Name | quote }}
+    component: prometheus
+{{- end }}
