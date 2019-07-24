@@ -11,6 +11,7 @@ type I3oConfiguration struct {
 	Debug       bool   `description:"Debug mode" export:"true"`
 	SMI         bool   `description:"Enable SMI operation" export:"true"`
 	DefaultMode string `description:"Default mode for mesh services" export:"true"`
+	Namespace   string `description:"The namespace that i3o is installed in." export:"true"`
 }
 
 // NewI3oConfiguration creates a I3oConfiguration with default values.
@@ -21,6 +22,7 @@ func NewI3oConfiguration() *I3oConfiguration {
 		Debug:       false,
 		SMI:         false,
 		DefaultMode: "http",
+		Namespace:   "i3o",
 	}
 }
 

@@ -34,11 +34,11 @@ run `make` to build the binary and build/tag the local image.
 
 To deploy the helm chart, run:
 
-`helm install helm/chart/i3o --namespace traefik-mesh --set image.pullPolicy=IfNotPresent --set image.tag=latest`
+`helm install helm/chart/i3o --namespace i3o --set image.pullPolicy=IfNotPresent --set image.tag=latest`
 
 ## Usage
 
-To use i3o, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.traefik.mesh`.
+To use i3o, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.i3o`.
 This will access the i3o service mesh, and will allow you to route requests through i3o.
 
 By default, i3o is opt-in, meaning you have to use the i3o service names to access the mesh, so you can have some services running through the mesh, and some services not.

@@ -42,12 +42,13 @@ type Controller struct {
 	smiEnabled         bool
 	traefikConfig      *dynamic.Configuration
 	defaultMode        string
+	meshNamespace      string
 }
 
 // New is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string) *Controller {
-	ignored := k8s.NewIgnored()
+func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string) *Controller {
+	ignored := k8s.NewIgnored(meshNamespace)
 
 	// messageQueue is used to process messages from the sub-controllers
 	// if cross-controller logic is required
@@ -58,13 +59,14 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 	meshHandler := NewHandler(ignored.WithoutMesh(), messageQueue)
 
 	c := &Controller{
-		clients:      clients,
-		handler:      handler,
-		meshHandler:  meshHandler,
-		messageQueue: messageQueue,
-		ignored:      ignored,
-		smiEnabled:   smiEnabled,
-		defaultMode:  defaultMode,
+		clients:       clients,
+		handler:       handler,
+		meshHandler:   meshHandler,
+		messageQueue:  messageQueue,
+		ignored:       ignored,
+		smiEnabled:    smiEnabled,
+		defaultMode:   defaultMode,
+		meshNamespace: meshNamespace,
 	}
 
 	if err := c.Init(); err != nil {
@@ -84,27 +86,27 @@ func (c *Controller) Init() error {
 	// Create a new SharedInformerFactory, and register the event handler to informers.
 	c.meshFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient,
 		k8s.ResyncPeriod,
-		informers.WithNamespace(k8s.MeshNamespace),
+		informers.WithNamespace(c.meshNamespace),
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = "component==i3o-mesh"
 		}),
 	)
 	c.meshFactory.Core().V1().Pods().Informer().AddEventHandler(c.meshHandler)
 
-	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode)
+	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace)
 
 	// configurationQueue is used to process configurations from the providers
 	// and deal with pushing them to mesh nodes
 	c.configurationQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	// Initialize the deployer.
-	c.deployer = deployer.New(c.clients, c.configurationQueue)
+	c.deployer = deployer.New(c.clients, c.configurationQueue, c.meshNamespace)
 
 	// Initialize an empty configuration with a readinesscheck so that configs deployed to nodes mark them as ready.
 	c.traefikConfig = createBaseConfigWithReadiness()
 
 	if c.smiEnabled {
-		c.smiProvider = smi.New(c.clients, c.defaultMode)
+		c.smiProvider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.ignored)
 
 		// Create new SharedInformerFactories, and register the event handler to informers.
 		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
@@ -354,8 +356,8 @@ func (c *Controller) processDeletedMessage(event message.Message) {
 }
 
 func (c *Controller) createMeshService(service *corev1.Service) (*corev1.Service, error) {
-	meshServiceName := userServiceToMeshServiceName(service.Name, service.Namespace)
-	meshServiceInstance, exists, err := c.clients.GetService(k8s.MeshNamespace, meshServiceName)
+	meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
+	meshServiceInstance, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +384,7 @@ func (c *Controller) createMeshService(service *corev1.Service) (*corev1.Service
 		svc := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      meshServiceName,
-				Namespace: k8s.MeshNamespace,
+				Namespace: c.meshNamespace,
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: ports,
@@ -399,18 +401,18 @@ func (c *Controller) createMeshService(service *corev1.Service) (*corev1.Service
 }
 
 func (c *Controller) deleteMeshService(serviceName, serviceNamespace string) error {
-	meshServiceName := userServiceToMeshServiceName(serviceName, serviceNamespace)
-	_, exists, err := c.clients.GetService(k8s.MeshNamespace, meshServiceName)
+	meshServiceName := c.userServiceToMeshServiceName(serviceName, serviceNamespace)
+	_, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
 	if err != nil {
 		return err
 	}
 
 	if exists {
 		// Service exists, delete
-		if err := c.clients.DeleteService(k8s.MeshNamespace, meshServiceName); err != nil {
+		if err := c.clients.DeleteService(c.meshNamespace, meshServiceName); err != nil {
 			return err
 		}
-		log.Debugf("Deleted service: %s/%s", k8s.MeshNamespace, meshServiceName)
+		log.Debugf("Deleted service: %s/%s", c.meshNamespace, meshServiceName)
 	}
 
 	return nil
@@ -419,11 +421,11 @@ func (c *Controller) deleteMeshService(serviceName, serviceNamespace string) err
 // updateMeshService updates the mesh service based on an old/new user service, and returns the updated mesh service
 func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error) {
 	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-	meshServiceName := userServiceToMeshServiceName(oldUserService.Name, oldUserService.Namespace)
+	meshServiceName := c.userServiceToMeshServiceName(oldUserService.Name, oldUserService.Namespace)
 
 	var updatedSvc *corev1.Service
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		service, exists, err := c.clients.GetService(k8s.MeshNamespace, meshServiceName)
+		service, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
 		if err != nil {
 			return err
 		}
@@ -461,7 +463,7 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 		return nil, fmt.Errorf("unable to update service %q: %v", meshServiceName, retryErr)
 	}
 
-	log.Debugf("Updated service: %s/%s", k8s.MeshNamespace, meshServiceName)
+	log.Debugf("Updated service: %s/%s", c.meshNamespace, meshServiceName)
 	return updatedSvc, nil
 
 }
@@ -482,9 +484,9 @@ func isMeshPod(pod *corev1.Pod) bool {
 	return pod.Labels["component"] == "i3o-mesh"
 }
 
-// userServiceToMeshServiceName converts a User service with a namespace to a traefik-mesh service name.
-func userServiceToMeshServiceName(serviceName string, namespace string) string {
-	return fmt.Sprintf("traefik-%s-%s", serviceName, namespace)
+// userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.
+func (c *Controller) userServiceToMeshServiceName(serviceName string, namespace string) string {
+	return fmt.Sprintf("%s-%s-%s", c.meshNamespace, serviceName, namespace)
 }
 
 func createBaseConfigWithReadiness() *dynamic.Configuration {

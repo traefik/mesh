@@ -16,8 +16,9 @@ import (
 
 // Provider holds a client to access the provider.
 type Provider struct {
-	client      k8s.CoreV1Client
-	defaultMode string
+	client        k8s.CoreV1Client
+	defaultMode   string
+	meshNamespace string
 }
 
 // Init the provider.
@@ -26,10 +27,11 @@ func (p *Provider) Init() {
 }
 
 // New creates a new provider.
-func New(client k8s.CoreV1Client, defaultMode string) *Provider {
+func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string) *Provider {
 	p := &Provider{
-		client:      client,
-		defaultMode: defaultMode,
+		client:        client,
+		defaultMode:   defaultMode,
+		meshNamespace: meshNamespace,
 	}
 
 	p.Init()
@@ -65,7 +67,7 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dyna
 
 func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string) *dynamic.Router {
 	return &dynamic.Router{
-		Rule:        fmt.Sprintf("Host(`%s.%s.traefik.mesh`) || Host(`%s`)", name, namespace, ip),
+		Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
 		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
 		Service:     serviceName,
 	}

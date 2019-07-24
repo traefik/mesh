@@ -11,14 +11,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const meshNamespace string = "i3o"
+
 func TestBuildRouter(t *testing.T) {
 	expected := &dynamic.Router{
-		Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.0.0.1`)",
+		Rule:        "Host(`test.foo.i3o`) || Host(`10.0.0.1`)",
 		EntryPoints: []string{"ingress-80"},
 		Service:     "bar",
 	}
 
-	provider := New(nil, k8s.ServiceTypeHTTP)
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace)
 
 	name := "test"
 	namespace := "foo"
@@ -37,7 +39,7 @@ func TestBuildTCPRouter(t *testing.T) {
 		Service:     "bar",
 	}
 
-	provider := New(nil, k8s.ServiceTypeTCP)
+	provider := New(nil, k8s.ServiceTypeTCP, meshNamespace)
 
 	port := 80
 	associatedService := "bar"
@@ -90,7 +92,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
-							Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
+							Rule:        "Host(`test.foo.i3o`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -387,7 +389,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
-							Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
+							Rule:        "Host(`test.foo.i3o`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -463,7 +465,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
-							Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
+							Rule:        "Host(`test.foo.i3o`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -497,7 +499,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
-							Rule:        "Host(`test.foo.traefik.mesh`) || Host(`10.1.0.1`)",
+							Rule:        "Host(`test.foo.i3o`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -581,7 +583,7 @@ func TestBuildConfiguration(t *testing.T) {
 				clientMock.EnableServiceError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
 			provider.BuildConfiguration(test.event, test.provided)
 			assert.Equal(t, test.expected, test.provided)
 		})
@@ -642,7 +644,7 @@ func TestBuildService(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			provider := New(clientMock, k8s.ServiceTypeHTTP)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
 			actual := provider.buildService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
 
@@ -703,7 +705,7 @@ func TestBuildTCPService(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			provider := New(clientMock, k8s.ServiceTypeHTTP)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
 			actual := provider.buildTCPService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
 

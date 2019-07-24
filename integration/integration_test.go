@@ -163,7 +163,7 @@ func (s *BaseSuite) waitForCoreDNSStarted(c *check.C) {
 }
 
 func (s *BaseSuite) waitForI3oControllerStarted(c *check.C) {
-	err := s.try.WaitReadyDeployment("i3o-controller", k8s.MeshNamespace, 30*time.Second)
+	err := s.try.WaitReadyDeployment("i3o-controller", "i3o", 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -225,7 +225,7 @@ func (s *BaseSuite) installTiller(c *check.C) {
 
 func (s *BaseSuite) installHelmI3o(_ *check.C, smi bool) error {
 	// Install the helm chart.
-	argSlice := []string{"install", "../helm/chart/i3o", "--values", "resources/values.yaml", "--name", "powpow", "--namespace", "traefik-mesh"}
+	argSlice := []string{"install", "../helm/chart/i3o", "--values", "resources/values.yaml", "--name", "powpow", "--namespace", "i3o"}
 
 	if smi {
 		argSlice = append(argSlice, "--set", "smi=true")

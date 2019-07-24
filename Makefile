@@ -28,7 +28,7 @@ clean:
 	rm -rf dist/ cover.out
 
 # Static linting of source files. See .golangci.toml for options
-local-check: $(DIST_DIR)
+local-check: $(DIST_DIR) helm-lint
 	golangci-lint run --config .golangci.toml
 
 # Build

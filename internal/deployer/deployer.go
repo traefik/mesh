@@ -26,9 +26,10 @@ const maxRetry = 3
 
 // Deployer holds a client to access the provider.
 type Deployer struct {
-	client      k8s.CoreV1Client
-	configQueue workqueue.RateLimitingInterface
-	deployQueue workqueue.RateLimitingInterface
+	client        k8s.CoreV1Client
+	configQueue   workqueue.RateLimitingInterface
+	deployQueue   workqueue.RateLimitingInterface
+	meshNamespace string
 }
 
 // Init the deployer.
@@ -39,10 +40,11 @@ func (d *Deployer) Init() error {
 }
 
 // New creates a new deployer.
-func New(client k8s.CoreV1Client, configQueue workqueue.RateLimitingInterface) *Deployer {
+func New(client k8s.CoreV1Client, configQueue workqueue.RateLimitingInterface, meshNamespace string) *Deployer {
 	d := &Deployer{
-		client:      client,
-		configQueue: configQueue,
+		client:        client,
+		configQueue:   configQueue,
+		meshNamespace: meshNamespace,
 	}
 
 	if err := d.Init(); err != nil {
@@ -115,7 +117,7 @@ func (d *Deployer) deployConfiguration(c *dynamic.Configuration) bool {
 	// Make a copy to deploy, so changes to the main configuration don't propagate
 	deployConfig := c.DeepCopy()
 
-	podList, err := d.client.ListPodWithOptions(k8s.MeshNamespace, metav1.ListOptions{
+	podList, err := d.client.ListPodWithOptions(d.meshNamespace, metav1.ListOptions{
 		LabelSelector: "component==i3o-mesh",
 	})
 	if err != nil {
