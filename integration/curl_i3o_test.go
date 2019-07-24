@@ -33,12 +33,12 @@ func (s *CurlI3oSuite) TestSimpleCURL(c *check.C) {
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami.whoami.i3o",
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.i3o", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
 
 	argSlice = []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "curl", "whoami-http.whoami.i3o",
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-http.whoami.i3o", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami-http")
 }

@@ -178,7 +178,7 @@ func (s *BaseSuite) waitForTools(c *check.C) {
 }
 
 func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data string) {
-	err := s.try.WaitCommandExecute("kubectl", argSlice, data, 30*time.Second)
+	err := s.try.WaitCommandExecute("kubectl", argSlice, data, 5*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -231,13 +231,13 @@ func (s *BaseSuite) installHelmI3o(_ *check.C, smi bool) error {
 		argSlice = append(argSlice, "--set", "smi=true")
 	}
 
-	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 30*time.Second)
+	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 10*time.Second)
 }
 
 func (s *BaseSuite) unInstallHelmI3o(c *check.C) {
 	// Install the helm chart.
 	argSlice := []string{"delete", "--purge", "powpow"}
-	err := s.try.WaitCommandExecute("helm", argSlice, "deleted", 30*time.Second)
+	err := s.try.WaitCommandExecute("helm", argSlice, "deleted", 10*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
