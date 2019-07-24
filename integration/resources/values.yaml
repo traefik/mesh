@@ -7,7 +7,7 @@ image:
   tag: latest
   # (Optional)
   # pullSecret: xxx
-  traefik: containous/traefik:experimental-v2.0
+  traefik: traefik:v2.0.0-beta1
 
 debug: true
 

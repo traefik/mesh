@@ -49,7 +49,7 @@ func init() {
 	images = append(images, image{"coredns/coredns:1.4.0", true})
 	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.1", true})
 	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
-	images = append(images, image{"containous/traefik:experimental-v2.0", true})
+	images = append(images, image{"traefik:v2.0.0-beta1", true})
 
 	check.Suite(&SMISuite{})
 	check.Suite(&CurlI3oSuite{})
