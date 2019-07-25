@@ -4,7 +4,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: grafana-core
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -79,7 +79,7 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: grafana-config
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -134,7 +134,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: grafana
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -157,7 +157,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-dashboard-{{ $filename }}
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
 data:
