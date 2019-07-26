@@ -20,6 +20,9 @@ debug: true
 tracing:
   enabled: true
 
+#
+# addon metrics configuration
+#
 metrics:
   enabled: true
 

@@ -1,10 +1,9 @@
-{{- if .Values.metrics.enabled }}
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: grafana-core
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -23,7 +22,7 @@ spec:
         runAsUser: 472
         fsGroup: 472
       containers:
-      - image: grafana/grafana:6.2.5
+      - image: {{ .Values.image.grafana | quote }}
         name: grafana-core
         imagePullPolicy: IfNotPresent
         resources:
@@ -79,7 +78,7 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: grafana-config
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -134,7 +133,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: grafana
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -151,17 +150,17 @@ spec:
 
 ---
 {{- $files := .Files }}
+{{- $ns := .Release.Namespace }}
 {{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
 {{- $filename := trimSuffix (ext $path) (base $path) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-dashboard-{{ $filename }}
-  namespace: traefik-mesh
+  namespace: {{ $ns }}
   labels:
     component: grafana
 data:
   {{ base $path }}: '{{ $files.Get $path }}'
 ---
-{{- end }}
 {{- end }}

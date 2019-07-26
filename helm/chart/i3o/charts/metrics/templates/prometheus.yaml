@@ -1,11 +1,10 @@
-{{- if .Values.metrics.enabled }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   creationTimestamp: null
   name: prometheus-rules
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -28,7 +27,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: prometheus-core
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -70,7 +69,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: prometheus-core
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -93,7 +92,7 @@ spec:
         runAsNonRoot: true
       containers:
       - name: prometheus
-        image: prom/prometheus:v2.11.1
+        image: {{ .Values.image.prometheus | quote }}
         args:
           - '--storage.tsdb.retention=60d'
           - '--storage.tsdb.path="/prometheus/data/"'
@@ -153,7 +152,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: prometheus
-  namespace: traefik-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "i3o.chartLabel" . | quote }}
@@ -171,4 +170,3 @@ spec:
   selector:
     app: {{ .Release.Name | quote }}
     component: prometheus
-{{- end }}

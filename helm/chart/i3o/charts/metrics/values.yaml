@@ -1,0 +1,3 @@
+image:
+  prometheus: prom/prometheus:v2.11.1
+  grafana: grafana/grafana:6.2.5

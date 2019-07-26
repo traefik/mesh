@@ -23,6 +23,13 @@ spec:
     spec:
       serviceAccountName: i3o-mesh
       terminationGracePeriodSeconds: 30
+      {{- if .Values.tracing.enabled }}
+      initContainers:
+        - name: wait-for-jaeger-init
+          image: groundnuty/k8s-wait-for:v1.2
+          imagePullPolicy: Always
+          args: ["service", "-lapp.kubernetes.io/name=jaeger-agent"]
+      {{- end }}
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret }}
@@ -44,15 +51,17 @@ spec:
             - "--entryPoints.ingress-5008.address=:5008"
             - "--entryPoints.ingress-5009.address=:5009"
             - "--providers.rest"
-            {{- if .Values.tracing.enable }}
+            {{- if .Values.tracing.enabled }}
             - "--tracing.jaeger.localagenthostport=jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:6831"
-            - "--tracing.jaeger.SamplingServerURL=http://jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:5778/sampling"
+            - "--tracing.jaeger.samplingserverurl=http://jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:5778/sampling"
             {{- end }}
             - "--api.dashboard"
-            - "--accesslog"
+#            - "--accesslog"
             - "--ping"
-            - "--log.level=DEBUG"
+            - "--log.level=INFO"
+            {{- if .Values.metrics.enabled }}
             - "--metrics.prometheus"
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /ping
