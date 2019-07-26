@@ -20,13 +20,13 @@ metadata:
   name: jaeger
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
-    chart: {{ include "i3o.chartLabel" . | quote }}
-    release: {{ .Release.Name | quote }}
-    heritage: {{ .Release.Service | quote }}
-    component: jaeger
+    app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: all-in-one
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   replicas: 1
   strategy:
@@ -73,12 +73,13 @@ metadata:
   name: jaeger-query
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
-    chart: {{ include "i3o.chartLabel" . | quote }}
-    release: {{ .Release.Name | quote }}
-    heritage: {{ .Release.Service | quote }}
+    app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: query
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ports:
     - name: query-http
@@ -96,12 +97,13 @@ metadata:
   name: jaeger-collector
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
-    chart: {{ include "i3o.chartLabel" . | quote }}
-    release: {{ .Release.Name | quote }}
-    heritage: {{ .Release.Service | quote }}
+    app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: collector
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ports:
     - name: jaeger-collector-tchannel
@@ -128,12 +130,13 @@ metadata:
   name: jaeger-agent
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
-    chart: {{ include "i3o.chartLabel" . | quote }}
-    release: {{ .Release.Name | quote }}
-    heritage: {{ .Release.Service | quote }}
+    app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: agent
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ports:
     - name: agent-zipkin-thrift
@@ -164,12 +167,13 @@ metadata:
   name: zipkin
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
-    chart: {{ include "i3o.chartLabel" . | quote }}
-    release: {{ .Release.Name | quote }}
-    heritage: {{ .Release.Service | quote }}
+    app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: zipkin
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ports:
     - name: jaeger-collector-zipkin

@@ -44,14 +44,14 @@ spec:
             - "--entryPoints.ingress-5008.address=:5008"
             - "--entryPoints.ingress-5009.address=:5009"
             - "--providers.rest"
-            {{- if .Values.tracing.enable }}
+            {{- if .Values.tracing.enabled }}
             - "--tracing.jaeger.localagenthostport=jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:6831"
-            - "--tracing.jaeger.SamplingServerURL=http://jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:5778/sampling"
+            - "--tracing.jaeger.samplingserverurl=http://jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:5778/sampling"
             {{- end }}
             - "--api.dashboard"
-            - "--accesslog"
+#            - "--accesslog"
             - "--ping"
-            - "--log.level=DEBUG"
+            - "--log.level=INFO"
             - "--metrics.prometheus"
           readinessProbe:
             httpGet:

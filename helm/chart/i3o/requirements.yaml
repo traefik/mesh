@@ -1,4 +1,0 @@
-dependencies:
-  - name: tracing
-    version: 0.0.1
-    condition: tracing.enabled

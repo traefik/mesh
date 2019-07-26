@@ -11,6 +11,10 @@ metadata:
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
     component: grafana
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   replicas: 1
   template:
@@ -86,6 +90,10 @@ metadata:
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
     component: grafana
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 data:
   grafana.ini: |-
     instance_name = containous-grafana
@@ -141,6 +149,10 @@ metadata:
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
     component: grafana
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   type: NodePort
   ports:
@@ -151,15 +163,20 @@ spec:
 
 ---
 {{- $files := .Files }}
+{{- $ns := .Release.Namespace }}
 {{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
 {{- $filename := trimSuffix (ext $path) (base $path) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-dashboard-{{ $filename }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ $ns }}
   labels:
     component: grafana
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
 data:
   {{ base $path }}: '{{ $files.Get $path }}'
 ---
