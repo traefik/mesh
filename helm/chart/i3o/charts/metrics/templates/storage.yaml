@@ -1,4 +1,3 @@
-{{- if .Values.metrics.enabled }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -34,5 +33,3 @@ spec:
     requests:
       storage: 10Gi
   storageClassName: local-path
-
-{{- end }}

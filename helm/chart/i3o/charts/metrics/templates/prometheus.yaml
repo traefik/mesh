@@ -1,4 +1,3 @@
-{{- if .Values.metrics.enabled }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -93,7 +92,7 @@ spec:
         runAsNonRoot: true
       containers:
       - name: prometheus
-        image: prom/prometheus:v2.11.1
+        image: {{ .Values.image.prometheus | quote }}
         args:
           - '--storage.tsdb.retention=60d'
           - '--storage.tsdb.path="/prometheus/data/"'
@@ -171,4 +170,3 @@ spec:
   selector:
     app: {{ .Release.Name | quote }}
     component: prometheus
-{{- end }}

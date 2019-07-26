@@ -1,1 +1,2 @@
-enabled: false
+image:
+  jaeger: jaegertracing/all-in-one:1.13

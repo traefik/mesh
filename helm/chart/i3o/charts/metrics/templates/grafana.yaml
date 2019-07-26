@@ -1,4 +1,3 @@
-{{- if .Values.metrics.enabled }}
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -23,7 +22,7 @@ spec:
         runAsUser: 472
         fsGroup: 472
       containers:
-      - image: grafana/grafana:6.2.5
+      - image: {{ .Values.image.grafana | quote }}
         name: grafana-core
         imagePullPolicy: IfNotPresent
         resources:
@@ -164,5 +163,4 @@ metadata:
 data:
   {{ base $path }}: '{{ $files.Get $path }}'
 ---
-{{- end }}
 {{- end }}

@@ -23,6 +23,13 @@ spec:
     spec:
       serviceAccountName: i3o-mesh
       terminationGracePeriodSeconds: 30
+      {{- if .Values.tracing.enabled }}
+      initContainers:
+        - name: wait-for-jaeger-init
+          image: groundnuty/k8s-wait-for:v1.2
+          imagePullPolicy: Always
+          args: ["service", "-lapp.kubernetes.io/name=jaeger-agent"]
+      {{- end }}
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret }}
@@ -52,7 +59,9 @@ spec:
 #            - "--accesslog"
             - "--ping"
             - "--log.level=INFO"
+            {{- if .Values.metrics.enabled }}
             - "--metrics.prometheus"
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /ping
