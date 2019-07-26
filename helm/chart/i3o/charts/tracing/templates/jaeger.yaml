@@ -23,10 +23,6 @@ metadata:
     app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: all-in-one
-  annotations:
-    "helm.sh/hook": "pre-install"
-    "helm.sh/hook-weight": "1"
-    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   replicas: 1
   strategy:
@@ -76,10 +72,6 @@ metadata:
     app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: query
-  annotations:
-    "helm.sh/hook": "pre-install"
-    "helm.sh/hook-weight": "1"
-    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ports:
     - name: query-http
@@ -100,10 +92,6 @@ metadata:
     app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: collector
-  annotations:
-    "helm.sh/hook": "pre-install"
-    "helm.sh/hook-weight": "1"
-    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ports:
     - name: jaeger-collector-tchannel
@@ -133,10 +121,6 @@ metadata:
     app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: agent
-  annotations:
-    "helm.sh/hook": "pre-install"
-    "helm.sh/hook-weight": "1"
-    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ports:
     - name: agent-zipkin-thrift
@@ -170,10 +154,6 @@ metadata:
     app: jaeger
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: zipkin
-  annotations:
-    "helm.sh/hook": "pre-install"
-    "helm.sh/hook-weight": "1"
-    "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   ports:
     - name: jaeger-collector-zipkin
