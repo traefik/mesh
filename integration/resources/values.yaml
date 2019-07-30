@@ -20,3 +20,4 @@ metrics:
 
 limits:
   http: 10
+  tcp: 25

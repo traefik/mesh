@@ -543,6 +543,9 @@ func ParseServiceNamePort(value string) (name, namespace string, port int32, err
 		return "", "", 0, fmt.Errorf("could not parse service into name and port")
 	}
 	port64, err := strconv.ParseInt(service[1], 10, 32)
+	if err != nil {
+		return "", "", 0, err
+	}
 	port = int32(port64)
 
 	substring := strings.Split(service[0], "/")

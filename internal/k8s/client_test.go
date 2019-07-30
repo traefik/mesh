@@ -55,7 +55,7 @@ func TestParseServiceNamePort(t *testing.T) {
 		serviceName      string
 		serviceNamespace string
 		servicePort      int32
-		parseError       error
+		parseError       bool
 	}{
 		{
 			desc:             "simple parse",
@@ -77,7 +77,15 @@ func TestParseServiceNamePort(t *testing.T) {
 			serviceName:      "",
 			serviceNamespace: "",
 			servicePort:      0,
-			parseError:       fmt.Errorf("could not parse service into name and port"),
+			parseError:       true,
+		},
+		{
+			desc:             "unparseable port",
+			given:            "foo/bar:%",
+			serviceName:      "",
+			serviceNamespace: "",
+			servicePort:      0,
+			parseError:       true,
 		},
 	}
 
@@ -90,7 +98,9 @@ func TestParseServiceNamePort(t *testing.T) {
 			assert.Equal(t, test.serviceName, name)
 			assert.Equal(t, test.serviceNamespace, namespace)
 			assert.Equal(t, test.servicePort, port)
-			assert.Equal(t, test.parseError, err)
+			if test.parseError {
+				assert.Error(t, err)
+			}
 		})
 	}
 }
