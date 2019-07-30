@@ -572,6 +572,9 @@ func (c *Controller) saveTCPStateTable() error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		newConfigmap := configmap.DeepCopy()
 
+		if newConfigmap.Data == nil {
+			newConfigmap.Data = make(map[string]string)
+		}
 		for k, v := range c.tcpStateTable {
 			key := strconv.Itoa(k)
 			value := k8s.ServiceNamePortToString(v.Name, v.Namespace, v.Port)
