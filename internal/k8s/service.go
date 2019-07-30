@@ -6,6 +6,13 @@ type Service struct {
 	Name      string
 }
 
+// ServiceWithPort holds a combination of service name and namespace and port.
+type ServiceWithPort struct {
+	Namespace string
+	Name      string
+	Port      int32
+}
+
 // Services holds a list of type Service.
 type Services []Service
 

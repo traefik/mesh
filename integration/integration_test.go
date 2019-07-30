@@ -52,7 +52,11 @@ func init() {
 	images = append(images, image{"traefik:v2.0.0-beta1", true})
 
 	check.Suite(&SMISuite{})
+<<<<<<< HEAD
 	check.Suite(&CurlMaeshSuite{})
+=======
+	check.Suite(&KubernetesSuite{})
+>>>>>>> base commit for TCP lookup
 	check.Suite(&CoreDNSSuite{})
 
 	dir, _ := os.Getwd()

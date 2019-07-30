@@ -165,7 +165,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 			continue
 		}
 
-		config.TCP.Routers[key] = p.buildTCPRouter(5000+id, key)
+		config.TCP.Routers[key] = p.buildTCPRouter(10000+id, key)
 		config.TCP.Services[key] = p.buildTCPService(endpoints)
 	}
 }

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/containous/maesh/internal/deployer"
@@ -43,6 +44,7 @@ type Controller struct {
 	traefikConfig      *dynamic.Configuration
 	defaultMode        string
 	meshNamespace      string
+	tcpStateTable      map[int]k8s.ServiceWithPort
 }
 
 // New is used to build the informers and other required components of the mesh controller,
@@ -127,6 +129,7 @@ func (c *Controller) Init() error {
 
 // Run is the main entrypoint for the controller.
 func (c *Controller) Run(stopCh <-chan struct{}) error {
+	var err error
 	// handle a panic with logging and exiting
 	defer utilruntime.HandleCrash()
 
@@ -168,6 +171,12 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
+	}
+
+	// Load the state from the TCP State Configmap before running
+	c.tcpStateTable, err = c.loadTCPStateTable()
+	if err != nil {
+		log.Errorf("encountered error loading TCP state table: %v", err)
 	}
 
 	// run the deployer to deploy configurations
@@ -366,16 +375,26 @@ func (c *Controller) createMeshService(service *corev1.Service) (*corev1.Service
 		// Mesh service does not exist.
 		var ports []corev1.ServicePort
 
+		serviceMode := service.Annotations[k8s.AnnotationServiceType]
+		if serviceMode == "" {
+			serviceMode = c.defaultMode
+		}
+
 		for id, sp := range service.Spec.Ports {
 			if sp.Protocol != corev1.ProtocolTCP {
 				log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, service.Namespace, service.Name)
 				continue
 			}
 
+			targetPort := intstr.FromInt(5000 + id)
+			if serviceMode == k8s.ServiceTypeTCP {
+				targetPort = intstr.FromInt(c.getTCPPortFromState(service.Name, service.Namespace, sp.Port))
+			}
+
 			meshPort := corev1.ServicePort{
 				Name:       sp.Name,
 				Port:       sp.Port,
-				TargetPort: intstr.FromInt(5000 + id),
+				TargetPort: targetPort,
 			}
 
 			ports = append(ports, meshPort)
@@ -479,14 +498,67 @@ func (c *Controller) setUserServiceExternalIP(userService *corev1.Service, ip st
 	})
 }
 
-// isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
-func isMeshPod(pod *corev1.Pod) bool {
-	return pod.Labels["component"] == "maesh-mesh"
-}
-
 // userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.
 func (c *Controller) userServiceToMeshServiceName(serviceName string, namespace string) string {
 	return fmt.Sprintf("%s-%s-%s", c.meshNamespace, serviceName, namespace)
+}
+
+func (c *Controller) loadTCPStateTable() (map[int]k8s.ServiceWithPort, error) {
+	result := make(map[int]k8s.ServiceWithPort)
+	configmap, exists, err := c.clients.GetConfigMap(c.meshNamespace, k8s.TCPStateConfigmapName)
+	if err != nil {
+		return result, err
+	}
+
+	if !exists {
+		return result, fmt.Errorf("TCP State Table configmap does not exist")
+	}
+
+	if len(configmap.Data) > 0 {
+		for k, v := range configmap.Data {
+			port, err := strconv.Atoi(k)
+			if err != nil {
+				continue
+			}
+			name, namespace, servicePort, err := k8s.ParseServiceNamePort(v)
+			if err != nil {
+				continue
+			}
+			result[port] = k8s.ServiceWithPort{
+				Name:      name,
+				Namespace: namespace,
+				Port:      servicePort,
+			}
+		}
+	}
+	return result, nil
+}
+
+func (c *Controller) getTCPPortFromState(serviceName, serviceNamespace string, servicePort int32) int {
+	for port, v := range c.tcpStateTable {
+		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
+			return port
+		}
+	}
+	// No Match, add new port
+	for i := 10000; true; i++ {
+		if _, exists := c.tcpStateTable[i]; exists {
+			// Port used
+			continue
+		}
+		c.tcpStateTable[i] = k8s.ServiceWithPort{
+			Name:      serviceName,
+			Namespace: serviceNamespace,
+			Port:      servicePort,
+		}
+		return i
+	}
+	return 0
+}
+
+// isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
+func isMeshPod(pod *corev1.Pod) bool {
+	return pod.Labels["component"] == "maesh-mesh"
 }
 
 func createBaseConfigWithReadiness() *dynamic.Configuration {

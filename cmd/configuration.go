@@ -31,12 +31,14 @@ type PrepareConfig struct {
 	KubeConfig string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	Debug      bool   `description:"Debug mode" export:"true"`
+	Namespace  string `description:"The namespace that i3o is installed in." export:"true"`
 }
 
 func NewPrepareConfig() *PrepareConfig {
 	return &PrepareConfig{
 		KubeConfig: os.Getenv("KUBECONFIG"),
 		Debug:      false,
+		Namespace:  "i3o",
 	}
 }
 

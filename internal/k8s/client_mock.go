@@ -312,11 +312,11 @@ func (c *CoreV1ClientMock) GetConfigMap(namespace, name string) (*corev1.ConfigM
 	return nil, false, c.apiConfigMapError
 }
 
-func (c *CoreV1ClientMock) CreateConfigmap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+func (c *CoreV1ClientMock) CreateConfigMap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	panic("implement me")
 }
 
-func (c *CoreV1ClientMock) UpdateConfigMap(service *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+func (c *CoreV1ClientMock) UpdateConfigMap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	panic("implement me")
 }
 
