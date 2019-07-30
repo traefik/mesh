@@ -550,9 +550,36 @@ func (c *Controller) getTCPPortFromState(serviceName, serviceNamespace string, s
 			Namespace: serviceNamespace,
 			Port:      servicePort,
 		}
+		err := c.saveTCPStateTable()
+		if err != nil {
+			return 0
+		}
 		return i
 	}
 	return 0
+}
+
+func (c *Controller) saveTCPStateTable() error {
+	configmap, exists, err := c.clients.GetConfigMap(c.meshNamespace, k8s.TCPStateConfigmapName)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("TCP State Table configmap does not exist")
+	}
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		newConfigmap := configmap.DeepCopy()
+
+		for k, v := range c.tcpStateTable {
+			key := strconv.Itoa(k)
+			value := k8s.ServiceNamePortToString(v.Name, v.Namespace, v.Port)
+			newConfigmap.Data[key] = value
+		}
+		_, err := c.clients.UpdateConfigMap(newConfigmap)
+		return err
+	})
 }
 
 // isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
