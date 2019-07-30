@@ -43,6 +43,7 @@ rules:
     verbs:
       - get
       - update
+      - create
   - apiGroups:
       - apps
     resources:
