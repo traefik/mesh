@@ -16,11 +16,11 @@ const meshNamespace string = "maesh"
 func TestBuildRouter(t *testing.T) {
 	expected := &dynamic.Router{
 		Rule:        "Host(`test.foo.maesh`) || Host(`10.0.0.1`)",
-		EntryPoints: []string{"ingress-80"},
+		EntryPoints: []string{"http-80"},
 		Service:     "bar",
 	}
 
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace)
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil)
 
 	name := "test"
 	namespace := "foo"
@@ -35,13 +35,13 @@ func TestBuildRouter(t *testing.T) {
 func TestBuildTCPRouter(t *testing.T) {
 	expected := &dynamic.TCPRouter{
 		Rule:        "HostSNI(`*`)",
-		EntryPoints: []string{"ingress-80"},
+		EntryPoints: []string{"tcp-10000"},
 		Service:     "bar",
 	}
 
-	provider := New(nil, k8s.ServiceTypeTCP, meshNamespace)
+	provider := New(nil, k8s.ServiceTypeTCP, meshNamespace, nil)
 
-	port := 80
+	port := 10000
 	associatedService := "bar"
 
 	actual := provider.buildTCPRouter(port, associatedService)
@@ -50,6 +50,14 @@ func TestBuildTCPRouter(t *testing.T) {
 }
 
 func TestBuildConfiguration(t *testing.T) {
+	stateTable := map[int]k8s.ServiceWithPort{
+		10000: {
+			Name:      "test",
+			Namespace: "foo",
+			Port:      80,
+		},
+	}
+
 	testCases := []struct {
 		desc           string
 		mockFile       string
@@ -90,7 +98,7 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							EntryPoints: []string{"ingress-5000"},
+							EntryPoints: []string{"http-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
@@ -161,7 +169,7 @@ func TestBuildConfiguration(t *testing.T) {
 				TCP: &dynamic.TCPConfiguration{
 					Routers: map[string]*dynamic.TCPRouter{
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							EntryPoints: []string{"ingress-5000"},
+							EntryPoints: []string{"tcp-10000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
 							Rule:        "HostSNI(`*`)",
 						},
@@ -583,7 +591,7 @@ func TestBuildConfiguration(t *testing.T) {
 				clientMock.EnableServiceError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, &stateTable)
 			provider.BuildConfiguration(test.event, test.provided)
 			assert.Equal(t, test.expected, test.provided)
 		})
@@ -644,7 +652,7 @@ func TestBuildService(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil)
 			actual := provider.buildService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
 
@@ -653,6 +661,14 @@ func TestBuildService(t *testing.T) {
 }
 
 func TestBuildTCPService(t *testing.T) {
+	stateTable := map[int]k8s.ServiceWithPort{
+		10000: {
+			Name:      "test",
+			Namespace: "foo",
+			Port:      80,
+		},
+	}
+
 	testCases := []struct {
 		desc      string
 		mockFile  string
@@ -705,7 +721,7 @@ func TestBuildTCPService(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, &stateTable)
 			actual := provider.buildTCPService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
 

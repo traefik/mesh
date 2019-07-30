@@ -95,7 +95,7 @@ func (c *Controller) Init() error {
 	)
 	c.meshFactory.Core().V1().Pods().Informer().AddEventHandler(c.meshHandler)
 
-	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace)
+	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, &c.tcpStateTable)
 
 	// configurationQueue is used to process configurations from the providers
 	// and deal with pushing them to mesh nodes
@@ -264,7 +264,6 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 			log.Errorf("Could not create mesh service: %v", err)
 			return
 		}
-
 		if err = c.setUserServiceExternalIP(obj, service.Spec.ClusterIP); err != nil {
 			log.Errorf("Could not update user service with externalIP: %v", err)
 		}
