@@ -3,19 +3,19 @@ package kubernetes
 import (
 	"testing"
 
-	"github.com/containous/i3o/internal/k8s"
-	"github.com/containous/i3o/internal/message"
+	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/internal/message"
 	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const meshNamespace string = "i3o"
+const meshNamespace string = "maesh"
 
 func TestBuildRouter(t *testing.T) {
 	expected := &dynamic.Router{
-		Rule:        "Host(`test.foo.i3o`) || Host(`10.0.0.1`)",
+		Rule:        "Host(`test.foo.maesh`) || Host(`10.0.0.1`)",
 		EntryPoints: []string{"ingress-80"},
 		Service:     "bar",
 	}
@@ -92,7 +92,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
-							Rule:        "Host(`test.foo.i3o`) || Host(`10.1.0.1`)",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -389,7 +389,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
-							Rule:        "Host(`test.foo.i3o`) || Host(`10.1.0.1`)",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -465,7 +465,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
-							Rule:        "Host(`test.foo.i3o`) || Host(`10.1.0.1`)",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -499,7 +499,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
 							EntryPoints: []string{"ingress-5000"},
 							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
-							Rule:        "Host(`test.foo.i3o`) || Host(`10.1.0.1`)",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{

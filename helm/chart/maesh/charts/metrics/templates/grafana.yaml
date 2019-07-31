@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
-    chart: {{ include "i3o.chartLabel" . | quote }}
+    chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
     component: grafana
@@ -81,7 +81,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
-    chart: {{ include "i3o.chartLabel" . | quote }}
+    chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
     component: grafana
@@ -136,7 +136,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
-    chart: {{ include "i3o.chartLabel" . | quote }}
+    chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
     component: grafana

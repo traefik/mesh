@@ -1,4 +1,4 @@
-# Let's build i3o for linux-amd64
+# Let's build maesh for linux-amd64
 FROM golang:1.12-alpine AS base-image
 
 # Package dependencies
@@ -9,7 +9,7 @@ RUN apk --no-cache --no-progress add \
     make \
     musl-dev
 
-ENV PROJECT_WORKING_DIR=/go/src/github.com/containous/i3o
+ENV PROJECT_WORKING_DIR=/go/src/github.com/containous/maesh
 
 WORKDIR "${PROJECT_WORKING_DIR}"
 COPY go.mod go.sum "${PROJECT_WORKING_DIR}"/
@@ -28,6 +28,6 @@ FROM alpine:3.10
 RUN addgroup -g 1000 -S app && \
     adduser -u 1000 -S app -G app
 
-COPY --from=maker /go/src/github.com/containous/i3o/dist/i3o /app/
+COPY --from=maker /go/src/github.com/containous/maesh/dist/maesh /app/
 
-ENTRYPOINT ["/app/i3o"]
+ENTRYPOINT ["/app/maesh"]

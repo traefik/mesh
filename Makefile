@@ -1,9 +1,9 @@
 VERSION := latest
-DOCKER_IMAGE_NAME := containous/i3o
+DOCKER_IMAGE_NAME := containous/maesh
 
-BINARY_NAME = i3o
+BINARY_NAME = maesh
 DIST_DIR = $(CURDIR)/dist
-DIST_DIR_I3O = $(DIST_DIR)/$(BINARY_NAME)
+DIST_DIR_MAESH = $(DIST_DIR)/$(BINARY_NAME)
 PROJECT ?= github.com/containous/$(BINARY_NAME)
 GOLANGCI_LINTER_VERSION = v1.17.1
 
@@ -15,7 +15,7 @@ BUILD_DATE := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 INTEGRATION_TEST_OPTS := -timeout 30m
 
 DOCKER_INTEGRATION_TEST_NAME := $(DOCKER_IMAGE_NAME)-integration-tests
-DOCKER_INTEGRATION_TEST_OTPS := -v $(CURDIR):/i3o --privileged -e INTEGRATION_TEST_OPTS
+DOCKER_INTEGRATION_TEST_OTPS := -v $(CURDIR):/maesh --privileged -e INTEGRATION_TEST_OPTS
 
 export GO111MODULE=on
 
@@ -33,7 +33,7 @@ local-check: $(DIST_DIR) helm-lint
 
 # Build
 local-build: $(DIST_DIR)
-	CGO_ENABLED=0 go build -o ${DIST_DIR_I3O} -ldflags="-s -w \
+	CGO_ENABLED=0 go build -o ${DIST_DIR_MAESH} -ldflags="-s -w \
 	-X github.com/containous/$(BINARY_NAME)/cmd/version.version=$(VERSION) \
 	-X github.com/containous/$(BINARY_NAME)/cmd/version.commit=$(SHA) \
 	-X github.com/containous/$(BINARY_NAME)/cmd/version.date=$(BUILD_DATE)" \
@@ -85,7 +85,7 @@ tidy:
 	go mod tidy
 
 helm-lint: helm
-	helm lint helm/chart/i3o
+	helm lint helm/chart/maesh
 
 .PHONY: local-check local-build local-test check build test push-docker \
 		vendor helm-lint helm kubectl test-integration local-test-integration

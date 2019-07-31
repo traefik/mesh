@@ -221,7 +221,7 @@ func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (b
 	}
 
 	if len(coreConfigMap.ObjectMeta.Labels) > 0 {
-		if _, ok := coreConfigMap.ObjectMeta.Labels["i3o-patched"]; ok {
+		if _, ok := coreConfigMap.ObjectMeta.Labels["maesh-patched"]; ok {
 			log.Debugln("Configmap already patched...")
 			return true, nil
 		}
@@ -229,9 +229,9 @@ func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (b
 
 	serverBlock :=
 		`
-i3o:53 {
+maesh:53 {
 	kubernetes cluster.local
-	k8s_external i3o
+	k8s_external maesh
 }
 `
 	originalBlock := coreConfigMap.Data["Corefile"]
@@ -240,7 +240,7 @@ i3o:53 {
 	if len(coreConfigMap.ObjectMeta.Labels) == 0 {
 		coreConfigMap.ObjectMeta.Labels = make(map[string]string)
 	}
-	coreConfigMap.ObjectMeta.Labels["i3o-patched"] = "true"
+	coreConfigMap.ObjectMeta.Labels["maesh-patched"] = "true"
 
 	if _, err = w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Update(coreConfigMap); err != nil {
 		return false, err
@@ -259,7 +259,7 @@ func (w *ClientWrapper) restartCorePods(coreDeployment *appsv1.Deployment) error
 		annotations = make(map[string]string)
 	}
 
-	annotations["i3o-hash"] = uuid.New().String()
+	annotations["maesh-hash"] = uuid.New().String()
 	newDeployment.Spec.Template.Annotations = annotations
 	_, err := w.KubeClient.AppsV1().Deployments(newDeployment.Namespace).Update(newDeployment)
 
@@ -297,12 +297,12 @@ func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string
 	}
 
 	if len(coreConfigMap.ObjectMeta.Labels) > 0 {
-		if _, ok := coreConfigMap.ObjectMeta.Labels["i3o-patched"]; ok {
+		if _, ok := coreConfigMap.ObjectMeta.Labels["maesh-patched"]; ok {
 			return nil
 		}
 	}
 
-	return errors.New("coreDNS not patched. Run ./i3o patch to update DNS")
+	return errors.New("coreDNS not patched. Run ./maesh patch to update DNS")
 }
 
 // buildClient returns a useable kubernetes client.

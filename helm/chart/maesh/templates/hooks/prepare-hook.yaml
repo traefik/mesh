@@ -2,11 +2,11 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: i3o-prepare
+  name: maesh-prepare
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote}}
-    chart: {{ include "i3o.chartLabel" . | quote}}
+    chart: {{ include "maesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
   annotations:
@@ -17,11 +17,11 @@ metadata:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: i3o-prepare-role
+  name: maesh-prepare-role
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote}}
-    chart: {{ include "i3o.chartLabel" . | quote}}
+    chart: {{ include "maesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
   annotations:
@@ -54,11 +54,11 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: i3o-prepare
+  name: maesh-prepare
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote}}
-    chart: {{ include "i3o.chartLabel" . | quote}}
+    chart: {{ include "maesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
   annotations:
@@ -68,20 +68,20 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: i3o-prepare-role
+  name: maesh-prepare-role
 subjects:
   - kind: ServiceAccount
-    name: i3o-prepare
+    name: maesh-prepare
     namespace: {{ .Release.Namespace }}
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: i3o-prepare
+  name: maesh-prepare
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote}}
-    chart: {{ include "i3o.chartLabel" . | quote }}
+    chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
   annotations:
@@ -98,15 +98,15 @@ spec:
         component: prepare
         release: {{ .Release.Name | quote}}
     spec:
-      serviceAccountName: i3o-prepare
+      serviceAccountName: maesh-prepare
       restartPolicy: Never
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret }}
       {{- end }}
       containers:
-        - name: i3o-prepare
-          image: {{ include "i3o.image" . | quote }}
+        - name: maesh-prepare
+          image: {{ include "maesh.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent"}}
           args:
             - "prepare"

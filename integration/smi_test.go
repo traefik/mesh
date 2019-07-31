@@ -20,9 +20,9 @@ func (s *SMISuite) SetUpSuite(c *check.C) {
 	s.waitForCoreDNSStarted(c)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 	s.installTiller(c)
-	err = s.installHelmI3o(c, true)
+	err = s.installHelmMaesh(c, true)
 	c.Assert(err, checker.IsNil)
-	s.waitForI3oControllerStarted(c)
+	s.waitForMaeshControllerStarted(c)
 
 }
 
@@ -79,14 +79,14 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod C -> Service B.mesh /test returns 401",
 			source:      "c-tools",
-			destination: "b.default.i3o",
+			destination: "b.default.maesh",
 			path:        "/test",
 			expected:    401, // Returns 404
 		},
 		{
 			desc:        "Pod C -> Service B.mesh /foo returns 200",
 			source:      "c-tools",
-			destination: "b.default.i3o",
+			destination: "b.default.maesh",
 			path:        "/foo",
 			expected:    200, // Returns 403
 		},
@@ -100,21 +100,21 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod A -> Service B.mesh /test returns 401",
 			source:      "a-tools",
-			destination: "b.default.i3o",
+			destination: "b.default.maesh",
 			path:        "/test",
 			expected:    401,
 		},
 		{
 			desc:        "Pod A -> Service B.mesh /foo returns 200",
 			source:      "a-tools",
-			destination: "b.default.i3o",
+			destination: "b.default.maesh",
 			path:        "/foo",
 			expected:    200,
 		},
 		{
 			desc:        "Pod A -> Service D.mesh /bar returns 401",
 			source:      "a-tools",
-			destination: "d.default.i3o",
+			destination: "d.default.maesh",
 			path:        "/bar",
 			expected:    401,
 		},
@@ -128,14 +128,14 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod C -> Service D.mesh /test returns 401",
 			source:      "c-tools",
-			destination: "d.default.i3o",
+			destination: "d.default.maesh",
 			path:        "/test",
 			expected:    401, // Returns 404
 		},
 		{
 			desc:        "Pod C -> Service D.mesh /bar returns 200",
 			source:      "c-tools",
-			destination: "d.default.i3o",
+			destination: "d.default.maesh",
 			path:        "/bar",
 			expected:    200, // Returns 403
 		},
@@ -170,28 +170,28 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod A -> Service E.mesh /test returns 401",
 			source:      "a-tools",
-			destination: "e.default.i3o",
+			destination: "e.default.maesh",
 			path:        "/test",
 			expected:    401,
 		},
 		{
 			desc:        "Pod B -> Service E.mesh /test returns 401",
 			source:      "b-tools",
-			destination: "e.default.i3o",
+			destination: "e.default.maesh",
 			path:        "/test",
 			expected:    401,
 		},
 		{
 			desc:        "Pod C -> Service E.mesh /test returns 401",
 			source:      "c-tools",
-			destination: "e.default.i3o",
+			destination: "e.default.maesh",
 			path:        "/test",
 			expected:    401, // Returns 404
 		},
 		{
 			desc:        "Pod D -> Service E.mesh /test returns 401",
 			source:      "d-tools",
-			destination: "e.default.i3o",
+			destination: "e.default.maesh",
 			path:        "/test",
 			expected:    401,
 		},

@@ -1,4 +1,4 @@
-module github.com/containous/i3o
+module github.com/containous/maesh
 
 go 1.12
 

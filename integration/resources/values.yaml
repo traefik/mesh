@@ -1,6 +1,6 @@
-## Default values for i3o
+## Default values for maesh
 image:
-  name: containous/i3o
+  name: containous/maesh
   # (Optional)
   pullPolicy: IfNotPresent
   # (Optional)
