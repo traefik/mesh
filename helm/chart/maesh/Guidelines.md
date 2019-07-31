@@ -1,6 +1,6 @@
-# I3o Helm Chart Guidelines
+# Maesh Helm Chart Guidelines
 
-This document outlines the guidelines for developing, managing and extending the i3o helm chart.
+This document outlines the guidelines for developing, managing and extending the maesh helm chart.
 
 ## Optionality
 
@@ -64,7 +64,7 @@ These should just be added as an uncommented non-critical feature:
 
 ```yaml
 image:
-  name: containous/i3o
+  name: containous/maesh
   # (Optional)
   # pullPolicy: IfNotPresent
 ```

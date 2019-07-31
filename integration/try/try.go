@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/traefik/pkg/safe"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"

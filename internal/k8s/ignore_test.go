@@ -8,7 +8,7 @@ import (
 )
 
 func TestIgnored(t *testing.T) {
-	meshNamespace := "i3o"
+	meshNamespace := "maesh"
 	testCases := []struct {
 		desc      string
 		name      string
@@ -36,7 +36,7 @@ func TestIgnored(t *testing.T) {
 		{
 			desc:      "ignored mesh service",
 			name:      "omg",
-			namespace: "i3o",
+			namespace: "maesh",
 			expected:  true,
 		},
 	}
@@ -53,7 +53,7 @@ func TestIgnored(t *testing.T) {
 }
 
 func TestWithoutMesh(t *testing.T) {
-	meshNamespace := "i3o"
+	meshNamespace := "maesh"
 	testCases := []struct {
 		desc      string
 		name      string
@@ -81,7 +81,7 @@ func TestWithoutMesh(t *testing.T) {
 		{
 			desc:      "ignored mesh service",
 			name:      "omg",
-			namespace: "i3o",
+			namespace: "maesh",
 			expected:  false,
 		},
 	}

@@ -5,42 +5,42 @@ import (
 	stdlog "log"
 	"os"
 
-	"github.com/containous/i3o/cmd"
-	"github.com/containous/i3o/cmd/prepare"
-	"github.com/containous/i3o/cmd/version"
-	"github.com/containous/i3o/internal/controller"
-	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/maesh/cmd"
+	"github.com/containous/maesh/cmd/prepare"
+	"github.com/containous/maesh/cmd/version"
+	"github.com/containous/maesh/internal/controller"
+	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/traefik/pkg/cli"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/sample-controller/pkg/signals"
 )
 
 func main() {
-	iConfig := cmd.NewI3oConfiguration()
+	iConfig := cmd.NewMaeshConfiguration()
 	loaders := []cli.ResourceLoader{&cli.FileLoader{}, &cli.FlagLoader{}, &cli.EnvLoader{}}
 
-	cmdI3o := &cli.Command{
-		Name:          "i3o",
-		Description:   `i3o`,
+	cmdMaesh := &cli.Command{
+		Name:          "maesh",
+		Description:   `maesh`,
 		Configuration: iConfig,
 		Resources:     loaders,
 		Run: func(_ []string) error {
-			return i3oCommand(iConfig)
+			return maeshCommand(iConfig)
 		},
 	}
 
 	pConfig := cmd.NewPrepareConfig()
-	if err := cmdI3o.AddCommand(prepare.NewCmd(pConfig, loaders)); err != nil {
+	if err := cmdMaesh.AddCommand(prepare.NewCmd(pConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	if err := cmdI3o.AddCommand(version.NewCmd()); err != nil {
+	if err := cmdMaesh.AddCommand(version.NewCmd()); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	if err := cli.Execute(cmdI3o); err != nil {
+	if err := cli.Execute(cmdMaesh); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
@@ -48,14 +48,14 @@ func main() {
 	os.Exit(0)
 }
 
-func i3oCommand(iConfig *cmd.I3oConfiguration) error {
+func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
 	if iConfig.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	log.Debugln("Starting i3o prepare...")
+	log.Debugln("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)
 

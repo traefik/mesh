@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"github.com/containous/i3o/internal/k8s"
-	"github.com/containous/i3o/internal/message"
+	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/internal/message"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"

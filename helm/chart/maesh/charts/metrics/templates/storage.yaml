@@ -5,7 +5,7 @@ metadata:
   name: metrics-storage
   namespace: {{ .Release.Namespace }}
   labels:
-    chart: {{ include "i3o.chartLabel" . | quote }}
+    chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:
@@ -23,7 +23,7 @@ metadata:
   name: prometheus-storage
   namespace: {{ .Release.Namespace }}
   labels:
-    chart: {{ include "i3o.chartLabel" . | quote }}
+    chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:

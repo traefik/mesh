@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/containous/i3o/internal/deployer"
-	"github.com/containous/i3o/internal/k8s"
-	"github.com/containous/i3o/internal/message"
-	"github.com/containous/i3o/internal/providers/kubernetes"
-	"github.com/containous/i3o/internal/providers/smi"
+	"github.com/containous/maesh/internal/deployer"
+	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/internal/message"
+	"github.com/containous/maesh/internal/providers/kubernetes"
+	"github.com/containous/maesh/internal/providers/smi"
 	"github.com/containous/traefik/pkg/config/dynamic"
 	smiAccessExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	smiSpecsExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
@@ -88,7 +88,7 @@ func (c *Controller) Init() error {
 		k8s.ResyncPeriod,
 		informers.WithNamespace(c.meshNamespace),
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.LabelSelector = "component==i3o-mesh"
+			options.LabelSelector = "component==maesh-mesh"
 		}),
 	)
 	c.meshFactory.Core().V1().Pods().Informer().AddEventHandler(c.meshHandler)
@@ -389,7 +389,7 @@ func (c *Controller) createMeshService(service *corev1.Service) (*corev1.Service
 			Spec: corev1.ServiceSpec{
 				Ports: ports,
 				Selector: map[string]string{
-					"component": "i3o-mesh",
+					"component": "maesh-mesh",
 				},
 			},
 		}
@@ -481,7 +481,7 @@ func (c *Controller) setUserServiceExternalIP(userService *corev1.Service, ip st
 
 // isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
 func isMeshPod(pod *corev1.Pod) bool {
-	return pod.Labels["component"] == "i3o-mesh"
+	return pod.Labels["component"] == "maesh-mesh"
 }
 
 // userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.

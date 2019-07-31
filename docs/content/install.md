@@ -1,6 +1,6 @@
 # Installation
 
-To install i3o, the installation method is quite simple:
+To install maesh, the installation method is quite simple:
 
 ## Pre-release installation
 
@@ -27,24 +27,24 @@ make
 To deploy the helm chart, run:
 
 ```shell
-helm install helm/chart/i3o --namespace i3o --set image.pullPolicy=IfNotPresent --set image.tag=latest
+helm install helm/chart/maesh --namespace maesh --set image.pullPolicy=IfNotPresent --set image.tag=latest
 ```
 
 ## Post-release installation
 
-Once i3o has been publically released, it will be a simple helm install:
+Once maesh has been publically released, it will be a simple helm install:
 
 ```shell
-helm install helm/chart/i3o --namespace i3o
+helm install helm/chart/maesh --namespace maesh
 ```
 
 ## Installation namespace
 
-I3o does not _need_ to be installed into the i3o namespace, but it does need to be installed into its _own_ namespace, separate from user namespaces.
+Maesh does not _need_ to be installed into the maesh namespace, but it does need to be installed into its _own_ namespace, separate from user namespaces.
 
 ## Usage
 
-To use i3o, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.i3o`.
-This will access the i3o service mesh, and will allow you to route requests through i3o.
+To use maesh, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.maesh`.
+This will access the maesh service mesh, and will allow you to route requests through maesh.
 
-By default, i3o is opt-in, meaning you have to use the i3o service names to access the mesh, so you can have some services running through the mesh, and some services not.
+By default, maesh is opt-in, meaning you have to use the maesh service names to access the mesh, so you can have some services running through the mesh, and some services not.

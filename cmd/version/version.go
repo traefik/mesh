@@ -17,7 +17,7 @@ var (
 func NewCmd() *cli.Command {
 	return &cli.Command{
 		Name:          "version",
-		Description:   `Shows the current i3o version.`,
+		Description:   `Shows the current maesh version.`,
 		Configuration: nil,
 		Run: func(_ []string) error {
 			displayVersion("version")

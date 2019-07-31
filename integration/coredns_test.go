@@ -15,7 +15,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	c.Assert(err, checker.IsNil)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 	s.startWhoami(c)
-	s.installTinyToolsI3o(c)
+	s.installTinyToolsMaesh(c)
 	s.installTiller(c)
 }
 
@@ -26,40 +26,40 @@ func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
 func (s *CoreDNSSuite) TestCoreDNSVersion126Fail(c *check.C) {
 	// Test on CoreDNS 1.2
 	s.setCoreDNSVersion(c, "1.2.6")
-	err := s.installHelmI3o(c, false)
+	err := s.installHelmMaesh(c, false)
 	c.Assert(err, checker.NotNil)
 }
 
 func (s *CoreDNSSuite) TestCoreDNSVersion131(c *check.C) {
-	pod := s.getToolsPodI3o(c)
+	pod := s.getToolsPodMaesh(c)
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.i3o", "--max-time", "5",
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
 	}
 
 	// Test on CoreDNS 1.3.1
 	s.setCoreDNSVersion(c, "1.3.1")
-	err := s.installHelmI3o(c, false)
+	err := s.installHelmMaesh(c, false)
 	c.Assert(err, checker.IsNil)
-	s.waitForI3oControllerStarted(c)
+	s.waitForMaeshControllerStarted(c)
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmI3o(c)
+	s.unInstallHelmMaesh(c)
 }
 
 func (s *CoreDNSSuite) TestCoreDNSVersion140(c *check.C) {
-	pod := s.getToolsPodI3o(c)
+	pod := s.getToolsPodMaesh(c)
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.i3o", "--max-time", "5",
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
 	}
 
 	// Test on CoreDNS 1.4.0
 	s.setCoreDNSVersion(c, "1.4.0")
-	err := s.installHelmI3o(c, false)
+	err := s.installHelmMaesh(c, false)
 	c.Assert(err, checker.IsNil)
-	s.waitForI3oControllerStarted(c)
+	s.waitForMaeshControllerStarted(c)
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmI3o(c)
+	s.unInstallHelmMaesh(c)
 }

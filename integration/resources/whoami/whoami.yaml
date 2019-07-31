@@ -40,7 +40,7 @@ metadata:
   labels:
     app: whoami
   annotations:
-    i3o.containo.us/i3o-traffic-type: http
+    maesh.containo.us/maesh-traffic-type: http
 spec:
   type: ClusterIP
   ports:

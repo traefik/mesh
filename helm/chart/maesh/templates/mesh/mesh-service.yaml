@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: i3o-mesh-api
+  name: maesh-mesh-api
   namespace: {{ .Release.Namespace }}
   labels:
     app: mesh-api
@@ -11,4 +11,4 @@ spec:
     - port: 8080
       name: mesh-api
   selector:
-    component: i3o-mesh
+    component: maesh-mesh

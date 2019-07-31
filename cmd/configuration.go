@@ -2,8 +2,8 @@ package cmd
 
 import "os"
 
-// I3oConfiguration wraps the static configuration and extra parameters.
-type I3oConfiguration struct {
+// MaeshConfiguration wraps the static configuration and extra parameters.
+type MaeshConfiguration struct {
 	// ConfigFile is the path to the configuration file.
 	ConfigFile  string `description:"Configuration file to use. If specified all other flags are ignored." export:"true"`
 	KubeConfig  string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
@@ -11,18 +11,18 @@ type I3oConfiguration struct {
 	Debug       bool   `description:"Debug mode" export:"true"`
 	SMI         bool   `description:"Enable SMI operation" export:"true"`
 	DefaultMode string `description:"Default mode for mesh services" export:"true"`
-	Namespace   string `description:"The namespace that i3o is installed in." export:"true"`
+	Namespace   string `description:"The namespace that maesh is installed in." export:"true"`
 }
 
-// NewI3oConfiguration creates a I3oConfiguration with default values.
-func NewI3oConfiguration() *I3oConfiguration {
-	return &I3oConfiguration{
+// NewMaeshConfiguration creates a MaeshConfiguration with default values.
+func NewMaeshConfiguration() *MaeshConfiguration {
+	return &MaeshConfiguration{
 		ConfigFile:  "",
 		KubeConfig:  os.Getenv("KUBECONFIG"),
 		Debug:       false,
 		SMI:         false,
 		DefaultMode: "http",
-		Namespace:   "i3o",
+		Namespace:   "maesh",
 	}
 }
 

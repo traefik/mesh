@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/containous/i3o/cmd"
-	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/maesh/cmd"
+	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/traefik/pkg/cli"
 	log "github.com/sirupsen/logrus"
 )
@@ -30,7 +30,7 @@ func patchCommand(pConfig *cmd.PrepareConfig) error {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	log.Debugln("Starting i3o prepare...")
+	log.Debugln("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 

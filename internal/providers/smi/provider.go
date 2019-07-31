@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/containous/i3o/internal/k8s"
-	"github.com/containous/i3o/internal/message"
+	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/internal/message"
 	"github.com/containous/traefik/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"

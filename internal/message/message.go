@@ -14,7 +14,7 @@ const (
 	TypeUpdated = "updated"
 	TypeDeleted = "deleted"
 
-	ConfigServiceVersionKey string = "i3o-config-service-version-key"
+	ConfigServiceVersionKey string = "maesh-config-service-version-key"
 )
 
 // Message holds a message for processing in the message queue.

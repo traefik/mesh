@@ -14,7 +14,7 @@ COPY ./entrypoint.sh /usr/bin/entrypoint.sh
 
 VOLUME ["/var/log"]
 
-WORKDIR "/i3o"
+WORKDIR "/maesh"
 
 RUN mkdir /usr/local/go
 COPY --from=golang-image /usr/local/go /usr/local/go

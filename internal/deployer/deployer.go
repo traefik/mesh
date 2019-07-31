@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/containous/i3o/internal/k8s"
-	"github.com/containous/i3o/internal/message"
+	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/internal/message"
 	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/safe"
 	log "github.com/sirupsen/logrus"
@@ -118,7 +118,7 @@ func (d *Deployer) deployConfiguration(c *dynamic.Configuration) bool {
 	deployConfig := c.DeepCopy()
 
 	podList, err := d.client.ListPodWithOptions(d.meshNamespace, metav1.ListOptions{
-		LabelSelector: "component==i3o-mesh",
+		LabelSelector: "component==maesh-mesh",
 	})
 	if err != nil {
 		log.Errorf("Could not retrieve pod list: %v", err)

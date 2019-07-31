@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containous/i3o/integration/try"
-	"github.com/containous/i3o/internal/k8s"
+	"github.com/containous/maesh/integration/try"
+	"github.com/containous/maesh/internal/k8s"
 	"github.com/go-check/check"
 	log "github.com/sirupsen/logrus"
 	checker "github.com/vdemeester/shakers"
@@ -42,7 +42,7 @@ func init() {
 		return
 	}
 
-	images = append(images, image{"containous/i3o:latest", false})
+	images = append(images, image{"containous/maesh:latest", false})
 	images = append(images, image{"containous/whoami:v1.0.1", true})
 	images = append(images, image{"coredns/coredns:1.2.6", true})
 	images = append(images, image{"coredns/coredns:1.3.1", true})
@@ -52,7 +52,7 @@ func init() {
 	images = append(images, image{"traefik:v2.0.0-beta1", true})
 
 	check.Suite(&SMISuite{})
-	check.Suite(&CurlI3oSuite{})
+	check.Suite(&CurlMaeshSuite{})
 	check.Suite(&CoreDNSSuite{})
 
 	dir, _ := os.Getwd()
@@ -162,8 +162,8 @@ func (s *BaseSuite) waitForCoreDNSStarted(c *check.C) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) waitForI3oControllerStarted(c *check.C) {
-	err := s.try.WaitReadyDeployment("i3o-controller", "i3o", 30*time.Second)
+func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
+	err := s.try.WaitReadyDeployment("maesh-controller", "maesh", 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -223,9 +223,9 @@ func (s *BaseSuite) installTiller(c *check.C) {
 	s.waitForTiller(c)
 }
 
-func (s *BaseSuite) installHelmI3o(_ *check.C, smi bool) error {
+func (s *BaseSuite) installHelmMaesh(_ *check.C, smi bool) error {
 	// Install the helm chart.
-	argSlice := []string{"install", "../helm/chart/i3o", "--values", "resources/values.yaml", "--name", "powpow", "--namespace", "i3o"}
+	argSlice := []string{"install", "../helm/chart/maesh", "--values", "resources/values.yaml", "--name", "powpow", "--namespace", "maesh"}
 
 	if smi {
 		argSlice = append(argSlice, "--set", "smi=true")
@@ -234,7 +234,7 @@ func (s *BaseSuite) installHelmI3o(_ *check.C, smi bool) error {
 	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 10*time.Second)
 }
 
-func (s *BaseSuite) unInstallHelmI3o(c *check.C) {
+func (s *BaseSuite) unInstallHelmMaesh(c *check.C) {
 	// Install the helm chart.
 	argSlice := []string{"delete", "--purge", "powpow"}
 	err := s.try.WaitCommandExecute("helm", argSlice, "deleted", 10*time.Second)
@@ -257,7 +257,7 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) installTinyToolsI3o(c *check.C) {
+func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
 	// Create new tiny tools deployment.
 	cmd := exec.Command("kubectl", "apply",
 		"-f", path.Join(s.dir, "resources/tools/deployment.yaml"))
@@ -269,7 +269,7 @@ func (s *BaseSuite) installTinyToolsI3o(c *check.C) {
 	s.waitForTools(c)
 }
 
-func (s *BaseSuite) getToolsPodI3o(c *check.C) *corev1.Pod {
+func (s *BaseSuite) getToolsPodMaesh(c *check.C) *corev1.Pod {
 	podList, err := s.client.ListPodWithOptions(metav1.NamespaceDefault, metav1.ListOptions{
 		LabelSelector: "app=tiny-tools",
 	})

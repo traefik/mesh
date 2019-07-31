@@ -9,8 +9,8 @@
 *.log
 *.exe
 cover.out
-i3o
-!i3o/
+maesh
+!maesh/
 /dist/
 .vscode
 vendor

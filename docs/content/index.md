@@ -1,6 +1,6 @@
-# I3o: Simple Service Mesh
+# Maesh: Simple Service Mesh
 
-I3o is a simple service mesh that provides metrics, tracing, and more into your cluster in a non-intrusive way.
+Maesh is a simple service mesh that provides metrics, tracing, and more into your cluster in a non-intrusive way.
 
 ## Prerequisites
 
