@@ -213,5 +213,7 @@ func buildKey(name, namespace string, port int32) string {
 	sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s.%d", name, namespace, port)))
 	dst := make([]byte, hex.EncodedLen(len(sum)))
 	hex.Encode(dst, sum[:])
-	return string(dst)
+	fullHash := string(dst)
+	trimmedHash := fullHash[:15]
+	return fmt.Sprintf("%s-%s-%d-%s", name, namespace, port, trimmedHash)
 }

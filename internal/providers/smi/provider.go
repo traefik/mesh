@@ -439,7 +439,9 @@ func buildKey(serviceName, namespace string, port int32, ttName, ttNamespace str
 	sum := sha256.Sum256([]byte(fmt.Sprintf("%s.%s.%d.%s.%s", serviceName, namespace, port, ttName, ttNamespace)))
 	dst := make([]byte, hex.EncodedLen(len(sum)))
 	hex.Encode(dst, sum[:])
-	return string(dst)
+	fullHash := string(dst)
+	trimmedHash := fullHash[:15]
+	return fmt.Sprintf("%s-%s-%d-%s-%s-%s", serviceName, namespace, port, ttName, ttNamespace, trimmedHash)
 }
 
 func createWhitelistMiddleware(sourceIPs []string) *dynamic.Middleware {
