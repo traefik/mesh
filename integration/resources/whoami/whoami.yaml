@@ -24,7 +24,7 @@ metadata:
   labels:
     app: whoami
   annotations:
-    i3o.containo.us/i3o-traffic-type: http
+    maesh.containo.us/maesh-traffic-type: http
 spec:
   type: ClusterIP
   ports:
@@ -42,11 +42,7 @@ metadata:
   labels:
     app: whoami
   annotations:
-<<<<<<< HEAD
-    maesh.containo.us/maesh-traffic-type: http
-=======
-    i3o.containo.us/i3o-traffic-type: tcp
->>>>>>> base commit for TCP lookup
+    maesh.containo.us/maesh-traffic-type: tcp
 spec:
   type: ClusterIP
   ports:

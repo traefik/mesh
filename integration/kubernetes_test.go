@@ -16,11 +16,11 @@ func (s *KubernetesSuite) SetUpSuite(c *check.C) {
 	s.waitForCoreDNSStarted(c)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 	s.installTiller(c)
-	err = s.installHelmI3o(c, false)
+	err = s.installHelmMaesh(c, false)
 	c.Assert(err, checker.IsNil)
-	s.waitForI3oControllerStarted(c)
+	s.waitForMaeshControllerStarted(c)
 	s.startWhoami(c)
-	s.installTinyToolsI3o(c)
+	s.installTinyToolsMaesh(c)
 }
 
 func (s *KubernetesSuite) TearDownSuite(c *check.C) {
@@ -29,22 +29,22 @@ func (s *KubernetesSuite) TearDownSuite(c *check.C) {
 
 func (s *KubernetesSuite) TestHTTPCURL(c *check.C) {
 	// Get the tools pod service in whoami namespace
-	pod := s.getToolsPodI3o(c)
+	pod := s.getToolsPodMaesh(c)
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.i3o", "--max-time", "5",
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
 }
 
 func (s *KubernetesSuite) TestTCPCURL(c *check.C) {
 	// Get the tools pod service in whoami namespace
-	pod := s.getToolsPodI3o(c)
+	pod := s.getToolsPodMaesh(c)
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami.i3o", "--max-time", "5",
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami-tcp")
 
