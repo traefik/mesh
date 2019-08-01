@@ -214,6 +214,5 @@ func buildKey(name, namespace string, port int32) string {
 	dst := make([]byte, hex.EncodedLen(len(sum)))
 	hex.Encode(dst, sum[:])
 	fullHash := string(dst)
-	trimmedHash := fullHash[:15]
-	return fmt.Sprintf("%s-%s-%d-%s", name, namespace, port, trimmedHash)
+	return fmt.Sprintf("%.10s-%.10s-%d-%.16s", name, namespace, port, fullHash)
 }
