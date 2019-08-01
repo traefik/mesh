@@ -52,7 +52,7 @@ func init() {
 	images = append(images, image{"traefik:v2.0.0-beta1", true})
 
 	check.Suite(&SMISuite{})
-	check.Suite(&CurlMaeshSuite{})
+	check.Suite(&KubernetesSuite{})
 	check.Suite(&CoreDNSSuite{})
 
 	dir, _ := os.Getwd()

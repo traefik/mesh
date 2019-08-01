@@ -23,6 +23,8 @@ metadata:
   namespace: whoami
   labels:
     app: whoami
+  annotations:
+    maesh.containo.us/maesh-traffic-type: http
 spec:
   type: ClusterIP
   ports:
@@ -35,12 +37,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: whoami-http
+  name: whoami-tcp
   namespace: whoami
   labels:
     app: whoami
   annotations:
-    maesh.containo.us/maesh-traffic-type: http
+    maesh.containo.us/maesh-traffic-type: tcp
 spec:
   type: ClusterIP
   ports:

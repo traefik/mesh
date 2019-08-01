@@ -7,10 +7,10 @@ import (
 	checker "github.com/vdemeester/shakers"
 )
 
-// CurlMaeshSuite
-type CurlMaeshSuite struct{ BaseSuite }
+// KubernetesSuite
+type KubernetesSuite struct{ BaseSuite }
 
-func (s *CurlMaeshSuite) SetUpSuite(c *check.C) {
+func (s *KubernetesSuite) SetUpSuite(c *check.C) {
 	err := s.startk3s(c)
 	c.Assert(err, checker.IsNil)
 	s.waitForCoreDNSStarted(c)
@@ -23,11 +23,11 @@ func (s *CurlMaeshSuite) SetUpSuite(c *check.C) {
 	s.installTinyToolsMaesh(c)
 }
 
-func (s *CurlMaeshSuite) TearDownSuite(c *check.C) {
+func (s *KubernetesSuite) TearDownSuite(c *check.C) {
 	s.stopComposeProject()
 }
 
-func (s *CurlMaeshSuite) TestSimpleCURL(c *check.C) {
+func (s *KubernetesSuite) TestHTTPCURL(c *check.C) {
 	// Get the tools pod service in whoami namespace
 	pod := s.getToolsPodMaesh(c)
 	c.Assert(pod, checker.NotNil)
@@ -36,9 +36,16 @@ func (s *CurlMaeshSuite) TestSimpleCURL(c *check.C) {
 		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
+}
 
-	argSlice = []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-http.whoami.maesh", "--max-time", "5",
+func (s *KubernetesSuite) TestTCPCURL(c *check.C) {
+	// Get the tools pod service in whoami namespace
+	pod := s.getToolsPodMaesh(c)
+	c.Assert(pod, checker.NotNil)
+
+	argSlice := []string{
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami.maesh", "--max-time", "5",
 	}
-	s.waitKubectlExecCommand(c, argSlice, "whoami-http")
+	s.waitKubectlExecCommand(c, argSlice, "whoami-tcp")
+
 }

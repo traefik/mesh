@@ -11,4 +11,5 @@ const (
 	ServiceTypeHTTP       string = "http"
 	ServiceTypeTCP        string = "tcp"
 	BlockAllMiddlewareKey string = "smi-block-all-middleware"
+	TCPStateConfigmapName string = "tcp-state-table"
 )

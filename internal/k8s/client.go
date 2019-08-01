@@ -3,6 +3,7 @@ package k8s
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
@@ -57,6 +58,7 @@ type CoreV1Client interface {
 	GetNamespaces() ([]*corev1.Namespace, error)
 	GetConfigMap(namespace, name string) (*corev1.ConfigMap, bool, error)
 	UpdateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
+	CreateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
 }
 
 type AppsV1Client interface {
@@ -172,7 +174,7 @@ func isCoreDNSVersionSupported(versionLine string) bool {
 }
 
 // InitCluster is used to initialize a kubernetes cluster with a variety of configuration options.
-func (w *ClientWrapper) InitCluster() error {
+func (w *ClientWrapper) InitCluster(namespace string) error {
 	log.Infoln("Preparing Cluster...")
 
 	log.Debugln("Patching CoreDNS...")
@@ -180,6 +182,10 @@ func (w *ClientWrapper) InitCluster() error {
 		return err
 	}
 
+	log.Debugln("Creating TCP State Table...")
+	if err := w.createTCPStateTable(namespace); err != nil {
+		return err
+	}
 	log.Infoln("Cluster Preparation Complete...")
 
 	return nil
@@ -204,6 +210,24 @@ func (w *ClientWrapper) patchCoreDNS(deploymentName string, deploymentNamespace 
 		}
 	}
 
+	return nil
+}
+
+func (w *ClientWrapper) createTCPStateTable(namespace string) error {
+	_, exists, err := w.GetConfigMap(namespace, TCPStateConfigmapName)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		_, err := w.CreateConfigMap(&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TCPStateConfigmapName,
+				Namespace: namespace,
+			},
+		})
+		return err
+	}
 	return nil
 }
 
@@ -493,9 +517,14 @@ func (w *ClientWrapper) GetConfigMap(namespace, name string) (*corev1.ConfigMap,
 	return configMap, exists, err
 }
 
-// UpdateConfigMap updates the specified service.
+// UpdateConfigMap updates the specified configmap.
 func (w *ClientWrapper) UpdateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	return w.KubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(configMap)
+}
+
+// CreateConfigMap creates the specified configmap.
+func (w *ClientWrapper) CreateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+	return w.KubeClient.CoreV1().ConfigMaps(configMap.Namespace).Create(configMap)
 }
 
 // translateNotFoundError will translate a "not found" error to a boolean return
@@ -505,4 +534,29 @@ func translateNotFoundError(err error) (bool, error) {
 		return false, nil
 	}
 	return err == nil, err
+}
+
+// ParseServiceNamePort parses a name, namespace, and a port from a string, using the default namespace if none is defined.
+func ParseServiceNamePort(value string) (name, namespace string, port int32, err error) {
+	service := strings.Split(value, ":")
+	if len(service) < 2 {
+		return "", "", 0, fmt.Errorf("could not parse service into name and port")
+	}
+	port64, err := strconv.ParseInt(service[1], 10, 32)
+	if err != nil {
+		return "", "", 0, err
+	}
+	port = int32(port64)
+
+	substring := strings.Split(service[0], "/")
+	if len(substring) == 1 {
+		return service[0], metav1.NamespaceDefault, port, nil
+	}
+
+	return substring[1], substring[0], port, nil
+}
+
+// ServiceNamePortToString formats a parseable string from the values.
+func ServiceNamePortToString(name, namespace string, port int32) (value string) {
+	return fmt.Sprintf("%s/%s:%d", namespace, name, port)
 }

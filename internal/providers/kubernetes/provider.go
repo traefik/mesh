@@ -19,6 +19,7 @@ type Provider struct {
 	client        k8s.CoreV1Client
 	defaultMode   string
 	meshNamespace string
+	tcpStateTable *map[int]k8s.ServiceWithPort
 }
 
 // Init the provider.
@@ -27,11 +28,12 @@ func (p *Provider) Init() {
 }
 
 // New creates a new provider.
-func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string) *Provider {
+func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string, tcpStateTable *map[int]k8s.ServiceWithPort) *Provider {
 	p := &Provider{
 		client:        client,
 		defaultMode:   defaultMode,
 		meshNamespace: meshNamespace,
+		tcpStateTable: tcpStateTable,
 	}
 
 	p.Init()
@@ -68,7 +70,7 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dyna
 func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string) *dynamic.Router {
 	return &dynamic.Router{
 		Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
-		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
+		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
 		Service:     serviceName,
 	}
 }
@@ -76,7 +78,7 @@ func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName
 func (p *Provider) buildTCPRouter(port int, serviceName string) *dynamic.TCPRouter {
 	return &dynamic.TCPRouter{
 		Rule:        "HostSNI(`*`)",
-		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
+		EntryPoints: []string{fmt.Sprintf("tcp-%d", port)},
 		Service:     serviceName,
 	}
 }
@@ -165,7 +167,8 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 			continue
 		}
 
-		config.TCP.Routers[key] = p.buildTCPRouter(5000+id, key)
+		meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
+		config.TCP.Routers[key] = p.buildTCPRouter(meshPort, key)
 		config.TCP.Services[key] = p.buildTCPService(endpoints)
 	}
 }
@@ -192,6 +195,15 @@ func (p *Provider) getServiceMode(mode string) string {
 		return p.defaultMode
 	}
 	return mode
+}
+
+func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {
+	for port, v := range *p.tcpStateTable {
+		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
+			return port
+		}
+	}
+	return 0
 }
 
 func buildKey(name, namespace string, port int32) string {
