@@ -17,3 +17,6 @@ tracing:
   enabled: true
 metrics:
   enabled: true
+
+limits:
+  http: 10

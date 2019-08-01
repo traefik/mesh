@@ -27,3 +27,6 @@ metrics:
   enabled: true
 
 smi: false
+
+limits:
+  http: 10

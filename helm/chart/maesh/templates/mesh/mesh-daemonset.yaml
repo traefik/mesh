@@ -40,16 +40,9 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "--entryPoints.readiness.address=:1081"
-            - "--entryPoints.ingress-5000.address=:5000"
-            - "--entryPoints.ingress-5001.address=:5001"
-            - "--entryPoints.ingress-5002.address=:5002"
-            - "--entryPoints.ingress-5003.address=:5003"
-            - "--entryPoints.ingress-5004.address=:5004"
-            - "--entryPoints.ingress-5005.address=:5005"
-            - "--entryPoints.ingress-5006.address=:5006"
-            - "--entryPoints.ingress-5007.address=:5007"
-            - "--entryPoints.ingress-5008.address=:5008"
-            - "--entryPoints.ingress-5009.address=:5009"
+          {{- range $i, $e := until (.Values.limits.http|int) }}
+            - {{ printf "\"--entryPoints.ingress-%d.address=:%d\"" (add $i 5000) (add $i 5000) }}
+          {{- end }}
             - "--providers.rest"
             {{- if .Values.tracing.enabled }}
             - "--tracing.jaeger.localagenthostport=jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:6831"
