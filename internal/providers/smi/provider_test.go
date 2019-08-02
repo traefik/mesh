@@ -1260,15 +1260,15 @@ func TestBuildConfiguration(t *testing.T) {
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
-						"5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9": {
+						"demo-servi-default-80-api-servic-default-5bb66e727779b5ba": {
 							EntryPoints: []string{"ingress-5000"},
 							Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-service.default.maesh`) || Host(`10.1.0.1`))))",
-							Service:     "5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9",
-							Middlewares: []string{"api-service-metrics-default-5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9-whitelist"},
+							Service:     "demo-servi-default-80-api-servic-default-5bb66e727779b5ba",
+							Middlewares: []string{"api-service-metrics-default-demo-servi-default-80-api-servic-default-5bb66e727779b5ba-whitelist"},
 						},
 					},
 					Services: map[string]*dynamic.Service{
-						"5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9": {
+						"demo-servi-default-80-api-servic-default-5bb66e727779b5ba": {
 							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
@@ -1280,7 +1280,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 					Middlewares: map[string]*dynamic.Middleware{
-						"api-service-metrics-default-5bb66e727779b5ba3112d69259160957be7f58ce2caf1f9ec0d42c039a7b8ec9-whitelist": {
+						"api-service-metrics-default-demo-servi-default-80-api-servic-default-5bb66e727779b5ba-whitelist": {
 							IPWhiteList: &dynamic.IPWhiteList{
 								SourceRange: []string{"10.4.3.2"},
 							},
@@ -1328,15 +1328,15 @@ func TestBuildConfiguration(t *testing.T) {
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
-						"7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952": {
+						"demo-test-default-80-api-servic-default-7f2af3b9b8c32573": {
 							EntryPoints: []string{"ingress-5000"},
 							Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-test.default.maesh`) || Host(`10.1.0.1`))))",
-							Service:     "7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952",
-							Middlewares: []string{"api-service-metrics-default-7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952-whitelist"},
+							Service:     "demo-test-default-80-api-servic-default-7f2af3b9b8c32573",
+							Middlewares: []string{"api-service-metrics-default-demo-test-default-80-api-servic-default-7f2af3b9b8c32573-whitelist"},
 						},
 					},
 					Services: map[string]*dynamic.Service{
-						"7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952": {
+						"demo-test-default-80-api-servic-default-7f2af3b9b8c32573": {
 							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
@@ -1348,7 +1348,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 					Middlewares: map[string]*dynamic.Middleware{
-						"api-service-metrics-default-7f2af3b9b8c325734be45787c2167ed9081474e3dd74cb83630daf3512549952-whitelist": {
+						"api-service-metrics-default-demo-test-default-80-api-servic-default-7f2af3b9b8c32573-whitelist": {
 							IPWhiteList: &dynamic.IPWhiteList{
 								SourceRange: []string{"10.4.3.2"},
 							},

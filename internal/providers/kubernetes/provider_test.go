@@ -97,14 +97,14 @@ func TestBuildConfiguration(t *testing.T) {
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							EntryPoints: []string{"http-5000"},
-							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
+							Service:     "test-foo-80-6653beb49ee354ea",
 							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
@@ -168,14 +168,14 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers: map[string]*dynamic.TCPRouter{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							EntryPoints: []string{"tcp-10000"},
-							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
+							Service:     "test-foo-80-6653beb49ee354ea",
 							Rule:        "HostSNI(`*`)",
 						},
 					},
 					Services: map[string]*dynamic.TCPService{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.TCPLoadBalancerService{
 								Servers: []dynamic.TCPServer{
 									{
@@ -369,14 +369,14 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers: map[string]*dynamic.TCPRouter{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							EntryPoints: []string{"ingress-5000"},
-							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
+						"test-foo-80-6653beb49ee354ea": {
+							EntryPoints: []string{"tcp-10000"},
+							Service:     "test-foo-80-6653beb49ee354ea",
 							Rule:        "HostSNI(`*`)",
 						},
 					},
 					Services: map[string]*dynamic.TCPService{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.TCPLoadBalancerService{
 								Servers: []dynamic.TCPServer{
 									{
@@ -394,14 +394,14 @@ func TestBuildConfiguration(t *testing.T) {
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							EntryPoints: []string{"ingress-5000"},
-							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
+						"test-foo-80-6653beb49ee354ea": {
+							EntryPoints: []string{"http-5000"},
+							Service:     "test-foo-80-6653beb49ee354ea",
 							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
@@ -422,14 +422,14 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers: map[string]*dynamic.TCPRouter{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							EntryPoints: []string{"ingress-5000"},
-							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
+						"test-foo-80-6653beb49ee354ea": {
+							EntryPoints: []string{"tcp-10000"},
+							Service:     "test-foo-80-6653beb49ee354ea",
 							Rule:        "HostSNI(`*`)",
 						},
 					},
 					Services: map[string]*dynamic.TCPService{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.TCPLoadBalancerService{
 								Servers: []dynamic.TCPServer{
 									{
@@ -470,14 +470,14 @@ func TestBuildConfiguration(t *testing.T) {
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							EntryPoints: []string{"ingress-5000"},
-							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
+						"test-foo-80-6653beb49ee354ea": {
+							EntryPoints: []string{"http-5000"},
+							Service:     "test-foo-80-6653beb49ee354ea",
 							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
@@ -504,14 +504,14 @@ func TestBuildConfiguration(t *testing.T) {
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							EntryPoints: []string{"ingress-5000"},
-							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
+						"test-foo-80-6653beb49ee354ea": {
+							EntryPoints: []string{"http-5000"},
+							Service:     "test-foo-80-6653beb49ee354ea",
 							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
@@ -532,14 +532,14 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers: map[string]*dynamic.TCPRouter{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
-							EntryPoints: []string{"ingress-5000"},
-							Service:     "6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839",
+						"test-foo-80-6653beb49ee354ea": {
+							EntryPoints: []string{"tcp-10000"},
+							Service:     "test-foo-80-6653beb49ee354ea",
 							Rule:        "HostSNI(`*`)",
 						},
 					},
 					Services: map[string]*dynamic.TCPService{
-						"6653beb49ee354ea9d22028a3816f8947fe6b2f8362e42eb258e884769be2839": {
+						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.TCPLoadBalancerService{
 								Servers: []dynamic.TCPServer{
 									{
