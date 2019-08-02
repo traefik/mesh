@@ -37,4 +37,5 @@ Retries can be enabled by using the following annotation:
 maesh.containo.us/retry-attempts: "2"
 ```
 
-This annotation sets the number of retry attempts that maesh will make if a network error occurrs. Please note that this value is a string, and needs to be quoted.
+This annotation sets the number of retry attempts that maesh will make if a network error occurrs.
+Please note that this value is a string, and needs to be quoted.
