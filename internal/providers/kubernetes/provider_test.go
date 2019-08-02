@@ -17,6 +17,7 @@ func TestBuildRouter(t *testing.T) {
 	expected := &dynamic.Router{
 		Rule:        "Host(`test.foo.maesh`) || Host(`10.0.0.1`)",
 		EntryPoints: []string{"http-80"},
+		Middlewares: []string{"bar"},
 		Service:     "bar",
 	}
 
@@ -72,8 +73,9 @@ func TestBuildConfiguration(t *testing.T) {
 			mockFile: "build_configuration_simple.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -82,8 +84,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -100,6 +103,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"test-foo-80-6653beb49ee354ea": {
 							EntryPoints: []string{"http-5000"},
 							Service:     "test-foo-80-6653beb49ee354ea",
+							Middlewares: []string{"test-foo-80-6653beb49ee354ea"},
 							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
@@ -122,6 +126,9 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 					},
+					Middlewares: map[string]*dynamic.Middleware{
+						"test-foo-80-6653beb49ee354ea": {},
+					},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -130,8 +137,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -163,8 +171,9 @@ func TestBuildConfiguration(t *testing.T) {
 			mockFile: "build_configuration_simple.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers: map[string]*dynamic.TCPRouter{
@@ -192,8 +201,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -228,8 +238,9 @@ func TestBuildConfiguration(t *testing.T) {
 			mockFile: "build_configuration_simple.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -238,8 +249,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -263,8 +275,9 @@ func TestBuildConfiguration(t *testing.T) {
 			mockFile: "build_configuration_simple.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -273,8 +286,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -296,8 +310,9 @@ func TestBuildConfiguration(t *testing.T) {
 			mockFile: "build_configuration_simple.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -306,8 +321,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -331,8 +347,9 @@ func TestBuildConfiguration(t *testing.T) {
 			mockFile: "build_configuration_simple.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -341,8 +358,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -364,8 +382,9 @@ func TestBuildConfiguration(t *testing.T) {
 			mockFile: "build_configuration_simple.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:  map[string]*dynamic.Router{},
-					Services: map[string]*dynamic.Service{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
+					Middlewares: map[string]*dynamic.Middleware{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers: map[string]*dynamic.TCPRouter{
@@ -397,6 +416,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"test-foo-80-6653beb49ee354ea": {
 							EntryPoints: []string{"http-5000"},
 							Service:     "test-foo-80-6653beb49ee354ea",
+							Middlewares: []string{"test-foo-80-6653beb49ee354ea"},
 							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
@@ -418,6 +438,9 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
+					},
+					Middlewares: map[string]*dynamic.Middleware{
+						"test-foo-80-6653beb49ee354ea": {},
 					},
 				},
 				TCP: &dynamic.TCPConfiguration{
@@ -723,6 +746,94 @@ func TestBuildTCPService(t *testing.T) {
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
 			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, &stateTable)
 			actual := provider.buildTCPService(test.endpoints)
+			assert.Equal(t, test.expected, actual)
+
+		})
+	}
+}
+
+func TestGetMeshPort(t *testing.T) {
+
+	stateTable := map[int]k8s.ServiceWithPort{
+		10000: {
+			Name:      "foo",
+			Namespace: "bar",
+			Port:      80,
+		},
+	}
+
+	testCases := []struct {
+		desc      string
+		name      string
+		namespace string
+		port      int32
+		expected  int
+	}{
+		{
+			desc:      "match in state table",
+			name:      "foo",
+			namespace: "bar",
+			port:      80,
+			expected:  10000,
+		},
+		{
+			desc:      "no match in state table",
+			name:      "floo",
+			namespace: "floo",
+			port:      80,
+			expected:  0,
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, &stateTable)
+			actual := provider.getMeshPort(test.name, test.namespace, test.port)
+			assert.Equal(t, test.expected, actual)
+
+		})
+	}
+}
+
+func TestBuildHTTPMiddlewares(t *testing.T) {
+	testCases := []struct {
+		desc        string
+		annotations map[string]string
+		expected    *dynamic.Middleware
+	}{
+		{
+			desc:        "empty annotations",
+			annotations: map[string]string{},
+			expected:    &dynamic.Middleware{},
+		},
+		{
+			desc: "Parsable retry",
+			annotations: map[string]string{
+				k8s.AnnotationRetryAttempts: "2",
+			},
+			expected: &dynamic.Middleware{
+				Retry: &dynamic.Retry{
+					Attempts: 2,
+				},
+			},
+		},
+		{
+			desc: "unparsable retry",
+			annotations: map[string]string{
+				k8s.AnnotationRetryAttempts: "abc",
+			},
+			expected: &dynamic.Middleware{},
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil)
+			actual := provider.buildHTTPMiddlewares(test.annotations)
 			assert.Equal(t, test.expected, actual)
 
 		})

@@ -25,8 +25,16 @@ Annotations on services are the main way to configure maesh behavior.
 The service mode can be enabled by using the following annotation:
 
 ```shell
-maesh.containo.us/maesh-traffic-type: http
+maesh.containo.us/traffic-type: "http"
 ```
 
 This annotation can be set to either `http` or `tcp`, and will specify the mode for that service operation.
 If this annotation is not present, the mesh service will operate in the default mode specified in the static configuration.
+
+Retries can be enabled by using the following annotation:
+
+```shell
+maesh.containo.us/retry-attempts: "2"
+```
+
+This annotation sets the number of retry attempts that maesh will make if a network error occurrs. Please note that this value is a string, and needs to be quoted.
