@@ -27,6 +27,9 @@ spec:
     spec:
       serviceAccountName: maesh-controller
       automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -67,9 +70,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 999
           resources:
             requests:
               memory: "50Mi"
