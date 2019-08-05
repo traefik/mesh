@@ -54,3 +54,14 @@ metadata:
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana-k8s
+  namespace: {{ .Release.Namespace }}
+  labels:
+    chart: {{ include "maesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}

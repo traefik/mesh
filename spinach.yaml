@@ -1,0 +1,7 @@
+# Severities: Ok: 0, Info: 1, Warn: 2, Error: 3
+popeye:
+  codes:
+    301:
+     severity: 1 # Set severity level to Info if pod needs to connect to the API.
+    302:
+     severity: 1 # Set severity level to Info if pod needs to run as root.

@@ -80,6 +80,10 @@ spec:
                 path: "/"
                 port: readiness
               initialDelaySeconds: 5
+            livenessProbe:
+              tcpSocket:
+                port: readiness
+              initialDelaySeconds: 5
             resources:
               requests:
                 memory: "50Mi"
