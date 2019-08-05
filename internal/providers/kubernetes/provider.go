@@ -203,6 +203,27 @@ func (p *Provider) getServiceMode(annotations map[string]string) string {
 }
 
 func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.Middleware {
+	return &dynamic.Middleware{
+		CircuitBreaker: buildCircuitBreakerMiddleware(annotations),
+		Retry:          buildRetryMiddleware(annotations),
+	}
+
+}
+
+func buildCircuitBreakerMiddleware(annotations map[string]string) *dynamic.CircuitBreaker {
+	var cb *dynamic.CircuitBreaker
+	if annotations[k8s.AnnotationCircuitBreakerExpression] != "" {
+		expression := annotations[k8s.AnnotationCircuitBreakerExpression]
+		if expression != "" {
+			cb = &dynamic.CircuitBreaker{
+				Expression: expression,
+			}
+		}
+	}
+	return cb
+}
+
+func buildRetryMiddleware(annotations map[string]string) *dynamic.Retry {
 	var retry *dynamic.Retry
 	if annotations[k8s.AnnotationRetryAttempts] != "" {
 		retryAttempts, err := strconv.Atoi(annotations[k8s.AnnotationRetryAttempts])
@@ -215,11 +236,7 @@ func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.
 			}
 		}
 	}
-
-	return &dynamic.Middleware{
-		Retry: retry,
-	}
-
+	return retry
 }
 
 func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {
