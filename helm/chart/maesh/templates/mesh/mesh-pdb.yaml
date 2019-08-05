@@ -1,0 +1,15 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: maesh-mesh
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "maesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+spec:
+  maxUnavailable: 1
+  selector:
+    app: {{ .Release.Name | quote }}
+    component: maesh-mesh
+    release: {{ .Release.Name | quote }}

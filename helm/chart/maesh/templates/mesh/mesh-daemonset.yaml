@@ -22,6 +22,7 @@ spec:
         release: {{ .Release.Name | quote }}
     spec:
       serviceAccountName: maesh-mesh
+      automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
       {{- if .Values.tracing.enabled }}
       initContainers:
@@ -29,6 +30,13 @@ spec:
           image: groundnuty/k8s-wait-for:v1.2
           imagePullPolicy: Always
           args: ["service", "-lapp.kubernetes.io/name=jaeger-agent"]
+          resources:
+            requests:
+              memory: "10Mi"
+              cpu: "50m"
+            limits:
+              memory: "20Mi"
+              cpu: "100m"
       {{- end }}
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:
@@ -58,10 +66,20 @@ spec:
             {{- if .Values.metrics.enabled }}
             - "--metrics.prometheus"
             {{- end }}
+          ports:
+            - name: readiness
+              containerPort: 1081
+            - name: liveness
+              containerPort: 10000
           readinessProbe:
             httpGet:
               path: /ping
-              port: 1081
+              port: readiness
+            initialDelaySeconds: 3
+            periodSeconds: 1
+          livenessProbe:
+            tcpSocket:
+              port: liveness
             initialDelaySeconds: 3
             periodSeconds: 1
           securityContext:
@@ -70,3 +88,10 @@ spec:
                 - ALL
               add:
                 - NET_BIND_SERVICE
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "100m"
+            limits:
+              memory: "100Mi"
+              cpu: "200m"
