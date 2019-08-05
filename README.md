@@ -36,6 +36,10 @@ To deploy the helm chart, run:
 
 `helm install helm/chart/maesh --namespace maesh --set image.pullPolicy=IfNotPresent --set image.tag=latest`
 
+Note: The chart uses the `local-path` provisioner for k3s, but you can override that using:
+
+`helm install helm/chart/maesh --namespace maesh --set image.pullPolicy=IfNotPresent --set image.tag=latest --set metrics.storageClass=hostpath`
+
 ## Usage
 
 To use maesh, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.maesh`.

@@ -145,8 +145,8 @@ spec:
   ports:
     - port: 3000
   selector:
-    app: {{ .Release.Name | quote }}
-    component: grafana
+    app: grafana
+    component: core
 
 ---
 {{- $files := .Files }}

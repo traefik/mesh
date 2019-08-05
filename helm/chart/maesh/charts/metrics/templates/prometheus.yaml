@@ -86,6 +86,7 @@ spec:
         component: core
     spec:
       serviceAccountName: prometheus-k8s
+      automountServiceAccountToken: false
       securityContext:
         fsGroup: 2000
         runAsUser: 1000
@@ -168,5 +169,5 @@ spec:
       protocol: TCP
       name: webui
   selector:
-    app: {{ .Release.Name | quote }}
-    component: prometheus
+    app: prometheus
+    component: core
