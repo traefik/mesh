@@ -24,7 +24,7 @@ Annotations on services are the main way to configure maesh behavior.
 
 The service mode can be enabled by using the following annotation:
 
-```shell
+```yaml
 maesh.containo.us/traffic-type: "http"
 ```
 
@@ -33,9 +33,21 @@ If this annotation is not present, the mesh service will operate in the default 
 
 Retries can be enabled by using the following annotation:
 
-```shell
+```yaml
 maesh.containo.us/retry-attempts: "2"
 ```
 
 This annotation sets the number of retry attempts that maesh will make if a network error occurrs.
 Please note that this value is a string, and needs to be quoted.
+
+Circuit breaker can be enabled by using the following annotation:
+
+```yaml
+maesh.containo.us/circuit-breaker-expression: "Expression"
+```
+
+This annotation sets the expression for circuit breaking. 
+The circuit breaker protects your system from stacking requests to unhealthy services (resulting in cascading failures).
+When your system is healthy, the circuit is close (normal operations). When your system becomes unhealthy, the circuit becomes open and the requests are no longer forwarded (but handled by a fallback mechanism).
+
+All configuration options are available [here](https://docs.traefik.io/v2.0/middlewares/circuitbreaker/#configuration-options)

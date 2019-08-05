@@ -606,6 +606,7 @@ func TestBuildConfiguration(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
+
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
 			if test.endpointsError {
 				clientMock.EnableEndpointsError()
@@ -674,6 +675,7 @@ func TestBuildService(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
+
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
 			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil)
 			actual := provider.buildService(test.endpoints)
@@ -743,6 +745,7 @@ func TestBuildTCPService(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
+
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
 			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, &stateTable)
 			actual := provider.buildTCPService(test.endpoints)
@@ -753,7 +756,6 @@ func TestBuildTCPService(t *testing.T) {
 }
 
 func TestGetMeshPort(t *testing.T) {
-
 	stateTable := map[int]k8s.ServiceWithPort{
 		10000: {
 			Name:      "foo",
@@ -789,6 +791,7 @@ func TestGetMeshPort(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
+
 			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, &stateTable)
 			actual := provider.getMeshPort(test.name, test.namespace, test.port)
 			assert.Equal(t, test.expected, actual)
@@ -826,16 +829,34 @@ func TestBuildHTTPMiddlewares(t *testing.T) {
 			},
 			expected: &dynamic.Middleware{},
 		},
+		{
+			desc: "existing cb expression",
+			annotations: map[string]string{
+				k8s.AnnotationCircuitBreakerExpression: "toto",
+			},
+			expected: &dynamic.Middleware{
+				CircuitBreaker: &dynamic.CircuitBreaker{
+					Expression: "toto",
+				},
+			},
+		},
+		{
+			desc: "empty cb expression",
+			annotations: map[string]string{
+				k8s.AnnotationCircuitBreakerExpression: "",
+			},
+			expected: &dynamic.Middleware{},
+		},
 	}
 
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
+
 			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil)
 			actual := provider.buildHTTPMiddlewares(test.annotations)
 			assert.Equal(t, test.expected, actual)
-
 		})
 	}
 }
