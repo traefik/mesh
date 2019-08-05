@@ -71,6 +71,7 @@ func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName
 	return &dynamic.Router{
 		Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
 		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
+		Middlewares: []string{serviceName},
 		Service:     serviceName,
 	}
 }
@@ -156,7 +157,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 		}
 	}
 
-	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
+	serviceMode := p.getServiceMode(service.Annotations)
 
 	for id, sp := range service.Spec.Ports {
 		key := buildKey(service.Name, service.Namespace, sp.Port)
@@ -164,6 +165,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 		if serviceMode == k8s.ServiceTypeHTTP {
 			config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key)
 			config.HTTP.Services[key] = p.buildService(endpoints)
+			config.HTTP.Middlewares[key] = p.buildHTTPMiddlewares(service.Annotations)
 			continue
 		}
 
@@ -174,7 +176,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 }
 
 func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *dynamic.Configuration) {
-	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
+	serviceMode := p.getServiceMode(service.Annotations)
 
 	for _, sp := range service.Spec.Ports {
 		key := buildKey(service.Name, service.Namespace, sp.Port)
@@ -182,6 +184,7 @@ func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *dyna
 		if serviceMode == k8s.ServiceTypeHTTP {
 			delete(config.HTTP.Routers, key)
 			delete(config.HTTP.Services, key)
+			delete(config.HTTP.Middlewares, key)
 			continue
 		}
 
@@ -190,11 +193,33 @@ func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *dyna
 	}
 }
 
-func (p *Provider) getServiceMode(mode string) string {
+func (p *Provider) getServiceMode(annotations map[string]string) string {
+	mode := annotations[k8s.AnnotationServiceType]
+
 	if mode == "" {
 		return p.defaultMode
 	}
 	return mode
+}
+
+func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.Middleware {
+	var retry *dynamic.Retry
+	if annotations[k8s.AnnotationRetryAttempts] != "" {
+		retryAttempts, err := strconv.Atoi(annotations[k8s.AnnotationRetryAttempts])
+		if err != nil {
+			log.Errorf("Could not parse retry annotation: %v", err)
+		}
+		if retryAttempts > 0 {
+			retry = &dynamic.Retry{
+				Attempts: retryAttempts,
+			}
+		}
+	}
+
+	return &dynamic.Middleware{
+		Retry: retry,
+	}
+
 }
 
 func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {

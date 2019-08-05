@@ -24,7 +24,7 @@ metadata:
   labels:
     app: whoami
   annotations:
-    maesh.containo.us/maesh-traffic-type: http
+    maesh.containo.us/traffic-type: "http"
 spec:
   type: ClusterIP
   ports:
@@ -42,7 +42,7 @@ metadata:
   labels:
     app: whoami
   annotations:
-    maesh.containo.us/maesh-traffic-type: tcp
+    maesh.containo.us/traffic-type: "tcp"
 spec:
   type: ClusterIP
   ports:
