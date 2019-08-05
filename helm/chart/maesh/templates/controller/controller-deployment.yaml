@@ -69,6 +69,7 @@ spec:
                   fieldPath: metadata.namespace
           securityContext:
             runAsNonRoot: true
+            runAsUser: 999
           resources:
             requests:
               memory: "50Mi"

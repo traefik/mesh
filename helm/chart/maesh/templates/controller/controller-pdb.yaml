@@ -10,6 +10,7 @@ metadata:
 spec:
   minAvailable: 1
   selector:
-    app: {{ .Release.Name | quote }}
-    component: controller
-    release: {{ .Release.Name | quote }}
+    matchLabels:
+      app: {{ .Release.Name | quote }}
+      component: controller
+      release: {{ .Release.Name | quote }}

@@ -71,6 +71,8 @@ spec:
               containerPort: 1081
             - name: liveness
               containerPort: 10000
+            - name: api
+              containerPort: 8080
           readinessProbe:
             httpGet:
               path: /ping

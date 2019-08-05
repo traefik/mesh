@@ -10,6 +10,7 @@ metadata:
 spec:
   maxUnavailable: 1
   selector:
-    app: {{ .Release.Name | quote }}
-    component: maesh-mesh
-    release: {{ .Release.Name | quote }}
+    matchLabels:
+      app: {{ .Release.Name | quote }}
+      component: maesh-mesh
+      release: {{ .Release.Name | quote }}

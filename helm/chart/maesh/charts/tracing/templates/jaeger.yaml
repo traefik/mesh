@@ -45,16 +45,28 @@ spec:
             ports:
               - containerPort: 5775
                 protocol: UDP
+                name: thrift-legacy
               - containerPort: 6831
                 protocol: UDP
+                name: compact-thrift
               - containerPort: 6832
                 protocol: UDP
+                name: binary-thrift
               - containerPort: 5778
                 protocol: TCP
+                name: serve-configs
+              - containerPort: 14267
+                protocol: TCP
+                name: collector-tch
+              - containerPort: 14268
+                protocol: TCP
+                name: collector-http
               - containerPort: 16686
                 protocol: TCP
+                name: serve-frontend
               - containerPort: 9411
                 protocol: TCP
+                name: collector-zip
             readinessProbe:
               httpGet:
                 path: "/"
@@ -76,6 +88,7 @@ spec:
     - name: query-http
       protocol: TCP
       port: 16686
+      targetPort: serve-frontend
   selector:
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: all-in-one
@@ -96,15 +109,15 @@ spec:
     - name: jaeger-collector-tchannel
       port: 14267
       protocol: TCP
-      targetPort: 14267
+      targetPort: collector-tch
     - name: jaeger-collector-http
       port: 14268
       protocol: TCP
-      targetPort: 14268
+      targetPort: collector-http
     - name: jaeger-collector-zipkin
       port: 9411
       protocol: TCP
-      targetPort: 9411
+      targetPort: collector-zip
   selector:
     app.kubernetes.io/name: jaeger
     app.kubernetes.io/component: all-in-one
@@ -125,19 +138,19 @@ spec:
     - name: agent-zipkin-thrift
       port: 5775
       protocol: UDP
-      targetPort: 5775
+      targetPort: thrift-legacy
     - name: agent-compact
       port: 6831
       protocol: UDP
-      targetPort: 6831
+      targetPort: compact-thrift
     - name: agent-binary
       port: 6832
       protocol: UDP
-      targetPort: 6832
+      targetPort: binary-thrift
     - name: agent-configs
       port: 5778
       protocol: TCP
-      targetPort: 5778
+      targetPort: serve-configs
   clusterIP: None
   selector:
     app.kubernetes.io/name: jaeger
@@ -158,7 +171,7 @@ spec:
     - name: jaeger-collector-zipkin
       port: 9411
       protocol: TCP
-      targetPort: 9411
+      targetPort: collector-zip
   clusterIP: None
   selector:
     app.kubernetes.io/name: jaeger

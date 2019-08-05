@@ -10,5 +10,6 @@ spec:
   ports:
     - port: 8080
       name: mesh-api
+      targetPort: api
   selector:
     component: maesh-mesh
