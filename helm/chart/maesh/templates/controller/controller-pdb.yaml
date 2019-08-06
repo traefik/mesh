@@ -1,7 +1,8 @@
+---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: controller
+  name: maesh-controller
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "maesh.chartLabel" . | quote }}
