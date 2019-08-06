@@ -10,9 +10,9 @@ import (
 	"github.com/containous/maesh/cmd/version"
 	"github.com/containous/maesh/internal/controller"
 	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/internal/signals"
 	"github.com/containous/traefik/pkg/cli"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/sample-controller/pkg/signals"
 )
 
 func main() {
