@@ -67,12 +67,19 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dyna
 
 }
 
-func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string) *dynamic.Router {
+func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string, addMiddlewares bool) *dynamic.Router {
+	if addMiddlewares {
+		return &dynamic.Router{
+			Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
+			EntryPoints: []string{fmt.Sprintf("http-%d", port)},
+			Middlewares: []string{serviceName},
+			Service:     serviceName,
+		}
+	}
 	return &dynamic.Router{
 		Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
 		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
-		//Middlewares: []string{serviceName}, //FIXME Middlewares seems to be broken when there are created through rhe rest provider.
-		Service: serviceName,
+		Service:     serviceName,
 	}
 }
 
@@ -163,9 +170,14 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 		key := buildKey(service.Name, service.Namespace, sp.Port)
 
 		if serviceMode == k8s.ServiceTypeHTTP {
-			config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key)
 			config.HTTP.Services[key] = p.buildService(endpoints)
-			config.HTTP.Middlewares[key] = p.buildHTTPMiddlewares(service.Annotations)
+			middlewares := p.buildHTTPMiddlewares(service.Annotations)
+			if middlewares != nil {
+				config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, true)
+				config.HTTP.Middlewares[key] = middlewares
+				continue
+			}
+			config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, false)
 			continue
 		}
 
@@ -203,40 +215,43 @@ func (p *Provider) getServiceMode(annotations map[string]string) string {
 }
 
 func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.Middleware {
-	return &dynamic.Middleware{
-		CircuitBreaker: buildCircuitBreakerMiddleware(annotations),
-		Retry:          buildRetryMiddleware(annotations),
-	}
+	circuitBreaker := buildCircuitBreakerMiddleware(annotations)
+	retry := buildRetryMiddleware(annotations)
 
+	if circuitBreaker == nil && retry == nil {
+		return nil
+	}
+	return &dynamic.Middleware{
+		CircuitBreaker: circuitBreaker,
+		Retry:          retry,
+	}
 }
 
 func buildCircuitBreakerMiddleware(annotations map[string]string) *dynamic.CircuitBreaker {
-	var cb *dynamic.CircuitBreaker
 	if annotations[k8s.AnnotationCircuitBreakerExpression] != "" {
 		expression := annotations[k8s.AnnotationCircuitBreakerExpression]
 		if expression != "" {
-			cb = &dynamic.CircuitBreaker{
+			return &dynamic.CircuitBreaker{
 				Expression: expression,
 			}
 		}
 	}
-	return cb
+	return nil
 }
 
 func buildRetryMiddleware(annotations map[string]string) *dynamic.Retry {
-	var retry *dynamic.Retry
 	if annotations[k8s.AnnotationRetryAttempts] != "" {
 		retryAttempts, err := strconv.Atoi(annotations[k8s.AnnotationRetryAttempts])
 		if err != nil {
 			log.Errorf("Could not parse retry annotation: %v", err)
 		}
 		if retryAttempts > 0 {
-			retry = &dynamic.Retry{
+			return &dynamic.Retry{
 				Attempts: retryAttempts,
 			}
 		}
 	}
-	return retry
+	return nil
 }
 
 func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {

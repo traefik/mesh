@@ -14,11 +14,17 @@ import (
 const meshNamespace string = "maesh"
 
 func TestBuildRouter(t *testing.T) {
-	expected := &dynamic.Router{
+	expectedWithMiddlewares := &dynamic.Router{
 		Rule:        "Host(`test.foo.maesh`) || Host(`10.0.0.1`)",
 		EntryPoints: []string{"http-80"},
-		//Middlewares: []string{"bar"}, // FIXME
-		Service: "bar",
+		Middlewares: []string{"bar"},
+		Service:     "bar",
+	}
+
+	expectedWithoutMiddlewares := &dynamic.Router{
+		Rule:        "Host(`test.foo.maesh`) || Host(`10.0.0.1`)",
+		EntryPoints: []string{"http-80"},
+		Service:     "bar",
 	}
 
 	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil)
@@ -29,8 +35,10 @@ func TestBuildRouter(t *testing.T) {
 	port := 80
 	associatedService := "bar"
 
-	actual := provider.buildRouter(name, namespace, ip, port, associatedService)
-	assert.Equal(t, expected, actual)
+	actual := provider.buildRouter(name, namespace, ip, port, associatedService, true)
+	assert.Equal(t, expectedWithMiddlewares, actual)
+	actual = provider.buildRouter(name, namespace, ip, port, associatedService, false)
+	assert.Equal(t, expectedWithoutMiddlewares, actual)
 }
 
 func TestBuildTCPRouter(t *testing.T) {
@@ -105,8 +113,7 @@ func TestBuildConfiguration(t *testing.T) {
 						"test-foo-80-6653beb49ee354ea": {
 							EntryPoints: []string{"http-5000"},
 							Service:     "test-foo-80-6653beb49ee354ea",
-							//Middlewares: []string{"test-foo-80-6653beb49ee354ea"}, // FIXME
-							Rule: "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
 						},
 					},
 					Services: map[string]*dynamic.Service{
@@ -128,9 +135,6 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 					},
-					Middlewares: map[string]*dynamic.Middleware{
-						"test-foo-80-6653beb49ee354ea": {},
-					},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -139,9 +143,8 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			provided: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:  map[string]*dynamic.Router{},
+					Services: map[string]*dynamic.Service{},
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
@@ -815,7 +818,7 @@ func TestBuildHTTPMiddlewares(t *testing.T) {
 		{
 			desc:        "empty annotations",
 			annotations: map[string]string{},
-			expected:    &dynamic.Middleware{},
+			expected:    nil,
 		},
 		{
 			desc: "Parsable retry",
@@ -833,7 +836,7 @@ func TestBuildHTTPMiddlewares(t *testing.T) {
 			annotations: map[string]string{
 				k8s.AnnotationRetryAttempts: "abc",
 			},
-			expected: &dynamic.Middleware{},
+			expected: nil,
 		},
 		{
 			desc: "existing cb expression",
@@ -851,7 +854,7 @@ func TestBuildHTTPMiddlewares(t *testing.T) {
 			annotations: map[string]string{
 				k8s.AnnotationCircuitBreakerExpression: "",
 			},
-			expected: &dynamic.Middleware{},
+			expected: nil,
 		},
 	}
 
