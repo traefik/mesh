@@ -1,0 +1,93 @@
+#
+# Copyright 2017-2019 The Jaeger Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License
+# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied. See the License for the specific language governing permissions and limitations under
+# the License.
+#
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: all-in-one
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: jaeger
+        app.kubernetes.io/name: jaeger
+        app.kubernetes.io/component: all-in-one
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "16686"
+    spec:
+      serviceAccountName: jaeger
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      containers:
+        -   env:
+              - name: COLLECTOR_ZIPKIN_HTTP_PORT
+                value: "9411"
+            image: {{ .Values.image.jaeger | quote }}
+            name: jaeger
+            ports:
+              - containerPort: 5775
+                protocol: UDP
+                name: thrift-legacy
+              - containerPort: 6831
+                protocol: UDP
+                name: compact-thrift
+              - containerPort: 6832
+                protocol: UDP
+                name: binary-thrift
+              - containerPort: 5778
+                protocol: TCP
+                name: serve-configs
+              - containerPort: 9411
+                protocol: TCP
+                name: collector-zip
+              - containerPort: 14267
+                protocol: TCP
+                name: collector-tch
+              - containerPort: 14268
+                protocol: TCP
+                name: collector-http
+              - containerPort: 14269
+                protocol: TCP
+                name: readiness
+              - containerPort: 16686
+                protocol: TCP
+                name: serve-frontend
+            readinessProbe:
+              httpGet:
+                path: "/"
+                port: readiness
+              initialDelaySeconds: 5
+            livenessProbe:
+              tcpSocket:
+                port: readiness
+              initialDelaySeconds: 5
+            resources:
+              requests:
+                memory: "50Mi"
+                cpu: "100m"
+              limits:
+                memory: "100Mi"
+                cpu: "200m"

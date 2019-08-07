@@ -26,6 +26,10 @@ spec:
         prometheus.io/port: "4646"
     spec:
       serviceAccountName: maesh-controller
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -66,9 +70,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-          securityContext:
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - NET_BIND_SERVICE
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "100m"
+            limits:
+              memory: "100Mi"
+              cpu: "200m"

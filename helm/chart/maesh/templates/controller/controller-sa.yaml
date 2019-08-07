@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: maesh-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name | quote}}
+    chart: {{ include "maesh.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}

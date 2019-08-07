@@ -18,13 +18,19 @@ spec:
         app: grafana
         component: core
     spec:
+      serviceAccountName: grafana-k8s
+      automountServiceAccountToken: false
       securityContext:
+        runAsNonRoot: true
         runAsUser: 472
         fsGroup: 472
       containers:
       - image: {{ .Values.image.grafana | quote }}
         name: grafana-core
         imagePullPolicy: IfNotPresent
+        ports:
+        - name: web
+          containerPort: 3000
         resources:
           limits:
             cpu: 100m
@@ -32,13 +38,15 @@ spec:
           requests:
             cpu: 100m
             memory: 100Mi
-        # env:
-        #   - name: GF_PATHS_CONFIG
-        #     value: /var/grafana/grafana.ini
         readinessProbe:
           httpGet:
             path: /login
-            port: 3000
+            port: web
+        livenessProbe:
+          tcpSocket:
+            port: web
+          initialDelaySeconds: 5
+          periodSeconds: 10
         volumeMounts:
         - name: metrics-storage
           mountPath: /var/lib/grafana
@@ -145,8 +153,8 @@ spec:
   ports:
     - port: 3000
   selector:
-    app: {{ .Release.Name | quote }}
-    component: grafana
+    app: grafana
+    component: core
 
 ---
 {{- $files := .Files }}

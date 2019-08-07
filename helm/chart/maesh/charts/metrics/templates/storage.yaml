@@ -14,7 +14,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: local-path
+  storageClassName: {{ .Values.storageClass }}
 
 ---
 apiVersion: v1
@@ -32,4 +32,4 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: local-path
+  storageClassName: {{ .Values.storageClass }}

@@ -86,6 +86,7 @@ spec:
         component: core
     spec:
       serviceAccountName: prometheus-k8s
+      automountServiceAccountToken: true
       securityContext:
         fsGroup: 2000
         runAsUser: 1000
@@ -101,6 +102,15 @@ spec:
         ports:
         - name: webui
           containerPort: 9090
+        readinessProbe:
+          httpGet:
+            path: "/"
+            port: webui
+          initialDelaySeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: webui
+          initialDelaySeconds: 5
         resources:
           requests:
             cpu: 500m
@@ -168,5 +178,5 @@ spec:
       protocol: TCP
       name: webui
   selector:
-    app: {{ .Release.Name | quote }}
-    component: prometheus
+    app: prometheus
+    component: core

@@ -1,0 +1,17 @@
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: jaeger
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "maesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: jaeger
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: all-in-one

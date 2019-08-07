@@ -1,0 +1,16 @@
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: grafana
+  labels:
+    app: {{ .Release.Name | quote }}
+    chart: {{ include "maesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: grafana
+      component: core
