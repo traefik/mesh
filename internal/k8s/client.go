@@ -517,12 +517,12 @@ func (w *ClientWrapper) GetConfigMap(namespace, name string) (*corev1.ConfigMap,
 	return configMap, exists, err
 }
 
-// UpdateConfigMap updates the specified configmap.
+// UpdateConfigMap updates the specified configMap.
 func (w *ClientWrapper) UpdateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	return w.KubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(configMap)
 }
 
-// CreateConfigMap creates the specified configmap.
+// CreateConfigMap creates the specified configMap.
 func (w *ClientWrapper) CreateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	return w.KubeClient.CoreV1().ConfigMaps(configMap.Namespace).Create(configMap)
 }

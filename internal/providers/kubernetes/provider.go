@@ -19,7 +19,7 @@ type Provider struct {
 	client        k8s.CoreV1Client
 	defaultMode   string
 	meshNamespace string
-	tcpStateTable *map[int]k8s.ServiceWithPort
+	tcpStateTable *k8s.State
 }
 
 // Init the provider.
@@ -28,7 +28,7 @@ func (p *Provider) Init() {
 }
 
 // New creates a new provider.
-func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string, tcpStateTable *map[int]k8s.ServiceWithPort) *Provider {
+func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string, tcpStateTable *k8s.State) *Provider {
 	p := &Provider{
 		client:        client,
 		defaultMode:   defaultMode,
@@ -71,8 +71,8 @@ func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName
 	return &dynamic.Router{
 		Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
 		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
-		Middlewares: []string{serviceName},
-		Service:     serviceName,
+		//Middlewares: []string{serviceName}, //FIXME Middlewares seems to be broken when there are created through rhe rest provider.
+		Service: serviceName,
 	}
 }
 
@@ -240,7 +240,7 @@ func buildRetryMiddleware(annotations map[string]string) *dynamic.Retry {
 }
 
 func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {
-	for port, v := range *p.tcpStateTable {
+	for port, v := range p.tcpStateTable.Table {
 		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
 			return port
 		}

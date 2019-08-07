@@ -31,7 +31,7 @@ spec:
       initContainers:
         - name: wait-for-jaeger-init
           image: groundnuty/k8s-wait-for:v1.2
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args: ["service", "-lapp.kubernetes.io/name=jaeger-agent"]
           resources:
             requests:
