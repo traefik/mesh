@@ -72,8 +72,8 @@ spec:
                   fieldPath: metadata.namespace
           resources:
             requests:
-              memory: {{ .Values.controller.request.mem }}
-              cpu: {{ .Values.controller.request.cpu }}
+              memory: {{ .Values.controller.resources.request.mem }}
+              cpu: {{ .Values.controller.resources.request.cpu }}
             limits:
-              memory: {{ .Values.controller.limit.mem }}
-              cpu: {{ .Values.controller.limit.cpu }}
+              memory: {{ .Values.controller.resources.limit.mem }}
+              cpu: {{ .Values.controller.resources.limit.cpu }}

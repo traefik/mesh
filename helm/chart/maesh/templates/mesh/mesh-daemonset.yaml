@@ -43,7 +43,7 @@ spec:
       {{- end }}
       containers:
         - name: maesh-mesh
-          image: {{ .Values.mesh.image | quote }}
+          image: {{ .Values.mesh.image.name | quote }}
           imagePullPolicy: {{ .Values.mesh.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "--entryPoints.readiness.address=:1081"
@@ -85,8 +85,8 @@ spec:
             periodSeconds: 1
           resources:
             requests:
-              memory: {{ .Values.mesh.request.mem }}
-              cpu: {{ .Values.mesh.request.cpu }}
+              memory: {{ .Values.mesh.resources.request.mem }}
+              cpu: {{ .Values.mesh.resources.request.cpu }}
             limits:
-              memory: {{ .Values.mesh.limit.mem }}
-              cpu: {{ .Values.mesh.limit.cpu }}
+              memory: {{ .Values.mesh.resources.limit.mem }}
+              cpu: {{ .Values.mesh.resources.limit.cpu }}

@@ -20,7 +20,8 @@ controller:
 
 
 mesh:
-  image: traefik:v2.0.0-beta1
+  image:
+    name: traefik:v2.0.0-beta1
     # (Optional)
     # pullPolicy: IfNotPresent
     # (Optional)
@@ -29,11 +30,11 @@ mesh:
     # pullSecret: xxx
   resources:
     limit:
-      cpu: xxx
-      mem: xxx
+      mem: "100Mi"
+      cpu: "200m"
     request:
-      cpu: xxx
-      mem: xxx
+      mem: "50Mi"
+      cpu: "100m"
   logging: INFO
   defaultMode: http
 
