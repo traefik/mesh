@@ -25,7 +25,6 @@ metadata:
     app: whoami
   annotations:
     maesh.containo.us/traffic-type: "http"
-    maesh.containo.us/retry-attempts: "2"
 spec:
   type: ClusterIP
   ports:
