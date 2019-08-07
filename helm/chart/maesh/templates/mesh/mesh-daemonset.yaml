@@ -41,14 +41,10 @@ spec:
               memory: "20Mi"
               cpu: "100m"
       {{- end }}
-      {{- if .Values.image.pullSecret }}
-      imagePullSecrets:
-        - name: {{ .Values.image.pullSecret }}
-      {{- end }}
       containers:
         - name: maesh-mesh
-          image: {{ .Values.image.traefik | quote }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          image: {{ .Values.mesh.image | quote }}
+          imagePullPolicy: {{ .Values.mesh.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "--entryPoints.readiness.address=:1081"
           {{- range $i, $e := until (.Values.limits.http|int) }}
@@ -65,7 +61,7 @@ spec:
             - "--api.dashboard"
 #            - "--accesslog"
             - "--ping"
-            - "--log.level=INFO"
+            - "--log.level={{ .Values.mesh.logging }}"
             {{- if .Values.metrics.enabled }}
             - "--metrics.prometheus"
             {{- end }}
@@ -89,8 +85,8 @@ spec:
             periodSeconds: 1
           resources:
             requests:
-              memory: "50Mi"
-              cpu: "100m"
+              memory: {{ .Values.mesh.request.mem }}
+              cpu: {{ .Values.mesh.request.cpu }}
             limits:
-              memory: "100Mi"
-              cpu: "200m"
+              memory: {{ .Values.mesh.limit.mem }}
+              cpu: {{ .Values.mesh.limit.cpu }}

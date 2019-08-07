@@ -34,11 +34,11 @@ run `make` to build the binary and build/tag the local image.
 
 To deploy the helm chart, run:
 
-`helm install helm/chart/maesh --namespace maesh --set image.pullPolicy=IfNotPresent --set image.tag=latest`
+`helm install helm/chart/maesh --namespace maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest`
 
 Note: The chart uses the `local-path` provisioner for k3s, but you can override that using:
 
-`helm install helm/chart/maesh --namespace maesh --set image.pullPolicy=IfNotPresent --set image.tag=latest --set metrics.storageClass=hostpath`
+`helm install helm/chart/maesh --namespace maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest --set metrics.storageClass=hostpath`
 
 ## Usage
 
