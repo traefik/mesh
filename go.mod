@@ -30,9 +30,9 @@ require (
 	golang.org/x/time v0.0.0-20190513212739-9d24e82272b4 // indirect
 	google.golang.org/appengine v1.6.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
-	k8s.io/api v0.0.0-20190718183219-b59d8169aab5
+	k8s.io/api v0.0.0-20190805141119-fdd30b57c827
 	k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719
-	k8s.io/client-go v0.0.0-20190718183610-8e956561bbf5
+	k8s.io/client-go v0.0.0-20190805141520-2fe0317bcee0
 	k8s.io/klog v0.3.3 // indirect
 	k8s.io/utils v0.0.0-20190801114015-581e00157fb1 // indirect
 )
