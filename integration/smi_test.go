@@ -21,15 +21,20 @@ import (
 type SMISuite struct{ BaseSuite }
 
 func (s *SMISuite) SetUpSuite(c *check.C) {
-	err := s.startk3s(c)
-	c.Assert(err, checker.IsNil)
-	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
+	s.startk3s(c)
+	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 	s.startAndWaitForCoreDNS(c)
 	s.installTiller(c)
+
+	err := s.installHelmMaesh(c, true)
+	c.Assert(err, checker.IsNil)
+	s.waitForMaeshControllerStarted(c)
+	s.startWhoami(c)
+	s.installTinyToolsMaesh(c)
 }
 
 func (s *SMISuite) TearDownSuite(c *check.C) {
-	s.stopComposeProject()
+	s.stopK3s()
 }
 
 func (s *SMISuite) TestSMIAccessControl(c *check.C) {
