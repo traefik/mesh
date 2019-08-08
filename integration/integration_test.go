@@ -11,8 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/containous/maesh/integration/try"
 	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/traefik/pkg/safe"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 	corev1 "k8s.io/api/core/v1"
@@ -24,12 +26,22 @@ var (
 	kubeConfigPath = "/tmp/k3s-output/kubeconfig.yaml"
 	masterURL      = "https://localhost:8443"
 	images         []image
+	k3dClusterName = "maesh-integration"
 )
 
 func Test(t *testing.T) {
 	if !*integration {
 		log.Println("Integration tests disabled.")
 		return
+	}
+
+	check.Suite(&SMISuite{})
+	check.Suite(&KubernetesSuite{})
+	check.Suite(&CoreDNSSuite{})
+
+	err := downloadAndInstallK3d()
+	if err != nil {
+		fmt.Printf("unable to download and install k3d: %v", err)
 	}
 
 	images = append(images, image{"containous/maesh:latest", false})
@@ -41,14 +53,17 @@ func Test(t *testing.T) {
 	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
 	images = append(images, image{"traefik:v2.0.0-beta1", true})
 
-	check.Suite(&SMISuite{})
-	check.Suite(&KubernetesSuite{})
-	check.Suite(&CoreDNSSuite{})
+	for _, image := range images {
+		if image.pull {
+			cmd := exec.Command("docker", "pull", image.name)
+			cmd.Env = os.Environ()
 
-	dir, _ := os.Getwd()
-	err := os.RemoveAll(path.Join(dir, fmt.Sprintf("resources/compose/images")))
-	if err != nil {
-		fmt.Printf("unable to cleanup: %v", err)
+			output, err := cmd.CombinedOutput()
+			fmt.Println(string(output))
+			if err != nil {
+				fmt.Printf("unable to pull docker image: %v", err)
+			}
+		}
 	}
 
 	check.TestingT(t)
@@ -60,98 +75,87 @@ type image struct {
 }
 
 type BaseSuite struct {
-	composeProject string
-	projectName    string
-	dir            string
-	try            *try.Try
-	client         *k8s.ClientWrapper
+	dir    string
+	try    *try.Try
+	client *k8s.ClientWrapper
 }
 
-func (s *BaseSuite) startk3s(_ *check.C) error {
+func downloadAndInstallK3d() error {
+	cmd := exec.Command(".semaphoreci/k3d.sh")
+	cmd.Env = os.Environ()
+	_, err := cmd.CombinedOutput()
+
+	return err
+}
+
+func (s *BaseSuite) startk3s(c *check.C) {
+	// Set the base directory for the test suite
 	var err error
 	s.dir, err = os.Getwd()
-	if err != nil {
-		return err
-	}
+	c.Assert(err, checker.IsNil)
 
-	if err = os.MkdirAll(path.Join(s.dir, "resources/compose/images"), 0755); err != nil {
-		return err
-	}
-
-	for _, image := range images {
-		name := strings.ReplaceAll(image.name, "/", "-")
-		name = strings.ReplaceAll(name, ":", "-")
-		name = strings.ReplaceAll(name, ".", "-")
-		p := path.Join(s.dir, fmt.Sprintf("resources/compose/images/%s.tar", name))
-		err = saveDockerImage(image.name, p, image.pull)
-		if err != nil {
-			return err
-		}
-	}
-
-	s.composeProject = path.Join(s.dir, "resources/compose/k3s.yaml")
-	s.projectName = "integration-test-k3s"
-
-	s.stopComposeProject()
-
-	// Start k3s stack.
-	cmd := exec.Command("docker-compose",
-		"--file", s.composeProject, "--project-name", s.projectName,
-		"up", "-d", "--scale", "node=0")
+	// Create a k3s cluster.
+	cmd := exec.Command("k3d", "create", "--name", k3dClusterName, "--api-port", "8443", "--workers", "1")
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
 
 	fmt.Println(string(output))
-	if err != nil {
-		return err
-	}
+	c.Assert(err, checker.IsNil)
+
+	// Load images into k3s
+	err = s.loadK3sImages()
+	c.Assert(err, checker.IsNil)
+
+	// Get kubeconfig path.
+	cmd = exec.Command("k3d", "get-kubeconfig", "--name", k3dClusterName)
+	cmd.Env = os.Environ()
+
+	output, err = cmd.CombinedOutput()
+	c.Assert(err, checker.IsNil)
+
+	kubeConfigPath = strings.TrimSuffix(string(output), "\n")
 
 	s.client, err = s.try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
-	if err != nil {
-		return err
-	}
+	c.Assert(err, checker.IsNil)
 
 	s.try = try.NewTry(s.client)
+}
+
+func (s *BaseSuite) loadK3sImages() error {
+	for _, image := range images {
+		err := loadK3sImage(k3dClusterName, image.name, 1*time.Minute)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func saveDockerImage(image string, p string, pull bool) error {
-	if pull {
-		cmd := exec.Command("docker", "pull", image)
+func loadK3sImage(clusterName, imageName string, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = timeout
+
+	return backoff.Retry(safe.OperationWithRecover(func() error {
+		cmd := exec.Command("k3d", "import-images", "--name", clusterName, imageName)
 		cmd.Env = os.Environ()
 
 		output, err := cmd.CombinedOutput()
-		fmt.Println(string(output))
 		if err != nil {
-			return err
+			fmt.Println(string(output))
 		}
-	}
-	cmd := exec.Command("docker", "save", image, "-o", p)
-	cmd.Env = os.Environ()
-
-	output, err := cmd.CombinedOutput()
-	fmt.Println(string(output))
-	if err != nil {
 		return err
-	}
-
-	return nil
+	}), ebo)
 }
 
-func (s *BaseSuite) stopComposeProject() {
-	// shutdown and delete compose project
-	cmd := exec.Command("docker-compose", "--file", s.composeProject,
-		"--project-name", s.projectName,
-		"down", "--volumes", "--remove-orphans")
+func (s *BaseSuite) stopK3s() {
+	// delete the k3s cluster.
+	cmd := exec.Command("k3d", "delete", "--name", k3dClusterName)
 	cmd.Env = os.Environ()
 
-	output, err := cmd.CombinedOutput()
+	output, _ := cmd.CombinedOutput()
 
 	fmt.Println(string(output))
-	if err != nil {
-		fmt.Println(err)
-	}
 }
 
 func (s *BaseSuite) waitForCoreDNSStarted(c *check.C) {

@@ -11,12 +11,11 @@ import (
 type KubernetesSuite struct{ BaseSuite }
 
 func (s *KubernetesSuite) SetUpSuite(c *check.C) {
-	err := s.startk3s(c)
-	c.Assert(err, checker.IsNil)
+	s.startk3s(c)
 	s.waitForCoreDNSStarted(c)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 	s.installTiller(c)
-	err = s.installHelmMaesh(c, false)
+	err := s.installHelmMaesh(c, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
 	s.startWhoami(c)
@@ -24,7 +23,7 @@ func (s *KubernetesSuite) SetUpSuite(c *check.C) {
 }
 
 func (s *KubernetesSuite) TearDownSuite(c *check.C) {
-	s.stopComposeProject()
+	s.stopK3s()
 }
 
 func (s *KubernetesSuite) TestHTTPCURL(c *check.C) {

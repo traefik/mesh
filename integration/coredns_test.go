@@ -11,8 +11,7 @@ import (
 type CoreDNSSuite struct{ BaseSuite }
 
 func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
-	err := s.startk3s(c)
-	c.Assert(err, checker.IsNil)
+	s.startk3s(c)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
@@ -20,7 +19,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 }
 
 func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
-	s.stopComposeProject()
+	s.stopK3s()
 }
 
 func (s *CoreDNSSuite) TestCoreDNSVersion126Fail(c *check.C) {
