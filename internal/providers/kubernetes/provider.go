@@ -9,7 +9,7 @@ import (
 
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/maesh/internal/message"
-	"github.com/containous/traefik/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -104,7 +104,7 @@ func (p *Provider) buildService(endpoints *corev1.Endpoints) *dynamic.Service {
 		}
 	}
 
-	lb := &dynamic.LoadBalancerService{
+	lb := &dynamic.ServersLoadBalancer{
 		PassHostHeader: true,
 		Servers:        servers,
 	}

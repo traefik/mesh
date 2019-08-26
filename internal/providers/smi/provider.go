@@ -10,7 +10,7 @@ import (
 
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/maesh/internal/message"
-	"github.com/containous/traefik/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -415,7 +415,7 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 		}
 	}
 
-	lb := &dynamic.LoadBalancerService{
+	lb := &dynamic.ServersLoadBalancer{
 		PassHostHeader: true,
 		Servers:        servers,
 	}

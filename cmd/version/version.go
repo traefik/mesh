@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/containous/traefik/pkg/cli"
+	"github.com/containous/traefik/v2/pkg/cli"
 )
 
 var (

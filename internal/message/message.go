@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/containous/traefik/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 )
 
 const (
@@ -52,7 +52,7 @@ func BuildNewConfigWithVersion(conf *dynamic.Configuration) Config {
 	t := time.Now().UnixNano()
 	c := conf.DeepCopy()
 	c.HTTP.Services[ConfigServiceVersionKey] = &dynamic.Service{
-		LoadBalancer: &dynamic.LoadBalancerService{
+		LoadBalancer: &dynamic.ServersLoadBalancer{
 			Servers: []dynamic.Server{
 				{
 					URL: fmt.Sprintf("%d", t),

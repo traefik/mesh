@@ -10,7 +10,7 @@ import (
 	"github.com/containous/maesh/internal/message"
 	"github.com/containous/maesh/internal/providers/kubernetes"
 	"github.com/containous/maesh/internal/providers/smi"
-	"github.com/containous/traefik/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	smiAccessExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	smiSpecsExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	smiSplitExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
@@ -618,7 +618,7 @@ func createBaseConfigWithReadiness() *dynamic.Configuration {
 			},
 			Services: map[string]*dynamic.Service{
 				"readiness": {
-					LoadBalancer: &dynamic.LoadBalancerService{
+					LoadBalancer: &dynamic.ServersLoadBalancer{
 						Servers: []dynamic.Server{
 							{
 								URL: "http://127.0.0.1:8080",

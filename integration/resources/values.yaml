@@ -21,7 +21,7 @@ controller:
 
 mesh:
   image:
-    name: traefik:v2.0.0-beta1
+    name: traefik:v2.0.0-rc1
     # (Optional)
     # pullPolicy: IfNotPresent
     # (Optional)

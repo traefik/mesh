@@ -5,7 +5,7 @@ import (
 
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/maesh/internal/message"
-	"github.com/containous/traefik/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -118,7 +118,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.Service{
 						"test-foo-80-6653beb49ee354ea": {
-							LoadBalancer: &dynamic.LoadBalancerService{
+							LoadBalancer: &dynamic.ServersLoadBalancer{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
 									{
@@ -427,7 +427,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.Service{
 						"test-foo-80-6653beb49ee354ea": {
-							LoadBalancer: &dynamic.LoadBalancerService{
+							LoadBalancer: &dynamic.ServersLoadBalancer{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
 									{
@@ -506,7 +506,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.Service{
 						"test-foo-80-6653beb49ee354ea": {
-							LoadBalancer: &dynamic.LoadBalancerService{
+							LoadBalancer: &dynamic.ServersLoadBalancer{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
 									{
@@ -540,7 +540,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.Service{
 						"test-foo-80-6653beb49ee354ea": {
-							LoadBalancer: &dynamic.LoadBalancerService{
+							LoadBalancer: &dynamic.ServersLoadBalancer{
 								PassHostHeader: true,
 								Servers: []dynamic.Server{
 									{
@@ -661,7 +661,7 @@ func TestBuildService(t *testing.T) {
 				},
 			},
 			expected: &dynamic.Service{
-				LoadBalancer: &dynamic.LoadBalancerService{
+				LoadBalancer: &dynamic.ServersLoadBalancer{
 					PassHostHeader: true,
 					Servers: []dynamic.Server{
 						{
