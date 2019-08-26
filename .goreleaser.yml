@@ -1,0 +1,37 @@
+project_name: maesh
+
+builds:
+  - binary: maesh
+
+    main: ./cmd/maesh/maesh.go
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X github.com/containous/maesh/cmd/version.version={{.Version}}
+      - -X github.com/containous/maesh/cmd/version.commit={{.Commit}}
+      - -X github.com/containous/maesh/cmd/version.date={{.Date}}
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+changelog:
+  skip: true
+
+archives:
+  - id: traefik
+    name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - CHANGELOG.md
+
+checksum:
+  name_template: "{{ .ProjectName }}_v{{ .Version }}_checksums.txt"
+
+release:
+  disable: true

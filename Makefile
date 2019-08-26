@@ -1,6 +1,8 @@
 VERSION := latest
 DOCKER_IMAGE_NAME := containous/maesh
 
+SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')
+
 BINARY_NAME = maesh
 DIST_DIR = $(CURDIR)/dist
 DIST_DIR_MAESH = $(DIST_DIR)/$(BINARY_NAME)
@@ -73,7 +75,25 @@ push-docker: build
 	docker push ${DOCKER_IMAGE_NAME}:${VERSION}
 	docker push $(DOCKER_IMAGE_NAME):latest
 
-# Update vendor directory
+## Create packages for the release
+release-packages: vendor build
+	rm -rf dist
+	docker build --tag "$(DOCKER_IMAGE_NAME):release-packages" --target base-image $(CURDIR)/
+	docker run --rm \
+      -v $(CURDIR):/go/src/$(PROJECT) \
+      -w /go/src/$(PROJECT) \
+      -e GITHUB_TOKEN \
+      "$(DOCKER_IMAGE_NAME):release-packages" goreleaser release --skip-publish
+	docker run --rm \
+	  -v $(CURDIR):/go/src/$(PROJECT) \
+	  -w /go/src/$(PROJECT) \
+	  "$(DOCKER_IMAGE_NAME):release-packages" chown -R $(shell id -u):$(shell id -g) dist/
+
+## Format the Code
+fmt:
+	gofmt -s -l -w $(SRCS)
+
+## Update vendor directory
 vendor:
 	go mod vendor
 
