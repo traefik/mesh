@@ -182,10 +182,6 @@ func (w *ClientWrapper) InitCluster(namespace string) error {
 		return err
 	}
 
-	log.Debugln("Creating TCP State Table...")
-	if err := w.createTCPStateTable(namespace); err != nil {
-		return err
-	}
 	log.Infoln("Cluster Preparation Complete...")
 
 	return nil
@@ -210,24 +206,6 @@ func (w *ClientWrapper) patchCoreDNS(deploymentName string, deploymentNamespace 
 		}
 	}
 
-	return nil
-}
-
-func (w *ClientWrapper) createTCPStateTable(namespace string) error {
-	_, exists, err := w.GetConfigMap(namespace, TCPStateConfigmapName)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		_, err := w.CreateConfigMap(&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      TCPStateConfigmapName,
-				Namespace: namespace,
-			},
-		})
-		return err
-	}
 	return nil
 }
 
