@@ -101,14 +101,14 @@ spec:
     spec:
       serviceAccountName: maesh-prepare
       restartPolicy: Never
-      {{- if .Values.image.pullSecret }}
+      {{- if .Values.controller.image.pullSecret }}
       imagePullSecrets:
-        - name: {{ .Values.image.pullSecret }}
+        - name: {{ .Values.controller.image.pullSecret }}
       {{- end }}
       containers:
         - name: maesh-prepare
-          image: {{ include "maesh.image" . | quote }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent"}}
+          image: {{ include "maesh.controllerImage" . | quote }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent"}}
           args:
             - "prepare"
           securityContext:

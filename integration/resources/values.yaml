@@ -1,22 +1,56 @@
 ## Default values for maesh
-image:
-  name: containous/maesh
-  # (Optional)
-  pullPolicy: IfNotPresent
-  # (Optional)
-  tag: latest
-  # (Optional)
-  # pullSecret: xxx
-  traefik: traefik:v2.0.0-beta1
+controller:
+  image:
+    name: containous/maesh
+    # (Optional)
+    pullPolicy: IfNotPresent
+    # (Optional)
+    tag: latest
+    # (Optional)
+    # pullSecret: xxx
+  resources:
+    limit:
+      mem: "100Mi"
+      cpu: "200m"
+    request:
+      mem: "50Mi"
+      cpu: "100m"
+  logging:
+    debug: true
 
-debug: true
 
-smi: false
+mesh:
+  image:
+    name: traefik:v2.0.0-beta1
+    # (Optional)
+    # pullPolicy: IfNotPresent
+    # (Optional)
+    # tag: v0.0.1
+    # (Optional)
+    # pullSecret: xxx
+  resources:
+    limit:
+      mem: "100Mi"
+      cpu: "200m"
+    request:
+      mem: "50Mi"
+      cpu: "100m"
+  logging: INFO
+  defaultMode: http
 
+#
+# addon jaeger tracing configuration
+#
 tracing:
   enabled: true
+
+#
+# addon metrics configuration
+#
 metrics:
   enabled: true
+
+smi: false
 
 limits:
   http: 10

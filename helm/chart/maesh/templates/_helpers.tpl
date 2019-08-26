@@ -11,6 +11,6 @@ Define the Chart version Label
 {{/*
 Define the templated image with tag
 */}}
-{{- define "maesh.image" -}}
-    {{- printf "%s:%s" .Values.image.name ( .Values.image.tag | default .Chart.AppVersion ) -}}
+{{- define "maesh.controllerImage" -}}
+    {{- printf "%s:%s" .Values.controller.image.name ( .Values.controller.image.tag | default .Chart.AppVersion ) -}}
 {{- end -}}

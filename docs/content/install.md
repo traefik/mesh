@@ -27,7 +27,7 @@ make
 To deploy the helm chart, run:
 
 ```shell
-helm install helm/chart/maesh --namespace maesh --set image.pullPolicy=IfNotPresent --set image.tag=latest
+helm install helm/chart/maesh --namespace maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
 ## Post-release installation

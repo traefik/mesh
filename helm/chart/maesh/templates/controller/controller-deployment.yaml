@@ -42,16 +42,16 @@ spec:
                       values:
                         - controller
                 topologyKey: "kubernetes.io/hostname"
-      {{- if .Values.image.pullSecret }}
+      {{- if .Values.controller.image.pullSecret }}
       imagePullSecrets:
-        - name: {{ .Values.image.pullSecret }}
+        - name: {{ .Values.controller.image.pullSecret }}
       {{- end }}
       containers:
         - name: maesh-controller
-          image: {{ include "maesh.image" . | quote }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          image: {{ include "maesh.controllerImage" . | quote }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent" }}
           args:
-            {{- if .Values.debug }}
+            {{- if .Values.controller.logging.debug }}
             - "--debug"
             {{- end }}
             {{- if .Values.mesh }}
@@ -72,8 +72,8 @@ spec:
                   fieldPath: metadata.namespace
           resources:
             requests:
-              memory: "50Mi"
-              cpu: "100m"
+              memory: {{ .Values.controller.resources.request.mem }}
+              cpu: {{ .Values.controller.resources.request.cpu }}
             limits:
-              memory: "100Mi"
-              cpu: "200m"
+              memory: {{ .Values.controller.resources.limit.mem }}
+              cpu: {{ .Values.controller.resources.limit.cpu }}
