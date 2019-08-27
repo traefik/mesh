@@ -2,6 +2,7 @@ module github.com/containous/maesh
 
 go 1.13
 
+// Kubernetes version kubernetes-1.15.3
 require (
 	github.com/cenkalti/backoff/v3 v3.0.0
 	github.com/containous/traefik/v2 v2.0.0-rc1
@@ -21,9 +22,9 @@ require (
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
 	golang.org/x/sys v0.0.0-20190825160603-fb81701db80f // indirect
 	google.golang.org/appengine v1.6.1 // indirect
-	k8s.io/api v0.0.0-20190805141119-fdd30b57c827
-	k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719
-	k8s.io/client-go v0.0.0-20190805141520-2fe0317bcee0
+	k8s.io/api v0.0.0-20190819141258-3544db3b9e44
+	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
+	k8s.io/client-go v0.0.0-20190819141724-e14f31a72a77
 	k8s.io/klog v0.3.3 // indirect
 	k8s.io/utils v0.0.0-20190801114015-581e00157fb1 // indirect
 )

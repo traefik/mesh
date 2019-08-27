@@ -13,6 +13,7 @@ echo "${SHOULD_TEST}"
 if [ -n "${TEMP_STORAGE}" ]; then SHOULD_TEST=$(echo "${TEMP_STORAGE}" | grep -Ev '(.md|.yaml|.yml)' || :); fi
 echo "${TEMP_STORAGE}"
 echo "${SHOULD_TEST}"
+export SHOULD_TEST="${SHOULD_TEST}"
 if [ -n "$SHOULD_TEST" ]; then docker version; fi
 
 export GO_VERSION=1.12
