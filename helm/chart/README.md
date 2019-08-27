@@ -37,3 +37,5 @@ helm install maesh --namespace=maesh-custom maesh
 ```bash
 helm install maesh --set "key1=val1,key2=val2,..."
 ```
+
+Where `key1=val1`, `key2=val2`, `...` are chart values that you can find at <https://github.com/containous/maesh/blob/master/helm/chart/maesh/values.yaml>.
