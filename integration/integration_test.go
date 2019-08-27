@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/containous/maesh/integration/try"
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/go-check/check"
-	log "github.com/sirupsen/logrus"
 	checker "github.com/vdemeester/shakers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,16 +27,6 @@ var (
 )
 
 func Test(t *testing.T) {
-	check.TestingT(t)
-}
-
-type image struct {
-	name string
-	pull bool
-}
-
-func init() {
-	flag.Parse()
 	if !*integration {
 		log.Info("Integration tests disabled.")
 		return
@@ -60,6 +50,13 @@ func init() {
 	if err != nil {
 		fmt.Printf("unable to cleanup: %v", err)
 	}
+
+	check.TestingT(t)
+}
+
+type image struct {
+	name string
+	pull bool
 }
 
 type BaseSuite struct {

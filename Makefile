@@ -12,7 +12,7 @@ SHA := $(shell git rev-parse --short HEAD)
 VERSION := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
 BUILD_DATE := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 
-INTEGRATION_TEST_OPTS := -timeout 30m
+INTEGRATION_TEST_OPTS := -test.timeout=20m -check.vv -v
 
 DOCKER_INTEGRATION_TEST_NAME := $(DOCKER_IMAGE_NAME)-integration-tests
 DOCKER_INTEGRATION_TEST_OTPS := -v $(CURDIR):/maesh --privileged -e INTEGRATION_TEST_OPTS
@@ -44,7 +44,7 @@ local-test: clean
 
 # Integration test
 local-test-integration: $(DIST_DIR) kubectl helm build
-	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) -check.vv -v
+	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS)
 
 test-integration:
 	docker build -t $(DOCKER_INTEGRATION_TEST_NAME) integration/resources/build

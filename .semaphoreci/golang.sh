@@ -10,7 +10,7 @@ rm -rf go"${GO_VERSION}".linux-amd64.tar.gz
 sudo mkdir -p /usr/local/golang/"${GO_VERSION}"/go
 sudo mv go /usr/local/golang/"${GO_VERSION}"/
 
-sudo rm /usr/local/bin/go
+sudo rm -rf /usr/local/bin/go || exit 1
 sudo chmod +x /usr/local/golang/"${GO_VERSION}"/go/bin/go
 sudo ln -s /usr/local/golang/"${GO_VERSION}"/go/bin/go /usr/local/bin/go
 
