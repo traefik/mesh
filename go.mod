@@ -3,7 +3,6 @@ module github.com/containous/maesh
 go 1.13
 
 require (
-	github.com/apex/log v1.1.1
 	github.com/cenkalti/backoff/v3 v3.0.0
 	github.com/containous/traefik/v2 v2.0.0-rc1
 	github.com/deislabs/smi-sdk-go v0.0.0-20190819154013-e53a9b2d8c1a

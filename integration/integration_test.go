@@ -3,6 +3,7 @@ package integration
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -10,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/containous/maesh/integration/try"
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/go-check/check"
@@ -28,7 +28,7 @@ var (
 
 func Test(t *testing.T) {
 	if !*integration {
-		log.Info("Integration tests disabled.")
+		log.Println("Integration tests disabled.")
 		return
 	}
 
