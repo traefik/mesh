@@ -8,32 +8,18 @@ require (
 	github.com/containous/traefik/v2 v2.0.0-rc1
 	github.com/deislabs/smi-sdk-go v0.0.0-20190819154013-e53a9b2d8c1a
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
-	github.com/gogo/protobuf v1.2.2-0.20190730201129-28a6bbf47e48 // indirect
-	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/google/uuid v1.1.1
-	github.com/googleapis/gnostic v0.3.1 // indirect
-	github.com/imdario/mergo v0.3.7 // indirect
-	github.com/json-iterator/go v1.1.7 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/vdemeester/shakers v0.1.0
-	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 // indirect
-	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
-	golang.org/x/sys v0.0.0-20190825160603-fb81701db80f // indirect
-	google.golang.org/appengine v1.6.1 // indirect
 	k8s.io/api v0.0.0-20190819141258-3544db3b9e44
 	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
 	k8s.io/client-go v0.0.0-20190819141724-e14f31a72a77
-	k8s.io/klog v0.3.3 // indirect
-	k8s.io/utils v0.0.0-20190801114015-581e00157fb1 // indirect
 )
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.1.0+incompatible
 	github.com/docker/docker => github.com/docker/engine v0.0.0-20190725163905-fa8dd90ceb7b
-	github.com/go-resty/resty => gopkg.in/resty.v1 v1.9.1
-	github.com/h2non/gock => gopkg.in/h2non/gock.v1 v1.0.14
 )
 
 // Containous forks
