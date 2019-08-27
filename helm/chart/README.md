@@ -2,38 +2,38 @@
 
 ## Prerequisites
 
-Make sure you have:
+With the command `helm version`, make sure that you have:
 - Helm [installed](https://helm.sh/docs/using_helm/#installing-helm) 
 - Tiller [deployed](https://helm.sh/docs/using_helm/#installing-tiller) to your cluster 
 
 Add Maesh's chart repository to Helm:
 
 ```bash
-$ helm repo add maesh https://containous.github.io/maesh/charts
+helm repo add maesh https://containous.github.io/maesh/charts
 ```
 
 You can update the chart repository by running:
 
 ```bash
-$ helm repo update
+helm repo update
 ```
 
 ## Deploy Maesh
 
-### Deploy Maesh with default config
+### Deploy Maesh with Default Config
 
 ```bash
-$ helm install maesh
+helm install maesh
 ```
 
-### Deploy Maesh in a custom namespace
+### Deploy Maesh in a Custom Namespace
 
 ```bash
-$ helm install maesh --namespace=maesh-custom maesh
+helm install maesh --namespace=maesh-custom maesh
 ```
 
-### Deploy with custom config
+### Deploy with Custom Configuration
 
 ```bash
-$ helm install maesh --set "key1=val1,key2=val2,..."
+helm install maesh --set "key1=val1,key2=val2,..."
 ```
