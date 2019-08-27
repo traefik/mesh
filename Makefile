@@ -53,9 +53,6 @@ test-integration:
 kubectl:
 	@command -v kubectl >/dev/null 2>&1 || (curl -LO https://storage.googleapis.com/kubernetes-release/release/$(shell curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl)
 
-helm:
-	@command -v helm >/dev/null 2>&1 || curl https://raw.githubusercontent.com/helm/helm/v2.14.1/scripts/get | bash
-
 build: $(DIST_DIR)
 	docker build --tag "$(DOCKER_IMAGE_NAME):latest" --build-arg="MAKE_TARGET=local-build" $(CURDIR)/
 	docker run --name=build -t "$(DOCKER_IMAGE_NAME):latest" version
@@ -84,8 +81,25 @@ upgrade:
 tidy:
 	go mod tidy
 
+helm:
+	@command -v helm >/dev/null 2>&1 || curl https://raw.githubusercontent.com/helm/helm/v2.14.1/scripts/get | bash
+
 helm-lint: helm
 	helm lint helm/chart/maesh
 
+helm-publish: helm-lint
+	cp helm/chart/README.md index.md
+	git config user.email "traefiker@users.noreply.github.com"
+	git config user.name "traefiker"
+	git checkout gh-pages || (git checkout --orphan gh-pages && git rm -rf . > /dev/null)
+	helm package helm/chart/maesh
+	mkdir -p charts
+	mv *.tgz index.md charts/
+	helm repo index charts/
+	git add charts/
+	git commit -m "[helm] Publishing helm charts: ${REVISION}"
+	git push origin gh-pages
+
 .PHONY: local-check local-build local-test check build test push-docker \
-		vendor helm-lint helm kubectl test-integration local-test-integration
+		vendor kubectl test-integration local-test-integration
+.PHONY: helm helm-lint helm-publish
