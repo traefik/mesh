@@ -7,13 +7,23 @@ RUN apk --no-cache --no-progress add \
     gcc \
     git \
     make \
-    musl-dev
+    musl-dev \
+    mercurial \
+    curl \
+    tar \
+    ca-certificates \
+    tzdata \
+    && update-ca-certificates \
+    && rm -rf /var/cache/apk/*
 
 ENV PROJECT_WORKING_DIR=/go/src/github.com/containous/maesh
 
+# Download goreleaser binary to bin folder in $GOPATH
+RUN curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
+
 WORKDIR "${PROJECT_WORKING_DIR}"
 COPY go.mod go.sum "${PROJECT_WORKING_DIR}"/
-RUN GO111MODULE=on go mod download
+RUN GO111MODULE=on GOPROXY=https://proxy.golang.org go mod download
 COPY . "${PROJECT_WORKING_DIR}/"
 
 FROM base-image as maker
