@@ -20,7 +20,7 @@ changelog:
   skip: true
 
 archives:
-  - id: traefik
+  - id: maesh
     name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     format: tar.gz
     format_overrides:
