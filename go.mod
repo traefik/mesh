@@ -1,34 +1,26 @@
 module github.com/containous/maesh
 
-go 1.12
+go 1.13
 
 require (
-	github.com/Masterminds/goutils v1.1.0 // indirect
-	github.com/Masterminds/semver v1.4.2 // indirect
-	github.com/Masterminds/sprig v2.20.0+incompatible // indirect
-	github.com/cenkalti/backoff v2.1.1+incompatible
-	github.com/containous/mux v0.0.0-20181024131434-c33f32e26898 // indirect
-	github.com/containous/traefik v2.0.0-beta1.0.20190805162403-c2d440a914f4+incompatible
-	github.com/deislabs/smi-sdk-go v0.0.0-20190621175932-114e91dce170
-	github.com/go-acme/lego v2.6.0+incompatible // indirect
+	github.com/cenkalti/backoff/v3 v3.0.0
+	github.com/containous/traefik/v2 v2.0.0-rc1
+	github.com/deislabs/smi-sdk-go v0.0.0-20190819154013-e53a9b2d8c1a
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
-	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
+	github.com/gogo/protobuf v1.2.2-0.20190730201129-28a6bbf47e48 // indirect
+	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/google/uuid v1.1.1
-	github.com/googleapis/gnostic v0.3.0 // indirect
-	github.com/huandu/xstrings v1.2.0 // indirect
+	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
-	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
+	github.com/json-iterator/go v1.1.7 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.4.0
 	github.com/vdemeester/shakers v0.1.0
-	golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4 // indirect
-	golang.org/x/net v0.0.0-20190620200207-3b0461eec859 // indirect
-	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
-	golang.org/x/sys v0.0.0-20190624142023-c5567b49c5d0 // indirect
+	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 // indirect
+	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
+	golang.org/x/sys v0.0.0-20190825160603-fb81701db80f // indirect
 	google.golang.org/appengine v1.6.1 // indirect
-	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.0.0-20190805141119-fdd30b57c827
 	k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719
 	k8s.io/client-go v0.0.0-20190805141520-2fe0317bcee0
@@ -38,13 +30,17 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.1.0+incompatible
+	github.com/docker/docker => github.com/docker/engine v0.0.0-20190725163905-fa8dd90ceb7b
 	github.com/go-resty/resty => gopkg.in/resty.v1 v1.9.1
 	github.com/h2non/gock => gopkg.in/h2non/gock.v1 v1.0.14
-	github.com/rancher/go-rancher-metadata => github.com/containous/go-rancher-metadata v0.0.0-20190402144056-c6a65f8b7a28
 )
 
-// due https://github.com/deislabs/smi-sdk-go/pull/21
+// Containous forks
 replace (
-	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719
-	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20181117043124-c2090bec4d9b
+	github.com/abbot/go-http-auth => github.com/containous/go-http-auth v0.4.1-0.20180112153951-65b0cdae8d7f
+	github.com/go-check/check => github.com/containous/check v0.0.0-20170915194414-ca0bf163426a
+	github.com/gorilla/mux => github.com/containous/mux v0.0.0-20181024131434-c33f32e26898
+	github.com/mailgun/minheap => github.com/containous/minheap v0.0.0-20190809180810-6e71eb837595
+	github.com/mailgun/multibuf => github.com/containous/multibuf v0.0.0-20190809014333-8b6c9a7e6bba
+	github.com/rancher/go-rancher-metadata => github.com/containous/go-rancher-metadata v0.0.0-20190402144056-c6a65f8b7a28
 )

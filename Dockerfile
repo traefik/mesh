@@ -1,5 +1,5 @@
 # Let's build maesh for linux-amd64
-FROM golang:1.12-alpine AS base-image
+FROM golang:1.13rc1-alpine AS base-image
 
 # Package dependencies
 RUN apk --no-cache --no-progress add \

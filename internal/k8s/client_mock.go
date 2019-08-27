@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	splitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
