@@ -13,6 +13,7 @@ import (
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	splitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,17 +71,19 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dyna
 		case message.TypeUpdated:
 			p.buildServiceIntoConfig(nil, obj, traefikConfig)
 		case message.TypeDeleted:
-			// We don't precess deleted endpoint events, processig is done under service deletion.
+			// We don't precess deleted endpoint events, processing is done under service deletion.
 		}
 	case *accessv1alpha1.TrafficTarget:
-		p.buildAffectedServicesIntoConfig(obj, nil, traefikConfig)
+		p.buildAffectedServicesIntoConfig(obj, nil, nil, traefikConfig)
 	case *specsv1alpha1.HTTPRouteGroup:
-		p.buildAffectedServicesIntoConfig(nil, obj, traefikConfig)
+		p.buildAffectedServicesIntoConfig(nil, obj, nil, traefikConfig)
+	case *splitv1alpha1.TrafficSplit:
+		p.buildAffectedServicesIntoConfig(nil, nil, obj, traefikConfig)
 	}
 
 }
 
-func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1.TrafficTarget, httpRouteGroup *specsv1alpha1.HTTPRouteGroup, config *dynamic.Configuration) {
+func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1.TrafficTarget, httpRouteGroup *specsv1alpha1.HTTPRouteGroup, trafficSplit *splitv1alpha1.TrafficSplit, config *dynamic.Configuration) {
 	namespaces := k8s.Namespaces{}
 
 	if httpRouteGroup != nil {
@@ -153,6 +156,10 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 	groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
 	log.Debugf("Found grouped traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
 
+	// Get all traffic split in the service's namespace.
+	trafficSplits := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace)
+	log.Debugf("Found trafficsplit for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplits)
+
 	for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 		for _, groupedTrafficTarget := range groupedTrafficTargets {
 
@@ -186,14 +193,23 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 						whitelistMiddleware = whitelistKey
 					}
 					config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
-					config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(endpoints, groupedTrafficTarget)
+					config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(endpoints, groupedTrafficTarget, getTrafficSplit(service.Name, trafficSplits))
 					continue
 				}
 				// FIXME: Implement TCP routes
 			}
 		}
 	}
+}
 
+func getTrafficSplit(serviceName string, trafficSplits []*splitv1alpha1.TrafficSplit) *splitv1alpha1.TrafficSplit {
+	for _, t := range trafficSplits {
+		if t.Spec.Service == serviceName {
+			return t
+		}
+	}
+
+	return nil
 }
 
 func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string) []*accessv1alpha1.TrafficTarget {
@@ -212,6 +228,27 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 	if len(result) == 0 {
 		log.Debugf("No TrafficTargets with destination in namespace: %s", namespace)
 	}
+
+	return result
+}
+
+func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string) []*splitv1alpha1.TrafficSplit {
+	var result []*splitv1alpha1.TrafficSplit
+	allTrafficSplit, err := p.client.GetTrafficSplit()
+	if err != nil {
+		log.Error("Could not get a list of all TrafficTargets")
+	}
+
+	for _, trafficTarget := range allTrafficSplit {
+		if trafficTarget.Namespace == namespace {
+			result = append(result, trafficTarget)
+		}
+	}
+
+	if len(result) == 0 {
+		log.Debugf("No TrafficSplits in namespace: %s", namespace)
+	}
+
 	return result
 }
 
@@ -371,7 +408,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 	return "(" + strings.Join(result, " && ") + ")"
 }
 
-func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *dynamic.Service {
+func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget, trafficSplit *splitv1alpha1.TrafficSplit) *dynamic.Service {
 	var servers []dynamic.Server
 
 	if endpoints.Namespace != trafficTarget.Destination.Namespace {
@@ -420,8 +457,18 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 		Servers:        servers,
 	}
 
+	weighted := &dynamic.WeightedRoundRobin{
+		Services: []dynamic.WRRService{
+			{
+				Name:   "",
+				Weight: nil,
+			},
+		},
+	}
+
 	return &dynamic.Service{
 		LoadBalancer: lb,
+		Weighted:     weighted,
 	}
 }
 

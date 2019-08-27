@@ -8,6 +8,7 @@ import (
 
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	smiSplitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	smiAccessClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
 	smiSpecsClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
 	smiSplitClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
@@ -81,6 +82,7 @@ type SMISpecsV1Alpha1Client interface {
 }
 
 type SMISplitV1Alpha1Client interface {
+	GetTrafficSplit() ([]*smiSplitv1alpha1.TrafficSplit, error)
 }
 
 // ClientWrapper holds the clients for the various resource controllers.
@@ -475,8 +477,20 @@ func (w *ClientWrapper) GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget,
 		return result, err
 	}
 	for _, trafficTarget := range list.Items {
-		t := trafficTarget.DeepCopy()
-		result = append(result, t)
+		result = append(result, trafficTarget.DeepCopy())
+	}
+	return result, nil
+}
+
+// GetTrafficSplit returns a slice of all TrafficSplit.
+func (w *ClientWrapper) GetTrafficSplit() ([]*smiSplitv1alpha1.TrafficSplit, error) {
+	var result []*smiSplitv1alpha1.TrafficSplit
+	list, err := w.SmiSplitClient.SplitV1alpha1().TrafficSplits(metav1.NamespaceAll).List(metav1.ListOptions{})
+	if err != nil {
+		return result, err
+	}
+	for _, trafficSplit := range list.Items {
+		result = append(result, trafficSplit.DeepCopy())
 	}
 	return result, nil
 }
@@ -534,7 +548,7 @@ func ParseServiceNamePort(value string) (name, namespace string, port int32, err
 	return substring[1], substring[0], port, nil
 }
 
-// ServiceNamePortToString formats a parseable string from the values.
+// ServiceNamePortToString formats a parsable string from the values.
 func ServiceNamePortToString(name, namespace string, port int32) (value string) {
 	return fmt.Sprintf("%s/%s:%d", namespace, name, port)
 }
