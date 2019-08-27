@@ -1,6 +1,6 @@
 module github.com/containous/maesh
 
-go 1.12
+go 1.13
 
 require (
 	github.com/cenkalti/backoff/v3 v3.0.0

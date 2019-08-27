@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   server:
-    image: rancher/k3s:v0.7.0-rc4
+    image: rancher/k3s:v0.8.1
     command: server --disable-agent --no-deploy traefik ${K3S_OPTS} --https-listen-port=8443
     environment:
       - K3S_CLUSTER_SECRET=somethingtotallyrandom
@@ -15,7 +15,7 @@ services:
       - 8443:8443
 
   node: &nodes-base
-    image: rancher/k3s:v0.7.0-rc4
+    image: rancher/k3s:v0.8.1
     privileged: true
     command: agent
     depends_on:
