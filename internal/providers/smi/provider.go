@@ -101,6 +101,12 @@ func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1
 		}
 	}
 
+	if trafficSplit != nil {
+		if !namespaces.Contains(trafficSplit.Namespace) {
+			namespaces = append(namespaces, trafficSplit.Namespace)
+		}
+	}
+
 	for _, namespace := range namespaces {
 		allServices, err := p.client.GetServices(namespace)
 		if err != nil {
