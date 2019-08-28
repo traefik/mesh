@@ -130,7 +130,6 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 			log.Errorf("service %s/%s does not exist", endpoints.Namespace, endpoints.Name)
 			return
 		}
-
 	}
 
 	if endpoints == nil {
@@ -158,7 +157,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 
 	// Get all traffic split in the service's namespace.
 	trafficSplits := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace)
-	log.Debugf("Found trafficsplit for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplits)
+	log.Debugf("Found trafficsplits for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplits)
 
 	for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 		for _, groupedTrafficTarget := range groupedTrafficTargets {
@@ -192,14 +191,24 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 						config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
 						whitelistMiddleware = whitelistKey
 					}
-					config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
-					config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(endpoints, groupedTrafficTarget, getTrafficSplit(service.Name, trafficSplits))
-					continue
+					trafficSplit := getTrafficSplit(service.Name, trafficSplits)
+					if trafficSplit == nil {
+						config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
+						config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(endpoints, groupedTrafficTarget)
+						continue
+					}
+
+					p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware)
 				}
 				// FIXME: Implement TCP routes
 			}
 		}
 	}
+}
+
+func Int(v int64) *int {
+	i := int(v)
+	return &i
 }
 
 func getTrafficSplit(serviceName string, trafficSplits []*splitv1alpha1.TrafficSplit) *splitv1alpha1.TrafficSplit {
@@ -408,7 +417,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 	return "(" + strings.Join(result, " && ") + ")"
 }
 
-func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget, trafficSplit *splitv1alpha1.TrafficSplit) *dynamic.Service {
+func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *dynamic.Service {
 	var servers []dynamic.Server
 
 	if endpoints.Namespace != trafficTarget.Destination.Namespace {
@@ -452,23 +461,11 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 		}
 	}
 
-	lb := &dynamic.ServersLoadBalancer{
-		PassHostHeader: true,
-		Servers:        servers,
-	}
-
-	weighted := &dynamic.WeightedRoundRobin{
-		Services: []dynamic.WRRService{
-			{
-				Name:   "",
-				Weight: nil,
-			},
-		},
-	}
-
 	return &dynamic.Service{
-		LoadBalancer: lb,
-		Weighted:     weighted,
+		LoadBalancer: &dynamic.ServersLoadBalancer{
+			PassHostHeader: true,
+			Servers:        servers,
+		},
 	}
 }
 
@@ -477,6 +474,47 @@ func (p *Provider) getServiceMode(mode string) string {
 		return p.defaultMode
 	}
 	return mode
+}
+
+func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit *splitv1alpha1.TrafficSplit, sp corev1.ServicePort, id int, trafficTarget *accessv1alpha1.TrafficTarget, whitelistMiddleware string) {
+	var WRRServices []dynamic.WRRService
+	for _, backend := range trafficSplit.Spec.Backends {
+		endpoints, exists, err := p.client.GetEndpoints(trafficSplit.Namespace, backend.Service)
+		if err != nil {
+			log.Errorf("Could not get endpoints for service %s/%s: %v", trafficSplit.Namespace, backend.Service, err)
+			return
+		}
+		if !exists {
+			log.Errorf("endpoints for service %s/%s do not exist", trafficSplit.Namespace, backend.Service)
+			return
+		}
+		splitKey := buildKey(backend.Service, trafficSplit.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
+		config.HTTP.Services[splitKey] = p.buildServiceFromTrafficTarget(endpoints, trafficTarget)
+		WRRServices = append(WRRServices, dynamic.WRRService{
+			Name:   splitKey,
+			Weight: Int(backend.Weight.Value()),
+		})
+	}
+
+	svc, exists, err := p.client.GetService(trafficSplit.Namespace, trafficSplit.Spec.Service)
+	if err != nil {
+		log.Errorf("Could not get service for service %s/%s: %v", trafficSplit.Namespace, trafficSplit.Spec.Service, err)
+		return
+	}
+	if !exists {
+		log.Errorf("service %s/%s do not exist", trafficSplit.Namespace, trafficSplit.Spec.Service)
+		return
+	}
+
+	svcWeighted := &dynamic.Service{
+		Weighted: &dynamic.WeightedRoundRobin{
+			Services: WRRServices,
+		},
+	}
+
+	weightedKey := buildKey(svc.Name, svc.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
+	config.HTTP.Routers[weightedKey] = p.buildRouterFromTrafficTarget(trafficSplit.Spec.Service, trafficSplit.Namespace, svc.Spec.ClusterIP, trafficTarget, 5000+id, weightedKey, whitelistMiddleware)
+	config.HTTP.Services[weightedKey] = svcWeighted
 }
 
 func buildKey(serviceName, namespace string, port int32, ttName, ttNamespace string) string {
