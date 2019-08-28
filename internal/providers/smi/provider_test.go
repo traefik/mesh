@@ -25,7 +25,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 	}{
 		{
 			desc:     "method and regex in match",
-			expected: "(PathPrefix(`/foo`) && Method(`GET`,`POST`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`)))",
+			expected: "PathPrefix(`/foo`) && Method(`GET`,`POST`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:      "test",
 				Methods:   []string{"GET", "POST"},
@@ -34,7 +34,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 		},
 		{
 			desc:     "method only in match",
-			expected: "(Method(`GET`,`POST`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`)))",
+			expected: "Method(`GET`,`POST`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:    "test",
 				Methods: []string{"GET", "POST"},
@@ -42,7 +42,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 		},
 		{
 			desc:     "prefix only in match",
-			expected: "(PathPrefix(`/foo`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`)))",
+			expected: "PathPrefix(`/foo`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:      "test",
 				PathRegex: "/foo",
@@ -193,9 +193,9 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 				},
 			},
 			expected: &dynamic.Router{
-				EntryPoints: []string{"ingress-81"},
+				EntryPoints: []string{"http-81"},
 				Service:     "example",
-				Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`test.default.maesh`) || Host(`10.0.0.1`))))",
+				Rule:        "(PathPrefix(`/metrics`) && Method(`GET`) && (Host(`test.default.maesh`) || Host(`10.0.0.1`)))",
 				Middlewares: []string{"block-all"},
 			},
 		},
@@ -236,7 +236,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 				},
 			},
 			expected: &dynamic.Router{
-				EntryPoints: []string{"ingress-81"},
+				EntryPoints: []string{"http-81"},
 				Service:     "example",
 				Middlewares: []string{"block-all"},
 			},
@@ -278,7 +278,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 				},
 			},
 			expected: &dynamic.Router{
-				EntryPoints: []string{"ingress-81"},
+				EntryPoints: []string{"http-81"},
 				Service:     "example",
 				Middlewares: []string{"block-all"},
 			},
@@ -320,7 +320,7 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 				},
 			},
 			expected: &dynamic.Router{
-				EntryPoints: []string{"ingress-81"},
+				EntryPoints: []string{"http-81"},
 				Service:     "example",
 				Middlewares: []string{"block-all"},
 			},
@@ -1261,8 +1261,8 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
 						"demo-servi-default-80-api-servic-default-5bb66e727779b5ba": {
-							EntryPoints: []string{"ingress-5000"},
-							Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-service.default.maesh`) || Host(`10.1.0.1`))))",
+							EntryPoints: []string{"http-5000"},
+							Rule:        "(PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-service.default.maesh`) || Host(`10.1.0.1`)))",
 							Service:     "demo-servi-default-80-api-servic-default-5bb66e727779b5ba",
 							Middlewares: []string{"api-service-metrics-default-demo-servi-default-80-api-servic-default-5bb66e727779b5ba-whitelist"},
 						},
@@ -1329,8 +1329,8 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
 						"demo-test-default-80-api-servic-default-7f2af3b9b8c32573": {
-							EntryPoints: []string{"ingress-5000"},
-							Rule:        "((PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-test.default.maesh`) || Host(`10.1.0.1`))))",
+							EntryPoints: []string{"http-5000"},
+							Rule:        "(PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-test.default.maesh`) || Host(`10.1.0.1`)))",
 							Service:     "demo-test-default-80-api-servic-default-7f2af3b9b8c32573",
 							Middlewares: []string{"api-service-metrics-default-demo-test-default-80-api-servic-default-7f2af3b9b8c32573-whitelist"},
 						},

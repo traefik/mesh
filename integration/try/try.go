@@ -99,16 +99,22 @@ func (t *Try) WaitCommandExecute(command string, argSlice []string, expected str
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
+	var output []byte
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
 		cmd := exec.Command(command, argSlice...)
 		cmd.Env = os.Environ()
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("unable execute command %s %s - output %s: %v", command, strings.Join(argSlice, " "), output, err)
+		var errOpt error
+		output, errOpt = cmd.CombinedOutput()
+		if errOpt != nil {
+			return fmt.Errorf("unable execute command %s %s - output %s: \n%v\n", command, strings.Join(argSlice, " "), output, errOpt)
 		}
 		return nil
 	}), ebo); err != nil {
-		return fmt.Errorf("unable execute command %s %s: %v", command, strings.Join(argSlice, " "), err)
+		return fmt.Errorf("unable execute command %s %s: \n%v\n", command, strings.Join(argSlice, " "), err)
+	}
+
+	if !strings.Contains(string(output), expected) {
+		return fmt.Errorf("output %s does not contain %s", string(output), expected)
 	}
 
 	return nil

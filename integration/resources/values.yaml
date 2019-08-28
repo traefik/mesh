@@ -35,20 +35,20 @@ mesh:
     request:
       mem: "50Mi"
       cpu: "100m"
-  logging: INFO
+  logging: DEBUG
   defaultMode: http
 
 #
 # addon jaeger tracing configuration
 #
 tracing:
-  enabled: true
+  enabled: false
 
 #
 # addon metrics configuration
 #
 metrics:
-  enabled: true
+  enabled: false
 
 smi: false
 

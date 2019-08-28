@@ -249,7 +249,7 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 
 func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string) []*splitv1alpha1.TrafficSplit {
 	var result []*splitv1alpha1.TrafficSplit
-	allTrafficSplit, err := p.client.GetTrafficSplit()
+	allTrafficSplit, err := p.client.GetTrafficSplits()
 	if err != nil {
 		log.Error("Could not get a list of all TrafficTargets")
 	}
@@ -401,8 +401,9 @@ func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, s
 
 	return &dynamic.Router{
 		Rule:        strings.Join(rule, " || "),
-		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
+		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
 		Service:     key,
+		//Middlewares: []string{},
 		Middlewares: []string{middleware},
 	}
 }
@@ -420,7 +421,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 
 	result = append(result, fmt.Sprintf("(Host(`%s.%s.%s`) || Host(`%s`))", name, namespace, p.meshNamespace, ip))
 
-	return "(" + strings.Join(result, " && ") + ")"
+	return strings.Join(result, " && ")
 }
 
 func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *dynamic.Service {

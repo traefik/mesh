@@ -375,7 +375,7 @@ func (s *SMIClientMock) GetTrafficTargets() ([]*accessv1alpha1.TrafficTarget, er
 	return s.trafficTargets, nil
 }
 
-func (s *SMIClientMock) GetTrafficSplit() ([]*splitv1alpha1.TrafficSplit, error) {
+func (s *SMIClientMock) GetTrafficSplits() ([]*splitv1alpha1.TrafficSplit, error) {
 	if s.apiTrafficSplitError != nil {
 		return nil, s.apiTrafficSplitError
 	}

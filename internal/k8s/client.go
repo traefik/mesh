@@ -82,7 +82,7 @@ type SMISpecsV1Alpha1Client interface {
 }
 
 type SMISplitV1Alpha1Client interface {
-	GetTrafficSplit() ([]*smiSplitv1alpha1.TrafficSplit, error)
+	GetTrafficSplits() ([]*smiSplitv1alpha1.TrafficSplit, error)
 }
 
 // ClientWrapper holds the clients for the various resource controllers.
@@ -482,8 +482,8 @@ func (w *ClientWrapper) GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget,
 	return result, nil
 }
 
-// GetTrafficSplit returns a slice of all TrafficSplit.
-func (w *ClientWrapper) GetTrafficSplit() ([]*smiSplitv1alpha1.TrafficSplit, error) {
+// GetTrafficSplits returns a slice of all TrafficSplit.
+func (w *ClientWrapper) GetTrafficSplits() ([]*smiSplitv1alpha1.TrafficSplit, error) {
 	var result []*smiSplitv1alpha1.TrafficSplit
 	list, err := w.SmiSplitClient.SplitV1alpha1().TrafficSplits(metav1.NamespaceAll).List(metav1.ListOptions{})
 	if err != nil {
