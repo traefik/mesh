@@ -23,7 +23,6 @@ import (
 
 var (
 	integration    = flag.Bool("integration", false, "run integration tests")
-	kubeConfigPath = "/tmp/k3s-output/kubeconfig.yaml"
 	masterURL      = "https://localhost:8443"
 	images         []image
 	k3dClusterName = "maesh-integration"
@@ -38,11 +37,6 @@ func Test(t *testing.T) {
 	check.Suite(&SMISuite{})
 	check.Suite(&KubernetesSuite{})
 	check.Suite(&CoreDNSSuite{})
-
-	err := downloadAndInstallK3d()
-	if err != nil {
-		fmt.Printf("unable to download and install k3d: %v", err)
-	}
 
 	images = append(images, image{"containous/maesh:latest", false})
 	images = append(images, image{"containous/whoami:v1.0.1", true})
@@ -80,14 +74,6 @@ type BaseSuite struct {
 	client *k8s.ClientWrapper
 }
 
-func downloadAndInstallK3d() error {
-	cmd := exec.Command(".semaphoreci/k3d.sh")
-	cmd.Env = os.Environ()
-	_, err := cmd.CombinedOutput()
-
-	return err
-}
-
 func (s *BaseSuite) startk3s(c *check.C) {
 	// Set the base directory for the test suite
 	var err error
@@ -114,7 +100,7 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	output, err = cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
 
-	kubeConfigPath = strings.TrimSuffix(string(output), "\n")
+	kubeConfigPath := strings.TrimSuffix(string(output), "\n")
 
 	s.client, err = s.try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
 	c.Assert(err, checker.IsNil)
