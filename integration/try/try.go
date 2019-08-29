@@ -108,13 +108,14 @@ func (t *Try) WaitCommandExecute(command string, argSlice []string, expected str
 		if errOpt != nil {
 			return fmt.Errorf("unable execute command %s %s - output %s: \n%v", command, strings.Join(argSlice, " "), output, errOpt)
 		}
+
+		if !strings.Contains(string(output), expected) {
+			return fmt.Errorf("output %s does not contain %s", string(output), expected)
+		}
+
 		return nil
 	}), ebo); err != nil {
 		return fmt.Errorf("unable execute command %s %s: \n%v", command, strings.Join(argSlice, " "), err)
-	}
-
-	if !strings.Contains(string(output), expected) {
-		return fmt.Errorf("output %s does not contain %s", string(output), expected)
 	}
 
 	return nil

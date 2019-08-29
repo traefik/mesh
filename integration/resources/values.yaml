@@ -35,7 +35,7 @@ mesh:
     request:
       mem: "50Mi"
       cpu: "100m"
-  logging: DEBUG
+  logging: ERROR
   defaultMode: http
 
 #

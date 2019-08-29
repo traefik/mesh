@@ -174,7 +174,7 @@ func (s *BaseSuite) waitForTools(c *check.C) {
 }
 
 func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data string) {
-	err := s.try.WaitCommandExecute("kubectl", argSlice, data, 5*time.Second)
+	err := s.try.WaitCommandExecute("kubectl", argSlice, data, 10*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 

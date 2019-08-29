@@ -403,7 +403,6 @@ func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, s
 		Rule:        strings.Join(rule, " || "),
 		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
 		Service:     key,
-		//Middlewares: []string{},
 		Middlewares: []string{middleware},
 	}
 }

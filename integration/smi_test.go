@@ -34,27 +34,27 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 	// Get the tools pod service in whoami namespace
 	// This test needs to test the following requests result in the following responses:
 	// Pod C -> Service B /test returns 200
-	// Pod C -> Service B.mesh /test returns 401
-	// Pod C -> Service B.mesh /foo returns 200
+	// Pod C -> Service B.maesh /test returns 404
+	// Pod C -> Service B.maesh /foo returns 200
 	// Pod A -> Service B /test returns 200
-	// Pod A -> Service B.mesh /test returns 401
-	// Pod A -> Service B.mesh /foo returns 200
+	// Pod A -> Service B.maesh /test returns 401
+	// Pod A -> Service B.maesh /foo returns 200
 	// Pod A -> Service D /test returns 200
-	// Pod A -> Service D.mesh /bar returns 401
+	// Pod A -> Service D.maesh /bar returns 403
 	// Pod C -> Service D /test returns 200
-	// Pod C -> Service D.mesh /test returns 401
-	// Pod C -> Service D.mesh /bar returns 200
+	// Pod C -> Service D.maesh /test returns 403
+	// Pod C -> Service D.maesh /bar returns 200
 	// Pod A -> Service E /test returns 200
 	// Pod B -> Service E /test returns 200
 	// Pod C -> Service E /test returns 200
 	// Pod D -> Service E /test returns 200
-	// Pod A -> Service E.mesh /test returns 401
-	// Pod B -> Service E.mesh /test returns 401
-	// Pod C -> Service E.mesh /test returns 401
-	// Pod D -> Service E.mesh /test returns 401
+	// Pod A -> Service E.maesh /test returns 404
+	// Pod B -> Service E.maesh /test returns 404
+	// Pod C -> Service E.maesh /test returns 404
+	// Pod D -> Service E.maesh /test returns 404
 
 	s.createResources(c, "resources/smi")
-	s.createResources(c, "resources/smi/access-control")
+	s.createResources(c, "resources/smi/access-control/")
 
 	time.Sleep(10 * time.Second)
 
@@ -73,19 +73,19 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			expected:    200,
 		},
 		{
-			desc:        "Pod C -> Service B.mesh /test returns 401",
+			desc:        "Pod C -> Service B.maesh /test returns 404",
 			source:      "c-tools",
 			destination: "b.default.maesh",
 			path:        "/test",
-			expected:    401,
+			expected:    404,
 		},
-		{
-			desc:        "Pod C -> Service B.mesh /foo returns 200",
-			source:      "c-tools",
-			destination: "b.default.maesh",
-			path:        "/foo",
-			expected:    200,
-		},
+		//{
+		//	desc:        "Pod C -> Service B.maesh /foo returns 200",
+		//	source:      "c-tools",
+		//	destination: "b.default.maesh",
+		//	path:        "/foo",
+		//	expected:    200,
+		//},
 		{
 			desc:        "Pod A -> Service B /test returns 200",
 			source:      "a-tools",
@@ -94,25 +94,25 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			expected:    200,
 		},
 		{
-			desc:        "Pod A -> Service B.mesh /test returns 401",
+			desc:        "Pod A -> Service B.maesh /test returns 404",
 			source:      "a-tools",
 			destination: "b.default.maesh",
 			path:        "/test",
-			expected:    401,
+			expected:    404,
 		},
 		{
-			desc:        "Pod A -> Service B.mesh /foo returns 200",
+			desc:        "Pod A -> Service B.maesh /foo returns 200",
 			source:      "a-tools",
 			destination: "b.default.maesh",
 			path:        "/foo",
 			expected:    200,
 		},
 		{
-			desc:        "Pod A -> Service D.mesh /bar returns 401",
+			desc:        "Pod A -> Service D.maesh /bar returns 403",
 			source:      "a-tools",
 			destination: "d.default.maesh",
 			path:        "/bar",
-			expected:    401,
+			expected:    403,
 		},
 		{
 			desc:        "Pod C -> Service D /test returns 200",
@@ -122,14 +122,14 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			expected:    200,
 		},
 		{
-			desc:        "Pod C -> Service D.mesh /test returns 401",
+			desc:        "Pod C -> Service D.maesh /test returns 404",
 			source:      "c-tools",
 			destination: "d.default.maesh",
 			path:        "/test",
-			expected:    401,
+			expected:    404,
 		},
 		{
-			desc:        "Pod C -> Service D.mesh /bar returns 200",
+			desc:        "Pod C -> Service D.maesh /bar returns 200",
 			source:      "c-tools",
 			destination: "d.default.maesh",
 			path:        "/bar",
@@ -164,32 +164,32 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			expected:    200,
 		},
 		{
-			desc:        "Pod A -> Service E.mesh /test returns 401",
+			desc:        "Pod A -> Service E.maesh /test returns 404",
 			source:      "a-tools",
 			destination: "e.default.maesh",
 			path:        "/test",
-			expected:    401,
+			expected:    404,
 		},
 		{
-			desc:        "Pod B -> Service E.mesh /test returns 401",
+			desc:        "Pod B -> Service E.maesh /test returns 404",
 			source:      "b-tools",
 			destination: "e.default.maesh",
 			path:        "/test",
-			expected:    401,
+			expected:    404,
 		},
 		{
-			desc:        "Pod C -> Service E.mesh /test returns 401",
+			desc:        "Pod C -> Service E.maesh /test returns 404",
 			source:      "c-tools",
 			destination: "e.default.maesh",
 			path:        "/test",
-			expected:    401,
+			expected:    404,
 		},
 		{
-			desc:        "Pod D -> Service E.mesh /test returns 401",
+			desc:        "Pod D -> Service E.maesh /test returns 404",
 			source:      "d-tools",
 			destination: "e.default.maesh",
 			path:        "/test",
-			expected:    401,
+			expected:    404,
 		},
 	}
 
@@ -197,6 +197,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		argSlice := []string{
 			"exec", "-it", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
 		}
+		c.Log(test.desc)
 		s.waitKubectlExecCommand(c, argSlice, fmt.Sprintf("HTTP/1.1 %d", test.expected))
 	}
 
