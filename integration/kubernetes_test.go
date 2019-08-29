@@ -13,7 +13,7 @@ type KubernetesSuite struct{ BaseSuite }
 func (s *KubernetesSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
 	s.waitForCoreDNSStarted(c)
-	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
+	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 	s.installTiller(c)
 	err := s.installHelmMaesh(c, false)
 	c.Assert(err, checker.IsNil)

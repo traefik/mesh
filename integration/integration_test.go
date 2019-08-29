@@ -23,7 +23,6 @@ import (
 
 var (
 	integration    = flag.Bool("integration", false, "run integration tests")
-	kubeConfigPath = "/tmp/k3s-output/kubeconfig.yaml"
 	masterURL      = "https://localhost:8443"
 	images         []image
 	k3dClusterName = "maesh-integration"
@@ -70,9 +69,10 @@ type image struct {
 }
 
 type BaseSuite struct {
-	dir    string
-	try    *try.Try
-	client *k8s.ClientWrapper
+	dir            string
+	kubeConfigPath string
+	try            *try.Try
+	client         *k8s.ClientWrapper
 }
 
 func (s *BaseSuite) startk3s(c *check.C) {
@@ -101,10 +101,9 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	output, err = cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
 
-	kubeConfigPath = strings.TrimSuffix(string(output), "\n")
-	fmt.Println("kubeConfigPath: " + kubeConfigPath)
+	s.kubeConfigPath = strings.TrimSuffix(string(output), "\n")
 
-	s.client, err = s.try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
+	s.client, err = s.try.WaitClientCreated(masterURL, s.kubeConfigPath, 30*time.Second)
 	c.Assert(err, checker.IsNil)
 
 	s.try = try.NewTry(s.client)

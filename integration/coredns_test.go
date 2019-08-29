@@ -12,7 +12,7 @@ type CoreDNSSuite struct{ BaseSuite }
 
 func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
-	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
+	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
 	s.installTiller(c)
