@@ -234,8 +234,21 @@ func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (b
 	serverBlock :=
 		`
 maesh:53 {
-	kubernetes cluster.local
-	k8s_external maesh
+    errors
+    rewrite continue {
+        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh maesh-{1}-{2}.maesh.svc.cluster.local
+        answer name maesh-([a-zA-Z0-9-_]*)-([a-zA-Z0-9-_]*)\.maesh\.svc\.cluster\.local {1}.{2}.maesh
+    }
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+        pods insecure
+        upstream
+    	fallthrough in-addr.arpa ip6.arpa
+    }
+    forward . /etc/resolv.conf
+    cache 30
+    loop
+    reload
+    loadbalance
 }
 `
 	originalBlock := coreConfigMap.Data["Corefile"]

@@ -106,11 +106,11 @@ func (t *Try) WaitCommandExecute(command string, argSlice []string, expected str
 		var errOpt error
 		output, errOpt = cmd.CombinedOutput()
 		if errOpt != nil {
-			return fmt.Errorf("unable execute command %s %s - output %s: \n%v\n", command, strings.Join(argSlice, " "), output, errOpt)
+			return fmt.Errorf("unable execute command %s %s - output %s: \n%v", command, strings.Join(argSlice, " "), output, errOpt)
 		}
 		return nil
 	}), ebo); err != nil {
-		return fmt.Errorf("unable execute command %s %s: \n%v\n", command, strings.Join(argSlice, " "), err)
+		return fmt.Errorf("unable execute command %s %s: \n%v", command, strings.Join(argSlice, " "), err)
 	}
 
 	if !strings.Contains(string(output), expected) {

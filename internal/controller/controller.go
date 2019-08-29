@@ -260,13 +260,10 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectCreated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
 		log.Debugf("Creating associated mesh service for service: %s/%s", obj.Namespace, obj.Name)
-		service, err := c.createMeshService(obj)
-		if err != nil {
+
+		if _, err := c.createMeshService(obj); err != nil {
 			log.Errorf("Could not create mesh service: %v", err)
 			return
-		}
-		if err = c.setUserServiceExternalIP(obj, service.Spec.ClusterIP); err != nil {
-			log.Errorf("Could not update user service with externalIP: %v", err)
 		}
 
 	case *corev1.Endpoints:
@@ -494,17 +491,6 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 	log.Debugf("Updated service: %s/%s", c.meshNamespace, meshServiceName)
 	return updatedSvc, nil
 
-}
-
-// setUserServiceExternalIP sets the externalIP of the user's service to provide a DNS record.
-func (c *Controller) setUserServiceExternalIP(userService *corev1.Service, ip string) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		newService := userService.DeepCopy()
-		newService.Spec.ExternalIPs = []string{ip}
-
-		_, err := c.clients.UpdateService(newService)
-		return err
-	})
 }
 
 // userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.
