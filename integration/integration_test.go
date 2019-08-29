@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cenkalti/backoff"
+	"github.com/cenkalti/backoff/v3"
 	"github.com/containous/maesh/integration/try"
 	"github.com/containous/maesh/internal/k8s"
-	"github.com/containous/traefik/pkg/safe"
+	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 	corev1 "k8s.io/api/core/v1"
