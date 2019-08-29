@@ -17,6 +17,7 @@ type SMISuite struct{ BaseSuite }
 func (s *SMISuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
 	s.waitForCoreDNSStarted(c)
+	fmt.Println("kubeConfigPath: " + kubeConfigPath)
 	c.Assert(os.Setenv("KUBECONFIG", kubeConfigPath), checker.IsNil)
 	s.installTiller(c)
 	err := s.installHelmMaesh(c, true)

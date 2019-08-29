@@ -102,6 +102,7 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	c.Assert(err, checker.IsNil)
 
 	kubeConfigPath = strings.TrimSuffix(string(output), "\n")
+	fmt.Println("kubeConfigPath: " + kubeConfigPath)
 
 	s.client, err = s.try.WaitClientCreated(masterURL, kubeConfigPath, 30*time.Second)
 	c.Assert(err, checker.IsNil)
