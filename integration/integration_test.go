@@ -178,6 +178,10 @@ func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data s
 	c.Assert(err, checker.IsNil)
 }
 
+func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) (string, error) {
+	return s.try.WaitCommandExecuteReturn("kubectl", argSlice, 10*time.Second)
+}
+
 func (s *BaseSuite) startWhoami(c *check.C) {
 	// Init helm with the service account created before.
 	cmd := exec.Command("kubectl", "apply",

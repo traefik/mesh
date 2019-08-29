@@ -121,6 +121,41 @@ func (t *Try) WaitCommandExecute(command string, argSlice []string, expected str
 	return nil
 }
 
+// WaitCommandExecuteReturn wait until the command is executed.
+func (t *Try) WaitCommandExecuteReturn(command string, argSlice []string, timeout time.Duration) (string, error) {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	var output []byte
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		cmd := exec.Command(command, argSlice...)
+		cmd.Env = os.Environ()
+		var errOpt error
+		output, errOpt = cmd.CombinedOutput()
+		if errOpt != nil {
+			return fmt.Errorf("unable execute command %s %s - output %s: \n%v", command, strings.Join(argSlice, " "), output, errOpt)
+		}
+
+		return nil
+	}), ebo); err != nil {
+		return "", fmt.Errorf("unable execute command %s %s: \n%v", command, strings.Join(argSlice, " "), err)
+	}
+
+	return string(output), nil
+}
+
+// WaitFunction wait until the command is executed.
+func (t *Try) WaitFunction(f func() error, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	if err := backoff.Retry(safe.OperationWithRecover(f), ebo); err != nil {
+		return fmt.Errorf("unable execute function: %v", err)
+	}
+
+	return nil
+}
+
 // WaitDeleteNamespace wait until the namespace is delete.
 func (t *Try) WaitDeleteNamespace(name string, timeout time.Duration) error {
 	ebo := backoff.NewExponentialBackOff()

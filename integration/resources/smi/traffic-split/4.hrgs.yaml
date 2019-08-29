@@ -7,7 +7,3 @@ matches:
 - name: foo
   pathRegex: /foo
   methods: ["*"]
-- name: bar
-  pathRegex: /bar
-  methods: ["*"]
-
