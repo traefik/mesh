@@ -2,17 +2,18 @@
 
 To install maesh, the installation method is quite simple:
 
-## Pre-release installation
+```bash
+helm repo add maesh https://containous.github.io/maesh/charts
+helm repo update
+```
 
-To run the installer pre-release, you can do one of the following:
+Install maesh helm chart:
 
-- Log into dockerhub with your credentials on the kube machine to allow the private image pulls
-- Create imagepullsecrets for the image
-- Build the image locally and modify the imagepullpolicy to not pull if exists
+```bash
+helm install maesh
+```
 
-The third option is the one we recommend here.
-
-### Pre-release image build
+## Install from source
 
 To build the image locally, run:
 
@@ -22,7 +23,7 @@ make
 
  to build the binary and build/tag the local image.
 
-### Deploy helm chart
+## Deploy helm chart
 
 To deploy the helm chart, run:
 
@@ -30,17 +31,10 @@ To deploy the helm chart, run:
 helm install helm/chart/maesh --namespace maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
-## Post-release installation
-
-Once maesh has been publically released, it will be a simple helm install:
-
-```shell
-helm install helm/chart/maesh --namespace maesh
-```
-
 ## Installation namespace
 
-Maesh does not _need_ to be installed into the maesh namespace, but it does need to be installed into its _own_ namespace, separate from user namespaces.
+Maesh does not _need_ to be installed into the maesh namespace, 
+but it does need to be installed into its _own_ namespace, separate from user namespaces.
 
 ## Usage
 

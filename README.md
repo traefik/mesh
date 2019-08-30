@@ -1,6 +1,6 @@
-# maesh
+# Maesh
 
-The simple service mesh controller
+The simpler service mesh controller
 
 [![Build Status](https://semaphoreci.com/api/v1/projects/d10436a4-dcfb-454a-b19e-a9c96370b92d/2743246/badge.svg)](https://semaphoreci.com/containous/maesh)
 
