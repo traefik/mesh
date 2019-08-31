@@ -39,7 +39,7 @@ func Test(t *testing.T) {
 	images = append(images, image{"coredns/coredns:1.4.0", true})
 	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.1", true})
 	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
-	images = append(images, image{"traefik:v2.0.0-beta1", true})
+	images = append(images, image{"traefik:v2.0.0-rc1", true})
 
 	check.Suite(&SMISuite{})
 	check.Suite(&KubernetesSuite{})
@@ -83,8 +83,7 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 		name = strings.ReplaceAll(name, ":", "-")
 		name = strings.ReplaceAll(name, ".", "-")
 		p := path.Join(s.dir, fmt.Sprintf("resources/compose/images/%s.tar", name))
-		err = saveDockerImage(image.name, p, image.pull)
-		if err != nil {
+		if err = saveDockerImage(image.name, p, image.pull); err != nil {
 			return err
 		}
 	}
@@ -175,8 +174,12 @@ func (s *BaseSuite) waitForTools(c *check.C) {
 }
 
 func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data string) {
-	err := s.try.WaitCommandExecute("kubectl", argSlice, data, 5*time.Second)
+	err := s.try.WaitCommandExecute("kubectl", argSlice, data, 10*time.Second)
 	c.Assert(err, checker.IsNil)
+}
+
+func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) (string, error) {
+	return s.try.WaitCommandExecuteReturn("kubectl", argSlice, 10*time.Second)
 }
 
 func (s *BaseSuite) startWhoami(c *check.C) {

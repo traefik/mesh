@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: a-tools
+spec:
+  serviceAccountName: a
+  containers:
+    - name: a-tools
+      image: giantswarm/tiny-tools:3.9
+      command:
+      - "sleep"
+      - "3600"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: b-v1
+  labels:
+    app: b
+    version: v1
+spec:
+  serviceAccountName: b
+  hostname: b-v1
+  containers:
+    - name: b
+      image: containous/whoami:v1.0.1
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: b-v2
+  labels:
+    app: b
+    version: v2
+spec:
+  serviceAccountName: b
+  hostname: b-v2
+  containers:
+    - name: b
+      image: containous/whoami:v1.0.1

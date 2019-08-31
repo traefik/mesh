@@ -13,6 +13,7 @@ import (
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	splitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,17 +71,19 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dyna
 		case message.TypeUpdated:
 			p.buildServiceIntoConfig(nil, obj, traefikConfig)
 		case message.TypeDeleted:
-			// We don't precess deleted endpoint events, processig is done under service deletion.
+			// We don't precess deleted endpoint events, processing is done under service deletion.
 		}
 	case *accessv1alpha1.TrafficTarget:
-		p.buildAffectedServicesIntoConfig(obj, nil, traefikConfig)
+		p.buildAffectedServicesIntoConfig(obj, nil, nil, traefikConfig)
 	case *specsv1alpha1.HTTPRouteGroup:
-		p.buildAffectedServicesIntoConfig(nil, obj, traefikConfig)
+		p.buildAffectedServicesIntoConfig(nil, obj, nil, traefikConfig)
+	case *splitv1alpha1.TrafficSplit:
+		p.buildAffectedServicesIntoConfig(nil, nil, obj, traefikConfig)
 	}
 
 }
 
-func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1.TrafficTarget, httpRouteGroup *specsv1alpha1.HTTPRouteGroup, config *dynamic.Configuration) {
+func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1.TrafficTarget, httpRouteGroup *specsv1alpha1.HTTPRouteGroup, trafficSplit *splitv1alpha1.TrafficSplit, config *dynamic.Configuration) {
 	namespaces := k8s.Namespaces{}
 
 	if httpRouteGroup != nil {
@@ -95,6 +98,12 @@ func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1
 	if trafficTarget != nil {
 		if !namespaces.Contains(trafficTarget.Destination.Namespace) {
 			namespaces = append(namespaces, trafficTarget.Destination.Namespace)
+		}
+	}
+
+	if trafficSplit != nil {
+		if !namespaces.Contains(trafficSplit.Namespace) {
+			namespaces = append(namespaces, trafficSplit.Namespace)
 		}
 	}
 
@@ -127,7 +136,6 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 			log.Errorf("service %s/%s does not exist", endpoints.Namespace, endpoints.Name)
 			return
 		}
-
 	}
 
 	if endpoints == nil {
@@ -152,6 +160,10 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 	// Group the traffic targets by destination, so that they can be built separately.
 	groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
 	log.Debugf("Found grouped traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
+
+	// Get all traffic split in the service's namespace.
+	trafficSplits := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace)
+	log.Debugf("Found trafficsplits for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplits)
 
 	for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 		for _, groupedTrafficTarget := range groupedTrafficTargets {
@@ -185,15 +197,34 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 						config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
 						whitelistMiddleware = whitelistKey
 					}
-					config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
-					config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(endpoints, groupedTrafficTarget)
-					continue
+					trafficSplit := getTrafficSplit(service.Name, trafficSplits)
+					if trafficSplit == nil {
+						config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
+						config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(endpoints, groupedTrafficTarget)
+						continue
+					}
+
+					p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware)
 				}
 				// FIXME: Implement TCP routes
 			}
 		}
 	}
+}
 
+func Int(v int64) *int {
+	i := int(v)
+	return &i
+}
+
+func getTrafficSplit(serviceName string, trafficSplits []*splitv1alpha1.TrafficSplit) *splitv1alpha1.TrafficSplit {
+	for _, t := range trafficSplits {
+		if t.Spec.Service == serviceName {
+			return t
+		}
+	}
+
+	return nil
 }
 
 func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string) []*accessv1alpha1.TrafficTarget {
@@ -212,6 +243,27 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 	if len(result) == 0 {
 		log.Debugf("No TrafficTargets with destination in namespace: %s", namespace)
 	}
+
+	return result
+}
+
+func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string) []*splitv1alpha1.TrafficSplit {
+	var result []*splitv1alpha1.TrafficSplit
+	allTrafficSplit, err := p.client.GetTrafficSplits()
+	if err != nil {
+		log.Error("Could not get a list of all TrafficTargets")
+	}
+
+	for _, trafficTarget := range allTrafficSplit {
+		if trafficTarget.Namespace == namespace {
+			result = append(result, trafficTarget)
+		}
+	}
+
+	if len(result) == 0 {
+		log.Debugf("No TrafficSplits in namespace: %s", namespace)
+	}
+
 	return result
 }
 
@@ -349,7 +401,7 @@ func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, s
 
 	return &dynamic.Router{
 		Rule:        strings.Join(rule, " || "),
-		EntryPoints: []string{fmt.Sprintf("ingress-%d", port)},
+		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
 		Service:     key,
 		Middlewares: []string{middleware},
 	}
@@ -368,7 +420,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 
 	result = append(result, fmt.Sprintf("(Host(`%s.%s.%s`) || Host(`%s`))", name, namespace, p.meshNamespace, ip))
 
-	return "(" + strings.Join(result, " && ") + ")"
+	return strings.Join(result, " && ")
 }
 
 func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *dynamic.Service {
@@ -415,13 +467,11 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 		}
 	}
 
-	lb := &dynamic.ServersLoadBalancer{
-		PassHostHeader: true,
-		Servers:        servers,
-	}
-
 	return &dynamic.Service{
-		LoadBalancer: lb,
+		LoadBalancer: &dynamic.ServersLoadBalancer{
+			PassHostHeader: true,
+			Servers:        servers,
+		},
 	}
 }
 
@@ -430,6 +480,47 @@ func (p *Provider) getServiceMode(mode string) string {
 		return p.defaultMode
 	}
 	return mode
+}
+
+func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit *splitv1alpha1.TrafficSplit, sp corev1.ServicePort, id int, trafficTarget *accessv1alpha1.TrafficTarget, whitelistMiddleware string) {
+	var WRRServices []dynamic.WRRService
+	for _, backend := range trafficSplit.Spec.Backends {
+		endpoints, exists, err := p.client.GetEndpoints(trafficSplit.Namespace, backend.Service)
+		if err != nil {
+			log.Errorf("Could not get endpoints for service %s/%s: %v", trafficSplit.Namespace, backend.Service, err)
+			return
+		}
+		if !exists {
+			log.Errorf("endpoints for service %s/%s do not exist", trafficSplit.Namespace, backend.Service)
+			return
+		}
+		splitKey := buildKey(backend.Service, trafficSplit.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
+		config.HTTP.Services[splitKey] = p.buildServiceFromTrafficTarget(endpoints, trafficTarget)
+		WRRServices = append(WRRServices, dynamic.WRRService{
+			Name:   splitKey,
+			Weight: Int(backend.Weight.Value()),
+		})
+	}
+
+	svc, exists, err := p.client.GetService(trafficSplit.Namespace, trafficSplit.Spec.Service)
+	if err != nil {
+		log.Errorf("Could not get service for service %s/%s: %v", trafficSplit.Namespace, trafficSplit.Spec.Service, err)
+		return
+	}
+	if !exists {
+		log.Errorf("service %s/%s do not exist", trafficSplit.Namespace, trafficSplit.Spec.Service)
+		return
+	}
+
+	svcWeighted := &dynamic.Service{
+		Weighted: &dynamic.WeightedRoundRobin{
+			Services: WRRServices,
+		},
+	}
+
+	weightedKey := buildKey(svc.Name, svc.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
+	config.HTTP.Routers[weightedKey] = p.buildRouterFromTrafficTarget(trafficSplit.Spec.Service, trafficSplit.Namespace, svc.Spec.ClusterIP, trafficTarget, 5000+id, weightedKey, whitelistMiddleware)
+	config.HTTP.Services[weightedKey] = svcWeighted
 }
 
 func buildKey(serviceName, namespace string, port int32, ttName, ttNamespace string) string {
