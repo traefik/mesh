@@ -6,5 +6,7 @@ It will safely install itself via the helm chart, and will be ready for use imme
 It can be installed by running:
 
 ```shell
-helm install helm/chart/maesh --namespace maesh
+helm repo add maesh https://containous.github.io/maesh/charts
+helm repo update
+helm install maesh--namespace maesh
 ```

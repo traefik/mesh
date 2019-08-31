@@ -1,6 +1,8 @@
 # Configuration
 
-The configuration for maesh is broken into two parts: the static configuration, and the dynamic configuration. The static configuration is configured when the maesh service mesh is installed, and is configured via the values.yaml file in the helm install.
+The configuration for maesh is broken into two parts: the static configuration, and the dynamic configuration. 
+The static configuration is configured when the maesh service mesh is installed, 
+and is configured via the values.yaml file in the helm install.
 
 ## Static configuration
 
@@ -20,6 +22,8 @@ The configuration for maesh is broken into two parts: the static configuration, 
 
 ## Dynamic configuration
 
+### Traffic type
+
 Annotations on services are the main way to configure maesh behavior.
 
 The service mode can be enabled by using the following annotation:
@@ -31,6 +35,8 @@ maesh.containo.us/traffic-type: "http"
 This annotation can be set to either `http` or `tcp`, and will specify the mode for that service operation.
 If this annotation is not present, the mesh service will operate in the default mode specified in the static configuration.
 
+### Retry
+
 Retries can be enabled by using the following annotation:
 
 ```yaml
@@ -39,6 +45,8 @@ maesh.containo.us/retry-attempts: "2"
 
 This annotation sets the number of retry attempts that maesh will make if a network error occurrs.
 Please note that this value is a string, and needs to be quoted.
+
+### Circuit breaker
 
 Circuit breaker can be enabled by using the following annotation:
 

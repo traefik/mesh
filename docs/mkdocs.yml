@@ -1,7 +1,7 @@
 site_name: Maesh
-site_description: maesh Documentation
+site_description: Maesh Documentation
 site_author: containo.us
-site_url: https://docs.maesh.io
+site_url: https://docs.mae.sh
 dev_addr: 0.0.0.0:8000
 
 #repo_name: 'GitHub'
@@ -15,13 +15,13 @@ theme:
   custom_dir: 'theme'
   language: en
   include_sidebar: true
-  favicon: assets/img/traefik.icon.png
-  logo: assets/img/traefik.logo.png
+  favicon: assets/img/maesh-icon.svg
+  logo: assets/img/maesh-logo.svg
   feature:
     tabs: false
   palette:
-    primary: 'pink'
-    accent: 'pink'
+    primary: 'white'
+    accent: '#9D0EB0'
   i18n:
     prev: 'Previous'
     next: 'Next'
