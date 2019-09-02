@@ -15,7 +15,10 @@ Maesh supports multiple configuration options: annotations on user service objec
 Not using sidecars means that Maesh does not modify your kubernetes objects, and does not modify your traffic without your knowledge. 
 Using the Maesh endpoints is all that is required.
 
-![Maesh](assets/img/after-maesh-graphic.png)
+<p align="center">
+<img width="360" src="assets/img/before-maesh-graphic.svg" alt="Maesh" title="Maesh" />
+<img width="360" src="assets/img/after-maesh-graphic.svg" alt="Maesh" title="Maesh" />
+</p>
 
 ## Prerequisites
 
