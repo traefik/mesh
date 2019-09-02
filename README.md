@@ -43,6 +43,6 @@ To run this app, you require the following:
 ```shell
 helm repo add maesh https://containous.github.io/maesh/charts
 helm repo update
-helm install maesh--namespace maesh
+helm install maesh --namespace maesh
 ```
 
