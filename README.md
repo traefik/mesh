@@ -16,6 +16,10 @@ It supports the latest Service Mesh Interface specification [SMI](https://smi-sp
 Moreover, Maesh is opt-in by default, 
 which means that your existing services are unaffected until you decide to add them to the mesh.
 
+<p align="center">
+<a href="https://smi-spec.io" target="_blank"><img width="150" src="docs/content/assets/img/smi.png" alt="SMI" title="SMI" /></a>
+</p>
+
 
 ## Non-Invasive Service Mesh
 
