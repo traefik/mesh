@@ -16,8 +16,8 @@ Not using sidecars means that Maesh does not modify your kubernetes objects, and
 Using the Maesh endpoints is all that is required.
 
 <p align="center">
-<img width="360" src="assets/img/before-maesh-graphic.svg" alt="Maesh" title="Maesh" />
-<img width="360" src="assets/img/after-maesh-graphic.svg" alt="Maesh" title="Maesh" />
+<img width="360" src="assets/img/before-maesh-graphic.png" alt="Maesh" title="Maesh" />
+<img width="360" src="assets/img/after-maesh-graphic.png" alt="Maesh" title="Maesh" />
 </p>
 
 ## Prerequisites
