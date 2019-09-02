@@ -108,11 +108,11 @@ helm-lint: helm
 	helm lint helm/chart/maesh
 
 helm-publish: helm-lint
+	helm package --app-version $(TAG_NAME) $(DIST_DIR)/helm/chart/maesh
 	cp helm/chart/README.md index.md
 	git config user.email "traefiker@users.noreply.github.com"
 	git config user.name "traefiker"
 	git checkout gh-pages || (git checkout --orphan gh-pages && git rm -rf . > /dev/null)
-	helm package helm/chart/maesh
 	mkdir -p charts
 	mv *.tgz index.md charts/
 	helm repo index charts/

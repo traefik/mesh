@@ -8,5 +8,5 @@ It can be installed by running:
 ```shell
 helm repo add maesh https://containous.github.io/maesh/charts
 helm repo update
-helm install maesh --namespace maesh
+helm install --name=maesh --namespace=maesh maesh/maesh
 ```
