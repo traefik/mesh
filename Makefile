@@ -1,4 +1,3 @@
-VERSION := latest
 DOCKER_IMAGE_NAME := containous/maesh
 
 SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')

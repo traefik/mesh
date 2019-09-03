@@ -1,0 +1,75 @@
+language: go
+
+sudo: required
+dist: xenial
+
+notifications:
+  email:
+    on_success: never
+    on_failure: change
+
+cache:
+  directories:
+    - $GOPATH/pkg/mod
+
+matrix:
+  fast_finish: true
+  include:
+    - go: 1.12.x
+      env: STABLE=true
+
+env:
+  global:
+    - GO111MODULE=on
+
+services:
+  - docker
+
+script:
+  - echo "Skipping tests... (Tests are executed on SemaphoreCI)"
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then make -C ./docs docs; fi
+
+install:
+  - go mod tidy
+  - git diff --exit-code go.mod
+  - git diff --exit-code go.sum
+  - go mod download
+
+before_deploy:
+  # Install linters
+  - >
+    curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
+    golangci-lint --version
+
+    if ! [ "$BEFORE_DEPLOY_RUN" ]; then
+      export BEFORE_DEPLOY_RUN=1;
+      echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+    fi
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: curl -sL https://git.io/goreleaser | bash
+    on:
+      tags: true
+      condition: $STABLE = true
+  - provider: script
+    skip_cleanup: true
+    script: make build push-docker
+    on:
+      tags: true
+      condition: $STABLE = true
+  - provider: script
+    skip_cleanup: true
+    script: make helm-publish
+    on:
+      tags: true
+      condition: $STABLE = true
+  - provider: pages
+    edge: false
+    github_token: ${GITHUB_TOKEN}
+    target_branch: gh-pages-docs
+    local_dir: docs/site
+    skip_cleanup: true
+    on:
+      repo: containous/maesh
+      all_branches: true
