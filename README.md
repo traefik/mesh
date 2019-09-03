@@ -50,3 +50,17 @@ helm repo update
 helm install --name=maesh --namespace=maesh maesh/maesh
 ```
 
+
+## Contributing
+
+[Contributing guide](CONTRIBUTING.md).
+
+## License
+
+[Apache 2.0][License].
+
+[specs]: https://smi-spec.io
+[docs]: https://docs.mae.sh
+[license]: https://github.com/containous/maesh/blob/master/LICENSE
+[github]: https://github.com/containous/maesh
+[bugs]: https://github.com/containous/maesh/issues?q=is%3Aissue+is%3Aopen+label%3Abug
