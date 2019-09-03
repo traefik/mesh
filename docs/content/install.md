@@ -10,7 +10,7 @@ helm repo update
 Install maesh helm chart:
 
 ```bash
-helm install maesh
+helm install --name=maesh --namespace=maesh maesh/maesh
 ```
 
 ## Install from source

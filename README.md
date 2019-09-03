@@ -1,14 +1,24 @@
-# Maesh
+<p align="center">
+<img width="400" src="docs/content/assets/img/maesh.png" alt="Maesh" title="Maesh" />
+</p>
 
-The simpler service mesh controller
 
 [![Build Status](https://semaphoreci.com/api/v1/projects/d10436a4-dcfb-454a-b19e-a9c96370b92d/2743246/badge.svg)](https://semaphoreci.com/containous/maesh)
+[![release](https://img.shields.io/github/tag-date/containous/maesh.svg)](https://github.com/containous/maesh/releases)
+[![Build Status](https://travis-ci.com/containous/maesh.svg?branch=master)](https://travis-ci.com/containous/maesh)
+[![Discourse status](https://img.shields.io/discourse/https/community.containo.us/status?label=Community&style=social)](https://community.containo.us/c/maesh)
+
+## Maesh: Simpler Service Mesh
 
 Maesh is a simple, yet full-featured service mesh.. 
 It is container-native and fits as your de-facto service mesh in your Kubernetes cluster. 
 It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io) that facilitates integration with pre-existing solution. 
 Moreover, Maesh is opt-in by default, 
 which means that your existing services are unaffected until you decide to add them to the mesh.
+
+<p align="center">
+<a href="https://smi-spec.io" target="_blank"><img width="150" src="docs/content/assets/img/smi.png" alt="SMI" title="SMI" /></a>
+</p>
 
 
 ## Non-Invasive Service Mesh
@@ -19,7 +29,10 @@ Maesh supports multiple configuration options: annotations on user service objec
 Not using sidecars means that Maesh does not modify your kubernetes objects, and does not modify your traffic without your knowledge. 
 Using the Maesh endpoints is all that is required.
 
-![Maesh](docs/content/assets/img/after-maesh-graphic.png)
+<p align="center">
+<img width="400" src="docs/content/assets/img/before-maesh-graphic.png" alt="Maesh" title="Maesh" />
+<img width="400" src="docs/content/assets/img/after-maesh-graphic.png" alt="Maesh" title="Maesh" />
+</p>
 
 ## Prerequisites
 
@@ -28,3 +41,12 @@ To run this app, you require the following:
 - Kubernetes 1.11+
 - CoreDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.3+ supported)
 - Helm v2 with a [working tiller service account](https://helm.sh/docs/using_helm/#installing-tiller)
+
+## Install
+
+```shell
+helm repo add maesh https://containous.github.io/maesh/charts
+helm repo update
+helm install --name=maesh --namespace=maesh maesh/maesh
+```
+

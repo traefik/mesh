@@ -23,19 +23,19 @@ helm repo update
 ### Deploy Maesh with Default Config
 
 ```bash
-helm install maesh
+helm install --name=maesh maesh/maesh
 ```
 
 ### Deploy Maesh in a Custom Namespace
 
 ```bash
-helm install maesh --namespace=maesh-custom maesh
+helm install --name=maesh --namespace=maesh maesh/maesh
 ```
 
 ### Deploy with Custom Configuration
 
 ```bash
-helm install maesh --set "key1=val1,key2=val2,..."
+helm install --name=maesh --namespace=maesh --set "key1=val1,key2=val2,..." maesh/maesh
 ```
 
 Where `key1=val1`, `key2=val2`, `...` are chart values that you can find at <https://github.com/containous/maesh/blob/master/helm/chart/maesh/values.yaml>.

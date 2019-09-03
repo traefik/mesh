@@ -1,11 +1,18 @@
 # Maesh: Simpler Service Mesh
 
+<p align="center">
+<img width="400" src="assets/img/maesh.png" alt="Maesh" title="Maesh" />
+</p>
+
 Maesh is a simple, yet full-featured service mesh. 
 It is container-native and fits as your de-facto service mesh in your Kubernetes cluster. 
 It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io) that facilitates integration with pre-existing solutions. 
 Moreover, Maesh is opt-in by default, 
 which means that your existing services are unaffected until you decide to add them to the mesh.
 
+<p align="center">
+<a href="https://smi-spec.io" target="_blank"><img width="150" src="assets/img/smi.png" alt="SMI" title="SMI" /></a>
+</p>
 
 ## Non-Invasive Service Mesh
 
@@ -15,7 +22,10 @@ Maesh supports multiple configuration options: annotations on user service objec
 Not using sidecars means that Maesh does not modify your kubernetes objects, and does not modify your traffic without your knowledge. 
 Using the Maesh endpoints is all that is required.
 
-![Maesh](assets/img/after-maesh-graphic.png)
+<p align="center">
+<img width="360" src="assets/img/before-maesh-graphic.png" alt="Maesh" title="Maesh" />
+<img width="360" src="assets/img/after-maesh-graphic.png" alt="Maesh" title="Maesh" />
+</p>
 
 ## Prerequisites
 
