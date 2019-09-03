@@ -15,7 +15,7 @@ theme:
   custom_dir: 'theme'
   language: en
   include_sidebar: true
-  favicon: assets/img/maesh-icon.svg
+  favicon: assets/img/maesh-logo.svg
   logo: assets/img/maesh-logo.svg
   feature:
     tabs: false
