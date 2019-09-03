@@ -28,10 +28,16 @@ archives:
         format: zip
     files:
       - LICENSE
-      - CHANGELOG.md
 
 checksum:
   name_template: "{{ .ProjectName }}_v{{ .Version }}_checksums.txt"
 
-release:
-  disable: true
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^doc:'
+      - '^chore:'
+      - '^test:'
+      - '^tests:'
