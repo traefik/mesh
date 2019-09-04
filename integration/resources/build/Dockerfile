@@ -1,4 +1,4 @@
-FROM golang:1.13rc1-alpine as golang-image
+FROM golang:1.13-alpine as golang-image
 
 # Minimalistic image
 FROM docker:18.09-dind
