@@ -64,12 +64,12 @@ deploy:
     on:
       tags: true
       condition: $STABLE = true
-  - provider: pages
-    edge: false
-    github_token: ${GITHUB_TOKEN}
-    target_branch: docs
-    local_dir: docs/site
-    skip_cleanup: true
-    on:
-      repo: containous/maesh
-      all_branches: true
+#  - provider: pages
+#    edge: false
+#    github_token: ${GITHUB_TOKEN}
+#    target_branch: docs
+#    local_dir: docs/site
+#    skip_cleanup: true
+#    on:
+#      tag: true
+#      repo: containous/maesh
