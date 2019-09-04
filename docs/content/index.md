@@ -4,10 +4,11 @@
 <img width="400" src="assets/img/maesh.png" alt="Maesh" title="Maesh" />
 </p>
 
-Maesh is a simple, yet full-featured service mesh. 
-It is container-native and fits as your de-facto service mesh in your Kubernetes cluster. 
-It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io) that facilitates integration with pre-existing solutions. 
-Moreover, Maesh is opt-in by default, 
+Maesh is a lightweight and simpler service mesh designed from the ground up to be straightforward, easy to install and easy to use.
+
+Built on top of Traefik, Maesh fits as your de-facto service mesh in your Kubernetes cluster supporting the latest Service Mesh Interface specification (SMI).
+
+Moreover, Maesh is opt-in by default,
 which means that your existing services are unaffected until you decide to add them to the mesh.
 
 <p align="center">
@@ -16,10 +17,10 @@ which means that your existing services are unaffected until you decide to add t
 
 ## Non-Invasive Service Mesh
 
-Maesh does not use any sidecar container but handles routing through proxy endpoints running on each node. 
-The mesh controller runs in a dedicated pod and handles all the configuration parsing and deployment to the proxy nodes. 
-Maesh supports multiple configuration options: annotations on user service objects, and SMI objects. 
-Not using sidecars means that Maesh does not modify your kubernetes objects, and does not modify your traffic without your knowledge. 
+Maesh does not use any sidecar container but handles routing through proxy endpoints running on each node.
+The mesh controller runs in a dedicated pod and handles all the configuration parsing and deployment to the proxy nodes.
+Maesh supports multiple configuration options: annotations on user service objects, and SMI objects.
+Not using sidecars means that Maesh does not modify your kubernetes objects, and does not modify your traffic without your knowledge.
 Using the Maesh endpoints is all that is required.
 
 <p align="center">
