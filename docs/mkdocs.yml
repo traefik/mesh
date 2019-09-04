@@ -28,9 +28,6 @@ theme:
 
 copyright: "Copyright &copy; 2016-2019 Containous"
 
-#google_analytics:
-#  - 'docs.maesh.io'
-
 extra_css:
   - assets/styles/extra.css # Our custom styles
   - assets/styles/atom-one-light.css # HightlightJS's CSS theme
