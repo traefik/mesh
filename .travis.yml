@@ -39,7 +39,7 @@ before_deploy:
   # Install linters
   - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
   - golangci-lint --version
-  # - if ! [ "$BEFORE_DEPLOY_RUN" ]; then export BEFORE_DEPLOY_RUN=1; echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin; fi
+  - if ! [ "$BEFORE_DEPLOY_RUN" ]; then export BEFORE_DEPLOY_RUN=1; echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin; fi
 deploy:
   - provider: script
     skip_cleanup: true
@@ -47,12 +47,12 @@ deploy:
     on:
       tags: true
       condition: $STABLE = true
-  # - provider: script
-  #   skip_cleanup: true
-  #   script: make build push-docker
-  #   on:
-  #     tags: true
-  #     condition: $STABLE = true
+  - provider: script
+    skip_cleanup: true
+    script: make build push-docker
+    on:
+      tags: true
+      condition: $STABLE = true
   - provider: script
     skip_cleanup: true
     script: make helm-package
@@ -67,5 +67,5 @@ deploy:
     skip_cleanup: true
     keep_history: true
     on:
-      repo: dduportal/maesh
+      repo: containous/maesh
       all_branches: true
