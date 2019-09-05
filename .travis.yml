@@ -29,23 +29,17 @@ script:
   - echo "Skipping tests... (Tests are executed on SemaphoreCI)"
   - make docs-package
 
-# install:
-  # - go mod tidy
-  # - git diff --exit-code go.mod
-  # - git diff --exit-code go.sum
-  # - go mod download
+install:
+  - go mod tidy
+  - git diff --exit-code go.mod
+  - git diff --exit-code go.sum
+  - go mod download
 
 before_deploy:
   # Install linters
-  - >
-    curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
-    golangci-lint --version
-
-    if ! [ "$BEFORE_DEPLOY_RUN" ]; then
-      export BEFORE_DEPLOY_RUN=1;
-      echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
-    fi
-
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
+  - golangci-lint --version
+  # - if ! [ "$BEFORE_DEPLOY_RUN" ]; then export BEFORE_DEPLOY_RUN=1; echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin; fi
 deploy:
   - provider: script
     skip_cleanup: true

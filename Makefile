@@ -26,7 +26,7 @@ $(DIST_DIR):
 	mkdir -p $(DIST_DIR)
 
 clean:
-	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages
+	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
 
 # Static linting of source files. See .golangci.toml for options
 local-check: $(DIST_DIR) helm-lint
@@ -109,12 +109,12 @@ helm-lint: helm
 
 pages:
 	mkdir -p $(CURDIR)/pages
-	rm -rf $(TMPDIR)/.pages \
-		&& git fetch --all --prune \
-		&& git worktree add --checkout $(TMPDIR)/.pages gh-pages \
-		&& cd $(TMPDIR)/.pages \
-		&& git pull
-	cp -r $(TMPDIR)/.pages/charts $(CURDIR)/pages/
+	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
+	curl -sSLO https://$(PROJECT)/archive/gh-pages.zip
+	unzip $(CURDIR)/gh-pages.zip
+	# We only keep the directory "charts" so documentation may remove files
+	cp -r $(CURDIR)/maesh-gh-pages/charts $(CURDIR)/pages/
+	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
 
 docs-package: pages
 	make -C $(CURDIR)/docs
