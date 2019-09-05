@@ -27,7 +27,7 @@ services:
 
 script:
   - echo "Skipping tests... (Tests are executed on SemaphoreCI)"
-  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then make -C ./docs docs; fi
+  - make docs-package
 
 # install:
   # - go mod tidy
@@ -46,7 +46,6 @@ before_deploy:
       echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
     fi
 
-    make docs-package
 deploy:
   - provider: script
     skip_cleanup: true

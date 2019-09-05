@@ -110,6 +110,7 @@ helm-lint: helm
 pages:
 	mkdir -p $(CURDIR)/pages
 	rm -rf $(TMPDIR)/.pages \
+		&& git fetch --all --prune \
 		&& git worktree add --checkout $(TMPDIR)/.pages gh-pages \
 		&& cd $(TMPDIR)/.pages \
 		&& git pull
