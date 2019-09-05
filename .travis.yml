@@ -72,6 +72,7 @@ deploy:
     target_branch: gh-pages
     local_dir: pages
     skip_cleanup: true
+    keep_history: true
     on:
       repo: dduportal/maesh
       all_branches: true
