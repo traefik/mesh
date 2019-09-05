@@ -29,11 +29,11 @@ script:
   - echo "Skipping tests... (Tests are executed on SemaphoreCI)"
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then make -C ./docs docs; fi
 
-install:
-  - go mod tidy
-  - git diff --exit-code go.mod
-  - git diff --exit-code go.sum
-  - go mod download
+# install:
+  # - go mod tidy
+  # - git diff --exit-code go.mod
+  # - git diff --exit-code go.sum
+  # - go mod download
 
 before_deploy:
   # Install linters
@@ -54,12 +54,12 @@ deploy:
     on:
       tags: true
       condition: $STABLE = true
-  - provider: script
-    skip_cleanup: true
-    script: make build push-docker
-    on:
-      tags: true
-      condition: $STABLE = true
+  # - provider: script
+  #   skip_cleanup: true
+  #   script: make build push-docker
+  #   on:
+  #     tags: true
+  #     condition: $STABLE = true
   - provider: script
     skip_cleanup: true
     script: make helm-package
