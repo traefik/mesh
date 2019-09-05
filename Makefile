@@ -109,6 +109,15 @@ helm-lint: helm
 
 pages:
 	mkdir -p $(CURDIR)/pages
+	rm -rf $(TMPDIR)/.pages \
+		&& git worktree add --checkout $(TMPDIR)/.pages gh-pages \
+		&& cd $(TMPDIR)/.pages \
+		&& git pull
+	cp -r $(TMPDIR)/.pages/charts $(CURDIR)/pages/
+
+docs-package: pages
+	make -C $(CURDIR)/docs
+	cp -r $(CURDIR)/docs/site/* $(CURDIR)/pages/
 
 helm-package: helm-lint pages
 	helm package --app-version $(TAG_NAME) $(CURDIR)/helm/chart/maesh
@@ -117,10 +126,6 @@ helm-package: helm-lint pages
 	mv *.tgz index.md $(CURDIR)/pages/charts/
 	helm repo index $(CURDIR)/pages/charts/
 
-docs-package: pages
-	make -C $(CURDIR)/docs
-	cp -r $(CURDIR)/docs/site/* $(CURDIR)/pages/
-
 .PHONY: local-check local-build local-test check build test push-docker \
-		vendor kubectl test-integration local-test-integration
+		vendor kubectl test-integration local-test-integration pages
 .PHONY: helm helm-lint helm-package
