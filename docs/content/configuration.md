@@ -10,7 +10,7 @@ and is configured via the values.yaml file in the helm install.
 
 - Debug logging can be globally enabled.
 
-- The default mesh node can be configured. If this is not set, the default mode will be HTTP.
+- The default mesh mode can be configured. If this is not set, the default mode will be HTTP.
     This means that new mesh services that are not specified will default to operate in HTTP mode.
 
 - Tracing can be enabled.
@@ -56,6 +56,6 @@ maesh.containo.us/circuit-breaker-expression: "Expression"
 
 This annotation sets the expression for circuit breaking. 
 The circuit breaker protects your system from stacking requests to unhealthy services (resulting in cascading failures).
-When your system is healthy, the circuit is close (normal operations). When your system becomes unhealthy, the circuit becomes open and the requests are no longer forwarded (but handled by a fallback mechanism).
+When your system is healthy, the circuit is closed (normal operations). When your system becomes unhealthy, the circuit opens, and requests are no longer forwarded (but handled by a fallback mechanism).
 
 All configuration options are available [here](https://docs.traefik.io/v2.0/middlewares/circuitbreaker/#configuration-options)
