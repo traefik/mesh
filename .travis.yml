@@ -73,5 +73,5 @@ deploy:
     local_dir: pages
     skip_cleanup: true
     on:
-      repo: containous/maesh
+      repo: dduportal/maesh
       all_branches: true
