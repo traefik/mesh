@@ -8,7 +8,7 @@ DIST_DIR_MAESH = $(DIST_DIR)/$(BINARY_NAME)
 PROJECT ?= github.com/containous/$(BINARY_NAME)
 GOLANGCI_LINTER_VERSION = v1.17.1
 
-TAG_NAME := $(shell git tag -l --contains HEAD)
+TAG_NAME ?= $(shell git tag -l --contains HEAD)
 SHA := $(shell git rev-parse --short HEAD)
 VERSION := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
 BUILD_DATE := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
