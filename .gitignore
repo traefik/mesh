@@ -15,3 +15,6 @@ maesh
 .vscode
 vendor
 integration/resources/compose/images
+pages/
+maesh-gh-pages*
+*.zip

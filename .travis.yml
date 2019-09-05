@@ -27,7 +27,7 @@ services:
 
 script:
   - echo "Skipping tests... (Tests are executed on SemaphoreCI)"
-  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then make -C ./docs docs; fi
+  - make docs-package
 
 install:
   - go mod tidy
@@ -37,14 +37,9 @@ install:
 
 before_deploy:
   # Install linters
-  - >
-    curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
-    golangci-lint --version
-
-    if ! [ "$BEFORE_DEPLOY_RUN" ]; then
-      export BEFORE_DEPLOY_RUN=1;
-      echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
-    fi
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
+  - golangci-lint --version
+  - if ! [ "$BEFORE_DEPLOY_RUN" ]; then export BEFORE_DEPLOY_RUN=1; echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin; fi
 deploy:
   - provider: script
     skip_cleanup: true
@@ -60,16 +55,17 @@ deploy:
       condition: $STABLE = true
   - provider: script
     skip_cleanup: true
-    script: make helm-publish
+    script: make helm-package
     on:
       tags: true
       condition: $STABLE = true
-#  - provider: pages
-#    edge: false
-#    github_token: ${GITHUB_TOKEN}
-#    target_branch: docs
-#    local_dir: docs/site
-#    skip_cleanup: true
-#    on:
-#      tag: true
-#      repo: containous/maesh
+  - provider: pages
+    edge: false
+    github_token: ${GITHUB_TOKEN}
+    target_branch: gh-pages
+    local_dir: pages
+    skip_cleanup: true
+    keep_history: true
+    on:
+      repo: containous/maesh
+      all_branches: true

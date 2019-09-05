@@ -8,7 +8,7 @@ DIST_DIR_MAESH = $(DIST_DIR)/$(BINARY_NAME)
 PROJECT ?= github.com/containous/$(BINARY_NAME)
 GOLANGCI_LINTER_VERSION = v1.17.1
 
-TAG_NAME := $(shell git tag -l --contains HEAD)
+TAG_NAME ?= $(shell git tag -l --contains HEAD)
 SHA := $(shell git rev-parse --short HEAD)
 VERSION := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
 BUILD_DATE := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
@@ -26,7 +26,7 @@ $(DIST_DIR):
 	mkdir -p $(DIST_DIR)
 
 clean:
-	rm -rf dist/ cover.out
+	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
 
 # Static linting of source files. See .golangci.toml for options
 local-check: $(DIST_DIR) helm-lint
@@ -102,23 +102,31 @@ tidy:
 
 helm:
 	@command -v helm >/dev/null 2>&1 || curl https://raw.githubusercontent.com/helm/helm/v2.14.1/scripts/get | bash
+	@helm init --client-only
 
 helm-lint: helm
 	helm lint helm/chart/maesh
 
-helm-publish: helm-lint
-	helm package --app-version $(TAG_NAME) $(DIST_DIR)/helm/chart/maesh
+pages:
+	mkdir -p $(CURDIR)/pages
+	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
+	curl -sSLO https://$(PROJECT)/archive/gh-pages.zip
+	unzip $(CURDIR)/gh-pages.zip
+	# We only keep the directory "charts" so documentation may remove files
+	cp -r $(CURDIR)/maesh-gh-pages/charts $(CURDIR)/pages/
+	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
+
+docs-package: pages
+	make -C $(CURDIR)/docs
+	cp -r $(CURDIR)/docs/site/* $(CURDIR)/pages/
+
+helm-package: helm-lint pages
+	helm package --app-version $(TAG_NAME) $(CURDIR)/helm/chart/maesh
 	cp helm/chart/README.md index.md
-	git config user.email "traefiker@users.noreply.github.com"
-	git config user.name "traefiker"
-	git checkout gh-pages || (git checkout --orphan gh-pages && git rm -rf . > /dev/null)
-	mkdir -p charts
-	mv *.tgz index.md charts/
-	helm repo index charts/
-	git add charts/
-	git commit -m "[helm] Publishing helm charts: ${REVISION}"
-	git push origin gh-pages
+	mkdir -p $(CURDIR)/pages/charts
+	mv *.tgz index.md $(CURDIR)/pages/charts/
+	helm repo index $(CURDIR)/pages/charts/
 
 .PHONY: local-check local-build local-test check build test push-docker \
-		vendor kubectl test-integration local-test-integration
-.PHONY: helm helm-lint helm-publish
+		vendor kubectl test-integration local-test-integration pages
+.PHONY: helm helm-lint helm-package
