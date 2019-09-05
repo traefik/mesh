@@ -15,3 +15,4 @@ maesh
 .vscode
 vendor
 integration/resources/compose/images
+pages/

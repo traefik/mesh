@@ -26,7 +26,7 @@ $(DIST_DIR):
 	mkdir -p $(DIST_DIR)
 
 clean:
-	rm -rf dist/ cover.out
+	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages
 
 # Static linting of source files. See .golangci.toml for options
 local-check: $(DIST_DIR) helm-lint
@@ -106,19 +106,20 @@ helm:
 helm-lint: helm
 	helm lint helm/chart/maesh
 
-helm-publish: helm-lint
-	helm package --app-version $(TAG_NAME) $(DIST_DIR)/helm/chart/maesh
+pages:
+	mkdir -p $(CURDIR)/pages
+
+helm-package: helm-lint pages
+	helm package --app-version $(TAG_NAME) $(CURDIR)/helm/chart/maesh
 	cp helm/chart/README.md index.md
-	git config user.email "traefiker@users.noreply.github.com"
-	git config user.name "traefiker"
-	git checkout gh-pages || (git checkout --orphan gh-pages && git rm -rf . > /dev/null)
-	mkdir -p charts
-	mv *.tgz index.md charts/
-	helm repo index charts/
-	git add charts/
-	git commit -m "[helm] Publishing helm charts: ${REVISION}"
-	git push origin gh-pages
+	mkdir -p $(CURDIR)/pages/charts
+	mv *.tgz index.md $(CURDIR)/pages/charts/
+	helm repo index $(CURDIR)/pages/charts/
+
+docs-package: pages
+	make -C $(CURDIR)/docs
+	cp -r $(CURDIR)/docs/site/* $(CURDIR)/pages/
 
 .PHONY: local-check local-build local-test check build test push-docker \
 		vendor kubectl test-integration local-test-integration
-.PHONY: helm helm-lint helm-publish
+.PHONY: helm helm-lint helm-package
