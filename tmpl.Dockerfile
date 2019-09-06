@@ -1,5 +1,4 @@
-# Let's build maesh for linux-amd64
-FROM golang:1.13-alpine AS base-image
+FROM golang:1.13-alpine AS builder
 
 # Package dependencies
 RUN apk --no-cache --no-progress add \
@@ -26,19 +25,15 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
-FROM base-image as maker
-
-ARG MAKE_TARGET=local-build
-
-RUN make ${MAKE_TARGET}
+RUN GOARCH={{ .GoARCH }} GOARM={{ .GoARM }} make local-build
 
 ## IMAGE
-FROM alpine:3.10
+FROM {{ .RuntimeImage }}
 
 RUN addgroup -g 1000 -S app && \
     adduser -u 1000 -S app -G app
 
-COPY --from=base-image /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=maker /go/src/github.com/containous/maesh/dist/maesh /app/
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /go/src/github.com/containous/maesh/dist/maesh /app/
 
 ENTRYPOINT ["/app/maesh"]
