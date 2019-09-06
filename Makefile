@@ -66,10 +66,9 @@ test: $(DIST_DIR)
 check: $(DIST_DIR) helm-lint
 	docker run -t --rm -v $(CURDIR):/go/src/$(PROJECT) -w /go/src/$(PROJECT) -e GO111MODULE golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run --config .golangci.toml
 
-push-docker: build
-	docker tag "$(DOCKER_IMAGE_NAME):latest" ${DOCKER_IMAGE_NAME}:${VERSION}
-	docker push ${DOCKER_IMAGE_NAME}:${VERSION}
-	docker push $(DOCKER_IMAGE_NAME):latest
+publish-images: build
+	seihon publish -v "$(VERSION)" -v "latest" --image-name ${DOCKER_IMAGE_NAME} --dry-run=false --base-runtime-image=alpine:3.10
+
 
 ## Create packages for the release
 release-packages: vendor build
@@ -127,6 +126,6 @@ helm-package: helm-lint pages
 	mv *.tgz index.md $(CURDIR)/pages/charts/
 	helm repo index $(CURDIR)/pages/charts/
 
-.PHONY: local-check local-build local-test check build test push-docker \
+.PHONY: local-check local-build local-test check build test publish-images \
 		vendor kubectl test-integration local-test-integration pages
 .PHONY: helm helm-lint helm-package

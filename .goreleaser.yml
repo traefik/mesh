@@ -13,8 +13,23 @@ builds:
       - -X github.com/containous/maesh/cmd/version.date={{.Date}}
     goos:
       - linux
+      - darwin
+      - windows
+      - freebsd
+      - openbsd
     goarch:
       - amd64
+      - 386
+      - arm
+      - arm64
+    goarm:
+      - 7
+      - 6
+      - 5
+
+    ignore:
+      - goos: darwin
+        goarch: 386
 
 archives:
   - id: maesh
