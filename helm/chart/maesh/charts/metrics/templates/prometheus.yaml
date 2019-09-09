@@ -44,7 +44,7 @@ data:
       - "/prometheus/rules/*.yaml"
 
     scrape_configs:
-      - job_name: 'traefik-mesh'
+      - job_name: 'maesh'
         relabel_configs:
           - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
             action: keep
@@ -63,7 +63,7 @@ data:
           - role: pod
             namespaces:
               names:
-                - traefik-mesh
+                - maesh
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment

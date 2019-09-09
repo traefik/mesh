@@ -115,7 +115,7 @@ data:
     - name: prometheus
       type: prometheus
       orgId: 1
-      url: http://prometheus.traefik-mesh.svc.cluster.local:9090
+      url: http://prometheus.maesh.svc.cluster.local:9090
       isDefault: true
       access: proxy
       jsonData:
@@ -134,7 +134,7 @@ data:
       editable: true
       options:
         path: /var/lib/grafana/dashboards
-        homeDashboardId: traefik-mesh
+        homeDashboardId: maesh
 
 ---
 apiVersion: v1
