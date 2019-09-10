@@ -59,7 +59,7 @@ deploy:
       condition: $STABLE = true
   - provider: script
     skip_cleanup: true
-    script: make helm-package
+    script: make helm-package helm-manifest
     on:
       tags: true
       condition: $STABLE = true

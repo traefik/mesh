@@ -126,6 +126,11 @@ helm-package: helm-lint pages
 	mv *.tgz index.md $(CURDIR)/pages/charts/
 	helm repo index $(CURDIR)/pages/charts/
 
+helm-manifest: helm-package
+	mkdir -p $(CURDIR)/pages/manifests
+	helm template $(CURDIR)/pages/charts/maesh-$(TAG_NAME).tgz --name=maesh --namespace=maesh > $(CURDIR)/pages/manifests/maesh-$(TAG_NAME).yaml
+	cp $(CURDIR)/pages/manifests/maesh-$(TAG_NAME).yaml $(CURDIR)/pages/manifests/maesh.yaml
+
 .PHONY: local-check local-build local-test check build test publish-images \
 		vendor kubectl test-integration local-test-integration pages
 .PHONY: helm helm-lint helm-package
