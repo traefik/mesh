@@ -118,6 +118,7 @@ pages:
 docs-package: pages
 	make -C $(CURDIR)/docs
 	cp -r $(CURDIR)/docs/site/* $(CURDIR)/pages/
+	cp $(CURDIR)/docs/CNAME $(CURDIR)/pages/CNAME
 
 helm-package: helm-lint pages
 	helm package --app-version $(TAG_NAME) $(CURDIR)/helm/chart/maesh
