@@ -24,77 +24,52 @@ func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
 	s.stopComposeProject()
 }
 
-func (s *CoreDNSSuite) TestCoreDNSVersion126Fail(c *check.C) {
-	// Test on CoreDNS 1.2
-	s.setCoreDNSVersion(c, "1.2.6")
-	err := s.installHelmMaesh(c, false)
-	c.Assert(err, checker.NotNil)
-}
-
-func (s *CoreDNSSuite) TestCoreDNSVersion131(c *check.C) {
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
-
-	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
+func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
+	testCases := []struct {
+		desc          string
+		version       string
+		expectedError bool
+	}{
+		{
+			desc:          "CoreDNS 1.2.6",
+			version:       "1.2.6",
+			expectedError: true,
+		},
+		{
+			desc:          "CoreDNS 1.3.1",
+			version:       "1.3.1",
+			expectedError: false,
+		},
+		{
+			desc:          "CoreDNS 1.4.0",
+			version:       "1.4.0",
+			expectedError: false,
+		},
+		{
+			desc:          "CoreDNS 1.6.3",
+			version:       "1.6.3",
+			expectedError: false,
+		},
 	}
 
-	// Test on CoreDNS 1.3.1
-	s.setCoreDNSVersion(c, "1.3.1")
-	err := s.installHelmMaesh(c, false)
-	c.Assert(err, checker.IsNil)
-	s.waitForMaeshControllerStarted(c)
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmMaesh(c)
-}
+	for _, test := range testCases {
+		pod := s.getToolsPodMaesh(c)
+		c.Assert(pod, checker.NotNil)
 
-func (s *CoreDNSSuite) TestCoreDNSVersion140(c *check.C) {
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
+		argSlice := []string{
+			"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
+		}
 
-	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
+		c.Log(test.desc)
+		s.setCoreDNSVersion(c, test.version)
+		err := s.installHelmMaesh(c, false)
+		if test.expectedError {
+			c.Assert(err, checker.NotNil)
+		} else {
+			c.Assert(err, checker.IsNil)
+			s.waitForMaeshControllerStarted(c)
+			s.waitKubectlExecCommand(c, argSlice, "whoami")
+			s.unInstallHelmMaesh(c)
+		}
 	}
-
-	// Test on CoreDNS 1.4.0
-	s.setCoreDNSVersion(c, "1.4.0")
-	err := s.installHelmMaesh(c, false)
-	c.Assert(err, checker.IsNil)
-	s.waitForMaeshControllerStarted(c)
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmMaesh(c)
-}
-
-func (s *CoreDNSSuite) TestCoreDNSVersion152(c *check.C) {
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
-
-	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
-	}
-
-	// Test on CoreDNS 1.5.2
-	s.setCoreDNSVersion(c, "1.5.2")
-	err := s.installHelmMaesh(c, false)
-	c.Assert(err, checker.IsNil)
-	s.waitForMaeshControllerStarted(c)
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmMaesh(c)
-}
-
-func (s *CoreDNSSuite) TestCoreDNSVersion163(c *check.C) {
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
-
-	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
-	}
-
-	// Test on CoreDNS 1.5.2
-	s.setCoreDNSVersion(c, "1.6.3")
-	err := s.installHelmMaesh(c, false)
-	c.Assert(err, checker.IsNil)
-	s.waitForMaeshControllerStarted(c)
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmMaesh(c)
 }
