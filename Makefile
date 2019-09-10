@@ -69,7 +69,6 @@ check: $(DIST_DIR) helm-lint
 publish-images: build
 	seihon publish -v "$(VERSION)" -v "latest" --image-name ${DOCKER_IMAGE_NAME} --dry-run=false --base-runtime-image=alpine:3.10
 
-
 ## Create packages for the release
 release-packages: vendor build
 	rm -rf dist
