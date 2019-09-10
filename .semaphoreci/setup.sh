@@ -1,6 +1,7 @@
 # For personnal CI
 # mv /home/runner/workspace/src/github.com/<username>/ /home/runner/workspace/src/github.com/containous/
 # cd /home/runner/workspace/src/github.com/containous/maesh/
+for s in apache2 cassandra elasticsearch memcached mysql mongod postgresql sphinxsearch rethinkdb rabbitmq-server redis-server; do sudo service $s stop; done
 sudo swapoff -a
 sudo dd if=/dev/zero of=/swapfile bs=1M count=3072
 sudo mkswap /swapfile

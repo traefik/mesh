@@ -37,6 +37,8 @@ func Test(t *testing.T) {
 	images = append(images, image{"coredns/coredns:1.2.6", true})
 	images = append(images, image{"coredns/coredns:1.3.1", true})
 	images = append(images, image{"coredns/coredns:1.4.0", true})
+	images = append(images, image{"coredns/coredns:1.5.2", true})
+	images = append(images, image{"coredns/coredns:1.6.3", true})
 	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.1", true})
 	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
 	images = append(images, image{"traefik:v2.0.0-rc1", true})
@@ -112,6 +114,7 @@ func (s *BaseSuite) startk3s(_ *check.C) error {
 	}
 
 	s.try = try.NewTry(s.client)
+
 	return nil
 }
 
@@ -153,8 +156,15 @@ func (s *BaseSuite) stopComposeProject() {
 	}
 }
 
-func (s *BaseSuite) waitForCoreDNSStarted(c *check.C) {
-	err := s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 30*time.Second)
+func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
+	cmd := exec.Command("kubectl", "apply", "-f", path.Join(s.dir, "resources/coredns"))
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
+
+	fmt.Println(string(output))
+	c.Assert(err, checker.IsNil)
+	err = s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -253,7 +263,7 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 
 	newDeployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("coredns/coredns:%s", version)
 
-	err = s.try.WaitUpdateDeployment(newDeployment, 30*time.Second)
+	err = s.try.WaitUpdateDeployment(newDeployment, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
