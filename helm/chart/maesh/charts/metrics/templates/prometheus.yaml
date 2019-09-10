@@ -63,7 +63,7 @@ data:
           - role: pod
             namespaces:
               names:
-                - maesh
+                - {{ .Release.Namespace }}
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
