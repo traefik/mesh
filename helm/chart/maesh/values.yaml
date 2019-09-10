@@ -23,6 +23,8 @@ controller:
   tolerations: []
   affinity: {}
 
+kubedns: false
+
 mesh:
   image:
     name: traefik:v2.0.0

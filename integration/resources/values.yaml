@@ -57,6 +57,7 @@ metrics:
     enabled: false
 
 smi: false
+kubedns: false
 
 limits:
   http: 10

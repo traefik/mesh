@@ -16,7 +16,7 @@ func (s *KubernetesSuite) SetUpSuite(c *check.C) {
 	s.startAndWaitForCoreDNS(c)
 	s.installTiller(c)
 
-	err := s.installHelmMaesh(c, false)
+	err := s.installHelmMaesh(c, false, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
 	s.startWhoami(c)
