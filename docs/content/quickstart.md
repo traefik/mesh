@@ -1,7 +1,18 @@
 # Quickstart
 
 Maesh can be installed in your cluster without affecting any running services.
-It will safely install itself via the helm chart, and will be ready for use immediately after.
+
+## Kubectl
+
+Mesh can installed using a single kubectl command line using the default configuration: 
+
+```shell
+kubectl create -f https://containous.github.io/maesh/manifests/maesh.yaml
+```
+
+## Helm
+
+Maesh will safely install itself via the helm chart, and will be ready for use immediately after.
 
 It can be installed by running:
 
