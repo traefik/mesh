@@ -5,7 +5,7 @@
 
 [![Build Status](https://semaphoreci.com/api/v1/projects/d10436a4-dcfb-454a-b19e-a9c96370b92d/2743246/badge.svg)](https://semaphoreci.com/containous/maesh)
 [![Docs](https://img.shields.io/badge/docs-current-brightgreen.svg)](https://docs.mae.sh)
-[![GitHub](https://img.shields.io/github/license/containous/maesh)](https://github.com/containous/traefik/blob/master/LICENSE.md)
+[![GitHub](https://img.shields.io/github/license/containous/maesh)](https://github.com/containous/maesh/blob/master/LICENSE)
 [![release](https://img.shields.io/github/tag-date/containous/maesh.svg)](https://github.com/containous/maesh/releases)
 [![Build Status](https://travis-ci.com/containous/maesh.svg?branch=master)](https://travis-ci.com/containous/maesh)
 [![Discourse status](https://img.shields.io/discourse/https/community.containo.us/status?label=Community&style=social)](https://community.containo.us/c/maesh)
