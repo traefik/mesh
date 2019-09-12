@@ -3,5 +3,5 @@ dependencies:
     version: 0.0.1
     condition: tracing.enabled
   - name: metrics
-    version: 0.0.3
+    version: 0.0.4
     condition: metrics.enabled
