@@ -22,9 +22,15 @@ func TestIgnored(t *testing.T) {
 			expected:  false,
 		},
 		{
-			desc:      "ignored namespace",
+			desc:      "ignored k8s default namespace",
 			name:      "foo",
 			namespace: metav1.NamespaceSystem,
+			expected:  true,
+		},
+		{
+			desc:      "ignored another namespace",
+			name:      "foo",
+			namespace: "someNamespace",
 			expected:  true,
 		},
 		{
@@ -45,7 +51,7 @@ func TestIgnored(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			i := NewIgnored(meshNamespace)
+			i := NewIgnored(meshNamespace, []string{"someNamespace"})
 			actual := i.Ignored(test.name, test.namespace)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -67,9 +73,15 @@ func TestWithoutMesh(t *testing.T) {
 			expected:  false,
 		},
 		{
-			desc:      "ignored namespace",
+			desc:      "ignored k8s default namespace",
 			name:      "foo",
 			namespace: metav1.NamespaceSystem,
+			expected:  true,
+		},
+		{
+			desc:      "ignored another namespace",
+			name:      "foo",
+			namespace: "someNamespace",
 			expected:  true,
 		},
 		{
@@ -90,7 +102,7 @@ func TestWithoutMesh(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			i := NewIgnored(meshNamespace)
+			i := NewIgnored(meshNamespace, []string{"someNamespace"})
 			i = i.WithoutMesh()
 			actual := i.Ignored(test.name, test.namespace)
 			assert.Equal(t, test.expected, actual)

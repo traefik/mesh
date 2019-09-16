@@ -50,8 +50,8 @@ type Controller struct {
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string) *Controller {
-	ignored := k8s.NewIgnored(meshNamespace)
+func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string) *Controller {
+	ignored := k8s.NewIgnored(meshNamespace, ignoreNamespaces)
 
 	// messageQueue is used to process messages from the sub-controllers
 	// if cross-controller logic is required

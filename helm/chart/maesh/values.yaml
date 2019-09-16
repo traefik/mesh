@@ -17,7 +17,7 @@ controller:
       cpu: "100m"
   logging:
     debug: true
-
+  ignoreNamespaces:
 
 mesh:
   image:
