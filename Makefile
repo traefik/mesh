@@ -6,7 +6,6 @@ BINARY_NAME = maesh
 DIST_DIR = $(CURDIR)/dist
 DIST_DIR_MAESH = $(DIST_DIR)/$(BINARY_NAME)
 PROJECT ?= github.com/containous/$(BINARY_NAME)
-GOLANGCI_LINTER_VERSION = v1.18.0
 
 TAG_NAME ?= $(shell git tag -l --contains HEAD)
 SHA := $(shell git rev-parse --short HEAD)
@@ -64,7 +63,12 @@ test: $(DIST_DIR)
 	docker build --tag "$(DOCKER_IMAGE_NAME):test" --target maker --build-arg="MAKE_TARGET=local-test" $(CURDIR)/
 
 check: $(DIST_DIR) helm-lint
-	docker run -t --rm -v $(CURDIR):/go/src/$(PROJECT) -w /go/src/$(PROJECT) -e GO111MODULE golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run --config .golangci.toml
+	docker build --tag "$(DOCKER_IMAGE_NAME):check" --target base-image $(CURDIR)/
+	docker run --rm \
+      -v $(CURDIR):/go/src/$(PROJECT) \
+      -w /go/src/$(PROJECT) \
+      -e GO111MODULE \
+      "$(DOCKER_IMAGE_NAME):check" golangci-lint run --config .golangci.toml
 
 publish-images: build
 	seihon publish -v "$(VERSION)" -v "latest" --image-name ${DOCKER_IMAGE_NAME} --dry-run=false --base-runtime-image=alpine:3.10
