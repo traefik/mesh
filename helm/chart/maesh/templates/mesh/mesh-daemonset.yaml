@@ -20,6 +20,9 @@ spec:
         app: {{ .Release.Name | quote }}
         component: maesh-mesh
         release: {{ .Release.Name | quote }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
     spec:
       serviceAccountName: maesh-mesh
       automountServiceAccountToken: false
