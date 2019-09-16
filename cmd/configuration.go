@@ -12,6 +12,7 @@ type MaeshConfiguration struct {
 	SMI         bool   `description:"Enable SMI operation" export:"true"`
 	DefaultMode string `description:"Default mode for mesh services" export:"true"`
 	Namespace   string `description:"The namespace that maesh is installed in." export:"true"`
+	IgnoreNamespaces []string `description:"The namespace that maesh should be ignoring." export:"true"`
 }
 
 // NewMaeshConfiguration creates a MaeshConfiguration with default values.

@@ -61,6 +61,7 @@ spec:
             - "--smi"
             {{- end }}
             - "--namespace=$(POD_NAMESPACE)"
+            - "--ignorenamespaces={{- .Values.controller.ignoreNamespaces }}"
           env:
             - name: POD_IP
               valueFrom:

@@ -71,7 +71,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	// Create a new stop Channel
 	stopCh := signals.SetupSignalHandler()
 	// Create a new ctr.
-	ctr := controller.NewMeshController(clients, iConfig.SMI, iConfig.DefaultMode, iConfig.Namespace)
+	ctr := controller.NewMeshController(clients, iConfig.SMI, iConfig.DefaultMode, iConfig.Namespace, iConfig.IgnoreNamespaces)
 
 	// run the ctr loop to process items
 	if err = ctr.Run(stopCh); err != nil {

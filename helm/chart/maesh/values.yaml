@@ -16,6 +16,7 @@ controller:
       mem: "50Mi"
       cpu: "100m"
   logging:
+    excludeNamespaces:
     debug: true
 
 

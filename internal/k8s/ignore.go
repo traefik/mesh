@@ -37,8 +37,15 @@ func (i *IgnoreWrapper) WithoutMesh() IgnoreWrapper {
 }
 
 // NewIgnored returns a new IgnoreWrapper.
-func NewIgnored(meshNamespace string) IgnoreWrapper {
+func NewIgnored(meshNamespace string, namspacesoIgnore []string)  IgnoreWrapper {
 	ignoredNamespaces := Namespaces{metav1.NamespaceSystem}
+
+	for _ , ns := range namspacesoIgnore {
+		if !ignoredNamespaces.Contains(ns) {
+			ignoredNamespaces = append(ignoredNamespaces, ns)
+		}
+	}
+
 	ignoredServices := Services{
 		{
 			Name:      "kubernetes",
