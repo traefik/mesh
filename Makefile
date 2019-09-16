@@ -6,7 +6,7 @@ BINARY_NAME = maesh
 DIST_DIR = $(CURDIR)/dist
 DIST_DIR_MAESH = $(DIST_DIR)/$(BINARY_NAME)
 PROJECT ?= github.com/containous/$(BINARY_NAME)
-GOLANGCI_LINTER_VERSION = v1.17.1
+GOLANGCI_LINTER_VERSION = v1.18.0
 
 TAG_NAME ?= $(shell git tag -l --contains HEAD)
 SHA := $(shell git rev-parse --short HEAD)

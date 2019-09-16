@@ -14,6 +14,7 @@ type Handler struct {
 	messageQueue workqueue.RateLimitingInterface
 }
 
+// NewHandler creates a handler.
 func NewHandler(ignored k8s.IgnoreWrapper, messageQueue workqueue.RateLimitingInterface) *Handler {
 	h := &Handler{
 		ignored:      ignored,
@@ -34,6 +35,7 @@ func (h *Handler) Init() error {
 	return nil
 }
 
+// OnAdd executed when an object is added.
 func (h *Handler) OnAdd(obj interface{}) {
 	// convert the resource object into a key (in this case
 	// we are just doing it in the format of 'namespace/name')
@@ -54,6 +56,7 @@ func (h *Handler) OnAdd(obj interface{}) {
 	}
 }
 
+// OnUpdate executed when an object is updated.
 func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(newObj)
 	if err != nil {
@@ -71,6 +74,7 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 	}
 }
 
+// OnDelete executed when an object is deleted.
 func (h *Handler) OnDelete(obj interface{}) {
 	// DeletionHandlingMetaNamsespaceKeyFunc is a helper function that allows
 	// us to check the DeletedFinalStateUnknown existence in the event that

@@ -212,7 +212,7 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 	}
 }
 
-func Int(v int64) *int {
+func intToP(v int64) *int {
 	i := int(v)
 	return &i
 }
@@ -498,7 +498,7 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 		config.HTTP.Services[splitKey] = p.buildServiceFromTrafficTarget(endpoints, trafficTarget)
 		WRRServices = append(WRRServices, dynamic.WRRService{
 			Name:   splitKey,
-			Weight: Int(backend.Weight.Value()),
+			Weight: intToP(backend.Weight.Value()),
 		})
 	}
 

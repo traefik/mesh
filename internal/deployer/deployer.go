@@ -197,17 +197,18 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 	}
 
 	url := fmt.Sprintf("http://%s:8080/api/providers/rest", m.PodIP)
-	client := &http.Client{Timeout: 10 * time.Second}
+
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(b))
 	if err != nil {
 		log.Errorf("Could not create request: %v", err)
 		return false
 	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
-		_, bodyErr := ioutil.ReadAll(resp.Body)
-		if bodyErr != nil {
+		if _, bodyErr := ioutil.ReadAll(resp.Body); bodyErr != nil {
 			log.Errorf("Unable to read response body: %v", bodyErr)
 			return false
 		}

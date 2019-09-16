@@ -46,6 +46,7 @@ type ClusterInitClient interface {
 	VerifyCluster() error
 }
 
+// CoreV1Client CoreV1 client.
 type CoreV1Client interface {
 	GetService(namespace, name string) (*corev1.Service, bool, error)
 	GetServices(namespace string) ([]*corev1.Service, error)
@@ -64,25 +65,30 @@ type CoreV1Client interface {
 	CreateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
 }
 
+// AppsV1Client AppsV1 client.
 type AppsV1Client interface {
 	GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error)
 	UpdateDeployment(deployment *appsv1.Deployment) (*appsv1.Deployment, error)
 }
 
+// SMIClient SMI client.
 type SMIClient interface {
 	SMIAccessV1Alpha1Client
 	SMISpecsV1Alpha1Client
 	SMISplitV1Alpha1Client
 }
 
+// SMIAccessV1Alpha1Client SMI Access v1Alpha client.
 type SMIAccessV1Alpha1Client interface {
 	GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget, error)
 }
 
+// SMISpecsV1Alpha1Client SMI Specs v1Alpha client.
 type SMISpecsV1Alpha1Client interface {
 	GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error)
 }
 
+// SMISplitV1Alpha1Client SMI Split v1Alpha client.
 type SMISplitV1Alpha1Client interface {
 	GetTrafficSplits() ([]*smiSplitv1alpha1.TrafficSplit, error)
 }
@@ -427,6 +433,7 @@ func (w *ClientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error
 	return pod, exists, err
 }
 
+// ListPodWithOptions retrieves pods from the specified namespace.
 func (w *ClientWrapper) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
 	return w.KubeClient.CoreV1().Pods(namespace).List(options)
 }
