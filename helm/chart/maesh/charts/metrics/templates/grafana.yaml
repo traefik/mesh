@@ -40,10 +40,12 @@ spec:
             memory: 100Mi
         readinessProbe:
           httpGet:
-            path: /login
+            path: /api/health
             port: web
+          initialDelaySeconds: 5
         livenessProbe:
-          tcpSocket:
+          httpGet:
+            path: /api/health
             port: web
           initialDelaySeconds: 5
           periodSeconds: 10

@@ -104,11 +104,12 @@ spec:
           containerPort: 9090
         readinessProbe:
           httpGet:
-            path: "/"
+            path: "/-/ready"
             port: webui
           initialDelaySeconds: 5
         livenessProbe:
-          tcpSocket:
+          httpGet:
+            path: "/-/healthy"
             port: webui
           initialDelaySeconds: 5
         resources:
