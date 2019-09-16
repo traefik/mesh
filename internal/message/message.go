@@ -10,10 +10,14 @@ import (
 )
 
 const (
+	// TypeCreated created type.
 	TypeCreated = "created"
+	// TypeUpdated updated type.
 	TypeUpdated = "updated"
+	// TypeDeleted deleted type.
 	TypeDeleted = "deleted"
 
+	// ConfigServiceVersionKey config service version key name.
 	ConfigServiceVersionKey string = "maesh-config-service-version-key"
 )
 
@@ -48,6 +52,7 @@ type Config struct {
 	Config *dynamic.Configuration
 }
 
+// BuildNewConfigWithVersion builds new config with version.
 func BuildNewConfigWithVersion(conf *dynamic.Configuration) Config {
 	t := time.Now().UnixNano()
 	c := conf.DeepCopy()

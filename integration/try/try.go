@@ -22,10 +22,12 @@ const (
 	CITimeoutMultiplier = 3
 )
 
+// Try holds try configuration.
 type Try struct {
 	client *k8s.ClientWrapper
 }
 
+// NewTry creates a new try.
 func NewTry(client *k8s.ClientWrapper) *Try {
 	return &Try{client: client}
 }

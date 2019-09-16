@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
+// Controller hold controller configuration.
 type Controller struct {
 	clients            *k8s.ClientWrapper
 	kubernetesFactory  informers.SharedInformerFactory
@@ -47,7 +48,7 @@ type Controller struct {
 	tcpStateTable      *k8s.State
 }
 
-// New is used to build the informers and other required components of the mesh controller,
+// NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
 func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string) *Controller {
 	ignored := k8s.NewIgnored(meshNamespace)
@@ -504,7 +505,7 @@ func (c *Controller) loadTCPStateTable() (*k8s.State, error) {
 		result = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
 	}
 
-	configMap, exists, err := c.clients.GetConfigMap(c.meshNamespace, k8s.TCPStateConfigmapName)
+	configMap, exists, err := c.clients.GetConfigMap(c.meshNamespace, k8s.TCPStateConfigMapName)
 	if err != nil {
 		return result, err
 	}
@@ -562,7 +563,7 @@ func (c *Controller) getTCPPortFromState(serviceName, serviceNamespace string, s
 }
 
 func (c *Controller) saveTCPStateTable() error {
-	configMap, exists, err := c.clients.GetConfigMap(c.meshNamespace, k8s.TCPStateConfigmapName)
+	configMap, exists, err := c.clients.GetConfigMap(c.meshNamespace, k8s.TCPStateConfigMapName)
 	if err != nil {
 		return err
 	}

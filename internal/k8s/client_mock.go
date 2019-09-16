@@ -44,6 +44,7 @@ func init() {
 
 }
 
+// CoreV1ClientMock holds CoreV1 client mock information.
 type CoreV1ClientMock struct {
 	services     []*corev1.Service
 	servicesList *corev1.ServiceList
@@ -59,12 +60,14 @@ type CoreV1ClientMock struct {
 	apiConfigMapError error
 }
 
+// AppsV1ClientMock holds AppsV1 client mock information.
 type AppsV1ClientMock struct {
 	deployments []*appsv1.Deployment
 
 	apiDeploymentError error
 }
 
+// SMIClientMock holds SMI client mock information.
 type SMIClientMock struct {
 	trafficTargets  []*accessv1alpha1.TrafficTarget
 	httpRouteGroups []*specsv1alpha1.HTTPRouteGroup
@@ -75,12 +78,14 @@ type SMIClientMock struct {
 	apiTrafficSplitError   error
 }
 
+// ClientMock clients mock.
 type ClientMock struct {
 	CoreV1ClientMock
 	SMIClientMock
 	AppsV1ClientMock
 }
 
+// NewCoreV1ClientMock create a new corev1 client mock.
 func NewCoreV1ClientMock(paths ...string) *CoreV1ClientMock {
 	c := &CoreV1ClientMock{}
 
@@ -114,6 +119,7 @@ func NewCoreV1ClientMock(paths ...string) *CoreV1ClientMock {
 	return c
 }
 
+// NewSMIClientMock create a new smi client mock.
 func NewSMIClientMock(paths ...string) *SMIClientMock {
 	s := &SMIClientMock{}
 
@@ -144,6 +150,7 @@ func NewSMIClientMock(paths ...string) *SMIClientMock {
 	return s
 }
 
+// NewClientMock create a new client mock.
 func NewClientMock(paths ...string) *ClientMock {
 	c := &ClientMock{}
 
@@ -191,6 +198,7 @@ func setNamespaceIfNot(obj metav1.Object) {
 	}
 }
 
+// GetService returns mocked date for service.
 func (c *CoreV1ClientMock) GetService(namespace, name string) (*corev1.Service, bool, error) {
 	if c.apiServiceError != nil {
 		return nil, false, c.apiServiceError
@@ -204,6 +212,7 @@ func (c *CoreV1ClientMock) GetService(namespace, name string) (*corev1.Service, 
 	return nil, false, c.apiServiceError
 }
 
+// GetServices returns mocked date for services.
 func (c *CoreV1ClientMock) GetServices(namespace string) ([]*corev1.Service, error) {
 	if c.apiServiceError != nil {
 		return nil, c.apiServiceError
@@ -212,6 +221,7 @@ func (c *CoreV1ClientMock) GetServices(namespace string) ([]*corev1.Service, err
 	return c.services, nil
 }
 
+// ListServicesWithOptions returns mocked date for services.
 func (c *CoreV1ClientMock) ListServicesWithOptions(namespace string, options metav1.ListOptions) (*corev1.ServiceList, error) {
 	if c.apiServiceError != nil {
 		return nil, c.apiServiceError
@@ -220,22 +230,27 @@ func (c *CoreV1ClientMock) ListServicesWithOptions(namespace string, options met
 	return c.servicesList, nil
 }
 
+// WatchServicesWithOptions mocks service watch.
 func (c *CoreV1ClientMock) WatchServicesWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error) {
 	panic("implement me")
 }
 
+// DeleteService mocks service delete.
 func (c *CoreV1ClientMock) DeleteService(namespace, name string) error {
 	panic("implement me")
 }
 
+// CreateService mocks service update.
 func (c *CoreV1ClientMock) CreateService(service *corev1.Service) (*corev1.Service, error) {
 	panic("implement me")
 }
 
+// UpdateService mocks service update.
 func (c *CoreV1ClientMock) UpdateService(service *corev1.Service) (*corev1.Service, error) {
 	panic("implement me")
 }
 
+// GetEndpoints returns mocked data for endpoints.
 func (c *CoreV1ClientMock) GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error) {
 	if c.apiEndpointsError != nil {
 		return nil, false, c.apiEndpointsError
@@ -249,6 +264,7 @@ func (c *CoreV1ClientMock) GetEndpoints(namespace, name string) (*corev1.Endpoin
 	return nil, false, c.apiEndpointsError
 }
 
+// GetPod returns mocked data for pod.
 func (c *CoreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
 	if c.apiPodError != nil {
 		return nil, false, c.apiPodError
@@ -262,12 +278,13 @@ func (c *CoreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, bool, er
 	return nil, false, c.apiPodError
 }
 
+// ListPodWithOptions returns mocked data for pods.
 func (c *CoreV1ClientMock) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
 	if c.apiPodError != nil {
 		return nil, c.apiPodError
 	}
 
-	items := []corev1.Pod{}
+	var items []corev1.Pod
 
 	for _, pod := range c.pods {
 		items = append(items, *pod)
@@ -279,6 +296,7 @@ func (c *CoreV1ClientMock) ListPodWithOptions(namespace string, options metav1.L
 	return result, nil
 }
 
+// GetNamespace returns mocked data for namespace.
 func (c *CoreV1ClientMock) GetNamespace(name string) (*corev1.Namespace, bool, error) {
 	if c.apiNamespaceError != nil {
 		return nil, false, c.apiNamespaceError
@@ -292,6 +310,7 @@ func (c *CoreV1ClientMock) GetNamespace(name string) (*corev1.Namespace, bool, e
 	return nil, false, c.apiNamespaceError
 }
 
+// GetNamespaces returns mocked data for namespaces.
 func (c *CoreV1ClientMock) GetNamespaces() ([]*corev1.Namespace, error) {
 	if c.apiNamespaceError != nil {
 		return nil, c.apiNamespaceError
@@ -299,6 +318,7 @@ func (c *CoreV1ClientMock) GetNamespaces() ([]*corev1.Namespace, error) {
 	return c.namespaces, nil
 }
 
+// GetConfigMap returns mocked data for config map.
 func (c *CoreV1ClientMock) GetConfigMap(namespace, name string) (*corev1.ConfigMap, bool, error) {
 	if c.apiConfigMapError != nil {
 		return nil, false, c.apiConfigMapError
@@ -312,30 +332,37 @@ func (c *CoreV1ClientMock) GetConfigMap(namespace, name string) (*corev1.ConfigM
 	return nil, false, c.apiConfigMapError
 }
 
+// CreateConfigMap mock config map create.
 func (c *CoreV1ClientMock) CreateConfigMap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	panic("implement me")
 }
 
+// UpdateConfigMap mock config map update.
 func (c *CoreV1ClientMock) UpdateConfigMap(configmap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	panic("implement me")
 }
 
+// EnableEndpointsError enables error on endpoints.
 func (c *CoreV1ClientMock) EnableEndpointsError() {
 	c.apiEndpointsError = errors.New("endpoint error")
 }
 
+// EnableNamespaceError enables error on namespace.
 func (c *CoreV1ClientMock) EnableNamespaceError() {
 	c.apiNamespaceError = errors.New("namespace error")
 }
 
+// EnableServiceError enables error on service.
 func (c *CoreV1ClientMock) EnableServiceError() {
 	c.apiServiceError = errors.New("service error")
 }
 
+// EnablePodError enables error on pod.
 func (c *CoreV1ClientMock) EnablePodError() {
 	c.apiPodError = errors.New("pod error")
 }
 
+// GetDeployment returns mocked data for deployment.
 func (a *AppsV1ClientMock) GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error) {
 	if a.apiDeploymentError != nil {
 		return nil, false, a.apiDeploymentError
@@ -349,10 +376,12 @@ func (a *AppsV1ClientMock) GetDeployment(namespace, name string) (*appsv1.Deploy
 	return nil, false, a.apiDeploymentError
 }
 
+// UpdateDeployment mocked deployment update.
 func (a *AppsV1ClientMock) UpdateDeployment(deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
 	panic("implement me")
 }
 
+// GetHTTPRouteGroup returns mocked data for HTTP route group.
 func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha1.HTTPRouteGroup, bool, error) {
 	if s.apiHTTPRouteGroupError != nil {
 		return nil, false, s.apiHTTPRouteGroupError
@@ -367,6 +396,7 @@ func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha
 	return nil, false, s.apiHTTPRouteGroupError
 }
 
+// GetTrafficTargets returns mocked data for traffic targets.
 func (s *SMIClientMock) GetTrafficTargets() ([]*accessv1alpha1.TrafficTarget, error) {
 	if s.apiTrafficTargetError != nil {
 		return nil, s.apiTrafficTargetError
@@ -375,6 +405,7 @@ func (s *SMIClientMock) GetTrafficTargets() ([]*accessv1alpha1.TrafficTarget, er
 	return s.trafficTargets, nil
 }
 
+// GetTrafficSplits returns mocked data for traffic splits.
 func (s *SMIClientMock) GetTrafficSplits() ([]*splitv1alpha1.TrafficSplit, error) {
 	if s.apiTrafficSplitError != nil {
 		return nil, s.apiTrafficSplitError
@@ -383,14 +414,17 @@ func (s *SMIClientMock) GetTrafficSplits() ([]*splitv1alpha1.TrafficSplit, error
 	return s.trafficSplits, nil
 }
 
+// EnableTrafficTargetError enables error on traffic target.
 func (s *SMIClientMock) EnableTrafficTargetError() {
 	s.apiTrafficTargetError = errors.New("trafficTarget error")
 }
 
+// EnableHTTPRouteGroupError enables error on http router group.
 func (s *SMIClientMock) EnableHTTPRouteGroupError() {
 	s.apiHTTPRouteGroupError = errors.New("httpRouteGroup error")
 }
 
+// EnableTrafficSplitError enables error on traffic split.
 func (s *SMIClientMock) EnableTrafficSplitError() {
 	s.apiTrafficSplitError = errors.New("trafficSplit error")
 }
