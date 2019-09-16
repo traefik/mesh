@@ -37,10 +37,10 @@ func (i *IgnoreWrapper) WithoutMesh() IgnoreWrapper {
 }
 
 // NewIgnored returns a new IgnoreWrapper.
-func NewIgnored(meshNamespace string, namspacesoIgnore []string)  IgnoreWrapper {
+func NewIgnored(meshNamespace string, namspacesoIgnore []string) IgnoreWrapper {
 	ignoredNamespaces := Namespaces{metav1.NamespaceSystem}
 
-	for _ , ns := range namspacesoIgnore {
+	for _, ns := range namspacesoIgnore {
 		if !ignoredNamespaces.Contains(ns) {
 			ignoredNamespaces = append(ignoredNamespaces, ns)
 		}
