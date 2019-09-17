@@ -132,6 +132,11 @@ func loadK3sImage(clusterName, imageName string, timeout time.Duration) error {
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Println(string(output))
+
+			logCmd := exec.Command("docker", "events", "--since", "5m")
+			logCmd.Env = os.Environ()
+			logOutput, _ := cmd.CombinedOutput()
+			fmt.Println(string(logOutput))
 		}
 		return err
 	}), ebo)
