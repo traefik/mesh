@@ -127,7 +127,7 @@ func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *dynamic.TCPServ
 		}
 	}
 
-	lb := &dynamic.TCPLoadBalancerService{
+	lb := &dynamic.TCPServersLoadBalancer{
 		Servers: servers,
 	}
 

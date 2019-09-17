@@ -190,7 +190,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.TCPService{
 						"test-foo-80-6653beb49ee354ea": {
-							LoadBalancer: &dynamic.TCPLoadBalancerService{
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
 								Servers: []dynamic.TCPServer{
 									{
 										Address: "10.0.0.1:80",
@@ -401,7 +401,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.TCPService{
 						"test-foo-80-6653beb49ee354ea": {
-							LoadBalancer: &dynamic.TCPLoadBalancerService{
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
 								Servers: []dynamic.TCPServer{
 									{
 										Address: "10.0.0.1:80",
@@ -458,7 +458,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.TCPService{
 						"test-foo-80-6653beb49ee354ea": {
-							LoadBalancer: &dynamic.TCPLoadBalancerService{
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
 								Servers: []dynamic.TCPServer{
 									{
 										Address: "10.0.0.1:80",
@@ -568,7 +568,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.TCPService{
 						"test-foo-80-6653beb49ee354ea": {
-							LoadBalancer: &dynamic.TCPLoadBalancerService{
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
 								Servers: []dynamic.TCPServer{
 									{
 										Address: "10.0.0.1:80",
@@ -734,7 +734,7 @@ func TestBuildTCPService(t *testing.T) {
 				},
 			},
 			expected: &dynamic.TCPService{
-				LoadBalancer: &dynamic.TCPLoadBalancerService{
+				LoadBalancer: &dynamic.TCPServersLoadBalancer{
 					Servers: []dynamic.TCPServer{
 						{
 							Address: "10.0.0.1:80",
