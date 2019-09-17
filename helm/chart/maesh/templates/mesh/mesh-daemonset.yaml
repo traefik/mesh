@@ -61,15 +61,14 @@ spec:
             - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" (add $i 10000) (add $i 10000) }}
           {{- end }}
             - "--providers.rest"
-            {{- if .Values.tracing.enabled }}
-            - "--tracing.jaeger.localagenthostport=jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:6831"
-            - "--tracing.jaeger.samplingserverurl=http://jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:5778/sampling"
+            {{- if .Values.tracing.jaeger.enabled }}
+            - "--tracing.jaeger.localagenthostport={{ .Values.tracing.jaeger.localagenthostport }}"
+            - "--tracing.jaeger.samplingserverurl={{ .Values.tracing.jaeger.samplingserverurl }}"
             {{- end }}
             - "--api.dashboard"
-#            - "--accesslog"
             - "--ping"
             - "--log.level={{ .Values.mesh.logging }}"
-            {{- if .Values.metrics.enabled }}
+            {{- if .Values.metrics.prometheus.enabled }}
             - "--metrics.prometheus"
             {{- end }}
           ports:
