@@ -42,13 +42,19 @@ mesh:
 # addon jaeger tracing configuration
 #
 tracing:
-  enabled: false
+  deploy: false
+  jaeger:
+    enabled: false
+    localagenthostport: ""
+    samplingserverurl: ""
 
 #
 # addon metrics configuration
 #
 metrics:
-  enabled: false
+  deploy: false
+  prometheus:
+    enabled: false
 
 smi: false
 

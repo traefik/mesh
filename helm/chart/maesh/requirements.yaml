@@ -1,7 +1,7 @@
 dependencies:
   - name: tracing
-    version: 0.0.1
-    condition: tracing.enabled
+    version: 0.0.2
+    condition: tracing.deploy
   - name: metrics
-    version: 0.0.4
-    condition: metrics.enabled
+    version: 0.0.5
+    condition: metrics.deploy
