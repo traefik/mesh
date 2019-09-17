@@ -18,6 +18,10 @@ controller:
   logging:
     debug: true
   ignoreNamespaces:
+  # Added so we can launch on nodes with restrictions
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
 mesh:
   image:
@@ -37,6 +41,8 @@ mesh:
       cpu: "100m"
   logging: INFO
   defaultMode: http
+  # Added so we can launch on nodes with restrictions
+  tolerations: []
 
 #
 # addon jaeger tracing configuration

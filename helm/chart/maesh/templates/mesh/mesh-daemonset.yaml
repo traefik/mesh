@@ -30,6 +30,10 @@ spec:
         runAsNonRoot: true
         runAsUser: 999
       terminationGracePeriodSeconds: 30
+      {{- with .Values.mesh.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
       {{- if .Values.tracing.enabled }}
       initContainers:
         - name: wait-for-jaeger-init
