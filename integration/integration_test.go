@@ -153,7 +153,7 @@ func (s *BaseSuite) stopK3s() {
 }
 
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
-	cmd := exec.Command("kubectl", "create", "-f", path.Join(s.dir, "resources/coredns"))
+	cmd := exec.Command("kubectl", "apply", "-f", path.Join(s.dir, "resources/coredns"))
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
@@ -190,7 +190,7 @@ func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) 
 
 func (s *BaseSuite) startWhoami(c *check.C) {
 	// Init helm with the service account created before.
-	cmd := exec.Command("kubectl", "create",
+	cmd := exec.Command("kubectl", "apply",
 		"-f", path.Join(s.dir, "resources/whoami"))
 	cmd.Env = os.Environ()
 
@@ -205,14 +205,14 @@ func (s *BaseSuite) startWhoami(c *check.C) {
 
 func (s *BaseSuite) installTiller(c *check.C) {
 	// create tiller service account.
-	cmd := exec.Command("kubectl", "create",
+	cmd := exec.Command("kubectl", "apply",
 		"-f", path.Join(s.dir, "resources/helm/serviceaccount.yaml"))
 	cmd.Env = os.Environ()
 	_, err := cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
 
 	// create tiller cluster role binding account.
-	cmd = exec.Command("kubectl", "create",
+	cmd = exec.Command("kubectl", "apply",
 		"-f", path.Join(s.dir, "resources/helm/clusterrolebinding.yaml"))
 	cmd.Env = os.Environ()
 	_, err = cmd.CombinedOutput()
@@ -265,7 +265,7 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 
 func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
 	// Create new tiny tools deployment.
-	cmd := exec.Command("kubectl", "create",
+	cmd := exec.Command("kubectl", "apply",
 		"-f", path.Join(s.dir, "resources/tools/deployment.yaml"))
 	cmd.Env = os.Environ()
 	_, err := cmd.CombinedOutput()
