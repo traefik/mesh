@@ -41,7 +41,7 @@ func Test(t *testing.T) {
 	images = append(images, image{"coredns/coredns:1.6.3", true})
 	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.1", true})
 	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
-	images = append(images, image{"traefik:v2.0.0-rc1", true})
+	images = append(images, image{"traefik:v2.0.0", true})
 
 	check.Suite(&SMISuite{})
 	check.Suite(&KubernetesSuite{})

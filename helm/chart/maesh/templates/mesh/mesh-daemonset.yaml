@@ -61,11 +61,13 @@ spec:
             - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" (add $i 10000) (add $i 10000) }}
           {{- end }}
             - "--providers.rest"
+            - "--providers.rest.insecure"
             {{- if .Values.tracing.jaeger.enabled }}
             - "--tracing.jaeger.localagenthostport={{ .Values.tracing.jaeger.localagenthostport }}"
             - "--tracing.jaeger.samplingserverurl={{ .Values.tracing.jaeger.samplingserverurl }}"
             {{- end }}
             - "--api.dashboard"
+            - "--api.insecure"
             - "--ping"
             - "--log.level={{ .Values.mesh.logging }}"
             {{- if .Values.metrics.prometheus.enabled }}
