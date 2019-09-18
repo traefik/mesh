@@ -84,7 +84,12 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	c.Assert(err, checker.IsNil)
 
 	// Create a k3s cluster.
-	cmd := exec.Command("k3d", "create", "--name", k3dClusterName, "--api-port", "8443", "--workers", "1")
+	cmd := exec.Command("k3d", "create", "--name", k3dClusterName,
+		"--api-port", "8443",
+		"--workers", "1",
+		"--server-arg", "'--no-deploy=traefik'",
+		"--server-arg", "'--no-deploy=coredns'",
+	)
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
