@@ -73,7 +73,7 @@ spec:
             - "--smi"
             {{- end }}
             - "--namespace=$(POD_NAMESPACE)"
-            - "--ignorenamespaces={{- .Values.controller.ignoreNamespaces }}"
+            - {{ include "maesh.controllerIgnoreNamespaces" . | quote }}
           env:
             - name: POD_IP
               valueFrom:
