@@ -122,7 +122,7 @@ data:
 
 ---
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   name: coredns
   namespace: {{ .Release.Namespace }}
@@ -137,6 +137,7 @@ metadata:
     "helm.sh/hook-weight": "4"
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
+  replicas: 2
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -150,6 +151,18 @@ spec:
         k8s-app: coredns
     spec:
       serviceAccountName: coredns
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: k8s-app
+                      operator: In
+                      values:
+                        - corednss
+                topologyKey: "kubernetes.io/hostname"
       tolerations:
         - key: "CriticalAddonsOnly"
           operator: "Exists"
