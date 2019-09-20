@@ -14,7 +14,7 @@ Define the templated image with tag
     {{- printf "%s:%s" .Values.controller.image.name ( .Values.controller.image.tag | default .Chart.AppVersion ) -}}
 {{- end -}}
 {{/*
-Define the templated image with tag
+Define the ignoreNamespaces List
 */}}
 {{- define "maesh.controllerIgnoreNamespaces" -}}
     --ignoreNamespaces=
