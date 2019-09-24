@@ -31,6 +31,17 @@ To deploy the helm chart, run:
 helm install helm/chart/maesh --namespace maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
+## KubeDNS support
+
+Maesh can support KubeDNS
+
+```bash
+helm install --name=maesh --namespace=maesh maesh/maesh --set kubedns=true
+```
+
+With this parameter Maesh will install a CoreDNS as a daemonset.
+KubeDNS will be patched with [stubDomains](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#example-stub-domain)
+
 ## Installation namespace
 
 Maesh does not _need_ to be installed into the maesh namespace, 

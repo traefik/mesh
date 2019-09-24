@@ -13,6 +13,7 @@ metadata:
     "helm.sh/hook": "pre-install"
     "helm.sh/hook-weight": "1"
     "helm.sh/hook-delete-policy": "before-hook-creation"
+
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -45,12 +46,19 @@ rules:
       - update
       - create
   - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+  - apiGroups:
       - apps
     resources:
       - deployments
     verbs:
       - get
       - update
+      - create
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -111,6 +119,9 @@ spec:
           imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent"}}
           args:
             - "prepare"
+            {{- if .Values.controller.logging.debug }}
+            - "--debug"
+            {{- end }}
           securityContext:
             capabilities:
               drop:

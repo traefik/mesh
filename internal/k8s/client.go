@@ -1,10 +1,15 @@
 package k8s
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/cenkalti/backoff/v3"
+	"github.com/containous/traefik/v2/pkg/safe"
 
 	smiAccessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	smiSpecsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
@@ -48,18 +53,22 @@ type ClusterInitClient interface {
 
 // CoreV1Client CoreV1 client.
 type CoreV1Client interface {
+	GetNamespace(name string) (*corev1.Namespace, bool, error)
+	GetNamespaces() ([]*corev1.Namespace, error)
+
 	GetService(namespace, name string) (*corev1.Service, bool, error)
 	GetServices(namespace string) ([]*corev1.Service, error)
 	ListServicesWithOptions(namespace string, options metav1.ListOptions) (*corev1.ServiceList, error)
 	WatchServicesWithOptions(namespace string, options metav1.ListOptions) (watch.Interface, error)
-	DeleteService(namespace, name string) error
 	CreateService(service *corev1.Service) (*corev1.Service, error)
 	UpdateService(service *corev1.Service) (*corev1.Service, error)
+	DeleteService(namespace, name string) error
+
 	GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error)
+
 	GetPod(namespace, name string) (*corev1.Pod, bool, error)
 	ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error)
-	GetNamespace(name string) (*corev1.Namespace, bool, error)
-	GetNamespaces() ([]*corev1.Namespace, error)
+
 	GetConfigMap(namespace, name string) (*corev1.ConfigMap, bool, error)
 	UpdateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
 	CreateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
@@ -140,14 +149,38 @@ func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {
 func (w *ClientWrapper) CheckCluster() error {
 	log.Infoln("Checking Cluster...")
 
-	log.Debugln("Creating CoreDNS version...")
-	deployment, exists, err := w.GetDeployment(metav1.NamespaceSystem, "coredns")
+	match, err := w.CoreDNSMatch()
 	if err != nil {
 		return err
 	}
 
+	if !match {
+		match, err = w.KubeDNSMatch()
+		if err != nil {
+			return err
+		}
+	}
+
+	if !match {
+		return fmt.Errorf("no core dns service available for installing maesh: %v", err)
+	}
+
+	return nil
+
+}
+
+// CoreDNSMatch checks if CoreDNS service can match.
+func (w *ClientWrapper) CoreDNSMatch() (bool, error) {
+	log.Infoln("Checking CoreDNS...")
+	log.Debugln("Get CoreDNS version...")
+	deployment, exists, err := w.GetDeployment(metav1.NamespaceSystem, "coredns")
+	if err != nil {
+		return false, fmt.Errorf("unable to get deployment %q in namesapce %q: %v", "coredns", metav1.NamespaceSystem, err)
+	}
+
 	if !exists {
-		return fmt.Errorf("%s does not exist in namespace %s", "coredns", metav1.NamespaceSystem)
+		log.Debugf("%s does not exist in namespace %s", "coredns", metav1.NamespaceSystem)
+		return false, nil
 	}
 
 	var version string
@@ -164,12 +197,29 @@ func (w *ClientWrapper) CheckCluster() error {
 	}
 
 	if !isCoreDNSVersionSupported(version) {
-		return fmt.Errorf("unsupported CoreDNS version %q, (supported versions are: %s)", version, strings.Join(supportedCoreDNSVersions, ","))
+		return false, fmt.Errorf("unsupported CoreDNS version %q, (supported versions are: %s)", version, strings.Join(supportedCoreDNSVersions, ","))
 	}
 
-	log.Infoln("Cluster check Complete...")
+	log.Info("CoreDNS match")
+	return true, nil
+}
 
-	return nil
+// KubeDNSMatch checks if KubeDNS service can match.
+func (w *ClientWrapper) KubeDNSMatch() (bool, error) {
+	log.Infoln("Checking KubeDNS...")
+	log.Debugln("Get KubeDNS version...")
+	_, exists, err := w.GetDeployment(metav1.NamespaceSystem, "kube-dns")
+	if err != nil {
+		return false, fmt.Errorf("unable to get deployment %q in namesapce %q: %v", "kube-dns", metav1.NamespaceSystem, err)
+	}
+
+	if !exists {
+		log.Debugf("%s does not exist in namespace %s", "kube-dns", metav1.NamespaceSystem)
+		return false, nil
+	}
+
+	log.Info("KubeDNS match")
+	return true, nil
 }
 
 // isCoreDNSVersionSupported returns true if the provided string contains a supported CoreDNS version.
@@ -187,8 +237,8 @@ func isCoreDNSVersionSupported(versionLine string) bool {
 func (w *ClientWrapper) InitCluster(namespace string) error {
 	log.Infoln("Preparing Cluster...")
 
-	log.Debugln("Patching CoreDNS...")
-	if err := w.patchCoreDNS("coredns", metav1.NamespaceSystem); err != nil {
+	log.Debugln("Patching DNS...")
+	if err := w.patchDNS(metav1.NamespaceSystem); err != nil {
 		return err
 	}
 
@@ -197,21 +247,76 @@ func (w *ClientWrapper) InitCluster(namespace string) error {
 	return nil
 }
 
-func (w *ClientWrapper) patchCoreDNS(deploymentName string, deploymentNamespace string) error {
-	coreDeployment, err := w.KubeClient.AppsV1().Deployments(deploymentNamespace).Get(deploymentName, metav1.GetOptions{})
+func (w *ClientWrapper) patchDNS(namespace string) error {
+	deployment, exist, err := w.GetDeployment(namespace, "coredns")
 	if err != nil {
 		return err
 	}
 
-	log.Debugln("Patching CoreDNS configmap...")
-	patched, err := w.patchCoreConfigMap(coreDeployment)
+	// If CoreDNS exist we will patch it.
+	if exist {
+		log.Debugln("Patching CoreDNS configmap...")
+		var patched bool
+		patched, err = w.patchCoreDNSConfigMap(deployment)
+		if err != nil {
+			return err
+		}
+
+		if !patched {
+			log.Debugln("Restarting CoreDNS pods...")
+			if err = w.restartPods(deployment); err != nil {
+				return err
+			}
+
+			return nil
+		}
+
+		return nil
+	}
+
+	log.Debugln("coredns not available fallback to kube-dns")
+	// If coreDNS does not exist we try to get the kube-dns
+	deployment, exist, err = w.GetDeployment(namespace, "kube-dns")
+	if err != nil {
+		return err
+	}
+
+	if !exist {
+		return fmt.Errorf("nor CoreDNS and KubeDNS are available in namespace %q", namespace)
+	}
+
+	ebo := backoff.NewConstantBackOff(10 * time.Second)
+
+	var serviceIP string
+	log.Debugln("Get CoreDNS service IP")
+	if err = backoff.Retry(safe.OperationWithRecover(func() error {
+		svc, exists, errSvc := w.GetService("maesh", "coredns")
+		if errSvc != nil {
+			return fmt.Errorf("unable get the service %q in namespace %q: %v", "coredns", "maesh", errSvc)
+		}
+		if !exists {
+			return fmt.Errorf("service %q has not been yet created", "coredns")
+		}
+		if svc.Spec.ClusterIP == "" {
+			return fmt.Errorf("service %q has no clusterIP", "coredns")
+		}
+
+		serviceIP = svc.Spec.ClusterIP
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable get the service %q in namespace %q: %v", "coredns", "maesh", err)
+	}
+
+	// Patch KubeDNS
+	log.Debugln("Patching KubeDNS configmap... with IP: ", serviceIP)
+	patched, err := w.patchKubeDNSConfigMap(deployment, serviceIP)
 	if err != nil {
 		return err
 	}
 
 	if !patched {
-		log.Debugln("Restarting CoreDNS pods...")
-		if err := w.restartCorePods(coreDeployment); err != nil {
+		log.Debugln("Restarting KubeDNS pods...")
+		if err := w.restartPods(deployment); err != nil {
 			return err
 		}
 	}
@@ -219,7 +324,7 @@ func (w *ClientWrapper) patchCoreDNS(deploymentName string, deploymentNamespace 
 	return nil
 }
 
-func (w *ClientWrapper) patchCoreConfigMap(coreDeployment *appsv1.Deployment) (bool, error) {
+func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment) (bool, error) {
 	var coreConfigMapName string
 	if len(coreDeployment.Spec.Template.Spec.Volumes) == 0 {
 		return false, errors.New("coreDNS configmap not defined")
@@ -274,11 +379,65 @@ maesh:53 {
 	return false, nil
 }
 
-func (w *ClientWrapper) restartCorePods(coreDeployment *appsv1.Deployment) error {
-	log.Infoln("Restarting coreDNS pods...")
+func (w *ClientWrapper) patchKubeDNSConfigMap(deployment *appsv1.Deployment, coreDNSIp string) (bool, error) {
+	var configMapName string
+	if len(deployment.Spec.Template.Spec.Volumes) == 0 {
+		return false, errors.New("kube-dns configmap not defined")
+	}
+
+	configMapName = deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+
+	configMap, err := w.KubeClient.CoreV1().ConfigMaps(deployment.Namespace).Get(configMapName, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	if len(configMap.ObjectMeta.Labels) > 0 {
+		if _, ok := configMap.ObjectMeta.Labels["maesh-patched"]; ok {
+			log.Debugln("Configmap already patched...")
+			return true, nil
+		}
+	}
+
+	stubDomains := make(map[string][]string)
+	originalBlock, exist := configMap.Data["stubDomains"]
+	if !exist {
+		originalBlock = "{}"
+	}
+
+	if err = json.Unmarshal([]byte(originalBlock), &stubDomains); err != nil {
+		return false, err
+	}
+
+	stubDomains["maesh"] = []string{coreDNSIp}
+	var newData []byte
+	newData, err = json.Marshal(stubDomains)
+	if err != nil {
+		return false, err
+	}
+
+	if configMap.Data == nil {
+		configMap.Data = make(map[string]string)
+	}
+	configMap.Data["stubDomains"] = string(newData)
+
+	if len(configMap.ObjectMeta.Labels) == 0 {
+		configMap.ObjectMeta.Labels = make(map[string]string)
+	}
+	configMap.ObjectMeta.Labels["maesh-patched"] = "true"
+
+	if _, err = w.KubeClient.CoreV1().ConfigMaps(deployment.Namespace).Update(configMap); err != nil {
+		return false, err
+	}
+
+	return false, nil
+}
+
+func (w *ClientWrapper) restartPods(deployment *appsv1.Deployment) error {
+	log.Infof("Restarting %s pods...\n", deployment.Name)
 
 	// Never edit original object, always work with a clone for updates.
-	newDeployment := coreDeployment.DeepCopy()
+	newDeployment := deployment.DeepCopy()
 	annotations := newDeployment.Spec.Template.Annotations
 	if len(annotations) == 0 {
 		annotations = make(map[string]string)
@@ -456,27 +615,6 @@ func (w *ClientWrapper) GetNamespaces() ([]*corev1.Namespace, error) {
 		result = append(result, &namespace)
 	}
 	return result, nil
-}
-
-// CreateNamespace creates a namespace if it doesn't exist.
-func (w *ClientWrapper) CreateNamespace(namespace string) error {
-	if _, err := w.KubeClient.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{}); err != nil {
-		ns := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-			},
-			Spec: corev1.NamespaceSpec{},
-		}
-
-		if _, err := w.KubeClient.CoreV1().Namespaces().Create(ns); err != nil {
-			return fmt.Errorf("unable to create namespace %q: %v", namespace, err)
-		}
-		log.Infof("Namespace %q created successfully", namespace)
-	} else {
-		log.Debugf("Namespace %q already exist", namespace)
-	}
-
-	return nil
 }
 
 // GetDeployment retrieves the deployment from the specified namespace.

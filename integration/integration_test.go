@@ -37,6 +37,7 @@ func Test(t *testing.T) {
 	check.Suite(&SMISuite{})
 	check.Suite(&KubernetesSuite{})
 	check.Suite(&CoreDNSSuite{})
+	check.Suite(&KubeDNSSuite{})
 
 	images = append(images, image{"containous/maesh:latest", false})
 	images = append(images, image{"containous/whoami:v1.0.1", true})
@@ -47,6 +48,9 @@ func Test(t *testing.T) {
 	images = append(images, image{"coredns/coredns:1.6.3", true})
 	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.1", true})
 	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
+	images = append(images, image{"gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7", true})
+	images = append(images, image{"gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7", true})
+	images = append(images, image{"gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7", true})
 	images = append(images, image{"traefik:v2.0.0", true})
 
 	for _, image := range images {
@@ -78,6 +82,7 @@ type BaseSuite struct {
 }
 
 func (s *BaseSuite) startk3s(c *check.C) {
+	c.Log("Starting k3s...")
 	// Set the base directory for the test suite
 	var err error
 	s.dir, err = os.Getwd()
@@ -87,8 +92,8 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	cmd := exec.Command("k3d", "create", "--name", k3dClusterName,
 		"--api-port", "8443",
 		"--workers", "1",
-		"--server-arg", "'--no-deploy=traefik'",
-		"--server-arg", "'--no-deploy=coredns'",
+		"--server-arg", "--no-deploy=traefik",
+		"--server-arg", "--no-deploy=coredns",
 	)
 	cmd.Env = os.Environ()
 
@@ -98,6 +103,7 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	c.Assert(err, checker.IsNil)
 
 	// Load images into k3s
+	c.Log("Importing docker images in to k3s...")
 	err = s.loadK3sImages()
 	c.Assert(err, checker.IsNil)
 
@@ -114,6 +120,7 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	c.Assert(err, checker.IsNil)
 
 	s.try = try.NewTry(s.client)
+	c.Log("k3s start successfully.")
 }
 
 func (s *BaseSuite) loadK3sImages() error {
@@ -166,6 +173,18 @@ func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
 	fmt.Println(string(output))
 	c.Assert(err, checker.IsNil)
 	err = s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second)
+	c.Assert(err, checker.IsNil)
+}
+
+func (s *BaseSuite) startAndWaitForKubeDNS(c *check.C) {
+	cmd := exec.Command("kubectl", "apply", "-f", path.Join(s.dir, "resources/kubedns"))
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
+
+	fmt.Println(string(output))
+	c.Assert(err, checker.IsNil)
+	err = s.try.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -234,12 +253,16 @@ func (s *BaseSuite) installTiller(c *check.C) {
 	s.waitForTiller(c)
 }
 
-func (s *BaseSuite) installHelmMaesh(_ *check.C, smi bool) error {
+func (s *BaseSuite) installHelmMaesh(_ *check.C, smi bool, kubeDNS bool) error {
 	// Install the helm chart.
 	argSlice := []string{"install", "../helm/chart/maesh", "--values", "resources/values.yaml", "--name", "powpow", "--namespace", "maesh"}
 
 	if smi {
 		argSlice = append(argSlice, "--set", "smi=true")
+	}
+
+	if kubeDNS {
+		argSlice = append(argSlice, "--set", "kubedns=true")
 	}
 
 	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 10*time.Second)

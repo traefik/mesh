@@ -59,7 +59,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 
 	time.Sleep(10 * time.Second)
 
-	err := s.installHelmMaesh(c, true)
+	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
 
@@ -217,7 +217,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 
 	time.Sleep(10 * time.Second)
 
-	err := s.installHelmMaesh(c, true)
+	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
 
