@@ -247,7 +247,11 @@ func (c *Controller) buildConfigurationFromProviders(event message.Message) {
 		c.smiProvider.BuildConfiguration(event, c.traefikConfig)
 		return
 	}
-	c.kubernetesProvider.BuildConfiguration(event, c.traefikConfig)
+	config, err := c.kubernetesProvider.BuildConfig()
+	if err != nil {
+		log.Errorf("unable to build configuration: %v", err)
+	}
+	c.traefikConfig = config
 }
 
 func (c *Controller) processCreatedMessage(event message.Message) {

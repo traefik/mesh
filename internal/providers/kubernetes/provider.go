@@ -8,10 +8,10 @@ import (
 	"strconv"
 
 	"github.com/containous/maesh/internal/k8s"
-	"github.com/containous/maesh/internal/message"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Provider holds a client to access the provider.
@@ -39,32 +39,6 @@ func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string, tcpS
 	p.Init()
 
 	return p
-}
-
-// BuildConfiguration builds the configuration for routing
-// from a native kubernetes environment.
-func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dynamic.Configuration) {
-	switch obj := event.Object.(type) {
-	case *corev1.Service:
-		switch event.Action {
-		case message.TypeCreated:
-			p.buildServiceIntoConfig(obj, nil, traefikConfig)
-		case message.TypeUpdated:
-			//FIXME: We will need to delete the old references in the config, and create the new service.
-		case message.TypeDeleted:
-			p.deleteServiceFromConfig(obj, traefikConfig)
-		}
-	case *corev1.Endpoints:
-		switch event.Action {
-		case message.TypeCreated:
-			// We don't process created endpoint events, processing is done under service creation.
-		case message.TypeUpdated:
-			p.buildServiceIntoConfig(nil, obj, traefikConfig)
-		case message.TypeDeleted:
-			// We don't precess deleted endpoint events, processig is done under service deletion.
-		}
-	}
-
 }
 
 func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string, addMiddlewares bool) *dynamic.Router {
@@ -136,73 +110,46 @@ func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *dynamic.TCPServ
 	}
 }
 
-func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *dynamic.Configuration) {
-	var exists bool
-	var err error
-	if service == nil {
-		service, exists, err = p.client.GetService(endpoints.Namespace, endpoints.Name)
-		if err != nil {
-			log.Errorf("Could not get service %s/%s: %v", endpoints.Namespace, endpoints.Name, err)
-			return
-		}
-		if !exists {
-			log.Errorf("endpoints for service %s/%s do not exist", endpoints.Namespace, endpoints.Name)
-			return
-		}
-
+// BuildConfig builds the configuration for routing
+// from a native kubernetes environment.
+func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
+	services, err := p.client.GetServices(metav1.NamespaceAll)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get services: %v", err)
 	}
 
-	if endpoints == nil {
-		endpoints, exists, err = p.client.GetEndpoints(service.Namespace, service.Name)
-		if err != nil {
-			log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
-			return
-		}
-		if !exists {
-			log.Errorf("endpoints for service %s/%s do not exist", service.Namespace, service.Name)
-			return
-		}
+	endpoints, err := p.client.GetEndpointses(metav1.NamespaceAll)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get endpoints: %v", err)
 	}
 
-	serviceMode := p.getServiceMode(service.Annotations)
+	config := createBaseConfigWithReadiness()
 
-	for id, sp := range service.Spec.Ports {
-		key := buildKey(service.Name, service.Namespace, sp.Port)
+	for _, service := range services {
+		serviceMode := p.getServiceMode(service.Annotations)
 
-		if serviceMode == k8s.ServiceTypeHTTP {
-			config.HTTP.Services[key] = p.buildService(endpoints)
-			middlewares := p.buildHTTPMiddlewares(service.Annotations)
-			if middlewares != nil {
-				config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, true)
-				config.HTTP.Middlewares[key] = middlewares
+		for id, sp := range service.Spec.Ports {
+			key := buildKey(service.Name, service.Namespace, sp.Port)
+
+			if serviceMode == k8s.ServiceTypeHTTP {
+				config.HTTP.Services[key] = p.buildService(getEndpointsFromList(service.Name, service.Namespace, endpoints))
+				middlewares := p.buildHTTPMiddlewares(service.Annotations)
+				if middlewares != nil {
+					config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, true)
+					config.HTTP.Middlewares[key] = middlewares
+					continue
+				}
+				config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, false)
 				continue
 			}
-			config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, false)
-			continue
+
+			meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
+			config.TCP.Routers[key] = p.buildTCPRouter(meshPort, key)
+			config.TCP.Services[key] = p.buildTCPService(getEndpointsFromList(service.Name, service.Namespace, endpoints))
 		}
-
-		meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
-		config.TCP.Routers[key] = p.buildTCPRouter(meshPort, key)
-		config.TCP.Services[key] = p.buildTCPService(endpoints)
 	}
-}
 
-func (p *Provider) deleteServiceFromConfig(service *corev1.Service, config *dynamic.Configuration) {
-	serviceMode := p.getServiceMode(service.Annotations)
-
-	for _, sp := range service.Spec.Ports {
-		key := buildKey(service.Name, service.Namespace, sp.Port)
-
-		if serviceMode == k8s.ServiceTypeHTTP {
-			delete(config.HTTP.Routers, key)
-			delete(config.HTTP.Services, key)
-			delete(config.HTTP.Middlewares, key)
-			continue
-		}
-
-		delete(config.TCP.Routers, key)
-		delete(config.TCP.Services, key)
-	}
+	return config, nil
 }
 
 func (p *Provider) getServiceMode(annotations map[string]string) string {
@@ -261,6 +208,45 @@ func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort
 		}
 	}
 	return 0
+}
+
+func getEndpointsFromList(name, namespace string, endpointList []*corev1.Endpoints) *corev1.Endpoints {
+	for _, endpoints := range endpointList {
+		if endpoints.Name == name && endpoints.Namespace == namespace {
+			return endpoints
+		}
+	}
+	return nil
+}
+
+func createBaseConfigWithReadiness() *dynamic.Configuration {
+	return &dynamic.Configuration{
+		HTTP: &dynamic.HTTPConfiguration{
+			Routers: map[string]*dynamic.Router{
+				"readiness": {
+					Rule:        "Path(`/ping`)",
+					EntryPoints: []string{"readiness"},
+					Service:     "readiness",
+				},
+			},
+			Services: map[string]*dynamic.Service{
+				"readiness": {
+					LoadBalancer: &dynamic.ServersLoadBalancer{
+						Servers: []dynamic.Server{
+							{
+								URL: "http://127.0.0.1:8080",
+							},
+						},
+					},
+				},
+			},
+			Middlewares: map[string]*dynamic.Middleware{},
+		},
+		TCP: &dynamic.TCPConfiguration{
+			Routers:  map[string]*dynamic.TCPRouter{},
+			Services: map[string]*dynamic.TCPService{},
+		},
+	}
 }
 
 func buildKey(name, namespace string, port int32) string {
