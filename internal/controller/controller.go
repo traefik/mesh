@@ -200,22 +200,15 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 // runWorker executes the loop to process new items added to the queue
 func (c *Controller) runWorker() {
-	log.Debug("MeshController.runWorker: starting")
-
 	// invoke processNextMessage to fetch and consume the next
 	// message put in the queue
 	for c.processNextMessage() {
-		log.Debugf("MeshController.runWorker: processing next item")
 	}
-
-	log.Debugf("MeshController.runWorker: completed")
 }
 
 // processNextConfiguration retrieves each queued item and takes the
 // necessary handler action.
 func (c *Controller) processNextMessage() bool {
-	log.Debugf("MeshController Waiting for next item to process...")
-
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
 	// processing
@@ -268,7 +261,6 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 		}
 
 	case *corev1.Endpoints:
-		log.Debugf("MeshController ObjectCreated with type: *corev1.Endpoints: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 
 	case *corev1.Pod:
@@ -358,7 +350,6 @@ func (c *Controller) processDeletedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 
 	case *corev1.Pod:
-		log.Debugf("MeshController ObjectDeleted with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 	}
 
