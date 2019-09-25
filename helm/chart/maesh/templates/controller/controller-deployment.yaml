@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -92,3 +93,18 @@ spec:
             limits:
               memory: {{ .Values.controller.resources.limit.mem }}
               cpu: {{ .Values.controller.resources.limit.cpu }}
+      initContainers:
+        - name: maesh-prepare
+          image: {{ include "maesh.controllerImage" . | quote }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent"}}
+          args:
+            - "prepare"
+            {{- if .Values.controller.logging.debug }}
+            - "--debug"
+            {{- end }}
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE

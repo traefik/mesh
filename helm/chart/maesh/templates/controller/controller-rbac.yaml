@@ -52,6 +52,8 @@ rules:
       - deployments
     verbs:
       - get
+      - update
+      - create
   - apiGroups:
       - access.smi-spec.io
       - specs.smi-spec.io

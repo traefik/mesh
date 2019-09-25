@@ -10,4 +10,3 @@ metadata:
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 automountServiceAccountToken: false
-
