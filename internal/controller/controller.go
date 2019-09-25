@@ -379,8 +379,7 @@ func (c *Controller) createMeshServices() error {
 			}
 		}
 		log.Infof("Creating associated mesh service: %s", meshServiceName)
-		err := c.createMeshService(service)
-		if err != nil {
+		if err := c.createMeshService(service); err != nil {
 			return fmt.Errorf("unable to get create mesh service: %v", err)
 		}
 	}
@@ -417,6 +416,7 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 
 			if targetPort.IntVal == 0 {
 				log.Errorf("Could not get TCP Port for service: %s with service port: %v", service.Name, sp)
+				continue
 			}
 
 			meshPort := corev1.ServicePort{

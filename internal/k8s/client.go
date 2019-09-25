@@ -587,7 +587,7 @@ func (w *ClientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints,
 	return endpoints, exists, err
 }
 
-// GetEndpointses retrieves the endpoints from all namespaces.
+// GetEndpointses retrieves the endpoints from the specified namespace.
 func (w *ClientWrapper) GetEndpointses(namespace string) ([]*corev1.Endpoints, error) {
 	var result []*corev1.Endpoints
 	list, err := w.KubeClient.CoreV1().Endpoints(namespace).List(metav1.ListOptions{})
