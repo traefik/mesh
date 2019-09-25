@@ -182,8 +182,9 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	}
 
 	// Create the mesh services here to ensure that they exist
+	log.Info("Creating initial mesh services")
 	if err := c.createMeshServices(); err != nil {
-		return fmt.Errorf("could not create mesh services: %v", err)
+		log.Errorf("could not create mesh services: %v", err)
 	}
 
 	// run the deployer to deploy configurations
@@ -241,6 +242,12 @@ func (c *Controller) processNextMessage() bool {
 }
 
 func (c *Controller) buildConfigurationFromProviders(event message.Message) {
+
+	// Create all mesh services
+	if err := c.createMeshServices(); err != nil {
+		log.Errorf("could not create mesh services: %v", err)
+	}
+
 	if c.smiEnabled {
 		c.smiProvider.BuildConfiguration(event, c.traefikConfig)
 		return
@@ -273,11 +280,6 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 				c.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
 			}
 		}
-		return
-	}
-
-	if err := c.createMeshServices(); err != nil {
-		log.Errorf("Could not create mesh services: %v", err)
 		return
 	}
 
@@ -364,10 +366,19 @@ func (c *Controller) createMeshServices() error {
 		return fmt.Errorf("unable to get services: %v", err)
 	}
 
+	log.Debugf("Found Services: %v", services)
 	for _, service := range services {
 		if c.ignored.Ignored(service.Name, service.Namespace) {
 			continue
 		}
+		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
+		for _, subservice := range services {
+			// If there is already a mesh service created, don't bother recreating
+			if subservice.Name == meshServiceName && subservice.Namespace == c.meshNamespace {
+				continue
+			}
+		}
+		log.Infof("Creating associated mesh service: %s", meshServiceName)
 		err := c.createMeshService(service)
 		if err != nil {
 			return fmt.Errorf("unable to get create mesh service: %v", err)
@@ -378,6 +389,7 @@ func (c *Controller) createMeshServices() error {
 
 func (c *Controller) createMeshService(service *corev1.Service) error {
 	meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
+	log.Debugf("Creating mesh service: %s", meshServiceName)
 	_, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
 	if err != nil {
 		return err

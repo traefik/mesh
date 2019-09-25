@@ -549,7 +549,8 @@ func (w *ClientWrapper) GetServices(namespace string) ([]*corev1.Service, error)
 		return result, err
 	}
 	for _, service := range list.Items {
-		result = append(result, &service)
+		item := service
+		result = append(result, &item)
 	}
 	return result, nil
 }
@@ -594,7 +595,8 @@ func (w *ClientWrapper) GetEndpointses(namespace string) ([]*corev1.Endpoints, e
 		return result, err
 	}
 	for _, endpoints := range list.Items {
-		result = append(result, &endpoints)
+		item := endpoints
+		result = append(result, &item)
 	}
 	return result, nil
 }
@@ -626,7 +628,8 @@ func (w *ClientWrapper) GetNamespaces() ([]*corev1.Namespace, error) {
 		return result, err
 	}
 	for _, namespace := range list.Items {
-		result = append(result, &namespace)
+		item := namespace
+		result = append(result, &item)
 	}
 	return result, nil
 }
