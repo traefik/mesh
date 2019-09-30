@@ -127,7 +127,7 @@ spec:
         - name: prometheus-storage
           mountPath: /prometheus
       - name: configmap-reload
-        image: jimmidyson/configmap-reload:v0.2.2
+        image: {{ .Values.image.configmapReload | quote }}
         imagePullPolicy: IfNotPresent
         args:
           - --volume-dir=/etc/config
