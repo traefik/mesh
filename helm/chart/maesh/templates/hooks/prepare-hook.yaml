@@ -113,6 +113,9 @@ spec:
       imagePullSecrets:
         - name: {{ .Values.controller.image.pullSecret }}
       {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
       containers:
         - name: maesh-prepare
           image: {{ include "maesh.controllerImage" . | quote }}
