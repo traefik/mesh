@@ -242,7 +242,6 @@ func (c *Controller) processNextMessage() bool {
 }
 
 func (c *Controller) buildConfigurationFromProviders(event message.Message) {
-
 	// Create all mesh services
 	if err := c.createMeshServices(); err != nil {
 		log.Errorf("could not create mesh services: %v", err)
@@ -320,12 +319,10 @@ func (c *Controller) processUpdatedMessage(event message.Message) {
 			}
 		}
 		return
-
 	}
 
 	c.buildConfigurationFromProviders(event)
 	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
-
 }
 
 func (c *Controller) processDeletedMessage(event message.Message) {
@@ -357,7 +354,6 @@ func (c *Controller) processDeletedMessage(event message.Message) {
 
 	c.buildConfigurationFromProviders(event)
 	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
-
 }
 
 func (c *Controller) createMeshServices() error {
@@ -521,7 +517,6 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 
 	log.Debugf("Updated service: %s/%s", c.meshNamespace, meshServiceName)
 	return updatedSvc, nil
-
 }
 
 // userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.

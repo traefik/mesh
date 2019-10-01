@@ -63,7 +63,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		s.setCoreDNSVersion(c, test.version)
 		err := s.installHelmMaesh(c, false, false)
 		if test.expectedError {
-			err = s.waitForMaeshControllerStartedWithReturn(c)
+			err = s.waitForMaeshControllerStartedWithReturn()
 			c.Assert(err, checker.NotNil)
 		} else {
 			c.Assert(err, checker.IsNil)

@@ -184,14 +184,12 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 			// Return true, so that it will be removed from the deploy queue.
 			log.Debugf("Skipping outdated configuration: %v", currentVersion)
 			return true
-
 		}
 		if currentVersion.Equal(activeVersion) {
 			// The version we are trying to deploy is already deployed.
 			// Return true, so that it will be removed from the deploy queue.
 			log.Debugf("Skipping already deployed configuration: %v", currentVersion)
 			return true
-
 		}
 		log.Debugf("Deploying configuration version for pod %s: %s", m.PodName, currentVersion)
 	}
@@ -232,12 +230,10 @@ func waitForDeployToProcess(currentVersion time.Time, name, ip string) bool {
 			return fmt.Errorf("could not get newly deployed configuration version: %v", newErr)
 		}
 		if exists {
-
 			if currentVersion.Equal(newVersion) {
 				// The version we are trying to deploy is confirmed.
 				// Return nil, to break out of the ebo.
 				return nil
-
 			}
 		}
 		return fmt.Errorf("deployment was not successful")
@@ -353,7 +349,6 @@ func getDeployedVersion(ip string) (time.Time, bool, error) {
 			return time.Unix(0, version), true, nil
 		}
 		return time.Now(), false, nil
-
 	}
 	log.Errorf("Got no response: %v", err)
 	return time.Now(), false, err

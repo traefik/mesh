@@ -47,5 +47,4 @@ func (s *KubernetesSuite) TestTCPCURL(c *check.C) {
 		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami-tcp")
-
 }

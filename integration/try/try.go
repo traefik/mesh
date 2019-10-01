@@ -213,7 +213,6 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 	ciTimeoutMultiplier := getCITimeoutMultiplier()
 	log.Debug("Apply CI multiplier:", ciTimeoutMultiplier)
 	return time.Duration(float64(timeout) * ciTimeoutMultiplier)
-
 }
 
 func getCITimeoutMultiplier() float64 {

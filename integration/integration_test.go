@@ -193,7 +193,7 @@ func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) waitForMaeshControllerStartedWithReturn(c *check.C) error {
+func (s *BaseSuite) waitForMaeshControllerStartedWithReturn() error {
 	return s.try.WaitReadyDeployment("maesh-controller", "maesh", 30*time.Second)
 }
 
