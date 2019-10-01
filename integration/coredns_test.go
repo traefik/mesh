@@ -69,7 +69,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 			c.Assert(err, checker.IsNil)
 			s.waitForMaeshControllerStarted(c)
 			s.waitKubectlExecCommand(c, argSlice, "whoami")
-			s.unInstallHelmMaesh(c)
 		}
+		s.unInstallHelmMaesh(c)
 	}
 }
