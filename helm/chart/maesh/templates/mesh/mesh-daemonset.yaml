@@ -35,11 +35,11 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
       {{- end }}
-      {{- if .Values.tracing.enabled }}
+      {{- if .Values.tracing.deploy }}
       initContainers:
         - name: wait-for-jaeger-init
-          image: groundnuty/k8s-wait-for:v1.2
-          imagePullPolicy: {{ .Values.mesh.image.pullPolicy | default "IfNotPresent" }}
+          image: {{ .Values.tracing.jaeger.image.name | quote }}
+          imagePullPolicy: {{ .Values.tracing.jaeger.image.pullPolicy | default "IfNotPresent" }}
           args: ["service", "-lapp.kubernetes.io/name=jaeger-agent"]
           resources:
             requests:
