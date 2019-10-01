@@ -193,6 +193,10 @@ func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
 	c.Assert(err, checker.IsNil)
 }
 
+func (s *BaseSuite) waitForMaeshControllerStartedWithReturn(c *check.C) error {
+	return s.try.WaitReadyDeployment("maesh-controller", "maesh", 30*time.Second)
+}
+
 func (s *BaseSuite) waitForTiller(c *check.C) {
 	err := s.try.WaitReadyDeployment("tiller-deploy", metav1.NamespaceSystem, 30*time.Second)
 	c.Assert(err, checker.IsNil)
