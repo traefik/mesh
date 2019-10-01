@@ -241,17 +241,20 @@ func (c *Controller) processNextMessage() bool {
 	return c.messageQueue.Len() > 0
 }
 
-func (c *Controller) buildConfigurationFromProviders(event message.Message) {
+func (c *Controller) buildConfigurationFromProviders() {
 	// Create all mesh services
 	if err := c.createMeshServices(); err != nil {
 		log.Errorf("could not create mesh services: %v", err)
 	}
 
+	var config *dynamic.Configuration
+	var err error
+
 	if c.smiEnabled {
-		c.smiProvider.BuildConfiguration(event, c.traefikConfig)
-		return
+		config, err = c.smiProvider.BuildConfig()
+	} else {
+		config, err = c.kubernetesProvider.BuildConfig()
 	}
-	config, err := c.kubernetesProvider.BuildConfig()
 	if err != nil {
 		log.Errorf("unable to build configuration: %v", err)
 	}
@@ -282,7 +285,7 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 		return
 	}
 
-	c.buildConfigurationFromProviders(event)
+	c.buildConfigurationFromProviders()
 	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
 }
 
@@ -321,7 +324,7 @@ func (c *Controller) processUpdatedMessage(event message.Message) {
 		return
 	}
 
-	c.buildConfigurationFromProviders(event)
+	c.buildConfigurationFromProviders()
 	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
 }
 
@@ -352,7 +355,7 @@ func (c *Controller) processDeletedMessage(event message.Message) {
 		return
 	}
 
-	c.buildConfigurationFromProviders(event)
+	c.buildConfigurationFromProviders()
 	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
 }
 
