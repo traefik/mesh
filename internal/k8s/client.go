@@ -65,6 +65,7 @@ type CoreV1Client interface {
 	DeleteService(namespace, name string) error
 
 	GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error)
+	GetEndpointses(namespace string) ([]*corev1.Endpoints, error)
 
 	GetPod(namespace, name string) (*corev1.Pod, bool, error)
 	ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error)
@@ -548,7 +549,8 @@ func (w *ClientWrapper) GetServices(namespace string) ([]*corev1.Service, error)
 		return result, err
 	}
 	for _, service := range list.Items {
-		result = append(result, &service)
+		item := service
+		result = append(result, &item)
 	}
 	return result, nil
 }
@@ -585,6 +587,20 @@ func (w *ClientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints,
 	return endpoints, exists, err
 }
 
+// GetEndpointses retrieves the endpoints from the specified namespace.
+func (w *ClientWrapper) GetEndpointses(namespace string) ([]*corev1.Endpoints, error) {
+	var result []*corev1.Endpoints
+	list, err := w.KubeClient.CoreV1().Endpoints(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return result, err
+	}
+	for _, endpoints := range list.Items {
+		item := endpoints
+		result = append(result, &item)
+	}
+	return result, nil
+}
+
 // GetPod retrieves the pod from the specified namespace.
 func (w *ClientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
 	pod, err := w.KubeClient.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
@@ -612,7 +628,8 @@ func (w *ClientWrapper) GetNamespaces() ([]*corev1.Namespace, error) {
 		return result, err
 	}
 	for _, namespace := range list.Items {
-		result = append(result, &namespace)
+		item := namespace
+		result = append(result, &item)
 	}
 	return result, nil
 }

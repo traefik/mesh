@@ -175,10 +175,16 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		}
 	}
 
-	// Load the state from the TCP State Configmap before running
+	// Load the state from the TCP State Configmap before running.
 	c.tcpStateTable, err = c.loadTCPStateTable()
 	if err != nil {
 		log.Errorf("encountered error loading TCP state table: %v", err)
+	}
+
+	// Create the mesh services here to ensure that they exist
+	log.Info("Creating initial mesh services")
+	if err := c.createMeshServices(); err != nil {
+		log.Errorf("could not create mesh services: %v", err)
 	}
 
 	// run the deployer to deploy configurations
@@ -195,22 +201,15 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 // runWorker executes the loop to process new items added to the queue
 func (c *Controller) runWorker() {
-	log.Debug("MeshController.runWorker: starting")
-
 	// invoke processNextMessage to fetch and consume the next
 	// message put in the queue
 	for c.processNextMessage() {
-		log.Debugf("MeshController.runWorker: processing next item")
 	}
-
-	log.Debugf("MeshController.runWorker: completed")
 }
 
 // processNextConfiguration retrieves each queued item and takes the
 // necessary handler action.
 func (c *Controller) processNextMessage() bool {
-	log.Debugf("MeshController Waiting for next item to process...")
-
 	// fetch the next item (blocking) from the queue to process or
 	// if a shutdown is requested then return out of this to stop
 	// processing
@@ -243,11 +242,21 @@ func (c *Controller) processNextMessage() bool {
 }
 
 func (c *Controller) buildConfigurationFromProviders(event message.Message) {
+
+	// Create all mesh services
+	if err := c.createMeshServices(); err != nil {
+		log.Errorf("could not create mesh services: %v", err)
+	}
+
 	if c.smiEnabled {
 		c.smiProvider.BuildConfiguration(event, c.traefikConfig)
 		return
 	}
-	c.kubernetesProvider.BuildConfiguration(event, c.traefikConfig)
+	config, err := c.kubernetesProvider.BuildConfig()
+	if err != nil {
+		log.Errorf("unable to build configuration: %v", err)
+	}
+	c.traefikConfig = config
 }
 
 func (c *Controller) processCreatedMessage(event message.Message) {
@@ -258,17 +267,7 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 			return
 		}
 
-		log.Debugf("MeshController ObjectCreated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
-
-		log.Debugf("Creating associated mesh service for service: %s/%s", obj.Namespace, obj.Name)
-
-		if _, err := c.createMeshService(obj); err != nil {
-			log.Errorf("Could not create mesh service: %v", err)
-			return
-		}
-
 	case *corev1.Endpoints:
-		log.Debugf("MeshController ObjectCreated with type: *corev1.Endpoints: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 
 	case *corev1.Pod:
@@ -353,7 +352,6 @@ func (c *Controller) processDeletedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 
 	case *corev1.Pod:
-		log.Debugf("MeshController ObjectDeleted with type: *corev1.Pod: %s/%s, skipping...", obj.Namespace, obj.Name)
 		return
 	}
 
@@ -362,11 +360,38 @@ func (c *Controller) processDeletedMessage(event message.Message) {
 
 }
 
-func (c *Controller) createMeshService(service *corev1.Service) (*corev1.Service, error) {
-	meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
-	meshServiceInstance, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
+func (c *Controller) createMeshServices() error {
+	services, err := c.clients.GetServices(metav1.NamespaceAll)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("unable to get services: %v", err)
+	}
+
+	log.Debugf("Found Services: %v", services)
+	for _, service := range services {
+		if c.ignored.Ignored(service.Name, service.Namespace) {
+			continue
+		}
+		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
+		for _, subservice := range services {
+			// If there is already a mesh service created, don't bother recreating
+			if subservice.Name == meshServiceName && subservice.Namespace == c.meshNamespace {
+				continue
+			}
+		}
+		log.Infof("Creating associated mesh service: %s", meshServiceName)
+		if err := c.createMeshService(service); err != nil {
+			return fmt.Errorf("unable to get create mesh service: %v", err)
+		}
+	}
+	return nil
+}
+
+func (c *Controller) createMeshService(service *corev1.Service) error {
+	meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
+	log.Debugf("Creating mesh service: %s", meshServiceName)
+	_, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
+	if err != nil {
+		return err
 	}
 
 	if !exists {
@@ -387,6 +412,11 @@ func (c *Controller) createMeshService(service *corev1.Service) (*corev1.Service
 			targetPort := intstr.FromInt(5000 + id)
 			if serviceMode == k8s.ServiceTypeTCP {
 				targetPort = intstr.FromInt(c.getTCPPortFromState(service.Name, service.Namespace, sp.Port))
+			}
+
+			if targetPort.IntVal == 0 {
+				log.Errorf("Could not get TCP Port for service: %s with service port: %v", service.Name, sp)
+				continue
 			}
 
 			meshPort := corev1.ServicePort{
@@ -411,10 +441,10 @@ func (c *Controller) createMeshService(service *corev1.Service) (*corev1.Service
 			},
 		}
 
-		return c.clients.CreateService(svc)
+		_, err = c.clients.CreateService(svc)
 	}
 
-	return meshServiceInstance, nil
+	return err
 }
 
 func (c *Controller) deleteMeshService(serviceName, serviceNamespace string) error {

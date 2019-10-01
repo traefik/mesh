@@ -426,7 +426,7 @@ func (s *SMISuite) createResources(c *check.C, dirPath string) {
 }
 
 func (s *SMISuite) deleteResources(c *check.C, dirPath string, force bool) {
-	// Create the required objects from the smi directory
+	// Delete the required objects from the smi directory
 	args := []string{"delete", "-f", path.Join(s.dir, dirPath)}
 	if force {
 		args = append(args, "--force", "--grace-period=0")

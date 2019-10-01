@@ -265,6 +265,15 @@ func (c *CoreV1ClientMock) GetEndpoints(namespace, name string) (*corev1.Endpoin
 	return nil, false, c.apiEndpointsError
 }
 
+// GetEndpointses returns mocked date for endpoints.
+func (c *CoreV1ClientMock) GetEndpointses(namespace string) ([]*corev1.Endpoints, error) {
+	if c.apiEndpointsError != nil {
+		return nil, c.apiEndpointsError
+	}
+
+	return c.endpoints, nil
+}
+
 // GetPod returns mocked data for pod.
 func (c *CoreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
 	if c.apiPodError != nil {
