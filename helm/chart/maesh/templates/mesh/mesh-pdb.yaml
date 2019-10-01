@@ -3,6 +3,7 @@ apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
   name: maesh-mesh
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name | quote }}
     chart: {{ include "maesh.chartLabel" . | quote }}
