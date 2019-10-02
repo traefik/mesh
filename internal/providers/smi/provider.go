@@ -76,6 +76,10 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	}
 
 	for _, service := range services {
+		if p.ignored.Ignored(service.Name, service.Namespace) {
+			continue
+		}
+
 		serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
 		// Get all traffic targets in the service's namespace.
 		trafficTargetsInNamespace := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace, trafficTargets)

@@ -20,6 +20,7 @@ type Provider struct {
 	defaultMode   string
 	meshNamespace string
 	tcpStateTable *k8s.State
+	ignored       k8s.IgnoreWrapper
 }
 
 // Init the provider.
@@ -28,12 +29,13 @@ func (p *Provider) Init() {
 }
 
 // New creates a new provider.
-func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string, tcpStateTable *k8s.State) *Provider {
+func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
 	p := &Provider{
 		client:        client,
 		defaultMode:   defaultMode,
 		meshNamespace: meshNamespace,
 		tcpStateTable: tcpStateTable,
+		ignored:       ignored,
 	}
 
 	p.Init()
@@ -126,6 +128,9 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	config := createBaseConfigWithReadiness()
 
 	for _, service := range services {
+		if p.ignored.Ignored(service.Name, service.Namespace) {
+			continue
+		}
 		serviceMode := p.getServiceMode(service.Annotations)
 
 		for id, sp := range service.Spec.Ports {

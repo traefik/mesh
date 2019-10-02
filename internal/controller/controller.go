@@ -97,7 +97,7 @@ func (c *Controller) Init() error {
 	c.meshFactory.Core().V1().Pods().Informer().AddEventHandler(c.meshHandler)
 
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
-	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable)
+	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
 
 	// configurationQueue is used to process configurations from the providers
 	// and deal with pushing them to mesh nodes
@@ -365,11 +365,11 @@ func (c *Controller) createMeshServices() error {
 		return fmt.Errorf("unable to get services: %v", err)
 	}
 
-	log.Debugf("Found Services: %v", services)
 	for _, service := range services {
 		if c.ignored.Ignored(service.Name, service.Namespace) {
 			continue
 		}
+		log.Debugf("Creating mesh for service: %v", service.Name)
 		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
 		for _, subservice := range services {
 			// If there is already a mesh service created, don't bother recreating
