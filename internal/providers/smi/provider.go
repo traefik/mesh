@@ -88,12 +88,11 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 		log.Debugf("Found grouped traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
 
 		// Get all traffic split in the service's namespace.
-		trafficSplits := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace, trafficSplits)
-		log.Debugf("Found trafficsplits for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplits)
+		trafficSplitsInNamespace := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace, trafficSplits)
+		log.Debugf("Found trafficsplits for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplitsInNamespace)
 
 		for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 			for _, groupedTrafficTarget := range groupedTrafficTargets {
-
 				for id, sp := range service.Spec.Ports {
 					key := buildKey(service.Name, service.Namespace, sp.Port, groupedTrafficTarget.Name, groupedTrafficTarget.Namespace)
 
@@ -123,7 +122,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 							config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
 							whitelistMiddleware = whitelistKey
 						}
-						trafficSplit := getTrafficSplitFromList(service.Name, trafficSplits)
+						trafficSplit := getTrafficSplitFromList(service.Name, trafficSplitsInNamespace)
 						if trafficSplit == nil {
 							config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
 							config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(getEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
