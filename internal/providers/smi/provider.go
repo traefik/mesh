@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/internal/providers/base"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
@@ -53,7 +54,7 @@ func New(client k8s.Client, defaultMode string, meshNamespace string, ignored k8
 // BuildConfig builds the configuration for routing
 // from a native kubernetes environment.
 func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
-	config := createBaseConfigWithReadiness()
+	config := base.CreateBaseConfigWithReadiness()
 
 	services, err := p.client.GetServices(metav1.NamespaceAll)
 	if err != nil {
@@ -85,7 +86,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 		trafficTargetsInNamespace := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace, trafficTargets)
 		log.Debugf("Found traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, trafficTargets)
 		// Find all traffic targets that are applicable to the service in question.
-		applicableTrafficTargets := p.getApplicableTrafficTargets(getEndpointsFromList(service.Name, service.Namespace, endpoints), trafficTargetsInNamespace)
+		applicableTrafficTargets := p.getApplicableTrafficTargets(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), trafficTargetsInNamespace)
 		log.Debugf("Found applicable traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, applicableTrafficTargets)
 		// Group the traffic targets by destination, so that they can be built separately.
 		groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
@@ -126,10 +127,10 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 							config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
 							whitelistMiddleware = whitelistKey
 						}
-						trafficSplit := getTrafficSplitFromList(service.Name, trafficSplitsInNamespace)
+						trafficSplit := base.GetTrafficSplitFromList(service.Name, trafficSplitsInNamespace)
 						if trafficSplit == nil {
 							config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
-							config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(getEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
+							config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
 							continue
 						}
 
@@ -403,55 +404,6 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 	weightedKey := buildKey(svc.Name, svc.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
 	config.HTTP.Routers[weightedKey] = p.buildRouterFromTrafficTarget(trafficSplit.Spec.Service, trafficSplit.Namespace, svc.Spec.ClusterIP, trafficTarget, 5000+id, weightedKey, whitelistMiddleware)
 	config.HTTP.Services[weightedKey] = svcWeighted
-}
-
-func getTrafficSplitFromList(serviceName string, trafficSplits []*splitv1alpha1.TrafficSplit) *splitv1alpha1.TrafficSplit {
-	for _, t := range trafficSplits {
-		if t.Spec.Service == serviceName {
-			return t
-		}
-	}
-
-	return nil
-}
-
-func getEndpointsFromList(name, namespace string, endpointList []*corev1.Endpoints) *corev1.Endpoints {
-	for _, endpoints := range endpointList {
-		if endpoints.Name == name && endpoints.Namespace == namespace {
-			return endpoints
-		}
-	}
-	return nil
-}
-
-func createBaseConfigWithReadiness() *dynamic.Configuration {
-	return &dynamic.Configuration{
-		HTTP: &dynamic.HTTPConfiguration{
-			Routers: map[string]*dynamic.Router{
-				"readiness": {
-					Rule:        "Path(`/ping`)",
-					EntryPoints: []string{"readiness"},
-					Service:     "readiness",
-				},
-			},
-			Services: map[string]*dynamic.Service{
-				"readiness": {
-					LoadBalancer: &dynamic.ServersLoadBalancer{
-						Servers: []dynamic.Server{
-							{
-								URL: "http://127.0.0.1:8080",
-							},
-						},
-					},
-				},
-			},
-			Middlewares: map[string]*dynamic.Middleware{},
-		},
-		TCP: &dynamic.TCPConfiguration{
-			Routers:  map[string]*dynamic.TCPRouter{},
-			Services: map[string]*dynamic.TCPService{},
-		},
-	}
 }
 
 func buildKey(serviceName, namespace string, port int32, ttName, ttNamespace string) string {

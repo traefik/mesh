@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/internal/providers/base"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -125,7 +126,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 		return nil, fmt.Errorf("unable to get endpoints: %v", err)
 	}
 
-	config := createBaseConfigWithReadiness()
+	config := base.CreateBaseConfigWithReadiness()
 
 	for _, service := range services {
 		if p.ignored.Ignored(service.Name, service.Namespace) {
@@ -137,7 +138,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 			key := buildKey(service.Name, service.Namespace, sp.Port)
 
 			if serviceMode == k8s.ServiceTypeHTTP {
-				config.HTTP.Services[key] = p.buildService(getEndpointsFromList(service.Name, service.Namespace, endpoints))
+				config.HTTP.Services[key] = p.buildService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints))
 				middlewares := p.buildHTTPMiddlewares(service.Annotations)
 				if middlewares != nil {
 					config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, true)
@@ -150,7 +151,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 
 			meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
 			config.TCP.Routers[key] = p.buildTCPRouter(meshPort, key)
-			config.TCP.Services[key] = p.buildTCPService(getEndpointsFromList(service.Name, service.Namespace, endpoints))
+			config.TCP.Services[key] = p.buildTCPService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints))
 		}
 	}
 
@@ -213,45 +214,6 @@ func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort
 		}
 	}
 	return 0
-}
-
-func getEndpointsFromList(name, namespace string, endpointList []*corev1.Endpoints) *corev1.Endpoints {
-	for _, endpoints := range endpointList {
-		if endpoints.Name == name && endpoints.Namespace == namespace {
-			return endpoints
-		}
-	}
-	return nil
-}
-
-func createBaseConfigWithReadiness() *dynamic.Configuration {
-	return &dynamic.Configuration{
-		HTTP: &dynamic.HTTPConfiguration{
-			Routers: map[string]*dynamic.Router{
-				"readiness": {
-					Rule:        "Path(`/ping`)",
-					EntryPoints: []string{"readiness"},
-					Service:     "readiness",
-				},
-			},
-			Services: map[string]*dynamic.Service{
-				"readiness": {
-					LoadBalancer: &dynamic.ServersLoadBalancer{
-						Servers: []dynamic.Server{
-							{
-								URL: "http://127.0.0.1:8080",
-							},
-						},
-					},
-				},
-			},
-			Middlewares: map[string]*dynamic.Middleware{},
-		},
-		TCP: &dynamic.TCPConfiguration{
-			Routers:  map[string]*dynamic.TCPRouter{},
-			Services: map[string]*dynamic.TCPService{},
-		},
-	}
 }
 
 func buildKey(name, namespace string, port int32) string {
