@@ -132,14 +132,10 @@ func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 			},
 		},
 	}
-	actual := provider.getTrafficTargetsWithDestinationInNamespace("foo")
+	allTrafficTargets, err := clientMock.GetTrafficTargets()
+	assert.NoError(t, err)
+	actual := provider.getTrafficTargetsWithDestinationInNamespace("foo", allTrafficTargets)
 	assert.Equal(t, expected, actual)
-
-	clientMock.EnableTrafficTargetError()
-
-	var newExpected []*accessv1alpha1.TrafficTarget
-	newActual := provider.getTrafficTargetsWithDestinationInNamespace("foo")
-	assert.Equal(t, newExpected, newActual)
 }
 
 func TestBuildRouterFromTrafficTarget(t *testing.T) {

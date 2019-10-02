@@ -65,20 +65,30 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 		return nil, fmt.Errorf("unable to get endpoints: %v", err)
 	}
 
+	trafficTargets, err := p.client.GetTrafficTargets()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get traffictargets: %v", err)
+	}
+
+	trafficSplits, err := p.client.GetTrafficSplits()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get trafficsplits: %v", err)
+	}
+
 	for _, service := range services {
 		serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
 		// Get all traffic targets in the service's namespace.
-		trafficTargets := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace)
+		trafficTargetsInNamespace := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace, trafficTargets)
 		log.Debugf("Found traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, trafficTargets)
 		// Find all traffic targets that are applicable to the service in question.
-		applicableTrafficTargets := p.getApplicableTrafficTargets(getEndpointsFromList(service.Name, service.Namespace, endpoints), trafficTargets)
+		applicableTrafficTargets := p.getApplicableTrafficTargets(getEndpointsFromList(service.Name, service.Namespace, endpoints), trafficTargetsInNamespace)
 		log.Debugf("Found applicable traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, applicableTrafficTargets)
 		// Group the traffic targets by destination, so that they can be built separately.
 		groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
 		log.Debugf("Found grouped traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
 
 		// Get all traffic split in the service's namespace.
-		trafficSplits := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace)
+		trafficSplits := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace, trafficSplits)
 		log.Debugf("Found trafficsplits for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplits)
 
 		for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
@@ -129,14 +139,9 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	return config, nil
 }
 
-func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string) []*accessv1alpha1.TrafficTarget {
+func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
 	var result []*accessv1alpha1.TrafficTarget
-	allTrafficTargets, err := p.client.GetTrafficTargets()
-	if err != nil {
-		log.Error("Could not get a list of all TrafficTargets")
-	}
-
-	for _, trafficTarget := range allTrafficTargets {
+	for _, trafficTarget := range trafficTargets {
 		if trafficTarget.Destination.Namespace == namespace {
 			result = append(result, trafficTarget)
 		}
@@ -149,16 +154,11 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 	return result
 }
 
-func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string) []*splitv1alpha1.TrafficSplit {
+func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string, trafficSplits []*splitv1alpha1.TrafficSplit) []*splitv1alpha1.TrafficSplit {
 	var result []*splitv1alpha1.TrafficSplit
-	allTrafficSplit, err := p.client.GetTrafficSplits()
-	if err != nil {
-		log.Error("Could not get a list of all TrafficTargets")
-	}
-
-	for _, trafficTarget := range allTrafficSplit {
-		if trafficTarget.Namespace == namespace {
-			result = append(result, trafficTarget)
+	for _, trafficSplit := range trafficSplits {
+		if trafficSplit.Namespace == namespace {
+			result = append(result, trafficSplit)
 		}
 	}
 
