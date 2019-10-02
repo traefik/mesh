@@ -331,7 +331,7 @@ func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment)
 		return false, errors.New("coreDNS configmap not defined")
 	}
 
-	coreConfigMapName = coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+	coreConfigMapName = getCoreDNSConfigMapName(coreDeployment)
 
 	coreConfigMap, err := w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
 	if err != nil {
@@ -474,7 +474,7 @@ func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string
 		return errors.New("coreDNS configmap not defined")
 	}
 
-	coreConfigMapName := coreDeployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+	coreConfigMapName := getCoreDNSConfigMapName(coreDeployment)
 
 	coreConfigMap, err := w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
 	if err != nil {
@@ -532,6 +532,16 @@ func buildSmiSplitClient(config *rest.Config) (*smiSplitClientset.Clientset, err
 	}
 
 	return client, nil
+}
+
+// getCoreDNSConfigMapName returns the dected coredns configmap name
+func getCoreDNSConfigMapName(coreDeployment *appsv1.Deployment) string {
+	for _, volume := range coreDeployment.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap != nil {
+			return volume.ConfigMap.Name
+		}
+	}
+	return ""
 }
 
 // GetService retrieves the service from the specified namespace.
