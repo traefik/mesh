@@ -8,6 +8,7 @@ import (
 	"github.com/containous/maesh/internal/deployer"
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/maesh/internal/message"
+	"github.com/containous/maesh/internal/providers/base"
 	"github.com/containous/maesh/internal/providers/kubernetes"
 	"github.com/containous/maesh/internal/providers/smi"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
@@ -107,7 +108,7 @@ func (c *Controller) Init() error {
 	c.deployer = deployer.New(c.clients, c.configurationQueue, c.meshNamespace)
 
 	// Initialize an empty configuration with a readinesscheck so that configs deployed to nodes mark them as ready.
-	c.traefikConfig = createBaseConfigWithReadiness()
+	c.traefikConfig = base.CreateBaseConfigWithReadiness()
 
 	if c.smiEnabled {
 		c.smiProvider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.ignored)
@@ -619,36 +620,6 @@ func (c *Controller) saveTCPStateTable() error {
 // isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
 func isMeshPod(pod *corev1.Pod) bool {
 	return pod.Labels["component"] == "maesh-mesh"
-}
-
-func createBaseConfigWithReadiness() *dynamic.Configuration {
-	return &dynamic.Configuration{
-		HTTP: &dynamic.HTTPConfiguration{
-			Routers: map[string]*dynamic.Router{
-				"readiness": {
-					Rule:        "Path(`/ping`)",
-					EntryPoints: []string{"readiness"},
-					Service:     "readiness",
-				},
-			},
-			Services: map[string]*dynamic.Service{
-				"readiness": {
-					LoadBalancer: &dynamic.ServersLoadBalancer{
-						Servers: []dynamic.Server{
-							{
-								URL: "http://127.0.0.1:8080",
-							},
-						},
-					},
-				},
-			},
-			Middlewares: map[string]*dynamic.Middleware{},
-		},
-		TCP: &dynamic.TCPConfiguration{
-			Routers:  map[string]*dynamic.TCPRouter{},
-			Services: map[string]*dynamic.TCPService{},
-		},
-	}
 }
 
 func addBaseSMIMiddlewares(config *dynamic.Configuration) {
