@@ -42,7 +42,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
 }
 
 // CoreV1ClientMock holds CoreV1 client mock information.

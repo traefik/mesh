@@ -56,13 +56,8 @@ func New(client k8s.Client, defaultMode string, meshNamespace string, ignored k8
 func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dynamic.Configuration) {
 	switch obj := event.Object.(type) {
 	case *corev1.Service:
-		switch event.Action {
-		case message.TypeCreated:
+		if event.Action == message.TypeCreated {
 			p.buildServiceIntoConfig(obj, nil, traefikConfig)
-		case message.TypeUpdated:
-			//FIXME: We will need to delete the old references in the config, and create the new service.
-		case message.TypeDeleted:
-			//FIXME: Implement
 		}
 	case *corev1.Endpoints:
 		switch event.Action {
@@ -80,7 +75,6 @@ func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dyna
 	case *splitv1alpha1.TrafficSplit:
 		p.buildAffectedServicesIntoConfig(nil, nil, obj, traefikConfig)
 	}
-
 }
 
 func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1.TrafficTarget, httpRouteGroup *specsv1alpha1.HTTPRouteGroup, trafficSplit *splitv1alpha1.TrafficSplit, config *dynamic.Configuration) {
@@ -120,7 +114,6 @@ func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1
 			p.buildServiceIntoConfig(service, nil, config)
 		}
 	}
-
 }
 
 func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *dynamic.Configuration) {
@@ -167,7 +160,6 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 
 	for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 		for _, groupedTrafficTarget := range groupedTrafficTargets {
-
 			for id, sp := range service.Spec.Ports {
 				key := buildKey(service.Name, service.Namespace, sp.Port, groupedTrafficTarget.Name, groupedTrafficTarget.Namespace)
 
@@ -206,7 +198,6 @@ func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *co
 
 					p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware)
 				}
-				// FIXME: Implement TCP routes
 			}
 		}
 	}
@@ -342,9 +333,7 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 			// We have a subset match, and valid referenced pods for the trafficTarget.
 			result = append(result, trafficTarget)
 		}
-
 	}
-
 	return result
 }
 

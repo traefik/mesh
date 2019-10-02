@@ -167,7 +167,6 @@ func (w *ClientWrapper) CheckCluster() error {
 	}
 
 	return nil
-
 }
 
 // CoreDNSMatch checks if CoreDNS service can match.

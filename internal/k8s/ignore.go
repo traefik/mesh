@@ -58,5 +58,4 @@ func NewIgnored(meshNamespace string, namespacesIgnore []string) IgnoreWrapper {
 		Services:      ignoredServices,
 		MeshNamespace: meshNamespace,
 	}
-
 }

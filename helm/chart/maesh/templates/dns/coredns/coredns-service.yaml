@@ -1,0 +1,32 @@
+{{- if .Values.kubedns }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns
+  namespace: {{ .Release.Namespace }}
+  labels:
+    k8s-app: coredns
+    kubernetes.io/name: "CoreDNS"
+    kubernetes.io/cluster-service: "true"
+    chart: {{ include "maesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote}}
+    heritage: {{ .Release.Service | quote}}
+  annotations:
+    prometheus.io/port: "9153"
+    prometheus.io/scrape: "true"
+spec:
+  selector:
+    k8s-app: coredns
+  type: ClusterIP
+  ports:
+    - name: dns
+      port: 53
+      protocol: UDP
+    - name: dns-tcp
+      port: 53
+      protocol: TCP
+    - name: metrics
+      port: 9153
+      protocol: TCP
+{{- end }}

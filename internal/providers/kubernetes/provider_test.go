@@ -54,7 +54,6 @@ func TestBuildTCPRouter(t *testing.T) {
 
 	actual := provider.buildTCPRouter(port, associatedService)
 	assert.Equal(t, expected, actual)
-
 }
 
 func TestBuildConfiguration(t *testing.T) {
@@ -342,7 +341,6 @@ func TestBuildService(t *testing.T) {
 			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil)
 			actual := provider.buildService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
-
 		})
 	}
 }
@@ -414,7 +412,6 @@ func TestBuildTCPService(t *testing.T) {
 			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, stateTable)
 			actual := provider.buildTCPService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
-
 		})
 	}
 }
@@ -461,7 +458,6 @@ func TestGetMeshPort(t *testing.T) {
 			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, stateTable)
 			actual := provider.getMeshPort(test.name, test.namespace, test.port)
 			assert.Equal(t, test.expected, actual)
-
 		})
 	}
 }
@@ -596,7 +592,6 @@ func TestGetEndpointsFromList(t *testing.T) {
 
 			actual := getEndpointsFromList(test.name, test.namespace, test.provided)
 			assert.Equal(t, test.expected, actual)
-
 		})
 	}
 }

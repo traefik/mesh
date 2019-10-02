@@ -357,7 +357,6 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			trafficSplit, err = s.client.SmiSplitClient.SplitV1alpha1().TrafficSplits("default").Create(test.trafficSplit)
 			c.Assert(err, checker.IsNil)
 
-			// FIXME - Service b have to be deleted and created to be able to detect change.
 			err = s.client.KubeClient.CoreV1().Services("default").Delete("b", &metav1.DeleteOptions{})
 			c.Assert(err, checker.IsNil)
 			s.createResources(c, "resources/smi/traffic-split")

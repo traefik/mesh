@@ -61,7 +61,6 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 			assert.Equal(t, test.expected, actual)
 		})
 	}
-
 }
 
 func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
@@ -340,7 +339,6 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 			middleware := "block-all"
 			actual := provider.buildRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
 			assert.Equal(t, test.expected, actual)
-
 		})
 	}
 }
@@ -731,7 +729,6 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 
 			actual := provider.getApplicableTrafficTargets(test.endpoints, test.trafficTargets)
 			assert.Equal(t, test.expected, actual)
-
 		})
 	}
 }
@@ -1073,7 +1070,6 @@ func TestBuildServiceFromTrafficTarget(t *testing.T) {
 			assert.Equal(t, test.expected, actual)
 		})
 	}
-
 }
 
 func TestGroupTrafficTargetsByDestination(t *testing.T) {
@@ -1218,7 +1214,6 @@ func TestGroupTrafficTargetsByDestination(t *testing.T) {
 	}
 	actual := provider.groupTrafficTargetsByDestination(trafficTargets)
 	assert.Equal(t, expected, actual)
-
 }
 
 func TestBuildConfiguration(t *testing.T) {
