@@ -1224,23 +1224,8 @@ func TestBuildConfiguration(t *testing.T) {
 		serviceError   bool
 	}{
 		{
-			desc:     "simple configuration build with empty event",
-			mockFile: "mock.yaml",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-		},
-		{
 			desc:     "simple configuration build with HTTP service",
-			mockFile: "mock.yaml",
+			mockFile: "build_configuration_http_service.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
@@ -1250,6 +1235,11 @@ func TestBuildConfiguration(t *testing.T) {
 							Service:     "demo-servi-default-80-api-servic-default-5bb66e727779b5ba",
 							Middlewares: []string{"api-service-metrics-default-demo-servi-default-80-api-servic-default-5bb66e727779b5ba-whitelist"},
 						},
+						"readiness": {
+							EntryPoints: []string{"readiness"},
+							Service:     "readiness",
+							Rule:        "Path(`/ping`)",
+						},
 					},
 					Services: map[string]*dynamic.Service{
 						"demo-servi-default-80-api-servic-default-5bb66e727779b5ba": {
@@ -1258,6 +1248,18 @@ func TestBuildConfiguration(t *testing.T) {
 								Servers: []dynamic.Server{
 									{
 										URL: "http://10.1.1.50:50",
+									},
+								},
+							},
+						},
+						"readiness": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: false,
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://127.0.0.1:8080",
+										Scheme: "",
+										Port:   "",
 									},
 								},
 							},
@@ -1278,66 +1280,16 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 		},
 		{
-			desc:     "simple configuration build with endpoint error",
-			mockFile: "mock.yaml",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
+			desc:           "simple configuration build with endpoint error",
+			mockFile:       "build_configuration_http_service.yaml",
+			expected:       nil,
 			endpointsError: true,
 		},
 		{
-			desc:     "simple configuration build with endpoints don't exist",
-			mockFile: "mock.yaml",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-		},
-		{
-			desc:     "simple configuration build with service error",
-			mockFile: "mock.yaml",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
+			desc:         "simple configuration build with service error",
+			mockFile:     "build_configuration_http_service.yaml",
+			expected:     nil,
 			serviceError: true,
-		},
-		{
-			desc:     "simple configuration build with service doesn't exist",
-			mockFile: "mock.yaml",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
 		},
 	}
 

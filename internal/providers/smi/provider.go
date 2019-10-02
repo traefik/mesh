@@ -113,7 +113,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 							config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
 							whitelistMiddleware = whitelistKey
 						}
-						trafficSplit := getTrafficSplit(service.Name, trafficSplits)
+						trafficSplit := getTrafficSplitFromList(service.Name, trafficSplits)
 						if trafficSplit == nil {
 							config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
 							config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(getEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
@@ -122,27 +122,11 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 
 						p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware)
 					}
-					// FIXME: Implement TCP routes
 				}
 			}
 		}
 	}
 	return config, nil
-}
-
-func intToP(v int64) *int {
-	i := int(v)
-	return &i
-}
-
-func getTrafficSplit(serviceName string, trafficSplits []*splitv1alpha1.TrafficSplit) *splitv1alpha1.TrafficSplit {
-	for _, t := range trafficSplits {
-		if t.Spec.Service == serviceName {
-			return t
-		}
-	}
-
-	return nil
 }
 
 func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string) []*accessv1alpha1.TrafficTarget {
@@ -182,27 +166,6 @@ func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string) 
 		log.Debugf("No TrafficSplits in namespace: %s", namespace)
 	}
 
-	return result
-}
-
-func (p *Provider) getTrafficTargetsWithHTTPRouteGroup(httpRouteGroup *specsv1alpha1.HTTPRouteGroup) []*accessv1alpha1.TrafficTarget {
-	var result []*accessv1alpha1.TrafficTarget
-	allTrafficTargets, err := p.client.GetTrafficTargets()
-	if err != nil {
-		log.Error("Could not get a list of all TrafficTargets")
-	}
-
-	for _, trafficTarget := range allTrafficTargets {
-		for _, spec := range trafficTarget.Specs {
-			if spec.Kind == "HTTPRouteGroup" && spec.Name == httpRouteGroup.Name {
-				result = append(result, trafficTarget)
-			}
-		}
-	}
-
-	if len(result) == 0 {
-		log.Debugf("No TrafficTargets with HTTPRouteGroup: %s", httpRouteGroup.Name)
-	}
 	return result
 }
 
@@ -439,6 +402,16 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 	config.HTTP.Services[weightedKey] = svcWeighted
 }
 
+func getTrafficSplitFromList(serviceName string, trafficSplits []*splitv1alpha1.TrafficSplit) *splitv1alpha1.TrafficSplit {
+	for _, t := range trafficSplits {
+		if t.Spec.Service == serviceName {
+			return t
+		}
+	}
+
+	return nil
+}
+
 func getEndpointsFromList(name, namespace string, endpointList []*corev1.Endpoints) *corev1.Endpoints {
 	for _, endpoints := range endpointList {
 		if endpoints.Name == name && endpoints.Namespace == namespace {
@@ -496,4 +469,9 @@ func createWhitelistMiddleware(sourceIPs []string) *dynamic.Middleware {
 			SourceRange: sourceIPs,
 		},
 	}
+}
+
+func intToP(v int64) *int {
+	i := int(v)
+	return &i
 }
