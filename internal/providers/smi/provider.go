@@ -219,7 +219,7 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 			}
 
 			if !validPodFound {
-				// No valid pods with serviceAccound found on the subset, so it is not affected
+				// No valid pods with serviceAccount found on the subset, so it is not affected
 				log.Debugf("Endpoints %s/%s has no valid pods with destination service account: %s", endpoints.Namespace, endpoints.Name, trafficTarget.Destination.Name)
 				continue
 			}

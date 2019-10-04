@@ -6,7 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// CreateBaseConfigWithReadiness creates a base configuration for deploying to mesh nodes
+// CreateBaseConfigWithReadiness creates a base configuration for deploying to mesh nodes.
 func CreateBaseConfigWithReadiness() *dynamic.Configuration {
 	return &dynamic.Configuration{
 		HTTP: &dynamic.HTTPConfiguration{
@@ -37,7 +37,7 @@ func CreateBaseConfigWithReadiness() *dynamic.Configuration {
 	}
 }
 
-// GetTrafficSplitFromList returns a trafficsplit from a list
+// GetTrafficSplitFromList returns a trafficsplit from a list.
 func GetTrafficSplitFromList(serviceName string, trafficSplits []*splitv1alpha1.TrafficSplit) *splitv1alpha1.TrafficSplit {
 	for _, t := range trafficSplits {
 		if t.Spec.Service == serviceName {
@@ -48,7 +48,7 @@ func GetTrafficSplitFromList(serviceName string, trafficSplits []*splitv1alpha1.
 	return nil
 }
 
-// GetEndpointsFromList returns an endpoint from a list
+// GetEndpointsFromList returns an endpoint from a list.
 func GetEndpointsFromList(name, namespace string, endpointList []*corev1.Endpoints) *corev1.Endpoints {
 	for _, endpoints := range endpointList {
 		if endpoints.Name == name && endpoints.Namespace == namespace {
