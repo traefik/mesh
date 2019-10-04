@@ -55,5 +55,6 @@ func GetEndpointsFromList(name, namespace string, endpointList []*corev1.Endpoin
 			return endpoints
 		}
 	}
+
 	return nil
 }
