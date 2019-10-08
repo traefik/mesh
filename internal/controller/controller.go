@@ -8,6 +8,7 @@ import (
 	"github.com/containous/maesh/internal/deployer"
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/maesh/internal/message"
+	"github.com/containous/maesh/internal/providers/base"
 	"github.com/containous/maesh/internal/providers/kubernetes"
 	"github.com/containous/maesh/internal/providers/smi"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
@@ -97,7 +98,7 @@ func (c *Controller) Init() error {
 	c.meshFactory.Core().V1().Pods().Informer().AddEventHandler(c.meshHandler)
 
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
-	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable)
+	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
 
 	// configurationQueue is used to process configurations from the providers
 	// and deal with pushing them to mesh nodes
@@ -107,7 +108,7 @@ func (c *Controller) Init() error {
 	c.deployer = deployer.New(c.clients, c.configurationQueue, c.meshNamespace)
 
 	// Initialize an empty configuration with a readinesscheck so that configs deployed to nodes mark them as ready.
-	c.traefikConfig = createBaseConfigWithReadiness()
+	c.traefikConfig = base.CreateBaseConfigWithReadiness()
 
 	if c.smiEnabled {
 		c.smiProvider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.ignored)
@@ -241,17 +242,20 @@ func (c *Controller) processNextMessage() bool {
 	return c.messageQueue.Len() > 0
 }
 
-func (c *Controller) buildConfigurationFromProviders(event message.Message) {
+func (c *Controller) buildConfigurationFromProviders() {
 	// Create all mesh services
 	if err := c.createMeshServices(); err != nil {
 		log.Errorf("could not create mesh services: %v", err)
 	}
 
+	var config *dynamic.Configuration
+	var err error
+
 	if c.smiEnabled {
-		c.smiProvider.BuildConfiguration(event, c.traefikConfig)
-		return
+		config, err = c.smiProvider.BuildConfig()
+	} else {
+		config, err = c.kubernetesProvider.BuildConfig()
 	}
-	config, err := c.kubernetesProvider.BuildConfig()
 	if err != nil {
 		log.Errorf("unable to build configuration: %v", err)
 	}
@@ -282,7 +286,7 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 		return
 	}
 
-	c.buildConfigurationFromProviders(event)
+	c.buildConfigurationFromProviders()
 	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
 }
 
@@ -321,7 +325,7 @@ func (c *Controller) processUpdatedMessage(event message.Message) {
 		return
 	}
 
-	c.buildConfigurationFromProviders(event)
+	c.buildConfigurationFromProviders()
 	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
 }
 
@@ -352,7 +356,7 @@ func (c *Controller) processDeletedMessage(event message.Message) {
 		return
 	}
 
-	c.buildConfigurationFromProviders(event)
+	c.buildConfigurationFromProviders()
 	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
 }
 
@@ -362,11 +366,11 @@ func (c *Controller) createMeshServices() error {
 		return fmt.Errorf("unable to get services: %v", err)
 	}
 
-	log.Debugf("Found Services: %v", services)
 	for _, service := range services {
 		if c.ignored.Ignored(service.Name, service.Namespace) {
 			continue
 		}
+		log.Debugf("Creating mesh for service: %v", service.Name)
 		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
 		for _, subservice := range services {
 			// If there is already a mesh service created, don't bother recreating
@@ -616,36 +620,6 @@ func (c *Controller) saveTCPStateTable() error {
 // isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
 func isMeshPod(pod *corev1.Pod) bool {
 	return pod.Labels["component"] == "maesh-mesh"
-}
-
-func createBaseConfigWithReadiness() *dynamic.Configuration {
-	return &dynamic.Configuration{
-		HTTP: &dynamic.HTTPConfiguration{
-			Routers: map[string]*dynamic.Router{
-				"readiness": {
-					Rule:        "Path(`/ping`)",
-					EntryPoints: []string{"readiness"},
-					Service:     "readiness",
-				},
-			},
-			Services: map[string]*dynamic.Service{
-				"readiness": {
-					LoadBalancer: &dynamic.ServersLoadBalancer{
-						Servers: []dynamic.Server{
-							{
-								URL: "http://127.0.0.1:8080",
-							},
-						},
-					},
-				},
-			},
-			Middlewares: map[string]*dynamic.Middleware{},
-		},
-		TCP: &dynamic.TCPConfiguration{
-			Routers:  map[string]*dynamic.TCPRouter{},
-			Services: map[string]*dynamic.TCPService{},
-		},
-	}
 }
 
 func addBaseSMIMiddlewares(config *dynamic.Configuration) {

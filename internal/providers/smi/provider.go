@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/containous/maesh/internal/k8s"
-	"github.com/containous/maesh/internal/message"
+	"github.com/containous/maesh/internal/providers/base"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
@@ -51,181 +51,101 @@ func New(client k8s.Client, defaultMode string, meshNamespace string, ignored k8
 	return p
 }
 
-// BuildConfiguration builds the configuration for routing
+// BuildConfig builds the configuration for routing
 // from a native kubernetes environment.
-func (p *Provider) BuildConfiguration(event message.Message, traefikConfig *dynamic.Configuration) {
-	switch obj := event.Object.(type) {
-	case *corev1.Service:
-		if event.Action == message.TypeCreated {
-			p.buildServiceIntoConfig(obj, nil, traefikConfig)
-		}
-	case *corev1.Endpoints:
-		switch event.Action {
-		case message.TypeCreated:
-			// We don't process created endpoint events, processing is done under service creation.
-		case message.TypeUpdated:
-			p.buildServiceIntoConfig(nil, obj, traefikConfig)
-		case message.TypeDeleted:
-			// We don't precess deleted endpoint events, processing is done under service deletion.
-		}
-	case *accessv1alpha1.TrafficTarget:
-		p.buildAffectedServicesIntoConfig(obj, nil, nil, traefikConfig)
-	case *specsv1alpha1.HTTPRouteGroup:
-		p.buildAffectedServicesIntoConfig(nil, obj, nil, traefikConfig)
-	case *splitv1alpha1.TrafficSplit:
-		p.buildAffectedServicesIntoConfig(nil, nil, obj, traefikConfig)
-	}
-}
+func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
+	config := base.CreateBaseConfigWithReadiness()
 
-func (p *Provider) buildAffectedServicesIntoConfig(trafficTarget *accessv1alpha1.TrafficTarget, httpRouteGroup *specsv1alpha1.HTTPRouteGroup, trafficSplit *splitv1alpha1.TrafficSplit, config *dynamic.Configuration) {
-	namespaces := k8s.Namespaces{}
-
-	if httpRouteGroup != nil {
-		tts := p.getTrafficTargetsWithHTTPRouteGroup(httpRouteGroup)
-		for _, tt := range tts {
-			if !namespaces.Contains(tt.Destination.Namespace) {
-				namespaces = append(namespaces, tt.Destination.Namespace)
-			}
-		}
+	services, err := p.client.GetServices(metav1.NamespaceAll)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get services: %v", err)
 	}
 
-	if trafficTarget != nil {
-		if !namespaces.Contains(trafficTarget.Destination.Namespace) {
-			namespaces = append(namespaces, trafficTarget.Destination.Namespace)
-		}
+	endpoints, err := p.client.GetEndpointses(metav1.NamespaceAll)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get endpoints: %v", err)
 	}
 
-	if trafficSplit != nil {
-		if !namespaces.Contains(trafficSplit.Namespace) {
-			namespaces = append(namespaces, trafficSplit.Namespace)
-		}
+	trafficTargets, err := p.client.GetTrafficTargets()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get traffictargets: %v", err)
 	}
 
-	for _, namespace := range namespaces {
-		allServices, err := p.client.GetServices(namespace)
-		if err != nil {
-			log.Errorf("Could not get services in namespace %s: %v", namespace, err)
-		}
-
-		for _, service := range allServices {
-			if p.ignored.Ignored(service.Name, service.Namespace) {
-				continue
-			}
-			p.buildServiceIntoConfig(service, nil, config)
-		}
-	}
-}
-
-func (p *Provider) buildServiceIntoConfig(service *corev1.Service, endpoints *corev1.Endpoints, config *dynamic.Configuration) {
-	var exists bool
-	var err error
-	if service == nil {
-		service, exists, err = p.client.GetService(endpoints.Namespace, endpoints.Name)
-		if err != nil {
-			log.Errorf("Could not get service %s/%s: %v", endpoints.Namespace, endpoints.Name, err)
-			return
-		}
-		if !exists {
-			log.Errorf("service %s/%s does not exist", endpoints.Namespace, endpoints.Name)
-			return
-		}
+	trafficSplits, err := p.client.GetTrafficSplits()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get trafficsplits: %v", err)
 	}
 
-	if endpoints == nil {
-		endpoints, exists, err = p.client.GetEndpoints(service.Namespace, service.Name)
-		if err != nil {
-			log.Errorf("Could not get endpoints for service %s/%s: %v", service.Namespace, service.Name, err)
-			return
+	for _, service := range services {
+		if p.ignored.Ignored(service.Name, service.Namespace) {
+			continue
 		}
-		if !exists {
-			log.Errorf("endpoints for service %s/%s do not exist", service.Namespace, service.Name)
-			return
-		}
-	}
 
-	serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
-	// Get all traffic targets in the service's namespace.
-	trafficTargets := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace)
-	log.Debugf("Found traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, trafficTargets)
-	// Find all traffic targets that are applicable to the service in question.
-	applicableTrafficTargets := p.getApplicableTrafficTargets(endpoints, trafficTargets)
-	log.Debugf("Found applicable traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, applicableTrafficTargets)
-	// Group the traffic targets by destination, so that they can be built separately.
-	groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
-	log.Debugf("Found grouped traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
+		serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
+		// Get all traffic targets in the service's namespace.
+		trafficTargetsInNamespace := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace, trafficTargets)
+		log.Debugf("Found traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, trafficTargets)
+		// Find all traffic targets that are applicable to the service in question.
+		applicableTrafficTargets := p.getApplicableTrafficTargets(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), trafficTargetsInNamespace)
+		log.Debugf("Found applicable traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, applicableTrafficTargets)
+		// Group the traffic targets by destination, so that they can be built separately.
+		groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
+		log.Debugf("Found grouped traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
 
-	// Get all traffic split in the service's namespace.
-	trafficSplits := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace)
-	log.Debugf("Found trafficsplits for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplits)
+		// Get all traffic split in the service's namespace.
+		trafficSplitsInNamespace := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace, trafficSplits)
+		log.Debugf("Found trafficsplits for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplitsInNamespace)
 
-	for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
-		for _, groupedTrafficTarget := range groupedTrafficTargets {
-			for id, sp := range service.Spec.Ports {
-				key := buildKey(service.Name, service.Namespace, sp.Port, groupedTrafficTarget.Name, groupedTrafficTarget.Namespace)
+		for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
+			for _, groupedTrafficTarget := range groupedTrafficTargets {
+				for id, sp := range service.Spec.Ports {
+					key := buildKey(service.Name, service.Namespace, sp.Port, groupedTrafficTarget.Name, groupedTrafficTarget.Namespace)
 
-				//	For each source in the trafficTarget, get a list of IPs to whitelist.
-				var sourceIPs []string
-				for _, source := range groupedTrafficTarget.Sources {
-					fieldSelector := fmt.Sprintf("spec.serviceAccountName=%s", source.Name)
-					// Get all pods with the associated source serviceAccount (can only be in the source namespaces).
-					podList, err := p.client.ListPodWithOptions(source.Namespace, metav1.ListOptions{FieldSelector: fieldSelector})
-					if err != nil {
-						log.Errorf("Could not list pods: %v", err)
-						return
-					}
+					//	For each source in the trafficTarget, get a list of IPs to whitelist.
+					var sourceIPs []string
+					for _, source := range groupedTrafficTarget.Sources {
+						fieldSelector := fmt.Sprintf("spec.serviceAccountName=%s", source.Name)
+						// Get all pods with the associated source serviceAccount (can only be in the source namespaces).
+						podList, err := p.client.ListPodWithOptions(source.Namespace, metav1.ListOptions{FieldSelector: fieldSelector})
+						if err != nil {
+							log.Errorf("Could not list pods: %v", err)
+							continue
+						}
 
-					// Retrieve a list of sourceIPs from the list of pods.
-					for _, pod := range podList.Items {
-						if pod.Status.PodIP != "" {
-							sourceIPs = append(sourceIPs, pod.Status.PodIP)
+						// Retrieve a list of sourceIPs from the list of pods.
+						for _, pod := range podList.Items {
+							if pod.Status.PodIP != "" {
+								sourceIPs = append(sourceIPs, pod.Status.PodIP)
+							}
 						}
 					}
-				}
 
-				whitelistKey := groupedTrafficTarget.Name + "-" + groupedTrafficTarget.Namespace + "-" + key + "-whitelist"
-				whitelistMiddleware := k8s.BlockAllMiddlewareKey
-				if serviceMode == k8s.ServiceTypeHTTP {
-					if len(sourceIPs) > 0 {
-						config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
-						whitelistMiddleware = whitelistKey
-					}
-					trafficSplit := getTrafficSplit(service.Name, trafficSplits)
-					if trafficSplit == nil {
-						config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
-						config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(endpoints, groupedTrafficTarget)
-						continue
-					}
+					whitelistKey := groupedTrafficTarget.Name + "-" + groupedTrafficTarget.Namespace + "-" + key + "-whitelist"
+					whitelistMiddleware := k8s.BlockAllMiddlewareKey
+					if serviceMode == k8s.ServiceTypeHTTP {
+						if len(sourceIPs) > 0 {
+							config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
+							whitelistMiddleware = whitelistKey
+						}
+						trafficSplit := base.GetTrafficSplitFromList(service.Name, trafficSplitsInNamespace)
+						if trafficSplit == nil {
+							config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
+							config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
+							continue
+						}
 
-					p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware)
+						p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware)
+					}
 				}
 			}
 		}
 	}
+	return config, nil
 }
 
-func intToP(v int64) *int {
-	i := int(v)
-	return &i
-}
-
-func getTrafficSplit(serviceName string, trafficSplits []*splitv1alpha1.TrafficSplit) *splitv1alpha1.TrafficSplit {
-	for _, t := range trafficSplits {
-		if t.Spec.Service == serviceName {
-			return t
-		}
-	}
-
-	return nil
-}
-
-func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string) []*accessv1alpha1.TrafficTarget {
+func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
 	var result []*accessv1alpha1.TrafficTarget
-	allTrafficTargets, err := p.client.GetTrafficTargets()
-	if err != nil {
-		log.Error("Could not get a list of all TrafficTargets")
-	}
-
-	for _, trafficTarget := range allTrafficTargets {
+	for _, trafficTarget := range trafficTargets {
 		if trafficTarget.Destination.Namespace == namespace {
 			result = append(result, trafficTarget)
 		}
@@ -238,16 +158,11 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string)
 	return result
 }
 
-func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string) []*splitv1alpha1.TrafficSplit {
+func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string, trafficSplits []*splitv1alpha1.TrafficSplit) []*splitv1alpha1.TrafficSplit {
 	var result []*splitv1alpha1.TrafficSplit
-	allTrafficSplit, err := p.client.GetTrafficSplits()
-	if err != nil {
-		log.Error("Could not get a list of all TrafficTargets")
-	}
-
-	for _, trafficTarget := range allTrafficSplit {
-		if trafficTarget.Namespace == namespace {
-			result = append(result, trafficTarget)
+	for _, trafficSplit := range trafficSplits {
+		if trafficSplit.Namespace == namespace {
+			result = append(result, trafficSplit)
 		}
 	}
 
@@ -255,27 +170,6 @@ func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string) 
 		log.Debugf("No TrafficSplits in namespace: %s", namespace)
 	}
 
-	return result
-}
-
-func (p *Provider) getTrafficTargetsWithHTTPRouteGroup(httpRouteGroup *specsv1alpha1.HTTPRouteGroup) []*accessv1alpha1.TrafficTarget {
-	var result []*accessv1alpha1.TrafficTarget
-	allTrafficTargets, err := p.client.GetTrafficTargets()
-	if err != nil {
-		log.Error("Could not get a list of all TrafficTargets")
-	}
-
-	for _, trafficTarget := range allTrafficTargets {
-		for _, spec := range trafficTarget.Specs {
-			if spec.Kind == "HTTPRouteGroup" && spec.Name == httpRouteGroup.Name {
-				result = append(result, trafficTarget)
-			}
-		}
-	}
-
-	if len(result) == 0 {
-		log.Debugf("No TrafficTargets with HTTPRouteGroup: %s", httpRouteGroup.Name)
-	}
 	return result
 }
 
@@ -325,7 +219,7 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 			}
 
 			if !validPodFound {
-				// No valid pods with serviceAccound found on the subset, so it is not affected
+				// No valid pods with serviceAccount found on the subset, so it is not affected
 				log.Debugf("Endpoints %s/%s has no valid pods with destination service account: %s", endpoints.Namespace, endpoints.Name, trafficTarget.Destination.Name)
 				continue
 			}
@@ -530,4 +424,9 @@ func createWhitelistMiddleware(sourceIPs []string) *dynamic.Middleware {
 			SourceRange: sourceIPs,
 		},
 	}
+}
+
+func intToP(v int64) *int {
+	i := int(v)
+	return &i
 }

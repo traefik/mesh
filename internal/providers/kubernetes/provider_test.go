@@ -26,7 +26,7 @@ func TestBuildRouter(t *testing.T) {
 		Service:     "bar",
 	}
 
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil)
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 
 	name := "test"
 	namespace := "foo"
@@ -47,7 +47,7 @@ func TestBuildTCPRouter(t *testing.T) {
 		Service:     "bar",
 	}
 
-	provider := New(nil, k8s.ServiceTypeTCP, meshNamespace, nil)
+	provider := New(nil, k8s.ServiceTypeTCP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 
 	port := 10000
 	associatedService := "bar"
@@ -273,7 +273,7 @@ func TestBuildConfiguration(t *testing.T) {
 				clientMock.EnableServiceError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, stateTable)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, stateTable, k8s.NewIgnored(meshNamespace, []string{}))
 			config, err := provider.BuildConfig()
 			assert.Equal(t, test.expected, config)
 			if test.endpointsError || test.serviceError {
@@ -338,7 +338,7 @@ func TestBuildService(t *testing.T) {
 			t.Parallel()
 
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 			actual := provider.buildService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -409,7 +409,7 @@ func TestBuildTCPService(t *testing.T) {
 			t.Parallel()
 
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, stateTable)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, stateTable, k8s.NewIgnored(meshNamespace, []string{}))
 			actual := provider.buildTCPService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -455,7 +455,7 @@ func TestGetMeshPort(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, stateTable)
+			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, stateTable, k8s.NewIgnored(meshNamespace, []string{}))
 			actual := provider.getMeshPort(test.name, test.namespace, test.port)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -516,81 +516,8 @@ func TestBuildHTTPMiddlewares(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil)
+			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 			actual := provider.buildHTTPMiddlewares(test.annotations)
-			assert.Equal(t, test.expected, actual)
-		})
-	}
-}
-
-func TestGetEndpointsFromList(t *testing.T) {
-	testCases := []struct {
-		desc      string
-		provided  []*corev1.Endpoints
-		name      string
-		namespace string
-		expected  *corev1.Endpoints
-	}{
-		{
-			desc:      "empty list",
-			provided:  []*corev1.Endpoints{},
-			name:      "foo",
-			namespace: "bar",
-			expected:  nil,
-		},
-		{
-			desc: "match in list",
-			provided: []*corev1.Endpoints{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "bar",
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fifi",
-						Namespace: "fufu",
-					},
-				},
-			},
-			name:      "foo",
-			namespace: "bar",
-			expected: &corev1.Endpoints{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
-				},
-			},
-		},
-		{
-			desc: "no match in list",
-			provided: []*corev1.Endpoints{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "bar",
-						Namespace: "bar",
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fifi",
-						Namespace: "fufu",
-					},
-				},
-			},
-			name:      "foo",
-			namespace: "bar",
-			expected:  nil,
-		},
-	}
-
-	for _, test := range testCases {
-		test := test
-		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
-
-			actual := getEndpointsFromList(test.name, test.namespace, test.provided)
 			assert.Equal(t, test.expected, actual)
 		})
 	}

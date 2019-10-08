@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/containous/maesh/internal/k8s"
-	"github.com/containous/maesh/internal/message"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
@@ -133,14 +132,10 @@ func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 			},
 		},
 	}
-	actual := provider.getTrafficTargetsWithDestinationInNamespace("foo")
+	allTrafficTargets, err := clientMock.GetTrafficTargets()
+	assert.NoError(t, err)
+	actual := provider.getTrafficTargetsWithDestinationInNamespace("foo", allTrafficTargets)
 	assert.Equal(t, expected, actual)
-
-	clientMock.EnableTrafficTargetError()
-
-	var newExpected []*accessv1alpha1.TrafficTarget
-	newActual := provider.getTrafficTargetsWithDestinationInNamespace("foo")
-	assert.Equal(t, newExpected, newActual)
 }
 
 func TestBuildRouterFromTrafficTarget(t *testing.T) {
@@ -1219,39 +1214,14 @@ func TestGroupTrafficTargetsByDestination(t *testing.T) {
 func TestBuildConfiguration(t *testing.T) {
 	testCases := []struct {
 		desc           string
-		event          message.Message
-		provided       *dynamic.Configuration
+		mockFile       string
 		expected       *dynamic.Configuration
 		endpointsError bool
 		serviceError   bool
 	}{
 		{
-			desc: "simple configuration build with empty event",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			provided: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-		},
-		{
-			desc: "simple configuration build with HTTP service event",
+			desc:     "simple configuration build with HTTP service",
+			mockFile: "build_configuration_http_service.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
@@ -1261,6 +1231,11 @@ func TestBuildConfiguration(t *testing.T) {
 							Service:     "demo-servi-default-80-api-servic-default-5bb66e727779b5ba",
 							Middlewares: []string{"api-service-metrics-default-demo-servi-default-80-api-servic-default-5bb66e727779b5ba-whitelist"},
 						},
+						"readiness": {
+							EntryPoints: []string{"readiness"},
+							Service:     "readiness",
+							Rule:        "Path(`/ping`)",
+						},
 					},
 					Services: map[string]*dynamic.Service{
 						"demo-servi-default-80-api-servic-default-5bb66e727779b5ba": {
@@ -1269,6 +1244,18 @@ func TestBuildConfiguration(t *testing.T) {
 								Servers: []dynamic.Server{
 									{
 										URL: "http://10.1.1.50:50",
+									},
+								},
+							},
+						},
+						"readiness": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: false,
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://127.0.0.1:8080",
+										Scheme: "",
+										Port:   "",
 									},
 								},
 							},
@@ -1287,306 +1274,18 @@ func TestBuildConfiguration(t *testing.T) {
 					Services: map[string]*dynamic.TCPService{},
 				},
 			},
-			provided: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			event: message.Message{
-				Object: &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "demo-service",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Spec: corev1.ServiceSpec{
-						ClusterIP: "10.1.0.1",
-						Ports: []corev1.ServicePort{
-							{
-								Name:     "test",
-								Port:     80,
-								Protocol: "TCP",
-							},
-						},
-					},
-				},
-				Action: message.TypeCreated,
-			},
 		},
 		{
-			desc: "simple configuration build with HTTP endpoint event",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers: map[string]*dynamic.Router{
-						"demo-test-default-80-api-servic-default-7f2af3b9b8c32573": {
-							EntryPoints: []string{"http-5000"},
-							Rule:        "(PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-test.default.maesh`) || Host(`10.1.0.1`)))",
-							Service:     "demo-test-default-80-api-servic-default-7f2af3b9b8c32573",
-							Middlewares: []string{"api-service-metrics-default-demo-test-default-80-api-servic-default-7f2af3b9b8c32573-whitelist"},
-						},
-					},
-					Services: map[string]*dynamic.Service{
-						"demo-test-default-80-api-servic-default-7f2af3b9b8c32573": {
-							LoadBalancer: &dynamic.ServersLoadBalancer{
-								PassHostHeader: true,
-								Servers: []dynamic.Server{
-									{
-										URL: "http://10.1.1.50:50",
-									},
-								},
-							},
-						},
-					},
-					Middlewares: map[string]*dynamic.Middleware{
-						"api-service-metrics-default-demo-test-default-80-api-servic-default-7f2af3b9b8c32573-whitelist": {
-							IPWhiteList: &dynamic.IPWhiteList{
-								SourceRange: []string{"10.4.3.2"},
-							},
-						},
-					},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			provided: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			event: message.Message{
-				Object: &corev1.Endpoints{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "demo-test",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Subsets: []corev1.EndpointSubset{
-						{
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "10.1.1.50",
-									TargetRef: &corev1.ObjectReference{
-										Name:      "example",
-										Namespace: metav1.NamespaceDefault,
-									},
-								},
-							},
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 50,
-								},
-							},
-						},
-					},
-				},
-				Action: message.TypeUpdated,
-			},
-		},
-		{
-			desc: "simple configuration build with endpoint error",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			provided: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			event: message.Message{
-				Object: &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "demo-service",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Spec: corev1.ServiceSpec{
-						ClusterIP: "10.1.0.1",
-						Ports: []corev1.ServicePort{
-							{
-								Name:     "test",
-								Port:     80,
-								Protocol: "TCP",
-							},
-						},
-					},
-				},
-				Action: message.TypeCreated,
-			},
+			desc:           "simple configuration build with endpoint error",
+			mockFile:       "build_configuration_http_service.yaml",
+			expected:       nil,
 			endpointsError: true,
 		},
 		{
-			desc: "simple configuration build with endpoints don't exist",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			provided: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			event: message.Message{
-				Object: &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "demo-service-foobar",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Spec: corev1.ServiceSpec{
-						ClusterIP: "10.1.0.1",
-						Ports: []corev1.ServicePort{
-							{
-								Name:     "test",
-								Port:     80,
-								Protocol: "TCP",
-							},
-						},
-					},
-				},
-				Action: message.TypeCreated,
-			},
-		},
-		{
-			desc: "simple configuration build with service error",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			provided: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			event: message.Message{
-				Object: &corev1.Endpoints{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "demo-test",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Subsets: []corev1.EndpointSubset{
-						{
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "10.1.1.50",
-									TargetRef: &corev1.ObjectReference{
-										Name:      "example",
-										Namespace: metav1.NamespaceDefault,
-									},
-								},
-							},
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 50,
-								},
-							},
-						},
-					},
-				},
-				Action: message.TypeUpdated,
-			},
+			desc:         "simple configuration build with service error",
+			mockFile:     "build_configuration_http_service.yaml",
+			expected:     nil,
 			serviceError: true,
-		},
-		{
-			desc: "simple configuration build with service doesn't exist",
-			expected: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			provided: &dynamic.Configuration{
-				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     map[string]*dynamic.Router{},
-					Services:    map[string]*dynamic.Service{},
-					Middlewares: map[string]*dynamic.Middleware{},
-				},
-				TCP: &dynamic.TCPConfiguration{
-					Routers:  map[string]*dynamic.TCPRouter{},
-					Services: map[string]*dynamic.TCPService{},
-				},
-			},
-			event: message.Message{
-				Object: &corev1.Endpoints{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "demo-test-foobar",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Subsets: []corev1.EndpointSubset{
-						{
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP: "10.1.1.50",
-									TargetRef: &corev1.ObjectReference{
-										Name:      "example",
-										Namespace: metav1.NamespaceDefault,
-									},
-								},
-							},
-							Ports: []corev1.EndpointPort{
-								{
-									Port: 50,
-								},
-							},
-						},
-					},
-				},
-				Action: message.TypeUpdated,
-			},
 		},
 	}
 
@@ -1594,7 +1293,7 @@ func TestBuildConfiguration(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			clientMock := k8s.NewClientMock("mock.yaml")
+			clientMock := k8s.NewClientMock(test.mockFile)
 			if test.endpointsError {
 				clientMock.EnableEndpointsError()
 			}
@@ -1603,8 +1302,11 @@ func TestBuildConfiguration(t *testing.T) {
 			}
 
 			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace, []string{}))
-			provider.BuildConfiguration(test.event, test.provided)
-			assert.Equal(t, test.expected, test.provided)
+			config, err := provider.BuildConfig()
+			assert.Equal(t, test.expected, config)
+			if test.endpointsError || test.serviceError {
+				assert.Error(t, err)
+			}
 		})
 	}
 }
