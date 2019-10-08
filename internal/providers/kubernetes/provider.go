@@ -95,13 +95,15 @@ func (p *Provider) buildService(endpoints *corev1.Endpoints) *dynamic.Service {
 
 func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *dynamic.TCPService {
 	var servers []dynamic.TCPServer
-	for _, subset := range endpoints.Subsets {
-		for _, endpointPort := range subset.Ports {
-			for _, address := range subset.Addresses {
-				server := dynamic.TCPServer{
-					Address: net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
+	if endpoints.Subsets != nil {
+		for _, subset := range endpoints.Subsets {
+			for _, endpointPort := range subset.Ports {
+				for _, address := range subset.Addresses {
+					server := dynamic.TCPServer{
+						Address: net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
+					}
+					servers = append(servers, server)
 				}
-				servers = append(servers, server)
 			}
 		}
 	}
