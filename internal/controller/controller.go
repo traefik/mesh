@@ -1,16 +1,21 @@
 package controller
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"reflect"
 	"strconv"
 	"time"
 
-	"github.com/containous/maesh/internal/deployer"
 	"github.com/containous/maesh/internal/k8s"
-	"github.com/containous/maesh/internal/message"
+	"github.com/containous/maesh/internal/providers/base"
 	"github.com/containous/maesh/internal/providers/kubernetes"
 	"github.com/containous/maesh/internal/providers/smi"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/safe"
 	smiAccessExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	smiSpecsExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	smiSplitExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
@@ -19,32 +24,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/client-go/util/workqueue"
 )
 
 // Controller hold controller configuration.
 type Controller struct {
-	clients            *k8s.ClientWrapper
-	kubernetesFactory  informers.SharedInformerFactory
-	meshFactory        informers.SharedInformerFactory
-	smiAccessFactory   smiAccessExternalversions.SharedInformerFactory
-	smiSpecsFactory    smiSpecsExternalversions.SharedInformerFactory
-	smiSplitFactory    smiSplitExternalversions.SharedInformerFactory
-	handler            *Handler
-	meshHandler        *Handler
-	messageQueue       workqueue.RateLimitingInterface
-	configurationQueue workqueue.RateLimitingInterface
-	kubernetesProvider *kubernetes.Provider
-	smiProvider        *smi.Provider
-	deployer           *deployer.Deployer
-	ignored            k8s.IgnoreWrapper
-	smiEnabled         bool
-	defaultMode        string
-	meshNamespace      string
-	tcpStateTable      *k8s.State
+	clients           *k8s.ClientWrapper
+	kubernetesFactory informers.SharedInformerFactory
+	meshFactory       informers.SharedInformerFactory
+	smiAccessFactory  smiAccessExternalversions.SharedInformerFactory
+	smiSpecsFactory   smiSpecsExternalversions.SharedInformerFactory
+	smiSplitFactory   smiSplitExternalversions.SharedInformerFactory
+	handler           *Handler
+	meshHandler       *Handler
+	configRefreshChan chan bool
+	provider          base.Provider
+	ignored           k8s.IgnoreWrapper
+	smiEnabled        bool
+	defaultMode       string
+	meshNamespace     string
+	tcpStateTable     *k8s.State
+	lastConfiguration safe.Safe
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
@@ -52,23 +53,22 @@ type Controller struct {
 func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string) *Controller {
 	ignored := k8s.NewIgnored(meshNamespace, ignoreNamespaces)
 
-	// messageQueue is used to process messages from the sub-controllers
-	// if cross-controller logic is required
-	messageQueue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+	// configRefreshChan is used to trigger configuration refreshes and deploys.
+	configRefreshChan := make(chan bool)
 
-	handler := NewHandler(ignored, messageQueue)
+	handler := NewHandler(ignored, configRefreshChan)
 	// Create a new mesh handler to handle mesh events (pods)
-	meshHandler := NewHandler(ignored.WithoutMesh(), messageQueue)
+	meshHandler := NewHandler(ignored.WithoutMesh(), configRefreshChan)
 
 	c := &Controller{
-		clients:       clients,
-		handler:       handler,
-		meshHandler:   meshHandler,
-		messageQueue:  messageQueue,
-		ignored:       ignored,
-		smiEnabled:    smiEnabled,
-		defaultMode:   defaultMode,
-		meshNamespace: meshNamespace,
+		clients:           clients,
+		handler:           handler,
+		meshHandler:       meshHandler,
+		configRefreshChan: configRefreshChan,
+		ignored:           ignored,
+		smiEnabled:        smiEnabled,
+		defaultMode:       defaultMode,
+		meshNamespace:     meshNamespace,
 	}
 
 	if err := c.Init(); err != nil {
@@ -80,6 +80,10 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 
 // Init the Controller.
 func (c *Controller) Init() error {
+	// Register handler funcs to controller funcs.
+	c.handler.RegisterHandlers(c.deleteMeshService, c.updateMeshService)
+	c.meshHandler.RegisterHandlers(c.deleteMeshService, c.updateMeshService)
+
 	// Create a new SharedInformerFactory, and register the event handler to informers.
 	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient, k8s.ResyncPeriod)
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
@@ -96,17 +100,9 @@ func (c *Controller) Init() error {
 	c.meshFactory.Core().V1().Pods().Informer().AddEventHandler(c.meshHandler)
 
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
-	c.kubernetesProvider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
-
-	// configurationQueue is used to process configurations from the providers
-	// and deal with pushing them to mesh nodes
-	c.configurationQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-
-	// Initialize the deployer.
-	c.deployer = deployer.New(c.clients, c.configurationQueue, c.meshNamespace)
 
 	if c.smiEnabled {
-		c.smiProvider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.ignored)
+		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.ignored)
 
 		// Create new SharedInformerFactories, and register the event handler to informers.
 		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
@@ -117,7 +113,12 @@ func (c *Controller) Init() error {
 
 		c.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiSplitClient, k8s.ResyncPeriod)
 		c.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(c.handler)
+
+		return nil
 	}
+
+	// If SMI is not configured, use the kubernetes provider.
+	c.provider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
 
 	return nil
 }
@@ -125,11 +126,49 @@ func (c *Controller) Init() error {
 // Run is the main entrypoint for the controller.
 func (c *Controller) Run(stopCh <-chan struct{}) error {
 	var err error
-	// handle a panic with logging and exiting
+	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
 	log.Debug("Initializing Mesh controller")
 
+	// Start the informers.
+	c.startInformers(stopCh)
+
+	// Load the state from the TCP State Configmap before running.
+	c.tcpStateTable, err = c.loadTCPStateTable()
+	if err != nil {
+		log.Errorf("encountered error loading TCP state table: %v", err)
+	}
+
+	// Create the mesh services here to ensure that they exist
+	log.Info("Creating initial mesh services")
+	if err := c.createMeshServices(); err != nil {
+		log.Errorf("could not create mesh services: %v", err)
+	}
+
+	for {
+		select {
+		case <-stopCh:
+			log.Info("Shutting down workers")
+			return nil
+		case <-c.configRefreshChan:
+			// Reload the configuration
+			conf, err := c.provider.BuildConfig()
+			if err != nil {
+				return err
+			}
+			if !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
+				c.lastConfiguration.Set(conf)
+				if deployErr := c.deployConfiguration(conf); deployErr != nil {
+					return err
+				}
+			}
+		}
+	}
+}
+
+// startInformers starts the controller informers.
+func (c *Controller) startInformers(stopCh <-chan struct{}) {
 	// Start the informers
 	c.kubernetesFactory.Start(stopCh)
 
@@ -172,192 +211,6 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 			}
 		}
 	}
-
-	// Load the state from the TCP State Configmap before running.
-	c.tcpStateTable, err = c.loadTCPStateTable()
-	if err != nil {
-		log.Errorf("encountered error loading TCP state table: %v", err)
-	}
-
-	// Create the mesh services here to ensure that they exist
-	log.Info("Creating initial mesh services")
-
-	if err := c.createMeshServices(); err != nil {
-		log.Errorf("could not create mesh services: %v", err)
-	}
-
-	// run the deployer to deploy configurations
-	go c.deployer.Run(stopCh)
-
-	// run the runWorker method every second with a stop channel
-	wait.Until(c.runWorker, time.Second, stopCh)
-
-	<-stopCh
-	log.Info("Shutting down workers")
-
-	return nil
-}
-
-// runWorker executes the loop to process new items added to the queue
-func (c *Controller) runWorker() {
-	// invoke processNextMessage to fetch and consume the next
-	// message put in the queue
-	for c.processNextMessage() {
-	}
-}
-
-// processNextConfiguration retrieves each queued item and takes the
-// necessary handler action.
-func (c *Controller) processNextMessage() bool {
-	// fetch the next item (blocking) from the queue to process or
-	// if a shutdown is requested then return out of this to stop
-	// processing
-	item, quit := c.messageQueue.Get()
-
-	// stop the worker loop from running as this indicates we
-	// have sent a shutdown message that the queue has indicated
-	// from the Get method
-	if quit {
-		return false
-	}
-
-	defer c.messageQueue.Done(item)
-
-	event := item.(message.Message)
-
-	switch event.Action {
-	case message.TypeCreated:
-		c.processCreatedMessage(event)
-	case message.TypeUpdated:
-		c.processUpdatedMessage(event)
-	case message.TypeDeleted:
-		c.processDeletedMessage(event)
-	}
-
-	c.messageQueue.Forget(item)
-
-	// keep the worker loop running by returning true if there are queue objects remaining
-	return c.messageQueue.Len() > 0
-}
-
-func (c *Controller) buildConfigurationFromProviders() *dynamic.Configuration {
-	// Create all mesh services
-	if err := c.createMeshServices(); err != nil {
-		log.Errorf("could not create mesh services: %v", err)
-	}
-
-	var (
-		config *dynamic.Configuration
-		err    error
-	)
-
-	if c.smiEnabled {
-		config, err = c.smiProvider.BuildConfig()
-	} else {
-		config, err = c.kubernetesProvider.BuildConfig()
-	}
-
-	if err != nil {
-		log.Errorf("unable to build configuration: %v", err)
-	}
-
-	return config
-}
-
-func (c *Controller) processCreatedMessage(event message.Message) {
-	// assert the type to an object to pull out relevant data
-	switch obj := event.Object.(type) {
-	case *corev1.Service:
-		if c.ignored.Ignored(obj.Name, obj.Namespace) {
-			return
-		}
-	case *corev1.Endpoints:
-		return
-	case *corev1.Pod:
-		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
-
-		if isMeshPod(obj) {
-			// Re-Deploy configuration to the created mesh pod.
-			msg := message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders())
-			// Don't deploy if name or IP are unassigned.
-			if obj.Name != "" && obj.Status.PodIP != "" {
-				c.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
-			}
-		}
-
-		return
-	}
-
-	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders()))
-}
-
-func (c *Controller) processUpdatedMessage(event message.Message) {
-	// assert the type to an object to pull out relevant data
-	switch obj := event.Object.(type) {
-	case *corev1.Service:
-		if c.ignored.Ignored(obj.Name, obj.Namespace) {
-			return
-		}
-
-		log.Debugf("MeshController ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
-
-		oldService := event.OldObject.(*corev1.Service)
-		if _, err := c.updateMeshService(oldService, obj); err != nil {
-			log.Errorf("Could not update mesh service: %v", err)
-			return
-		}
-	case *corev1.Endpoints:
-		if c.ignored.Ignored(obj.Name, obj.Namespace) {
-			return
-		}
-
-		log.Debugf("MeshController ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
-	case *corev1.Pod:
-		log.Debugf("MeshController ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
-
-		if isMeshPod(obj) {
-			// Re-Deploy configuration to the updated mesh pod.
-			msg := message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders())
-			// Don't deploy if name or IP are unassigned.
-			if obj.Name != "" && obj.Status.PodIP != "" {
-				c.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
-			}
-		}
-
-		return
-	}
-
-	c.buildConfigurationFromProviders()
-	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders()))
-}
-
-func (c *Controller) processDeletedMessage(event message.Message) {
-	// assert the type to an object to pull out relevant data
-	switch obj := event.Object.(type) {
-	case *corev1.Service:
-		// assert the type to an object to pull out relevant data
-		if c.ignored.Ignored(obj.Name, obj.Namespace) {
-			return
-		}
-
-		log.Debugf("MeshController ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
-
-		if err := c.deleteMeshService(obj.Name, obj.Namespace); err != nil {
-			log.Errorf("Could not delete mesh service: %v", err)
-			return
-		}
-	case *corev1.Endpoints:
-		if c.ignored.Ignored(obj.Name, obj.Namespace) {
-			return
-		}
-
-		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
-	case *corev1.Pod:
-		return
-	}
-
-	c.buildConfigurationFromProviders()
-	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders()))
 }
 
 func (c *Controller) createMeshServices() error {
@@ -632,6 +485,62 @@ func (c *Controller) saveTCPStateTable() error {
 		_, err := c.clients.UpdateConfigMap(newConfigMap)
 		return err
 	})
+}
+
+// deployConfiguration deploys the configuration to the mesh pods.
+func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
+	podList, err := c.clients.ListPodWithOptions(c.meshNamespace, metav1.ListOptions{
+		LabelSelector: "component==maesh-mesh",
+	})
+	if err != nil {
+		return fmt.Errorf("unable to retrieve pod list: %v", err)
+	}
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
+	}
+
+	for _, pod := range podList.Items {
+		log.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
+
+		if deployErr := c.deployToPod(pod.Name, pod.Status.PodIP, config); deployErr != nil {
+			log.Debugf("Error deploying configuration: %v", deployErr)
+		}
+	}
+
+	return nil
+}
+
+func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration) error {
+	if name == "" || ip == "" {
+		// If there is no name or ip, then just return.
+		return fmt.Errorf("pod has no name or IP")
+	}
+
+	b, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("unable to marshal configuration: %v", err)
+	}
+
+	url := fmt.Sprintf("http://%s:8080/api/providers/rest", ip)
+
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(b))
+	if err != nil {
+		return fmt.Errorf("unable to create request: %v", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+		if _, bodyErr := ioutil.ReadAll(resp.Body); bodyErr != nil {
+			return fmt.Errorf("unable to read response body: %v", bodyErr)
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("unable to deploy configuration: %v", err)
+	}
+
+	return nil
 }
 
 // isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
