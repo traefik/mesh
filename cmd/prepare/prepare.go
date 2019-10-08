@@ -26,6 +26,7 @@ func NewCmd(pConfig *cmd.PrepareConfig, loaders []cli.ResourceLoader) *cli.Comma
 func patchCommand(pConfig *cmd.PrepareConfig) error {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
+
 	if pConfig.Debug {
 		log.SetLevel(log.DebugLevel)
 	}

@@ -30,14 +30,17 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
 	err = specsv1alpha1.AddToScheme(scheme.Scheme)
 	if err != nil {
 		panic(err)
 	}
+
 	err = splitv1alpha1.AddToScheme(scheme.Scheme)
 	if err != nil {
 		panic(err)
 	}
+
 	err = v1alpha1.AddToScheme(scheme.Scheme)
 	if err != nil {
 		panic(err)
@@ -189,6 +192,7 @@ func NewClientMock(paths ...string) *ClientMock {
 			}
 		}
 	}
+
 	return c
 }
 
@@ -209,6 +213,7 @@ func (c *CoreV1ClientMock) GetService(namespace, name string) (*corev1.Service, 
 			return service, true, nil
 		}
 	}
+
 	return nil, false, c.apiServiceError
 }
 
@@ -261,6 +266,7 @@ func (c *CoreV1ClientMock) GetEndpoints(namespace, name string) (*corev1.Endpoin
 			return endpoint, true, nil
 		}
 	}
+
 	return nil, false, c.apiEndpointsError
 }
 
@@ -284,6 +290,7 @@ func (c *CoreV1ClientMock) GetPod(namespace, name string) (*corev1.Pod, bool, er
 			return pod, true, nil
 		}
 	}
+
 	return nil, false, c.apiPodError
 }
 
@@ -302,6 +309,7 @@ func (c *CoreV1ClientMock) ListPodWithOptions(namespace string, options metav1.L
 	result := &corev1.PodList{
 		Items: items,
 	}
+
 	return result, nil
 }
 
@@ -316,6 +324,7 @@ func (c *CoreV1ClientMock) GetNamespace(name string) (*corev1.Namespace, bool, e
 			return ns, true, nil
 		}
 	}
+
 	return nil, false, c.apiNamespaceError
 }
 
@@ -324,6 +333,7 @@ func (c *CoreV1ClientMock) GetNamespaces() ([]*corev1.Namespace, error) {
 	if c.apiNamespaceError != nil {
 		return nil, c.apiNamespaceError
 	}
+
 	return c.namespaces, nil
 }
 
@@ -338,6 +348,7 @@ func (c *CoreV1ClientMock) GetConfigMap(namespace, name string) (*corev1.ConfigM
 			return configmap, true, nil
 		}
 	}
+
 	return nil, false, c.apiConfigMapError
 }
 
@@ -382,6 +393,7 @@ func (a *AppsV1ClientMock) GetDeployment(namespace, name string) (*appsv1.Deploy
 			return deployment, true, nil
 		}
 	}
+
 	return nil, false, a.apiDeploymentError
 }
 
@@ -444,6 +456,7 @@ func MustParseYaml(content []byte) []runtime.Object {
 
 	files := strings.Split(string(content), "---")
 	retVal := make([]runtime.Object, 0, len(files))
+
 	for _, file := range files {
 		if file == "\n" || file == "" {
 			continue
@@ -451,6 +464,7 @@ func MustParseYaml(content []byte) []runtime.Object {
 
 		decode := scheme.Codecs.UniversalDeserializer().Decode
 		obj, groupVersionKind, err := decode([]byte(file), nil, nil)
+
 		if err != nil {
 			panic(fmt.Sprintf("Error while decoding YAML object. Err was: %s", err))
 		}
@@ -461,5 +475,6 @@ func MustParseYaml(content []byte) []runtime.Object {
 			retVal = append(retVal, obj)
 		}
 	}
+
 	return retVal
 }

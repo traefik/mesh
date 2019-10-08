@@ -28,5 +28,6 @@ func (s Services) Contains(name, namespace string) bool {
 			return true
 		}
 	}
+
 	return false
 }

@@ -53,6 +53,7 @@ func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName
 			Service:     serviceName,
 		}
 	}
+
 	return &dynamic.Router{
 		Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
 		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
@@ -70,6 +71,7 @@ func (p *Provider) buildTCPRouter(port int, serviceName string) *dynamic.TCPRout
 
 func (p *Provider) buildService(endpoints *corev1.Endpoints) *dynamic.Service {
 	var servers []dynamic.Server
+
 	if endpoints.Subsets != nil {
 		for _, subset := range endpoints.Subsets {
 			for _, endpointPort := range subset.Ports {
@@ -95,6 +97,7 @@ func (p *Provider) buildService(endpoints *corev1.Endpoints) *dynamic.Service {
 
 func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *dynamic.TCPService {
 	var servers []dynamic.TCPServer
+
 	if endpoints.Subsets != nil {
 		for _, subset := range endpoints.Subsets {
 			for _, endpointPort := range subset.Ports {
@@ -136,6 +139,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 		if p.ignored.Ignored(service.Name, service.Namespace) {
 			continue
 		}
+
 		serviceMode := p.getServiceMode(service.Annotations)
 
 		for id, sp := range service.Spec.Ports {
@@ -144,12 +148,16 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 			if serviceMode == k8s.ServiceTypeHTTP {
 				config.HTTP.Services[key] = p.buildService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints))
 				middlewares := p.buildHTTPMiddlewares(service.Annotations)
+
 				if middlewares != nil {
 					config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, true)
 					config.HTTP.Middlewares[key] = middlewares
+
 					continue
 				}
+
 				config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, false)
+
 				continue
 			}
 
@@ -168,6 +176,7 @@ func (p *Provider) getServiceMode(annotations map[string]string) string {
 	if mode == "" {
 		return p.defaultMode
 	}
+
 	return mode
 }
 
@@ -178,6 +187,7 @@ func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.
 	if circuitBreaker == nil && retry == nil {
 		return nil
 	}
+
 	return &dynamic.Middleware{
 		CircuitBreaker: circuitBreaker,
 		Retry:          retry,
@@ -193,6 +203,7 @@ func buildCircuitBreakerMiddleware(annotations map[string]string) *dynamic.Circu
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -202,12 +213,14 @@ func buildRetryMiddleware(annotations map[string]string) *dynamic.Retry {
 		if err != nil {
 			log.Errorf("Could not parse retry annotation: %v", err)
 		}
+
 		if retryAttempts > 0 {
 			return &dynamic.Retry{
 				Attempts: retryAttempts,
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -217,6 +230,7 @@ func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort
 			return port
 		}
 	}
+
 	return 0
 }
 
@@ -228,5 +242,6 @@ func buildKey(name, namespace string, port int32) string {
 	dst := make([]byte, hex.EncodedLen(len(sum)))
 	hex.Encode(dst, sum[:])
 	fullHash := string(dst)
+
 	return fmt.Sprintf("%.10s-%.10s-%d-%.16s", name, namespace, port, fullHash)
 }

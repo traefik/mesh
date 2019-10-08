@@ -35,7 +35,9 @@ type Deployer struct {
 // Init the deployer.
 func (d *Deployer) Init() error {
 	log.Info("Initializing Deployer")
+
 	d.deployQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+
 	return nil
 }
 
@@ -83,6 +85,7 @@ func (d *Deployer) runWorker() {
 // necessary handler action based off of the event type.
 func (d *Deployer) processNextItem() bool {
 	log.Debug("Deployer - Config Processing Waiting for next item to process...")
+
 	if d.configQueue.Len() > 0 {
 		log.Debugf("Config queue length: %d", d.configQueue.Len())
 	}
@@ -164,6 +167,7 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 	}
 
 	log.Debugf("Deploying configuration to pod %s with IP %s", m.PodName, m.PodIP)
+
 	b, err := json.Marshal(m.Config)
 	if err != nil {
 		log.Errorf("Unable to marshal configuration: %v", err)
@@ -181,6 +185,7 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 		log.Errorf("Could not get deployed configuration version: %v", err)
 		return false
 	}
+
 	if exists {
 		log.Debugf("Currently deployed version for pod %s: %s", m.PodName, activeVersion)
 
@@ -190,12 +195,14 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 			log.Debugf("Skipping outdated configuration: %v", currentVersion)
 			return true
 		}
+
 		if currentVersion.Equal(activeVersion) {
 			// The version we are trying to deploy is already deployed.
 			// Return true, so that it will be removed from the deploy queue.
 			log.Debugf("Skipping already deployed configuration: %v", currentVersion)
 			return true
 		}
+
 		log.Debugf("Deploying configuration version for pod %s: %s", m.PodName, currentVersion)
 	}
 
@@ -209,14 +216,18 @@ func (d *Deployer) deployAPI(m message.Deploy) bool {
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
+
 	if resp != nil {
 		defer resp.Body.Close()
+
 		if _, bodyErr := ioutil.ReadAll(resp.Body); bodyErr != nil {
 			log.Errorf("Unable to read response body: %v", bodyErr)
 			return false
 		}
+
 		return waitForDeployToProcess(currentVersion, m.PodName, m.PodIP)
 	}
+
 	if err != nil {
 		log.Errorf("Unable to deploy configuration: %v", err)
 	}
@@ -250,6 +261,7 @@ func waitForDeployToProcess(currentVersion time.Time, name, ip string) bool {
 		log.Debugf("Successfully deployed version for pod %s: %s", name, currentVersion)
 		return true
 	}
+
 	return false
 }
 
@@ -279,6 +291,7 @@ func (d *Deployer) processDeployQueueWorker() {
 // necessary handler action based off of the event type.
 func (d *Deployer) processDeployQueueNextItem() bool {
 	log.Debug("Deployer - Deploy Processing Waiting for next item to process...")
+
 	if d.deployQueue.Len() > 0 {
 		log.Debugf("Deploy queue length: %d", d.deployQueue.Len())
 	}
@@ -297,8 +310,9 @@ func (d *Deployer) processDeployQueueNextItem() bool {
 
 	defer d.deployQueue.Done(item)
 
-	deployConfig := item.(message.Deploy)
 	log.Debug("Deploying configuration to pod...")
+
+	deployConfig := item.(message.Deploy)
 	if d.deployAPI(deployConfig) {
 		// Only remove item from queue on successful deploy.
 		d.deployQueue.Forget(item)
@@ -318,14 +332,17 @@ func getDeployedVersion(ip string) (time.Time, bool, error) {
 	url := fmt.Sprintf("http://%s:8080/api/rawdata", ip)
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
+
 	if err != nil {
 		log.Errorf("Could not create request: %v", err)
 		return time.Now(), false, err
 	}
+
 	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
 		body, bodyErr := ioutil.ReadAll(resp.Body)
+
 		if bodyErr != nil {
 			log.Errorf("Unable to read response body: %v", bodyErr)
 			return time.Now(), false, bodyErr
@@ -333,28 +350,36 @@ func getDeployedVersion(ip string) (time.Time, bool, error) {
 
 		trimmedBody := strings.TrimRight(string(body), "\n")
 		data := new(dynamic.HTTPConfiguration)
+
 		if unmarshalErr := json.Unmarshal([]byte(trimmedBody), data); err != nil {
 			log.Errorf("Unable to parse response body: %v", unmarshalErr)
 			return time.Now(), false, unmarshalErr
 		}
 
-		var version int64
-		var timeError error
+		var (
+			version   int64
+			timeError error
+		)
 
 		if len(data.Services) == 0 {
 			return time.Now(), false, nil
 		}
 
 		versionKey := message.ConfigServiceVersionKey + "@rest"
+
 		if value, exists := data.Services[versionKey]; exists {
 			version, timeError = strconv.ParseInt(value.LoadBalancer.Servers[0].URL, 10, 64)
 			if timeError != nil {
 				return time.Now(), false, timeError
 			}
+
 			return time.Unix(0, version), true, nil
 		}
+
 		return time.Now(), false, nil
 	}
+
 	log.Errorf("Got no response: %v", err)
+
 	return time.Now(), false, err
 }

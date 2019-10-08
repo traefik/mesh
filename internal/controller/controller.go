@@ -132,6 +132,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 	// Start the informers
 	c.kubernetesFactory.Start(stopCh)
+
 	for t, ok := range c.kubernetesFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
@@ -139,6 +140,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	}
 
 	c.meshFactory.Start(stopCh)
+
 	for t, ok := range c.meshFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
@@ -147,6 +149,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 	if c.smiEnabled {
 		c.smiAccessFactory.Start(stopCh)
+
 		for t, ok := range c.smiAccessFactory.WaitForCacheSync(stopCh) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
@@ -154,6 +157,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		}
 
 		c.smiSpecsFactory.Start(stopCh)
+
 		for t, ok := range c.smiSpecsFactory.WaitForCacheSync(stopCh) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
@@ -161,6 +165,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		}
 
 		c.smiSplitFactory.Start(stopCh)
+
 		for t, ok := range c.smiSplitFactory.WaitForCacheSync(stopCh) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
@@ -176,6 +181,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 	// Create the mesh services here to ensure that they exist
 	log.Info("Creating initial mesh services")
+
 	if err := c.createMeshServices(); err != nil {
 		log.Errorf("could not create mesh services: %v", err)
 	}
@@ -240,17 +246,21 @@ func (c *Controller) buildConfigurationFromProviders() *dynamic.Configuration {
 		log.Errorf("could not create mesh services: %v", err)
 	}
 
-	var config *dynamic.Configuration
-	var err error
+	var (
+		config *dynamic.Configuration
+		err    error
+	)
 
 	if c.smiEnabled {
 		config, err = c.smiProvider.BuildConfig()
 	} else {
 		config, err = c.kubernetesProvider.BuildConfig()
 	}
+
 	if err != nil {
 		log.Errorf("unable to build configuration: %v", err)
 	}
+
 	return config
 }
 
@@ -261,12 +271,11 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 		if c.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
-
 	case *corev1.Endpoints:
 		return
-
 	case *corev1.Pod:
 		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
+
 		if isMeshPod(obj) {
 			// Re-Deploy configuration to the created mesh pod.
 			msg := message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders())
@@ -275,6 +284,7 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 				c.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
 			}
 		}
+
 		return
 	}
 
@@ -290,21 +300,21 @@ func (c *Controller) processUpdatedMessage(event message.Message) {
 		}
 
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+
 		oldService := event.OldObject.(*corev1.Service)
 		if _, err := c.updateMeshService(oldService, obj); err != nil {
 			log.Errorf("Could not update mesh service: %v", err)
 			return
 		}
-
 	case *corev1.Endpoints:
 		if c.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
-
 	case *corev1.Pod:
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
+
 		if isMeshPod(obj) {
 			// Re-Deploy configuration to the updated mesh pod.
 			msg := message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders())
@@ -313,6 +323,7 @@ func (c *Controller) processUpdatedMessage(event message.Message) {
 				c.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
 			}
 		}
+
 		return
 	}
 
@@ -335,14 +346,12 @@ func (c *Controller) processDeletedMessage(event message.Message) {
 			log.Errorf("Could not delete mesh service: %v", err)
 			return
 		}
-
 	case *corev1.Endpoints:
 		if c.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
 
 		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
-
 	case *corev1.Pod:
 		return
 	}
@@ -361,25 +370,31 @@ func (c *Controller) createMeshServices() error {
 		if c.ignored.Ignored(service.Name, service.Namespace) {
 			continue
 		}
+
 		log.Debugf("Creating mesh for service: %v", service.Name)
 		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
+
 		for _, subservice := range services {
 			// If there is already a mesh service created, don't bother recreating
 			if subservice.Name == meshServiceName && subservice.Namespace == c.meshNamespace {
 				continue
 			}
 		}
+
 		log.Infof("Creating associated mesh service: %s", meshServiceName)
+
 		if err := c.createMeshService(service); err != nil {
 			return fmt.Errorf("unable to get create mesh service: %v", err)
 		}
 	}
+
 	return nil
 }
 
 func (c *Controller) createMeshService(service *corev1.Service) error {
 	meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
 	log.Debugf("Creating mesh service: %s", meshServiceName)
+
 	_, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
 	if err != nil {
 		return err
@@ -440,6 +455,7 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 
 func (c *Controller) deleteMeshService(serviceName, serviceNamespace string) error {
 	meshServiceName := c.userServiceToMeshServiceName(serviceName, serviceNamespace)
+
 	_, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
 	if err != nil {
 		return err
@@ -450,6 +466,7 @@ func (c *Controller) deleteMeshService(serviceName, serviceNamespace string) err
 		if err := c.clients.DeleteService(c.meshNamespace, meshServiceName); err != nil {
 			return err
 		}
+
 		log.Debugf("Deleted service: %s/%s", c.meshNamespace, meshServiceName)
 	}
 
@@ -462,6 +479,7 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 	meshServiceName := c.userServiceToMeshServiceName(oldUserService.Name, oldUserService.Namespace)
 
 	var updatedSvc *corev1.Service
+
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		service, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
 		if err != nil {
@@ -511,6 +529,7 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 	}
 
 	log.Debugf("Updated service: %s/%s", c.meshNamespace, meshServiceName)
+
 	return updatedSvc, nil
 }
 
@@ -540,10 +559,12 @@ func (c *Controller) loadTCPStateTable() (*k8s.State, error) {
 			if err != nil {
 				continue
 			}
+
 			name, namespace, servicePort, err := k8s.ParseServiceNamePort(v)
 			if err != nil {
 				continue
 			}
+
 			result.Table[port] = &k8s.ServiceWithPort{
 				Name:      name,
 				Namespace: namespace,
@@ -551,6 +572,7 @@ func (c *Controller) loadTCPStateTable() (*k8s.State, error) {
 			}
 		}
 	}
+
 	return result, nil
 }
 
@@ -560,6 +582,7 @@ func (c *Controller) getTCPPortFromState(serviceName, serviceNamespace string, s
 			return port
 		}
 	}
+
 	log.Debugf("No match found for %s/%s %d - Add a new port", serviceName, serviceNamespace, servicePort)
 	// No Match, add new port
 	for i := 10000; true; i++ {
@@ -567,6 +590,7 @@ func (c *Controller) getTCPPortFromState(serviceName, serviceNamespace string, s
 			// Port used
 			continue
 		}
+
 		c.tcpStateTable.Table[i] = &k8s.ServiceWithPort{
 			Name:      serviceName,
 			Namespace: serviceNamespace,
@@ -577,8 +601,10 @@ func (c *Controller) getTCPPortFromState(serviceName, serviceNamespace string, s
 			log.Errorf("unable to save TCP state table config map: %v", err)
 			return 0
 		}
+
 		return i
 	}
+
 	return 0
 }
 

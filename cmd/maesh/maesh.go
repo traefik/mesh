@@ -51,6 +51,7 @@ func main() {
 func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
+
 	if iConfig.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -77,5 +78,6 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	if err = ctr.Run(stopCh); err != nil {
 		log.Fatalf("Error running ctr: %v", err)
 	}
+
 	return nil
 }

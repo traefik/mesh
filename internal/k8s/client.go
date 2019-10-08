@@ -173,6 +173,7 @@ func (w *ClientWrapper) CheckCluster() error {
 func (w *ClientWrapper) CoreDNSMatch() (bool, error) {
 	log.Infoln("Checking CoreDNS...")
 	log.Debugln("Get CoreDNS version...")
+
 	deployment, exists, err := w.GetDeployment(metav1.NamespaceSystem, "coredns")
 	if err != nil {
 		return false, fmt.Errorf("unable to get deployment %q in namesapce %q: %v", "coredns", metav1.NamespaceSystem, err)
@@ -201,6 +202,7 @@ func (w *ClientWrapper) CoreDNSMatch() (bool, error) {
 	}
 
 	log.Info("CoreDNS match")
+
 	return true, nil
 }
 
@@ -208,6 +210,7 @@ func (w *ClientWrapper) CoreDNSMatch() (bool, error) {
 func (w *ClientWrapper) KubeDNSMatch() (bool, error) {
 	log.Infoln("Checking KubeDNS...")
 	log.Debugln("Get KubeDNS version...")
+
 	_, exists, err := w.GetDeployment(metav1.NamespaceSystem, "kube-dns")
 	if err != nil {
 		return false, fmt.Errorf("unable to get deployment %q in namesapce %q: %v", "kube-dns", metav1.NamespaceSystem, err)
@@ -219,6 +222,7 @@ func (w *ClientWrapper) KubeDNSMatch() (bool, error) {
 	}
 
 	log.Info("KubeDNS match")
+
 	return true, nil
 }
 
@@ -236,8 +240,8 @@ func isCoreDNSVersionSupported(versionLine string) bool {
 // InitCluster is used to initialize a kubernetes cluster with a variety of configuration options.
 func (w *ClientWrapper) InitCluster(namespace string) error {
 	log.Infoln("Preparing Cluster...")
-
 	log.Debugln("Patching DNS...")
+
 	if err := w.patchDNS(metav1.NamespaceSystem); err != nil {
 		return err
 	}
@@ -256,7 +260,9 @@ func (w *ClientWrapper) patchDNS(namespace string) error {
 	// If CoreDNS exist we will patch it.
 	if exist {
 		log.Debugln("Patching CoreDNS configmap...")
+
 		var patched bool
+
 		patched, err = w.patchCoreDNSConfigMap(deployment)
 		if err != nil {
 			return err
@@ -264,6 +270,7 @@ func (w *ClientWrapper) patchDNS(namespace string) error {
 
 		if !patched {
 			log.Debugln("Restarting CoreDNS pods...")
+
 			if err = w.restartPods(deployment); err != nil {
 				return err
 			}
@@ -288,7 +295,9 @@ func (w *ClientWrapper) patchDNS(namespace string) error {
 	ebo := backoff.NewConstantBackOff(10 * time.Second)
 
 	var serviceIP string
+
 	log.Debugln("Get CoreDNS service IP")
+
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
 		svc, exists, errSvc := w.GetService("maesh", "coredns")
 		if errSvc != nil {
@@ -309,6 +318,7 @@ func (w *ClientWrapper) patchDNS(namespace string) error {
 
 	// Patch KubeDNS
 	log.Debugln("Patching KubeDNS configmap... with IP: ", serviceIP)
+
 	patched, err := w.patchKubeDNSConfigMap(deployment, serviceIP)
 	if err != nil {
 		return err
@@ -316,6 +326,7 @@ func (w *ClientWrapper) patchDNS(namespace string) error {
 
 	if !patched {
 		log.Debugln("Restarting KubeDNS pods...")
+
 		if err := w.restartPods(deployment); err != nil {
 			return err
 		}
@@ -326,6 +337,7 @@ func (w *ClientWrapper) patchDNS(namespace string) error {
 
 func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment) (bool, error) {
 	var coreConfigMapName string
+
 	if len(coreDeployment.Spec.Template.Spec.Volumes) == 0 {
 		return false, errors.New("coreDNS configmap not defined")
 	}
@@ -367,9 +379,11 @@ maesh:53 {
 	originalBlock := coreConfigMap.Data["Corefile"]
 	newBlock := originalBlock + serverBlock
 	coreConfigMap.Data["Corefile"] = newBlock
+
 	if len(coreConfigMap.ObjectMeta.Labels) == 0 {
 		coreConfigMap.ObjectMeta.Labels = make(map[string]string)
 	}
+
 	coreConfigMap.ObjectMeta.Labels["maesh-patched"] = "true"
 
 	if _, err = w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Update(coreConfigMap); err != nil {
@@ -381,6 +395,7 @@ maesh:53 {
 
 func (w *ClientWrapper) patchKubeDNSConfigMap(deployment *appsv1.Deployment, coreDNSIp string) (bool, error) {
 	var configMapName string
+
 	if len(deployment.Spec.Template.Spec.Volumes) == 0 {
 		return false, errors.New("kube-dns configmap not defined")
 	}
@@ -401,6 +416,7 @@ func (w *ClientWrapper) patchKubeDNSConfigMap(deployment *appsv1.Deployment, cor
 
 	stubDomains := make(map[string][]string)
 	originalBlock, exist := configMap.Data["stubDomains"]
+
 	if !exist {
 		originalBlock = "{}"
 	}
@@ -410,7 +426,9 @@ func (w *ClientWrapper) patchKubeDNSConfigMap(deployment *appsv1.Deployment, cor
 	}
 
 	stubDomains["maesh"] = []string{coreDNSIp}
+
 	var newData []byte
+
 	newData, err = json.Marshal(stubDomains)
 	if err != nil {
 		return false, err
@@ -419,11 +437,13 @@ func (w *ClientWrapper) patchKubeDNSConfigMap(deployment *appsv1.Deployment, cor
 	if configMap.Data == nil {
 		configMap.Data = make(map[string]string)
 	}
+
 	configMap.Data["stubDomains"] = string(newData)
 
 	if len(configMap.ObjectMeta.Labels) == 0 {
 		configMap.ObjectMeta.Labels = make(map[string]string)
 	}
+
 	configMap.ObjectMeta.Labels["maesh-patched"] = "true"
 
 	if _, err = w.KubeClient.CoreV1().ConfigMaps(deployment.Namespace).Update(configMap); err != nil {
@@ -439,6 +459,7 @@ func (w *ClientWrapper) restartPods(deployment *appsv1.Deployment) error {
 	// Never edit original object, always work with a clone for updates.
 	newDeployment := deployment.DeepCopy()
 	annotations := newDeployment.Spec.Template.Annotations
+
 	if len(annotations) == 0 {
 		annotations = make(map[string]string)
 	}
@@ -454,8 +475,8 @@ func (w *ClientWrapper) restartPods(deployment *appsv1.Deployment) error {
 func (w *ClientWrapper) VerifyCluster() error {
 	log.Infoln("Verifying Cluster...")
 	defer log.Infoln("Cluster Verification Complete...")
-
 	log.Debugln("Verifying CoreDNS Patched...")
+
 	if err := w.isCoreDNSPatched("coredns", metav1.NamespaceSystem); err != nil {
 		return err
 	}
@@ -492,6 +513,7 @@ func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string
 // buildClient returns a useable kubernetes client.
 func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
 	log.Debugln("Building Kubernetes Client...")
+
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create kubernetes client: %v", err)
@@ -503,6 +525,7 @@ func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
 // buildSmiAccessClient returns a client to manage SMI Access objects.
 func buildSmiAccessClient(config *rest.Config) (*smiAccessClientset.Clientset, error) {
 	log.Debugln("Building SMI Access Client...")
+
 	client, err := smiAccessClientset.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Access Client: %v", err)
@@ -514,6 +537,7 @@ func buildSmiAccessClient(config *rest.Config) (*smiAccessClientset.Clientset, e
 // buildSmiSpecsClient returns a client to manage SMI Specs objects.
 func buildSmiSpecsClient(config *rest.Config) (*smiSpecsClientset.Clientset, error) {
 	log.Debugln("Building SMI Specs Client...")
+
 	client, err := smiSpecsClientset.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Specs Client: %v", err)
@@ -525,6 +549,7 @@ func buildSmiSpecsClient(config *rest.Config) (*smiSpecsClientset.Clientset, err
 // buildSmiSplitClient returns a client to manage SMI Split objects.
 func buildSmiSplitClient(config *rest.Config) (*smiSplitClientset.Clientset, error) {
 	log.Debugln("Building SMI Split Client...")
+
 	client, err := smiSplitClientset.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Split Client: %v", err)
@@ -540,6 +565,7 @@ func getCoreDNSConfigMapName(coreDeployment *appsv1.Deployment) string {
 			return volume.ConfigMap.Name
 		}
 	}
+
 	return ""
 }
 
@@ -547,20 +573,24 @@ func getCoreDNSConfigMapName(coreDeployment *appsv1.Deployment) string {
 func (w *ClientWrapper) GetService(namespace, name string) (*corev1.Service, bool, error) {
 	service, err := w.KubeClient.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
+
 	return service, exists, err
 }
 
 // GetServices retrieves the services from the specified namespace.
 func (w *ClientWrapper) GetServices(namespace string) ([]*corev1.Service, error) {
 	var result []*corev1.Service
+
 	list, err := w.KubeClient.CoreV1().Services(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return result, err
 	}
+
 	for _, service := range list.Items {
 		item := service
 		result = append(result, &item)
 	}
+
 	return result, nil
 }
 
@@ -593,20 +623,24 @@ func (w *ClientWrapper) WatchServicesWithOptions(namespace string, options metav
 func (w *ClientWrapper) GetEndpoints(namespace, name string) (*corev1.Endpoints, bool, error) {
 	endpoints, err := w.KubeClient.CoreV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
+
 	return endpoints, exists, err
 }
 
 // GetEndpointses retrieves the endpoints from the specified namespace.
 func (w *ClientWrapper) GetEndpointses(namespace string) ([]*corev1.Endpoints, error) {
 	var result []*corev1.Endpoints
+
 	list, err := w.KubeClient.CoreV1().Endpoints(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return result, err
 	}
+
 	for _, endpoints := range list.Items {
 		item := endpoints
 		result = append(result, &item)
 	}
+
 	return result, nil
 }
 
@@ -614,6 +648,7 @@ func (w *ClientWrapper) GetEndpointses(namespace string) ([]*corev1.Endpoints, e
 func (w *ClientWrapper) GetPod(namespace, name string) (*corev1.Pod, bool, error) {
 	pod, err := w.KubeClient.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
+
 	return pod, exists, err
 }
 
@@ -626,20 +661,24 @@ func (w *ClientWrapper) ListPodWithOptions(namespace string, options metav1.List
 func (w *ClientWrapper) GetNamespace(name string) (*corev1.Namespace, bool, error) {
 	pod, err := w.KubeClient.CoreV1().Namespaces().Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
+
 	return pod, exists, err
 }
 
 // GetNamespaces returns a slice of all namespaces.
 func (w *ClientWrapper) GetNamespaces() ([]*corev1.Namespace, error) {
 	var result []*corev1.Namespace
+
 	list, err := w.KubeClient.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
 		return result, err
 	}
+
 	for _, namespace := range list.Items {
 		item := namespace
 		result = append(result, &item)
 	}
+
 	return result, nil
 }
 
@@ -647,6 +686,7 @@ func (w *ClientWrapper) GetNamespaces() ([]*corev1.Namespace, error) {
 func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error) {
 	deployment, err := w.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
+
 	return deployment, exists, err
 }
 
@@ -658,26 +698,32 @@ func (w *ClientWrapper) UpdateDeployment(deployment *appsv1.Deployment) (*appsv1
 // GetTrafficTargets returns a slice of all TrafficTargets.
 func (w *ClientWrapper) GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget, error) {
 	var result []*smiAccessv1alpha1.TrafficTarget
+
 	list, err := w.SmiAccessClient.AccessV1alpha1().TrafficTargets(metav1.NamespaceAll).List(metav1.ListOptions{})
 	if err != nil {
 		return result, err
 	}
+
 	for _, trafficTarget := range list.Items {
 		result = append(result, trafficTarget.DeepCopy())
 	}
+
 	return result, nil
 }
 
 // GetTrafficSplits returns a slice of all TrafficSplit.
 func (w *ClientWrapper) GetTrafficSplits() ([]*smiSplitv1alpha1.TrafficSplit, error) {
 	var result []*smiSplitv1alpha1.TrafficSplit
+
 	list, err := w.SmiSplitClient.SplitV1alpha1().TrafficSplits(metav1.NamespaceAll).List(metav1.ListOptions{})
 	if err != nil {
 		return result, err
 	}
+
 	for _, trafficSplit := range list.Items {
 		result = append(result, trafficSplit.DeepCopy())
 	}
+
 	return result, nil
 }
 
@@ -685,6 +731,7 @@ func (w *ClientWrapper) GetTrafficSplits() ([]*smiSplitv1alpha1.TrafficSplit, er
 func (w *ClientWrapper) GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error) {
 	group, err := w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
+
 	return group, exists, err
 }
 
@@ -692,6 +739,7 @@ func (w *ClientWrapper) GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1al
 func (w *ClientWrapper) GetConfigMap(namespace, name string) (*corev1.ConfigMap, bool, error) {
 	configMap, err := w.KubeClient.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
+
 	return configMap, exists, err
 }
 
@@ -711,6 +759,7 @@ func translateNotFoundError(err error) (bool, error) {
 	if kubeerror.IsNotFound(err) {
 		return false, nil
 	}
+
 	return err == nil, err
 }
 
@@ -720,13 +769,15 @@ func ParseServiceNamePort(value string) (name, namespace string, port int32, err
 	if len(service) < 2 {
 		return "", "", 0, fmt.Errorf("could not parse service into name and port")
 	}
+
 	port64, err := strconv.ParseInt(service[1], 10, 32)
 	if err != nil {
 		return "", "", 0, err
 	}
-	port = int32(port64)
 
+	port = int32(port64)
 	substring := strings.Split(service[0], "/")
+
 	if len(substring) == 1 {
 		return service[0], metav1.NamespaceDefault, port, nil
 	}
