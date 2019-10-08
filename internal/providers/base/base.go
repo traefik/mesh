@@ -1,6 +1,7 @@
 package base
 
 import (
+	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	splitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,4 +58,15 @@ func GetEndpointsFromList(name, namespace string, endpointList []*corev1.Endpoin
 	}
 
 	return nil
+}
+
+// AddBaseSMIMiddlewares adds base middleware to a dynamic config.
+func AddBaseSMIMiddlewares(config *dynamic.Configuration) {
+	blockAll := &dynamic.Middleware{
+		IPWhiteList: &dynamic.IPWhiteList{
+			SourceRange: []string{"255.255.255.255"},
+		},
+	}
+
+	config.HTTP.Middlewares[k8s.BlockAllMiddlewareKey] = blockAll
 }

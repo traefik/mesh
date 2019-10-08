@@ -141,6 +141,11 @@ func (d *Deployer) deployConfiguration(c *dynamic.Configuration) bool {
 
 // DeployToPod takes the configuration, and adds it into the deploy queue for a pod.
 func (d *Deployer) DeployToPod(name, ip string, c *dynamic.Configuration) {
+	if name == "" && ip == "" {
+		// If there is no name and ip, then just return.
+		return
+	}
+
 	// Make a copy to deploy, so changes to the main configuration don't propagate
 	deployConfig := c.DeepCopy()
 

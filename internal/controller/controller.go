@@ -8,7 +8,6 @@ import (
 	"github.com/containous/maesh/internal/deployer"
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/maesh/internal/message"
-	"github.com/containous/maesh/internal/providers/base"
 	"github.com/containous/maesh/internal/providers/kubernetes"
 	"github.com/containous/maesh/internal/providers/smi"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
@@ -43,7 +42,6 @@ type Controller struct {
 	deployer           *deployer.Deployer
 	ignored            k8s.IgnoreWrapper
 	smiEnabled         bool
-	traefikConfig      *dynamic.Configuration
 	defaultMode        string
 	meshNamespace      string
 	tcpStateTable      *k8s.State
@@ -107,9 +105,6 @@ func (c *Controller) Init() error {
 	// Initialize the deployer.
 	c.deployer = deployer.New(c.clients, c.configurationQueue, c.meshNamespace)
 
-	// Initialize an empty configuration with a readinesscheck so that configs deployed to nodes mark them as ready.
-	c.traefikConfig = base.CreateBaseConfigWithReadiness()
-
 	if c.smiEnabled {
 		c.smiProvider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.ignored)
 
@@ -122,9 +117,6 @@ func (c *Controller) Init() error {
 
 		c.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiSplitClient, k8s.ResyncPeriod)
 		c.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(c.handler)
-
-		// Initialize the base configuration with the base SMI middleware
-		addBaseSMIMiddlewares(c.traefikConfig)
 	}
 
 	return nil
@@ -242,7 +234,7 @@ func (c *Controller) processNextMessage() bool {
 	return c.messageQueue.Len() > 0
 }
 
-func (c *Controller) buildConfigurationFromProviders() {
+func (c *Controller) buildConfigurationFromProviders() *dynamic.Configuration {
 	// Create all mesh services
 	if err := c.createMeshServices(); err != nil {
 		log.Errorf("could not create mesh services: %v", err)
@@ -259,7 +251,7 @@ func (c *Controller) buildConfigurationFromProviders() {
 	if err != nil {
 		log.Errorf("unable to build configuration: %v", err)
 	}
-	c.traefikConfig = config
+	return config
 }
 
 func (c *Controller) processCreatedMessage(event message.Message) {
@@ -277,7 +269,7 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectCreated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
 		if isMeshPod(obj) {
 			// Re-Deploy configuration to the created mesh pod.
-			msg := message.BuildNewConfigWithVersion(c.traefikConfig)
+			msg := message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders())
 			// Don't deploy if name or IP are unassigned.
 			if obj.Name != "" && obj.Status.PodIP != "" {
 				c.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
@@ -286,8 +278,7 @@ func (c *Controller) processCreatedMessage(event message.Message) {
 		return
 	}
 
-	c.buildConfigurationFromProviders()
-	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
+	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders()))
 }
 
 func (c *Controller) processUpdatedMessage(event message.Message) {
@@ -316,7 +307,7 @@ func (c *Controller) processUpdatedMessage(event message.Message) {
 		log.Debugf("MeshController ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
 		if isMeshPod(obj) {
 			// Re-Deploy configuration to the updated mesh pod.
-			msg := message.BuildNewConfigWithVersion(c.traefikConfig)
+			msg := message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders())
 			// Don't deploy if name or IP are unassigned.
 			if obj.Name != "" && obj.Status.PodIP != "" {
 				c.deployer.DeployToPod(obj.Name, obj.Status.PodIP, msg.Config)
@@ -326,7 +317,7 @@ func (c *Controller) processUpdatedMessage(event message.Message) {
 	}
 
 	c.buildConfigurationFromProviders()
-	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
+	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders()))
 }
 
 func (c *Controller) processDeletedMessage(event message.Message) {
@@ -357,7 +348,7 @@ func (c *Controller) processDeletedMessage(event message.Message) {
 	}
 
 	c.buildConfigurationFromProviders()
-	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.traefikConfig))
+	c.configurationQueue.Add(message.BuildNewConfigWithVersion(c.buildConfigurationFromProviders()))
 }
 
 func (c *Controller) createMeshServices() error {
@@ -620,14 +611,4 @@ func (c *Controller) saveTCPStateTable() error {
 // isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
 func isMeshPod(pod *corev1.Pod) bool {
 	return pod.Labels["component"] == "maesh-mesh"
-}
-
-func addBaseSMIMiddlewares(config *dynamic.Configuration) {
-	blockAll := &dynamic.Middleware{
-		IPWhiteList: &dynamic.IPWhiteList{
-			SourceRange: []string{"255.255.255.255"},
-		},
-	}
-
-	config.HTTP.Middlewares[k8s.BlockAllMiddlewareKey] = blockAll
 }
