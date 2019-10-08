@@ -1267,6 +1267,11 @@ func TestBuildConfiguration(t *testing.T) {
 								SourceRange: []string{"10.4.3.2"},
 							},
 						},
+						"smi-block-all-middleware": {
+							IPWhiteList: &dynamic.IPWhiteList{
+								SourceRange: []string{"255.255.255.255"},
+							},
+						},
 					},
 				},
 				TCP: &dynamic.TCPConfiguration{
