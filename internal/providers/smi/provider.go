@@ -55,6 +55,7 @@ func New(client k8s.Client, defaultMode string, meshNamespace string, ignored k8
 // from a native kubernetes environment.
 func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	config := base.CreateBaseConfigWithReadiness()
+	base.AddBaseSMIMiddlewares(config)
 
 	services, err := p.client.GetServices(metav1.NamespaceAll)
 	if err != nil {
