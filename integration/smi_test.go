@@ -53,7 +53,6 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 	// Pod B -> Service E.maesh /test returns 404
 	// Pod C -> Service E.maesh /test returns 404
 	// Pod D -> Service E.maesh /test returns 404
-
 	s.createResources(c, "resources/smi")
 	s.createResources(c, "resources/smi/access-control/")
 
@@ -202,6 +201,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		argSlice := []string{
 			"exec", "-it", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
 		}
+
 		c.Log(test.desc)
 		s.waitKubectlExecCommand(c, argSlice, fmt.Sprintf("HTTP/1.1 %d", test.expected))
 	}
@@ -363,9 +363,11 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 
 			time.Sleep(10 * time.Second)
 		}
+
 		argSlice := []string{
 			"exec", "-it", test.source, "--", "curl", "-v", test.destination, "--max-time", "5",
 		}
+
 		c.Log(test.desc)
 
 		err := s.try.WaitFunction(func() error {
@@ -430,6 +432,7 @@ func (s *SMISuite) deleteResources(c *check.C, dirPath string, force bool) {
 	if force {
 		args = append(args, "--force", "--grace-period=0")
 	}
+
 	cmd := exec.Command("kubectl", args...)
 	cmd.Env = os.Environ()
 	_, err := cmd.CombinedOutput()

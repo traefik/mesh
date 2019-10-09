@@ -44,6 +44,7 @@ func (d *Deploy) GetVersion() (time.Time, error) {
 			return time.Unix(0, nano), err
 		}
 	}
+
 	return time.Now(), errors.New("could not parse version from Deploy")
 }
 
@@ -65,6 +66,7 @@ func BuildNewConfigWithVersion(conf *dynamic.Configuration) Config {
 			},
 		},
 	}
+
 	return Config{
 		Config: c,
 	}
@@ -78,5 +80,6 @@ func (c *Config) GetVersion() (time.Time, error) {
 			return time.Unix(0, nano), err
 		}
 	}
+
 	return time.Now(), errors.New("could not parse version from Config")
 }

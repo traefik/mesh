@@ -102,6 +102,7 @@ func (t *Try) WaitCommandExecute(command string, argSlice []string, expected str
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	var output []byte
+
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
 		cmd := exec.Command(command, argSlice...)
 		cmd.Env = os.Environ()
@@ -129,6 +130,7 @@ func (t *Try) WaitCommandExecuteReturn(command string, argSlice []string, timeou
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	var output []byte
+
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
 		cmd := exec.Command(command, argSlice...)
 		cmd.Env = os.Environ()
@@ -185,8 +187,11 @@ func (t *Try) WaitClientCreated(url string, kubeConfigPath string, timeout time.
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
-	var clients *k8s.ClientWrapper
-	var err error
+	var (
+		clients *k8s.ClientWrapper
+		err     error
+	)
+
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
 		clients, err = k8s.NewClientWrapper(url, kubeConfigPath)
 		if err != nil {
@@ -212,6 +217,7 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 
 	ciTimeoutMultiplier := getCITimeoutMultiplier()
 	log.Debug("Apply CI multiplier:", ciTimeoutMultiplier)
+
 	return time.Duration(float64(timeout) * ciTimeoutMultiplier)
 }
 

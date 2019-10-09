@@ -60,6 +60,7 @@ func Test(t *testing.T) {
 
 			output, err := cmd.CombinedOutput()
 			fmt.Println(string(output))
+
 			if err != nil {
 				fmt.Printf("unable to pull docker image: %v", err)
 			}
@@ -104,6 +105,7 @@ func (s *BaseSuite) startk3s(c *check.C) {
 
 	// Load images into k3s
 	c.Log("Importing docker images in to k3s...")
+
 	err = s.loadK3sImages()
 	c.Assert(err, checker.IsNil)
 
@@ -120,6 +122,7 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	c.Assert(err, checker.IsNil)
 
 	s.try = try.NewTry(s.client)
+
 	c.Log("k3s start successfully.")
 }
 
@@ -130,6 +133,7 @@ func (s *BaseSuite) loadK3sImages() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -281,7 +285,6 @@ func (s *BaseSuite) unInstallHelmMaesh(c *check.C) {
 
 func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 	// Get current coreDNS deployment.
-
 	deployment, exists, err := s.client.GetDeployment(metav1.NamespaceSystem, "coredns")
 	c.Assert(err, checker.IsNil)
 	c.Assert(exists, checker.True)

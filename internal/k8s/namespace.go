@@ -14,6 +14,7 @@ func (n Namespaces) Contains(x string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 

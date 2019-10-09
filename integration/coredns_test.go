@@ -62,6 +62,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		c.Log(test.desc)
 		s.setCoreDNSVersion(c, test.version)
 		err := s.installHelmMaesh(c, false, false)
+
 		if test.expectedError {
 			err = s.waitForMaeshControllerStartedWithReturn()
 			c.Assert(err, checker.NotNil)
@@ -70,6 +71,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 			s.waitForMaeshControllerStarted(c)
 			s.waitKubectlExecCommand(c, argSlice, "whoami")
 		}
+
 		s.unInstallHelmMaesh(c)
 	}
 }

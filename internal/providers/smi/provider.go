@@ -104,6 +104,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 
 					//	For each source in the trafficTarget, get a list of IPs to whitelist.
 					var sourceIPs []string
+
 					for _, source := range groupedTrafficTarget.Sources {
 						fieldSelector := fmt.Sprintf("spec.serviceAccountName=%s", source.Name)
 						// Get all pods with the associated source serviceAccount (can only be in the source namespaces).
@@ -123,15 +124,18 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 
 					whitelistKey := groupedTrafficTarget.Name + "-" + groupedTrafficTarget.Namespace + "-" + key + "-whitelist"
 					whitelistMiddleware := k8s.BlockAllMiddlewareKey
+
 					if serviceMode == k8s.ServiceTypeHTTP {
 						if len(sourceIPs) > 0 {
 							config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
 							whitelistMiddleware = whitelistKey
 						}
+
 						trafficSplit := base.GetTrafficSplitFromList(service.Name, trafficSplitsInNamespace)
 						if trafficSplit == nil {
 							config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
 							config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
+
 							continue
 						}
 
@@ -141,11 +145,13 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 			}
 		}
 	}
+
 	return config, nil
 }
 
 func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
 	var result []*accessv1alpha1.TrafficTarget
+
 	for _, trafficTarget := range trafficTargets {
 		if trafficTarget.Destination.Namespace == namespace {
 			result = append(result, trafficTarget)
@@ -161,6 +167,7 @@ func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string,
 
 func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string, trafficSplits []*splitv1alpha1.TrafficSplit) []*splitv1alpha1.TrafficSplit {
 	var result []*splitv1alpha1.TrafficSplit
+
 	for _, trafficSplit := range trafficSplits {
 		if trafficSplit.Namespace == namespace {
 			result = append(result, trafficSplit)
@@ -176,6 +183,7 @@ func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string, 
 
 func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
 	var result []*accessv1alpha1.TrafficTarget
+
 	if len(endpoints.Subsets) == 0 {
 		log.Debugf("No applicable TrafficTargets for service %s/%s: No endpoint subsets", endpoints.Namespace, endpoints.Name)
 	}
@@ -189,6 +197,7 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 			}
 
 			var subsetMatch bool
+
 			for _, endpointPort := range subset.Ports {
 				if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port || trafficTarget.Destination.Port == "" {
 					subsetMatch = true
@@ -203,16 +212,19 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 			}
 
 			var validPodFound bool
+
 			for _, address := range subset.Addresses {
 				pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name)
 				if err != nil {
 					log.Errorf("Could not get pod %s/%s: %v", address.TargetRef.Namespace, address.TargetRef.Name, err)
 					continue
 				}
+
 				if !exists {
 					log.Errorf("pod %s/%s do not exist", address.TargetRef.Namespace, address.TargetRef.Name)
 					continue
 				}
+
 				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
 					validPodFound = true
 					break
@@ -229,6 +241,7 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 			result = append(result, trafficTarget)
 		}
 	}
+
 	return result
 }
 
@@ -256,30 +269,37 @@ func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1al
 
 func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key, middleware string) *dynamic.Router {
 	var rule []string
+
 	for _, spec := range trafficTarget.Specs {
 		if spec.Kind != "HTTPRouteGroup" {
 			log.Warn("TCP is unsupported for now.")
 			continue
 		}
+
 		var builtRule []string
+
 		rawHTTPRouteGroup, exists, err := p.client.GetHTTPRouteGroup(trafficTarget.Namespace, spec.Name)
 		if err != nil {
 			log.Errorf("Error getting HTTPRouteGroup: %v", err)
 			continue
 		}
+
 		if !exists {
 			log.Errorf("HTTPRouteGroup %s/%s does not exist", trafficTarget.Namespace, spec.Name)
 			continue
 		}
+
 		for _, match := range spec.Matches {
 			for _, httpMatch := range rawHTTPRouteGroup.Matches {
 				if match != httpMatch.Name {
 					// Matches specified, add only matches from route group
 					continue
 				}
+
 				builtRule = append(builtRule, p.buildRuleSnippetFromServiceAndMatch(serviceName, serviceNamespace, serviceIP, httpMatch))
 			}
 		}
+
 		rule = append(rule, "("+strings.Join(builtRule, " || ")+")")
 	}
 
@@ -318,6 +338,7 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 
 	for _, subset := range endpoints.Subsets {
 		var subsetMatch bool
+
 		for _, endpointPort := range subset.Ports {
 			if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port || trafficTarget.Destination.Port == "" {
 				subsetMatch = true
@@ -337,10 +358,12 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 					log.Errorf("Could not get pod %s/%s: %v", address.TargetRef.Namespace, address.TargetRef.Name, err)
 					continue
 				}
+
 				if !exists {
 					log.Errorf("pod %s/%s do not exist", address.TargetRef.Namespace, address.TargetRef.Name)
 					continue
 				}
+
 				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
 					server := dynamic.Server{
 						URL: "http://" + net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
@@ -363,23 +386,28 @@ func (p *Provider) getServiceMode(mode string) string {
 	if mode == "" {
 		return p.defaultMode
 	}
+
 	return mode
 }
 
 func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit *splitv1alpha1.TrafficSplit, sp corev1.ServicePort, id int, trafficTarget *accessv1alpha1.TrafficTarget, whitelistMiddleware string) {
 	var WRRServices []dynamic.WRRService
+
 	for _, backend := range trafficSplit.Spec.Backends {
 		endpoints, exists, err := p.client.GetEndpoints(trafficSplit.Namespace, backend.Service)
 		if err != nil {
 			log.Errorf("Could not get endpoints for service %s/%s: %v", trafficSplit.Namespace, backend.Service, err)
 			return
 		}
+
 		if !exists {
 			log.Errorf("endpoints for service %s/%s do not exist", trafficSplit.Namespace, backend.Service)
 			return
 		}
+
 		splitKey := buildKey(backend.Service, trafficSplit.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
 		config.HTTP.Services[splitKey] = p.buildServiceFromTrafficTarget(endpoints, trafficTarget)
+
 		WRRServices = append(WRRServices, dynamic.WRRService{
 			Name:   splitKey,
 			Weight: intToP(backend.Weight.Value()),
@@ -391,6 +419,7 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 		log.Errorf("Could not get service for service %s/%s: %v", trafficSplit.Namespace, trafficSplit.Spec.Service, err)
 		return
 	}
+
 	if !exists {
 		log.Errorf("service %s/%s do not exist", trafficSplit.Namespace, trafficSplit.Spec.Service)
 		return
@@ -415,6 +444,7 @@ func buildKey(serviceName, namespace string, port int32, ttName, ttNamespace str
 	dst := make([]byte, hex.EncodedLen(len(sum)))
 	hex.Encode(dst, sum[:])
 	fullHash := string(dst)
+
 	return fmt.Sprintf("%.10s-%.10s-%d-%.10s-%.10s-%.16s", serviceName, namespace, port, ttName, ttNamespace, fullHash)
 }
 

@@ -134,6 +134,7 @@ func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 	}
 	allTrafficTargets, err := clientMock.GetTrafficTargets()
 	assert.NoError(t, err)
+
 	actual := provider.getTrafficTargetsWithDestinationInNamespace("foo", allTrafficTargets)
 	assert.Equal(t, expected, actual)
 }
