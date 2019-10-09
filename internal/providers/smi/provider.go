@@ -26,7 +26,6 @@ type Provider struct {
 	meshNamespace string
 	tcpStateTable *k8s.State
 	ignored       k8s.IgnoreWrapper
-
 }
 
 // destinationKey is used to key a grouped map of trafficTargets.
@@ -145,7 +144,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 					}
 
 					meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
-					config.TCP.Routers[key] =  p.buildTCPRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, meshPort, key)
+					config.TCP.Routers[key] = p.buildTCPRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, meshPort, key)
 					config.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
 				}
 			}
@@ -273,7 +272,7 @@ func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1al
 	return result
 }
 
-func (p *Provider) 	buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key, middleware string) *dynamic.Router {
+func (p *Provider) buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key, middleware string) *dynamic.Router {
 	var rule []string
 
 	for _, spec := range trafficTarget.Specs {
@@ -315,7 +314,7 @@ func (p *Provider) 	buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespa
 	}
 }
 
-func (p *Provider) 	buildTCPRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *dynamic.TCPRouter {
+func (p *Provider) buildTCPRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *dynamic.TCPRouter {
 	var rule string
 	for _, spec := range trafficTarget.Specs {
 		if spec.Kind != "TCPRoute" {
@@ -334,7 +333,7 @@ func (p *Provider) 	buildTCPRouterFromTrafficTarget(serviceName, serviceNamespac
 	}
 
 	return &dynamic.TCPRouter{
-		Rule:         rule,
+		Rule:        rule,
 		EntryPoints: []string{fmt.Sprintf("tcp-%d", port)},
 		Service:     key,
 	}
@@ -493,11 +492,10 @@ func (p *Provider) buildTCPServiceFromTrafficTarget(endpoints *corev1.Endpoints,
 
 	return &dynamic.TCPService{
 		LoadBalancer: &dynamic.TCPServersLoadBalancer{
-			Servers:        servers,
+			Servers: servers,
 		},
 	}
 }
-
 
 func (p *Provider) getServiceMode(mode string) string {
 	if mode == "" {

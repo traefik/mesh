@@ -74,12 +74,12 @@ type AppsV1ClientMock struct {
 type SMIClientMock struct {
 	trafficTargets  []*accessv1alpha1.TrafficTarget
 	httpRouteGroups []*specsv1alpha1.HTTPRouteGroup
-	tcpRoutes 		[]*specsv1alpha1.TCPRoute
+	tcpRoutes       []*specsv1alpha1.TCPRoute
 	trafficSplits   []*splitv1alpha1.TrafficSplit
 
 	apiTrafficTargetError  error
 	apiHTTPRouteGroupError error
-	apiTCPRouteError error
+	apiTCPRouteError       error
 	apiTrafficSplitError   error
 }
 
