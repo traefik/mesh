@@ -54,3 +54,19 @@ sources:
 - kind: ServiceAccount
   name: c
   namespace: default
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: tcp-access
+destination:
+  kind: ServiceAccount
+  name: d
+  namespace: default
+specs:
+  - kind: TCPRoute
+    name: app-routes
+sources:
+  - kind: ServiceAccount
+    name: e
+    namespace: default
