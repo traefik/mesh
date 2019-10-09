@@ -102,8 +102,7 @@ func (c *Controller) Init() error {
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
 
 	if c.smiEnabled {
-		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.ignored)
-
+		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
 		// Create new SharedInformerFactories, and register the event handler to informers.
 		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
 		c.smiAccessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
