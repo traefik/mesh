@@ -74,10 +74,12 @@ type AppsV1ClientMock struct {
 type SMIClientMock struct {
 	trafficTargets  []*accessv1alpha1.TrafficTarget
 	httpRouteGroups []*specsv1alpha1.HTTPRouteGroup
+	tcpRoutes 		[]*specsv1alpha1.TCPRoute
 	trafficSplits   []*splitv1alpha1.TrafficSplit
 
 	apiTrafficTargetError  error
 	apiHTTPRouteGroupError error
+	apiTCPRouteError error
 	apiTrafficSplitError   error
 }
 
@@ -415,6 +417,21 @@ func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha
 	}
 
 	return nil, false, s.apiHTTPRouteGroupError
+}
+
+// GetHTTPRouteGroup returns mocked data for HTTP route group.
+func (s *SMIClientMock) GetTCPRoute(namespace, name string) (*specsv1alpha1.TCPRoute, bool, error) {
+	if s.apiTCPRouteError != nil {
+		return nil, false, s.apiTCPRouteError
+	}
+
+	for _, hrg := range s.tcpRoutes {
+		if hrg.Name == name && hrg.Namespace == namespace {
+			return hrg, true, nil
+		}
+	}
+
+	return nil, false, s.apiTCPRouteError
 }
 
 // GetTrafficTargets returns mocked data for traffic targets.

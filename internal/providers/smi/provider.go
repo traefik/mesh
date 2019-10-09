@@ -24,7 +24,9 @@ type Provider struct {
 	client        k8s.Client
 	defaultMode   string
 	meshNamespace string
+	tcpStateTable *k8s.State
 	ignored       k8s.IgnoreWrapper
+
 }
 
 // destinationKey is used to key a grouped map of trafficTargets.
@@ -38,11 +40,12 @@ type destinationKey struct {
 func (p *Provider) Init() {}
 
 // New creates a new provider.
-func New(client k8s.Client, defaultMode string, meshNamespace string, ignored k8s.IgnoreWrapper) *Provider {
+func New(client k8s.Client, defaultMode string, meshNamespace string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
 	p := &Provider{
 		client:        client,
 		defaultMode:   defaultMode,
 		meshNamespace: meshNamespace,
+		tcpStateTable: tcpStateTable,
 		ignored:       ignored,
 	}
 
@@ -133,14 +136,17 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 
 						trafficSplit := base.GetTrafficSplitFromList(service.Name, trafficSplitsInNamespace)
 						if trafficSplit == nil {
-							config.HTTP.Routers[key] = p.buildRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
-							config.HTTP.Services[key] = p.buildServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
-
+							config.HTTP.Routers[key] = p.buildHTTPRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
+							config.HTTP.Services[key] = p.buildHTTPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
 							continue
 						}
 
 						p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware)
 					}
+
+					meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
+					config.TCP.Routers[key] =  p.buildTCPRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, meshPort, key)
+					config.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
 				}
 			}
 		}
@@ -267,16 +273,14 @@ func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1al
 	return result
 }
 
-func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key, middleware string) *dynamic.Router {
+func (p *Provider) 	buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key, middleware string) *dynamic.Router {
 	var rule []string
 
 	for _, spec := range trafficTarget.Specs {
+		var builtRule []string
 		if spec.Kind != "HTTPRouteGroup" {
-			log.Warn("TCP is unsupported for now.")
 			continue
 		}
-
-		var builtRule []string
 
 		rawHTTPRouteGroup, exists, err := p.client.GetHTTPRouteGroup(trafficTarget.Namespace, spec.Name)
 		if err != nil {
@@ -311,6 +315,67 @@ func (p *Provider) buildRouterFromTrafficTarget(serviceName, serviceNamespace, s
 	}
 }
 
+func (p *Provider) 	buildTCPRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *dynamic.TCPRouter {
+	var rule string
+	for _, spec := range trafficTarget.Specs {
+		if spec.Kind != "TCPRoute" {
+			continue
+		}
+		_, exists, err := p.client.GetTCPRoute(trafficTarget.Namespace, spec.Name)
+		if err != nil {
+			log.Errorf("Error getting TCPRoute: %v", err)
+			continue
+		}
+		if !exists {
+			log.Errorf("TCPRoute %s/%s does not exist", trafficTarget.Namespace, spec.Name)
+			continue
+		}
+		rule = "HostSNI(`*`)"
+	}
+
+	return &dynamic.TCPRouter{
+		Rule:         rule,
+		EntryPoints: []string{fmt.Sprintf("tcp-%d", port)},
+		Service:     key,
+	}
+}
+
+func (p *Provider) buildHTTPRule(serviceName string, serviceNamespace string, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, matches []string, specName string) []string {
+	var builtRule []string
+	rawHTTPRouteGroup, exists, err := p.client.GetHTTPRouteGroup(trafficTarget.Namespace, specName)
+	if err != nil {
+		log.Errorf("Error getting HTTPRouteGroup: %v", err)
+		return builtRule
+	}
+	if !exists {
+		log.Errorf("HTTPRouteGroup %s/%s does not exist", trafficTarget.Namespace, specName)
+		return builtRule
+	}
+	for _, match := range matches {
+		for _, httpMatch := range rawHTTPRouteGroup.Matches {
+			if match != httpMatch.Name {
+				// Matches specified, add only matches from route group
+				continue
+			}
+			builtRule = append(builtRule, p.buildRuleSnippetFromServiceAndMatch(serviceName, serviceNamespace, serviceIP, httpMatch))
+		}
+	}
+	return builtRule
+}
+
+func (p *Provider) buildTCPRule(serviceName string, serviceNamespace string, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, matches []string, specName string) string {
+	_, exists, err := p.client.GetTCPRoute(trafficTarget.Namespace, specName)
+	if err != nil {
+		log.Errorf("Error getting TCPRoute: %v", err)
+		return ""
+	}
+	if !exists {
+		log.Errorf("TCPRoute %s/%s does not exist", trafficTarget.Namespace, specName)
+		return ""
+	}
+	return fmt.Sprintf("HostSNI(`*`)")
+}
+
 func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip string, match specsv1alpha1.HTTPMatch) string {
 	var result []string
 	if len(match.PathRegex) > 0 {
@@ -327,7 +392,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 	return strings.Join(result, " && ")
 }
 
-func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *dynamic.Service {
+func (p *Provider) buildHTTPServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *dynamic.Service {
 	var servers []dynamic.Server
 
 	if endpoints.Namespace != trafficTarget.Destination.Namespace {
@@ -382,6 +447,58 @@ func (p *Provider) buildServiceFromTrafficTarget(endpoints *corev1.Endpoints, tr
 	}
 }
 
+func (p *Provider) buildTCPServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *dynamic.TCPService {
+	var servers []dynamic.TCPServer
+
+	if endpoints.Namespace != trafficTarget.Destination.Namespace {
+		// Destination not in service namespace log error.
+		log.Errorf("TrafficTarget %s/%s destination not in namespace %s", trafficTarget.Namespace, trafficTarget.Name, endpoints.Namespace)
+		return nil
+	}
+
+	for _, subset := range endpoints.Subsets {
+		var subsetMatch bool
+		for _, endpointPort := range subset.Ports {
+			if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port || trafficTarget.Destination.Port == "" {
+				subsetMatch = true
+				break
+			}
+		}
+
+		if !subsetMatch {
+			// No subset port match on destination port, so subset is not affected
+			continue
+		}
+
+		for _, endpointPort := range subset.Ports {
+			for _, address := range subset.Addresses {
+				pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name)
+				if err != nil {
+					log.Errorf("Could not get pod %s/%s: %v", address.TargetRef.Namespace, address.TargetRef.Name, err)
+					continue
+				}
+				if !exists {
+					log.Errorf("pod %s/%s do not exist", address.TargetRef.Namespace, address.TargetRef.Name)
+					continue
+				}
+				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
+					server := dynamic.TCPServer{
+						Address: net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
+					}
+					servers = append(servers, server)
+				}
+			}
+		}
+	}
+
+	return &dynamic.TCPService{
+		LoadBalancer: &dynamic.TCPServersLoadBalancer{
+			Servers:        servers,
+		},
+	}
+}
+
+
 func (p *Provider) getServiceMode(mode string) string {
 	if mode == "" {
 		return p.defaultMode
@@ -406,8 +523,7 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 		}
 
 		splitKey := buildKey(backend.Service, trafficSplit.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
-		config.HTTP.Services[splitKey] = p.buildServiceFromTrafficTarget(endpoints, trafficTarget)
-
+		config.HTTP.Services[splitKey] = p.buildHTTPServiceFromTrafficTarget(endpoints, trafficTarget)
 		WRRServices = append(WRRServices, dynamic.WRRService{
 			Name:   splitKey,
 			Weight: intToP(backend.Weight.Value()),
@@ -432,8 +548,17 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 	}
 
 	weightedKey := buildKey(svc.Name, svc.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
-	config.HTTP.Routers[weightedKey] = p.buildRouterFromTrafficTarget(trafficSplit.Spec.Service, trafficSplit.Namespace, svc.Spec.ClusterIP, trafficTarget, 5000+id, weightedKey, whitelistMiddleware)
+	config.HTTP.Routers[weightedKey] = p.buildHTTPRouterFromTrafficTarget(trafficSplit.Spec.Service, trafficSplit.Namespace, svc.Spec.ClusterIP, trafficTarget, 5000+id, weightedKey, whitelistMiddleware)
 	config.HTTP.Services[weightedKey] = svcWeighted
+}
+
+func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {
+	for port, v := range p.tcpStateTable.Table {
+		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
+			return port
+		}
+	}
+	return 0
 }
 
 func buildKey(serviceName, namespace string, port int32, ttName, ttNamespace string) string {

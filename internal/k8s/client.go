@@ -96,6 +96,7 @@ type SMIAccessV1Alpha1Client interface {
 // SMISpecsV1Alpha1Client SMI Specs v1Alpha client.
 type SMISpecsV1Alpha1Client interface {
 	GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error)
+	GetTCPRoute(namespace, name string) (*smiSpecsv1alpha1.TCPRoute, bool, error)
 }
 
 // SMISplitV1Alpha1Client SMI Split v1Alpha client.
@@ -732,6 +733,13 @@ func (w *ClientWrapper) GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1al
 	group, err := w.SmiSpecsClient.SpecsV1alpha1().HTTPRouteGroups(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
 
+	return group, exists, err
+}
+
+// GetTCPRoute retrieves the HTTPRouteGroup from the specified namespace.
+func (w *ClientWrapper) GetTCPRoute(namespace, name string) (*smiSpecsv1alpha1.TCPRoute, bool, error) {
+	group, err := w.SmiSpecsClient.SpecsV1alpha1().TCPRoutes(namespace).Get(name, metav1.GetOptions{})
+	exists, err := translateNotFoundError(err)
 	return group, exists, err
 }
 

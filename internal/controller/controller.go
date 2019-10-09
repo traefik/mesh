@@ -106,7 +106,7 @@ func (c *Controller) Init() error {
 	c.deployer = deployer.New(c.clients, c.configurationQueue, c.meshNamespace)
 
 	if c.smiEnabled {
-		c.smiProvider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.ignored)
+		c.smiProvider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
 
 		// Create new SharedInformerFactories, and register the event handler to informers.
 		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
