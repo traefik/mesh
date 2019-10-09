@@ -41,6 +41,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: tcp
+  annotations:
+    maesh.containo.us/traffic-type: "tcp"
 spec:
   type: ClusterIP
   ports:

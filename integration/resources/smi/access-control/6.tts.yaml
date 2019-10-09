@@ -61,12 +61,12 @@ metadata:
   name: tcp-access
 destination:
   kind: ServiceAccount
-  name: d
+  name: tcp
   namespace: default
 specs:
   - kind: TCPRoute
-    name: app-routes
+    name: tcp-access
 sources:
   - kind: ServiceAccount
-    name: e
+    name: d
     namespace: default
