@@ -114,3 +114,15 @@ spec:
   containers:
     - name: e
       image: containous/whoami:v1.0.1
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tcp
+  labels:
+    app: tcp
+spec:
+  serviceAccountName: tcp
+  containers:
+    - name: tcp
+      image: containous/whoami:v1.0.1

@@ -74,10 +74,12 @@ type AppsV1ClientMock struct {
 type SMIClientMock struct {
 	trafficTargets  []*accessv1alpha1.TrafficTarget
 	httpRouteGroups []*specsv1alpha1.HTTPRouteGroup
+	tcpRoutes       []*specsv1alpha1.TCPRoute
 	trafficSplits   []*splitv1alpha1.TrafficSplit
 
 	apiTrafficTargetError  error
 	apiHTTPRouteGroupError error
+	apiTCPRouteError       error
 	apiTrafficSplitError   error
 }
 
@@ -184,6 +186,9 @@ func NewClientMock(paths ...string) *ClientMock {
 			case *specsv1alpha1.HTTPRouteGroup:
 				setNamespaceIfNot(o)
 				c.httpRouteGroups = append(c.httpRouteGroups, o)
+			case *specsv1alpha1.TCPRoute:
+				setNamespaceIfNot(o)
+				c.tcpRoutes = append(c.tcpRoutes, o)
 			case *splitv1alpha1.TrafficSplit:
 				setNamespaceIfNot(o)
 				c.trafficSplits = append(c.trafficSplits, o)
@@ -417,6 +422,21 @@ func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha
 	return nil, false, s.apiHTTPRouteGroupError
 }
 
+// GetTCPRoute returns mocked data for HTTP route group.
+func (s *SMIClientMock) GetTCPRoute(namespace, name string) (*specsv1alpha1.TCPRoute, bool, error) {
+	if s.apiTCPRouteError != nil {
+		return nil, false, s.apiTCPRouteError
+	}
+
+	for _, hrg := range s.tcpRoutes {
+		if hrg.Name == name && hrg.Namespace == namespace {
+			return hrg, true, nil
+		}
+	}
+
+	return nil, false, s.apiTCPRouteError
+}
+
 // GetTrafficTargets returns mocked data for traffic targets.
 func (s *SMIClientMock) GetTrafficTargets() ([]*accessv1alpha1.TrafficTarget, error) {
 	if s.apiTrafficTargetError != nil {
@@ -445,6 +465,11 @@ func (s *SMIClientMock) EnableHTTPRouteGroupError() {
 	s.apiHTTPRouteGroupError = errors.New("httpRouteGroup error")
 }
 
+// EnableTCPRouteError enables error on http router group.
+func (s *SMIClientMock) EnableTCPRouteError() {
+	s.apiTCPRouteError = errors.New("tcpRoute error")
+}
+
 // EnableTrafficSplitError enables error on traffic split.
 func (s *SMIClientMock) EnableTrafficSplitError() {
 	s.apiTrafficSplitError = errors.New("trafficSplit error")
@@ -452,7 +477,7 @@ func (s *SMIClientMock) EnableTrafficSplitError() {
 
 // MustParseYaml parses a YAML to objects.
 func MustParseYaml(content []byte) []runtime.Object {
-	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|Middleware|Secret|TLSOption|Namespace|TrafficTarget|HTTPRouteGroup|TrafficSplit|Pod)`)
+	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|Middleware|Secret|TLSOption|Namespace|TrafficTarget|HTTPRouteGroup|TCPRoute|TrafficSplit|Pod)`)
 
 	files := strings.Split(string(content), "---")
 	retVal := make([]runtime.Object, 0, len(files))
