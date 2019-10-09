@@ -137,6 +137,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 						if trafficSplit == nil {
 							config.HTTP.Routers[key] = p.buildHTTPRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
 							config.HTTP.Services[key] = p.buildHTTPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
+
 							continue
 						}
 
@@ -144,7 +145,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 					}
 
 					meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
-					config.TCP.Routers[key] = p.buildTCPRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, meshPort, key)
+					config.TCP.Routers[key] = p.buildTCPRouterFromTrafficTarget(service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, meshPort, key)
 					config.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
 				}
 			}
@@ -277,6 +278,7 @@ func (p *Provider) buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespac
 
 	for _, spec := range trafficTarget.Specs {
 		var builtRule []string
+
 		if spec.Kind != "HTTPRouteGroup" {
 			continue
 		}
@@ -314,7 +316,7 @@ func (p *Provider) buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespac
 	}
 }
 
-func (p *Provider) buildTCPRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *dynamic.TCPRouter {
+func (p *Provider) buildTCPRouterFromTrafficTarget(serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *dynamic.TCPRouter {
 	var rule string
 	for _, spec := range trafficTarget.Specs {
 		if spec.Kind != "TCPRoute" {
@@ -329,6 +331,7 @@ func (p *Provider) buildTCPRouterFromTrafficTarget(serviceName, serviceNamespace
 			log.Errorf("TCPRoute %s/%s does not exist", trafficTarget.Namespace, spec.Name)
 			continue
 		}
+
 		rule = "HostSNI(`*`)"
 	}
 
@@ -362,7 +365,7 @@ func (p *Provider) buildHTTPRule(serviceName string, serviceNamespace string, se
 	return builtRule
 }
 
-func (p *Provider) buildTCPRule(serviceName string, serviceNamespace string, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, matches []string, specName string) string {
+func (p *Provider) buildTCPRule(serviceNamespace string, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, matches []string, specName string) string {
 	_, exists, err := p.client.GetTCPRoute(trafficTarget.Namespace, specName)
 	if err != nil {
 		log.Errorf("Error getting TCPRoute: %v", err)

@@ -422,7 +422,7 @@ func (s *SMIClientMock) GetHTTPRouteGroup(namespace, name string) (*specsv1alpha
 	return nil, false, s.apiHTTPRouteGroupError
 }
 
-// GetHTTPRouteGroup returns mocked data for HTTP route group.
+// GetTCPRoute returns mocked data for HTTP route group.
 func (s *SMIClientMock) GetTCPRoute(namespace, name string) (*specsv1alpha1.TCPRoute, bool, error) {
 	if s.apiTCPRouteError != nil {
 		return nil, false, s.apiTCPRouteError
@@ -465,7 +465,7 @@ func (s *SMIClientMock) EnableHTTPRouteGroupError() {
 	s.apiHTTPRouteGroupError = errors.New("httpRouteGroup error")
 }
 
-// EnableHTTPRouteGroupError enables error on http router group.
+// EnableTCPRouteError enables error on http router group.
 func (s *SMIClientMock) EnableTCPRouteError() {
 	s.apiTCPRouteError = errors.New("tcpRoute error")
 }

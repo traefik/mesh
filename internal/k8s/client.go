@@ -740,6 +740,7 @@ func (w *ClientWrapper) GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1al
 func (w *ClientWrapper) GetTCPRoute(namespace, name string) (*smiSpecsv1alpha1.TCPRoute, bool, error) {
 	group, err := w.SmiSpecsClient.SpecsV1alpha1().TCPRoutes(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
+
 	return group, exists, err
 }
 
