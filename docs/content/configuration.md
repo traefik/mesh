@@ -32,8 +32,15 @@ The service mode can be enabled by using the following annotation:
 maesh.containo.us/traffic-type: "http"
 ```
 
-This annotation can be set to either `http` or `tcp`, and will specify the mode for that service operation.
-If this annotation is not present, the mesh service will operate in the default mode specified in the static configuration.
+### Scheme
+
+The scheme used to define custom scheme for request:
+
+```yaml
+maesh.containo.us/scheme: "h2c"
+```
+
+This annotation can be set to either `http` or `h2c`.
 
 ### Retry
 
