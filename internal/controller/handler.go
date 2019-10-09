@@ -36,7 +36,7 @@ func (h *Handler) Init() error {
 	return nil
 }
 
-// RegisterHandlers registers function handlers.
+// RegisterMeshHandlers registers function handlers.
 func (h *Handler) RegisterMeshHandlers(createFunc func(service *corev1.Service) error, updateFunc func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error), deleteFunc func(serviceName, serviceNamespace string) error) {
 	h.createMeshServiceFunc = createFunc
 	h.updateMeshServiceFunc = updateFunc
@@ -57,7 +57,6 @@ func (h *Handler) OnAdd(obj interface{}) {
 		}
 	case *corev1.Endpoints:
 		return
-
 	case *corev1.Pod:
 		if !isMeshPod(obj) {
 			return
@@ -76,23 +75,24 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 		if h.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
-		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
 		oldService := oldObj.(*corev1.Service)
 		if _, err := h.updateMeshServiceFunc(oldService, obj); err != nil {
 			log.Errorf("Could not update mesh service: %v", err)
 		}
 
+		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 	case *corev1.Endpoints:
 		if h.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
-		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 
+		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 	case *corev1.Pod:
 		if !isMeshPod(obj) {
 			return
 		}
+
 		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
 	}
 
@@ -108,18 +108,18 @@ func (h *Handler) OnDelete(obj interface{}) {
 		if h.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
+
 		log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
 		if err := h.deleteMeshServiceFunc(obj.Name, obj.Namespace); err != nil {
 			log.Errorf("Could not delete mesh service: %v", err)
 		}
-
 	case *corev1.Endpoints:
 		if h.ignored.Ignored(obj.Name, obj.Namespace) {
 			return
 		}
-		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 
+		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 	case *corev1.Pod:
 		return
 	}

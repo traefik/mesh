@@ -142,6 +142,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 	// Create the mesh services here to ensure that they exist
 	log.Info("Creating initial mesh services")
+
 	if err := c.createMeshServices(); err != nil {
 		log.Errorf("could not create mesh services: %v", err)
 	}
@@ -157,8 +158,10 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 			if err != nil {
 				return err
 			}
+
 			if !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
 				c.lastConfiguration.Set(conf)
+
 				if deployErr := c.deployConfiguration(conf); deployErr != nil {
 					return err
 				}
@@ -495,6 +498,7 @@ func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
 	if err != nil {
 		return fmt.Errorf("unable to retrieve pod list: %v", err)
 	}
+
 	if len(podList.Items) == 0 {
 		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
 	}
@@ -530,12 +534,15 @@ func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
+
 	if resp != nil {
 		defer resp.Body.Close()
+
 		if _, bodyErr := ioutil.ReadAll(resp.Body); bodyErr != nil {
 			return fmt.Errorf("unable to read response body: %v", bodyErr)
 		}
 	}
+
 	if err != nil {
 		return fmt.Errorf("unable to deploy configuration: %v", err)
 	}
