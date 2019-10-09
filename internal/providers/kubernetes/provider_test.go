@@ -288,6 +288,7 @@ func TestBuildService(t *testing.T) {
 		desc      string
 		mockFile  string
 		endpoints *corev1.Endpoints
+		scheme    string
 		expected  *dynamic.Service
 	}{
 		{
@@ -316,6 +317,7 @@ func TestBuildService(t *testing.T) {
 					},
 				},
 			},
+			scheme: "http",
 			expected: &dynamic.Service{
 				LoadBalancer: &dynamic.ServersLoadBalancer{
 					PassHostHeader: true,
@@ -330,6 +332,47 @@ func TestBuildService(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc:     "two successful h2c endpoints",
+			mockFile: "build_service_simple.yaml",
+			endpoints: &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "foo",
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.0.0.1",
+							},
+							{
+								IP: "10.0.0.2",
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 80,
+							},
+						},
+					},
+				},
+			},
+			scheme: "h2c",
+			expected: &dynamic.Service{
+				LoadBalancer: &dynamic.ServersLoadBalancer{
+					PassHostHeader: true,
+					Servers: []dynamic.Server{
+						{
+							URL: "h2c://10.0.0.1:80",
+						},
+						{
+							URL: "h2c://10.0.0.2:80",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range testCases {
@@ -339,7 +382,7 @@ func TestBuildService(t *testing.T) {
 
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
 			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
-			actual := provider.buildService(test.endpoints)
+			actual := provider.buildService(test.endpoints, test.scheme)
 			assert.Equal(t, test.expected, actual)
 		})
 	}

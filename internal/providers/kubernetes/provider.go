@@ -69,7 +69,7 @@ func (p *Provider) buildTCPRouter(port int, serviceName string) *dynamic.TCPRout
 	}
 }
 
-func (p *Provider) buildService(endpoints *corev1.Endpoints) *dynamic.Service {
+func (p *Provider) buildService(endpoints *corev1.Endpoints, scheme string) *dynamic.Service {
 	var servers []dynamic.Server
 
 	if endpoints.Subsets != nil {
@@ -77,7 +77,7 @@ func (p *Provider) buildService(endpoints *corev1.Endpoints) *dynamic.Service {
 			for _, endpointPort := range subset.Ports {
 				for _, address := range subset.Addresses {
 					server := dynamic.Server{
-						URL: "http://" + net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
+						URL: fmt.Sprintf("%s://%s", scheme, net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10))),
 					}
 					servers = append(servers, server)
 				}
@@ -141,12 +141,13 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 		}
 
 		serviceMode := p.getServiceMode(service.Annotations)
+		scheme := p.getScheme(service.Annotations)
 
 		for id, sp := range service.Spec.Ports {
 			key := buildKey(service.Name, service.Namespace, sp.Port)
 
 			if serviceMode == k8s.ServiceTypeHTTP {
-				config.HTTP.Services[key] = p.buildService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints))
+				config.HTTP.Services[key] = p.buildService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), scheme)
 				middlewares := p.buildHTTPMiddlewares(service.Annotations)
 
 				if middlewares != nil {
@@ -178,6 +179,16 @@ func (p *Provider) getServiceMode(annotations map[string]string) string {
 	}
 
 	return mode
+}
+
+func (p *Provider) getScheme(annotations map[string]string) string {
+	scheme := annotations[k8s.AnnotationScheme]
+
+	if scheme == "" {
+		return "http"
+	}
+
+	return scheme
 }
 
 func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.Middleware {

@@ -11,6 +11,8 @@ const (
 
 	// AnnotationServiceType service type annotation.
 	AnnotationServiceType = baseAnnotation + "traffic-type"
+	// AnnotationScheme scheme.
+	AnnotationScheme = baseAnnotation + "scheme"
 	// AnnotationRetryAttempts retry attempts annotation.
 	AnnotationRetryAttempts = baseAnnotation + "retry-attempts"
 	// AnnotationCircuitBreakerExpression circuit breaker expression annotation.
