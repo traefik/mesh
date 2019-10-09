@@ -1,0 +1,20 @@
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: example-traffic-target
+destination:
+  kind: ServiceAccount
+  name: api-service
+  namespace: foo
+sources:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: default
+specs:
+  - kind: TCPRoute
+    name: api-service-routes
+---
+kind: TCPRoute
+apiVersion: specs.smi-spec.io/v1alpha1
+metadata:
+  name: api-service-routes

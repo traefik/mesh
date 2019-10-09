@@ -15,7 +15,7 @@ import (
 const meshNamespace string = "maesh"
 
 func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace, []string{}))
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 
 	testCases := []struct {
 		desc     string
@@ -64,7 +64,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 
 func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 	clientMock := k8s.NewClientMock("mock.yaml")
-	provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace, []string{}))
+	provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 
 	expected := []*accessv1alpha1.TrafficTarget{
 		{
@@ -139,7 +139,7 @@ func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestBuildRouterFromTrafficTarget(t *testing.T) {
+func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 	testCases := []struct {
 		desc             string
 		serviceName      string
@@ -331,16 +331,168 @@ func TestBuildRouterFromTrafficTarget(t *testing.T) {
 			if test.httpError {
 				clientMock.EnableHTTPRouteGroupError()
 			}
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace, []string{}))
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 			middleware := "block-all"
-			actual := provider.buildRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
+			actual := provider.buildHTTPRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
+			assert.Equal(t, test.expected, actual)
+		})
+	}
+}
+
+func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
+	testCases := []struct {
+		desc             string
+		serviceName      string
+		serviceNamespace string
+		serviceIP        string
+		port             int
+		key              string
+		trafficTarget    *accessv1alpha1.TrafficTarget
+		expected         *dynamic.TCPRouter
+		tcpError        bool
+	}{
+		{
+			desc:             "simple router",
+			serviceName:      "test",
+			serviceNamespace: metav1.NamespaceDefault,
+			serviceIP:        "10.0.0.1",
+			port:             80,
+			key:              "example",
+			trafficTarget: &accessv1alpha1.TrafficTarget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "example-traffic-target",
+					Namespace: metav1.NamespaceDefault,
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TrafficTarget",
+					APIVersion: "access.smi-spec.io/v1alpha1",
+				},
+				Destination: accessv1alpha1.IdentityBindingSubject{
+					Kind:      "ServiceAccount",
+					Name:      "api-service",
+					Namespace: "foo",
+				},
+				Sources: []accessv1alpha1.IdentityBindingSubject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      "prometheus",
+						Namespace: metav1.NamespaceDefault,
+					},
+				},
+				Specs: []accessv1alpha1.TrafficTargetSpec{
+					{
+						Kind:    "TCPRoute",
+						Name:    "api-service-routes",
+					},
+				},
+			},
+			expected: &dynamic.TCPRouter{
+				EntryPoints: []string{"tcp-80"},
+				Service:     "example",
+				Rule:        "HostSNI(`*`)",
+			},
+		},
+		{
+			desc:             "simple router missing TCPRoute",
+			serviceName:      "test",
+			serviceNamespace: metav1.NamespaceDefault,
+			serviceIP:        "10.0.0.1",
+			port:             81,
+			key:              "example",
+			trafficTarget: &accessv1alpha1.TrafficTarget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "api-service-metrics-2",
+					Namespace: metav1.NamespaceDefault,
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TrafficTarget",
+					APIVersion: "access.smi-spec.io/v1alpha1",
+				},
+				Destination: accessv1alpha1.IdentityBindingSubject{
+					Kind:      "ServiceAccount",
+					Name:      "api-service",
+					Namespace: "foo",
+				},
+				Sources: []accessv1alpha1.IdentityBindingSubject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      "prometheus",
+						Namespace: metav1.NamespaceDefault,
+					},
+				},
+				Specs: []accessv1alpha1.TrafficTargetSpec{
+					{
+						Kind:    "TCPService",
+						Name:    "api-service-foo",
+					},
+				},
+			},
+			expected: &dynamic.TCPRouter{
+				EntryPoints: []string{"tcp-81"},
+				Service:     "example",
+			},
+		},
+		{
+			desc:             "simple router with TCPRoute error",
+			serviceName:      "test",
+			serviceNamespace: metav1.NamespaceDefault,
+			serviceIP:        "10.0.0.1",
+			port:             81,
+			key:              "example",
+			trafficTarget: &accessv1alpha1.TrafficTarget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "api-service-metrics-2",
+					Namespace: metav1.NamespaceDefault,
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TrafficTarget",
+					APIVersion: "access.smi-spec.io/v1alpha1",
+				},
+				Destination: accessv1alpha1.IdentityBindingSubject{
+					Kind:      "ServiceAccount",
+					Name:      "api-service",
+					Namespace: "foo",
+				},
+				Sources: []accessv1alpha1.IdentityBindingSubject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      "prometheus",
+						Namespace: metav1.NamespaceDefault,
+					},
+				},
+				Specs: []accessv1alpha1.TrafficTargetSpec{
+					{
+						Kind:    "HTTPRouteGroup",
+						Name:    "api-service-routes",
+						Matches: []string{"metrics"},
+					},
+				},
+			},
+			expected: &dynamic.TCPRouter{
+				EntryPoints: []string{"tcp-81"},
+				Service:     "example",
+			},
+			tcpError: true,
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+			clientMock := k8s.NewClientMock("mock_tcp.yaml")
+			if test.tcpError {
+				clientMock.EnableTCPRouteError()
+			}
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+			actual := provider.buildTCPRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key)
 			assert.Equal(t, test.expected, actual)
 		})
 	}
 }
 
 func TestGetServiceMode(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace, []string{}))
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 
 	testCases := []struct {
 		desc     string
@@ -721,7 +873,7 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 				clientMock.EnablePodError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace, []string{}))
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 
 			actual := provider.getApplicableTrafficTargets(test.endpoints, test.trafficTargets)
 			assert.Equal(t, test.expected, actual)
@@ -729,7 +881,7 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 	}
 }
 
-func TestBuildServiceFromTrafficTarget(t *testing.T) {
+func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 	testCases := []struct {
 		desc          string
 		endpoints     *corev1.Endpoints
@@ -1060,16 +1212,16 @@ func TestBuildServiceFromTrafficTarget(t *testing.T) {
 				clientMock.EnablePodError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace, []string{}))
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 
-			actual := provider.buildServiceFromTrafficTarget(test.endpoints, test.trafficTarget)
+			actual := provider.buildHTTPServiceFromTrafficTarget(test.endpoints, test.trafficTarget)
 			assert.Equal(t, test.expected, actual)
 		})
 	}
 }
 
 func TestGroupTrafficTargetsByDestination(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace, []string{}))
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 
 	trafficTargets := []*accessv1alpha1.TrafficTarget{
 		{
@@ -1307,7 +1459,7 @@ func TestBuildConfiguration(t *testing.T) {
 				clientMock.EnableServiceError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, k8s.NewIgnored(meshNamespace, []string{}))
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 			config, err := provider.BuildConfig()
 			assert.Equal(t, test.expected, config)
 			if test.endpointsError || test.serviceError {

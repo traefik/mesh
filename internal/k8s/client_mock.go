@@ -186,6 +186,9 @@ func NewClientMock(paths ...string) *ClientMock {
 			case *specsv1alpha1.HTTPRouteGroup:
 				setNamespaceIfNot(o)
 				c.httpRouteGroups = append(c.httpRouteGroups, o)
+			case *specsv1alpha1.TCPRoute:
+				setNamespaceIfNot(o)
+				c.tcpRoutes = append(c.tcpRoutes, o)
 			case *splitv1alpha1.TrafficSplit:
 				setNamespaceIfNot(o)
 				c.trafficSplits = append(c.trafficSplits, o)
@@ -462,6 +465,11 @@ func (s *SMIClientMock) EnableHTTPRouteGroupError() {
 	s.apiHTTPRouteGroupError = errors.New("httpRouteGroup error")
 }
 
+// EnableHTTPRouteGroupError enables error on http router group.
+func (s *SMIClientMock) EnableTCPRouteError() {
+	s.apiTCPRouteError = errors.New("tcpRoute error")
+}
+
 // EnableTrafficSplitError enables error on traffic split.
 func (s *SMIClientMock) EnableTrafficSplitError() {
 	s.apiTrafficSplitError = errors.New("trafficSplit error")
@@ -469,7 +477,7 @@ func (s *SMIClientMock) EnableTrafficSplitError() {
 
 // MustParseYaml parses a YAML to objects.
 func MustParseYaml(content []byte) []runtime.Object {
-	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|Middleware|Secret|TLSOption|Namespace|TrafficTarget|HTTPRouteGroup|TrafficSplit|Pod)`)
+	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|Middleware|Secret|TLSOption|Namespace|TrafficTarget|HTTPRouteGroup|TCPRoute|TrafficSplit|Pod)`)
 
 	files := strings.Split(string(content), "---")
 	retVal := make([]runtime.Object, 0, len(files))
