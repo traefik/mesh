@@ -349,7 +349,7 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 		key              string
 		trafficTarget    *accessv1alpha1.TrafficTarget
 		expected         *dynamic.TCPRouter
-		tcpError        bool
+		tcpError         bool
 	}{
 		{
 			desc:             "simple router",
@@ -381,8 +381,8 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 				},
 				Specs: []accessv1alpha1.TrafficTargetSpec{
 					{
-						Kind:    "TCPRoute",
-						Name:    "api-service-routes",
+						Kind: "TCPRoute",
+						Name: "api-service-routes",
 					},
 				},
 			},
@@ -422,8 +422,8 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 				},
 				Specs: []accessv1alpha1.TrafficTargetSpec{
 					{
-						Kind:    "TCPService",
-						Name:    "api-service-foo",
+						Kind: "TCPService",
+						Name: "api-service-foo",
 					},
 				},
 			},
