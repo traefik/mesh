@@ -81,8 +81,8 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 // Init the Controller.
 func (c *Controller) Init() error {
 	// Register handler funcs to controller funcs.
-	c.handler.RegisterHandlers(c.deleteMeshService, c.updateMeshService)
-	c.meshHandler.RegisterHandlers(c.deleteMeshService, c.updateMeshService)
+	c.handler.RegisterMeshHandlers(c.createMeshService, c.updateMeshService, c.deleteMeshService)
+	c.meshHandler.RegisterMeshHandlers(c.createMeshService, c.updateMeshService, c.deleteMeshService)
 
 	// Create a new SharedInformerFactory, and register the event handler to informers.
 	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient, k8s.ResyncPeriod)

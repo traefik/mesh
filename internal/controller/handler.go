@@ -8,10 +8,11 @@ import (
 
 // Handler is an implementation of a ResourceEventHandler.
 type Handler struct {
-	ignored           k8s.IgnoreWrapper
-	configRefreshChan chan bool
-	deleteFunc        func(serviceName, serviceNamespace string) error
-	updateFunc        func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error)
+	ignored               k8s.IgnoreWrapper
+	configRefreshChan     chan bool
+	createMeshServiceFunc func(service *corev1.Service) error
+	updateMeshServiceFunc func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error)
+	deleteMeshServiceFunc func(serviceName, serviceNamespace string) error
 }
 
 // NewHandler creates a handler.
@@ -36,9 +37,10 @@ func (h *Handler) Init() error {
 }
 
 // RegisterHandlers registers function handlers.
-func (h *Handler) RegisterHandlers(deleteFunc func(serviceName, serviceNamespace string) error, updateFunc func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error)) {
-	h.deleteFunc = deleteFunc
-	h.updateFunc = updateFunc
+func (h *Handler) RegisterMeshHandlers(createFunc func(service *corev1.Service) error, updateFunc func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error), deleteFunc func(serviceName, serviceNamespace string) error) {
+	h.createMeshServiceFunc = createFunc
+	h.updateMeshServiceFunc = updateFunc
+	h.deleteMeshServiceFunc = deleteFunc
 }
 
 // OnAdd executed when an object is added.
@@ -50,6 +52,9 @@ func (h *Handler) OnAdd(obj interface{}) {
 			return
 		}
 
+		if err := h.createMeshServiceFunc(obj); err != nil {
+			log.Errorf("Could not create mesh service: %v", err)
+		}
 	case *corev1.Endpoints:
 		return
 
@@ -74,7 +79,7 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
 		oldService := oldObj.(*corev1.Service)
-		if _, err := h.updateFunc(oldService, obj); err != nil {
+		if _, err := h.updateMeshServiceFunc(oldService, obj); err != nil {
 			log.Errorf("Could not update mesh service: %v", err)
 		}
 
@@ -105,7 +110,7 @@ func (h *Handler) OnDelete(obj interface{}) {
 		}
 		log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
-		if err := h.deleteFunc(obj.Name, obj.Namespace); err != nil {
+		if err := h.deleteMeshServiceFunc(obj.Name, obj.Namespace); err != nil {
 			log.Errorf("Could not delete mesh service: %v", err)
 		}
 
