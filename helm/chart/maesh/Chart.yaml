@@ -1,8 +1,8 @@
 ---
 apiVersion: v1
 name: maesh
-version: 0.0.5
-appVersion: v0.4.0
+version: 0.0.6
+appVersion: v0.5.0
 description: Maesh - Simpler Service Mesh
 keywords:
 - traefik
