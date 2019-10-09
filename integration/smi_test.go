@@ -195,6 +195,12 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			path:        "/test",
 			expected:    404,
 		},
+		{
+			desc:        "Pod D -> Service TCP.maesh returns something",
+			source:      "d-tools",
+			destination: "tcp.default.maesh",
+			expected:    404,
+		},
 	}
 
 	for _, test := range testCases {
