@@ -341,23 +341,17 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 
 func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 	testCases := []struct {
-		desc             string
-		serviceName      string
-		serviceNamespace string
-		serviceIP        string
-		port             int
-		key              string
-		trafficTarget    *accessv1alpha1.TrafficTarget
-		expected         *dynamic.TCPRouter
-		tcpError         bool
+		desc          string
+		port          int
+		key           string
+		trafficTarget *accessv1alpha1.TrafficTarget
+		expected      *dynamic.TCPRouter
+		tcpError      bool
 	}{
 		{
-			desc:             "simple router",
-			serviceName:      "test",
-			serviceNamespace: metav1.NamespaceDefault,
-			serviceIP:        "10.0.0.1",
-			port:             80,
-			key:              "example",
+			desc: "simple router",
+			port: 80,
+			key:  "example",
 			trafficTarget: &accessv1alpha1.TrafficTarget{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "example-traffic-target",
@@ -393,12 +387,9 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 			},
 		},
 		{
-			desc:             "simple router missing TCPRoute",
-			serviceName:      "test",
-			serviceNamespace: metav1.NamespaceDefault,
-			serviceIP:        "10.0.0.1",
-			port:             81,
-			key:              "example",
+			desc: "simple router missing TCPRoute",
+			port: 81,
+			key:  "example",
 			trafficTarget: &accessv1alpha1.TrafficTarget{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "api-service-metrics-2",
@@ -433,12 +424,9 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 			},
 		},
 		{
-			desc:             "simple router with TCPRoute error",
-			serviceName:      "test",
-			serviceNamespace: metav1.NamespaceDefault,
-			serviceIP:        "10.0.0.1",
-			port:             81,
-			key:              "example",
+			desc: "simple router with TCPRoute error",
+			port: 81,
+			key:  "example",
 			trafficTarget: &accessv1alpha1.TrafficTarget{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "api-service-metrics-2",
@@ -485,7 +473,7 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 				clientMock.EnableTCPRouteError()
 			}
 			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
-			actual := provider.buildTCPRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key)
+			actual := provider.buildTCPRouterFromTrafficTarget(test.trafficTarget, test.port, test.key)
 			assert.Equal(t, test.expected, actual)
 		})
 	}

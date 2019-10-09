@@ -145,7 +145,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 					}
 
 					meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
-					config.TCP.Routers[key] = p.buildTCPRouterFromTrafficTarget(service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, meshPort, key)
+					config.TCP.Routers[key] = p.buildTCPRouterFromTrafficTarget(groupedTrafficTarget, meshPort, key)
 					config.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
 				}
 			}
@@ -316,17 +316,21 @@ func (p *Provider) buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespac
 	}
 }
 
-func (p *Provider) buildTCPRouterFromTrafficTarget(serviceNamespace, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *dynamic.TCPRouter {
+func (p *Provider) buildTCPRouterFromTrafficTarget(trafficTarget *accessv1alpha1.TrafficTarget, port int, key string) *dynamic.TCPRouter {
 	var rule string
+
 	for _, spec := range trafficTarget.Specs {
 		if spec.Kind != "TCPRoute" {
 			continue
 		}
+
 		_, exists, err := p.client.GetTCPRoute(trafficTarget.Namespace, spec.Name)
+
 		if err != nil {
 			log.Errorf("Error getting TCPRoute: %v", err)
 			continue
 		}
+
 		if !exists {
 			log.Errorf("TCPRoute %s/%s does not exist", trafficTarget.Namespace, spec.Name)
 			continue
@@ -340,42 +344,6 @@ func (p *Provider) buildTCPRouterFromTrafficTarget(serviceNamespace, serviceIP s
 		EntryPoints: []string{fmt.Sprintf("tcp-%d", port)},
 		Service:     key,
 	}
-}
-
-func (p *Provider) buildHTTPRule(serviceName string, serviceNamespace string, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, matches []string, specName string) []string {
-	var builtRule []string
-	rawHTTPRouteGroup, exists, err := p.client.GetHTTPRouteGroup(trafficTarget.Namespace, specName)
-	if err != nil {
-		log.Errorf("Error getting HTTPRouteGroup: %v", err)
-		return builtRule
-	}
-	if !exists {
-		log.Errorf("HTTPRouteGroup %s/%s does not exist", trafficTarget.Namespace, specName)
-		return builtRule
-	}
-	for _, match := range matches {
-		for _, httpMatch := range rawHTTPRouteGroup.Matches {
-			if match != httpMatch.Name {
-				// Matches specified, add only matches from route group
-				continue
-			}
-			builtRule = append(builtRule, p.buildRuleSnippetFromServiceAndMatch(serviceName, serviceNamespace, serviceIP, httpMatch))
-		}
-	}
-	return builtRule
-}
-
-func (p *Provider) buildTCPRule(serviceNamespace string, serviceIP string, trafficTarget *accessv1alpha1.TrafficTarget, matches []string, specName string) string {
-	_, exists, err := p.client.GetTCPRoute(trafficTarget.Namespace, specName)
-	if err != nil {
-		log.Errorf("Error getting TCPRoute: %v", err)
-		return ""
-	}
-	if !exists {
-		log.Errorf("TCPRoute %s/%s does not exist", trafficTarget.Namespace, specName)
-		return ""
-	}
-	return fmt.Sprintf("HostSNI(`*`)")
 }
 
 func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip string, match specsv1alpha1.HTTPMatch) string {
@@ -460,6 +428,7 @@ func (p *Provider) buildTCPServiceFromTrafficTarget(endpoints *corev1.Endpoints,
 
 	for _, subset := range endpoints.Subsets {
 		var subsetMatch bool
+
 		for _, endpointPort := range subset.Ports {
 			if strconv.FormatInt(int64(endpointPort.Port), 10) == trafficTarget.Destination.Port || trafficTarget.Destination.Port == "" {
 				subsetMatch = true
@@ -475,14 +444,17 @@ func (p *Provider) buildTCPServiceFromTrafficTarget(endpoints *corev1.Endpoints,
 		for _, endpointPort := range subset.Ports {
 			for _, address := range subset.Addresses {
 				pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name)
+
 				if err != nil {
 					log.Errorf("Could not get pod %s/%s: %v", address.TargetRef.Namespace, address.TargetRef.Name, err)
 					continue
 				}
+
 				if !exists {
 					log.Errorf("pod %s/%s do not exist", address.TargetRef.Namespace, address.TargetRef.Name)
 					continue
 				}
+
 				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
 					server := dynamic.TCPServer{
 						Address: net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
@@ -525,6 +497,7 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 
 		splitKey := buildKey(backend.Service, trafficSplit.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
 		config.HTTP.Services[splitKey] = p.buildHTTPServiceFromTrafficTarget(endpoints, trafficTarget)
+
 		WRRServices = append(WRRServices, dynamic.WRRService{
 			Name:   splitKey,
 			Weight: intToP(backend.Weight.Value()),
@@ -559,6 +532,7 @@ func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort
 			return port
 		}
 	}
+
 	return 0
 }
 
