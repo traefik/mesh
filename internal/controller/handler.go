@@ -2,23 +2,24 @@ package controller
 
 import (
 	"github.com/containous/maesh/internal/k8s"
-	"github.com/containous/maesh/internal/message"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Handler is an implementation of a ResourceEventHandler.
 type Handler struct {
-	ignored      k8s.IgnoreWrapper
-	messageQueue workqueue.RateLimitingInterface
+	ignored               k8s.IgnoreWrapper
+	configRefreshChan     chan bool
+	createMeshServiceFunc func(service *corev1.Service) error
+	updateMeshServiceFunc func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error)
+	deleteMeshServiceFunc func(serviceName, serviceNamespace string) error
 }
 
 // NewHandler creates a handler.
-func NewHandler(ignored k8s.IgnoreWrapper, messageQueue workqueue.RateLimitingInterface) *Handler {
+func NewHandler(ignored k8s.IgnoreWrapper, configRefreshChan chan bool) *Handler {
 	h := &Handler{
-		ignored:      ignored,
-		messageQueue: messageQueue,
+		ignored:           ignored,
+		configRefreshChan: configRefreshChan,
 	}
 
 	if err := h.Init(); err != nil {
@@ -35,63 +36,94 @@ func (h *Handler) Init() error {
 	return nil
 }
 
+// RegisterMeshHandlers registers function handlers.
+func (h *Handler) RegisterMeshHandlers(createFunc func(service *corev1.Service) error, updateFunc func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error), deleteFunc func(serviceName, serviceNamespace string) error) {
+	h.createMeshServiceFunc = createFunc
+	h.updateMeshServiceFunc = updateFunc
+	h.deleteMeshServiceFunc = deleteFunc
+}
+
 // OnAdd executed when an object is added.
 func (h *Handler) OnAdd(obj interface{}) {
-	// convert the resource object into a key (in this case
-	// we are just doing it in the format of 'namespace/name')
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
+	// assert the type to an object to pull out relevant data
+	switch obj := obj.(type) {
+	case *corev1.Service:
+		if h.ignored.Ignored(obj.Name, obj.Namespace) {
+			return
+		}
+
+		if err := h.createMeshServiceFunc(obj); err != nil {
+			log.Errorf("Could not create mesh service: %v", err)
+		}
+	case *corev1.Endpoints:
 		return
+	case *corev1.Pod:
+		if !isMeshPod(obj) {
+			return
+		}
 	}
 
-	// add the key to the queue for the handler to get
-	// If object key is not in our list of ignored namespaces
-	if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
-		event := message.Message{
-			Key:    key,
-			Object: obj,
-			Action: message.TypeCreated,
-		}
-		h.messageQueue.Add(event)
-	}
+	// Trigger a configuration refresh.
+	h.configRefreshChan <- true
 }
 
 // OnUpdate executed when an object is updated.
 func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(newObj)
-	if err != nil {
-		return
+	// assert the type to an object to pull out relevant data
+	switch obj := newObj.(type) {
+	case *corev1.Service:
+		if h.ignored.Ignored(obj.Name, obj.Namespace) {
+			return
+		}
+
+		oldService := oldObj.(*corev1.Service)
+		if _, err := h.updateMeshServiceFunc(oldService, obj); err != nil {
+			log.Errorf("Could not update mesh service: %v", err)
+		}
+
+		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+	case *corev1.Endpoints:
+		if h.ignored.Ignored(obj.Name, obj.Namespace) {
+			return
+		}
+
+		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
+	case *corev1.Pod:
+		if !isMeshPod(obj) {
+			return
+		}
+
+		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
 	}
 
-	if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
-		event := message.Message{
-			Key:       key,
-			Object:    newObj,
-			OldObject: oldObj,
-			Action:    message.TypeUpdated,
-		}
-		h.messageQueue.Add(event)
-	}
+	// Trigger a configuration refresh.
+	h.configRefreshChan <- true
 }
 
 // OnDelete executed when an object is deleted.
 func (h *Handler) OnDelete(obj interface{}) {
-	// DeletionHandlingMetaNamsespaceKeyFunc is a helper function that allows
-	// us to check the DeletedFinalStateUnknown existence in the event that
-	// a resource was deleted but it is still contained in the index
-	//
-	// this then in turn calls MetaNamespaceKeyFunc
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
+	// assert the type to an object to pull out relevant data
+	switch obj := obj.(type) {
+	case *corev1.Service:
+		if h.ignored.Ignored(obj.Name, obj.Namespace) {
+			return
+		}
+
+		log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+
+		if err := h.deleteMeshServiceFunc(obj.Name, obj.Namespace); err != nil {
+			log.Errorf("Could not delete mesh service: %v", err)
+		}
+	case *corev1.Endpoints:
+		if h.ignored.Ignored(obj.Name, obj.Namespace) {
+			return
+		}
+
+		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
+	case *corev1.Pod:
 		return
 	}
 
-	if !k8s.ObjectKeyInNamespace(key, h.ignored.Namespaces) {
-		event := message.Message{
-			Key:    key,
-			Object: obj,
-			Action: message.TypeDeleted,
-		}
-		h.messageQueue.Add(event)
-	}
+	// Trigger a configuration refresh.
+	h.configRefreshChan <- true
 }

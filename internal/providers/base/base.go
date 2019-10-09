@@ -7,6 +7,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// Provider is an interface for providers that allows the controller to interact with providers
+// without having to deal with specifics of said providers.
+type Provider interface {
+	Init()
+	BuildConfig() (*dynamic.Configuration, error)
+}
+
 // CreateBaseConfigWithReadiness creates a base configuration for deploying to mesh nodes.
 func CreateBaseConfigWithReadiness() *dynamic.Configuration {
 	return &dynamic.Configuration{
