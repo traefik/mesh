@@ -32,6 +32,8 @@ The service mode can be enabled by using the following annotation:
 maesh.containo.us/traffic-type: "http"
 ```
 
+This annotation can be set to either `http` or `tcp`, and will specify the mode for that service operation.
+
 ### Scheme
 
 The scheme used to define custom scheme for request:
@@ -40,7 +42,7 @@ The scheme used to define custom scheme for request:
 maesh.containo.us/scheme: "h2c"
 ```
 
-This annotation can be set to either `http` or `h2c`.
+This annotation can be set to either `http` or `h2c` and is available for `maesh.containo.us/traffic-type: "http"`.
 
 ### Retry
 

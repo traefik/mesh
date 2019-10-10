@@ -77,3 +77,23 @@ func AddBaseSMIMiddlewares(config *dynamic.Configuration) {
 
 	config.HTTP.Middlewares[k8s.BlockAllMiddlewareKey] = blockAll
 }
+
+func GetScheme(annotations map[string]string) string {
+	scheme := annotations[k8s.AnnotationScheme]
+
+	if scheme != k8s.SchemeHTTP && scheme != k8s.SchemeH2c {
+		return k8s.SchemeHTTP
+	}
+
+	return scheme
+}
+
+func GetServiceMode(annotations map[string]string, defaultMode string) string {
+	mode := annotations[k8s.AnnotationServiceType]
+
+	if mode != k8s.ServiceTypeHTTP && mode != k8s.ServiceTypeTCP {
+		return defaultMode
+	}
+
+	return mode
+}

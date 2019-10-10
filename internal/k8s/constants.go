@@ -23,6 +23,11 @@ const (
 	// ServiceTypeTCP TCP service type.
 	ServiceTypeTCP string = "tcp"
 
+	// SchemeHTTP HTTP scheme.
+	SchemeHTTP string = "http"
+	// SchemeH2c h2c scheme.
+	SchemeH2c string = "h2c"
+
 	// BlockAllMiddlewareKey block all middleware name.
 	BlockAllMiddlewareKey string = "smi-block-all-middleware"
 

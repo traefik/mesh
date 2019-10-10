@@ -140,8 +140,8 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 			continue
 		}
 
-		serviceMode := p.getServiceMode(service.Annotations)
-		scheme := p.getScheme(service.Annotations)
+		serviceMode := base.GetServiceMode(service.Annotations, p.defaultMode)
+		scheme := base.GetScheme(service.Annotations)
 
 		for id, sp := range service.Spec.Ports {
 			key := buildKey(service.Name, service.Namespace, sp.Port)
@@ -169,26 +169,6 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	}
 
 	return config, nil
-}
-
-func (p *Provider) getServiceMode(annotations map[string]string) string {
-	mode := annotations[k8s.AnnotationServiceType]
-
-	if mode == "" {
-		return p.defaultMode
-	}
-
-	return mode
-}
-
-func (p *Provider) getScheme(annotations map[string]string) string {
-	scheme := annotations[k8s.AnnotationScheme]
-
-	if scheme == "" {
-		return "http"
-	}
-
-	return scheme
 }
 
 func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.Middleware {
