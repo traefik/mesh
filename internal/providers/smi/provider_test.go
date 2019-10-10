@@ -1202,7 +1202,7 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 
 			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
 
-			actual := provider.buildHTTPServiceFromTrafficTarget(test.endpoints, test.trafficTarget)
+			actual := provider.buildHTTPServiceFromTrafficTarget(test.endpoints, test.trafficTarget, k8s.SchemeHTTP)
 			assert.Equal(t, test.expected, actual)
 		})
 	}

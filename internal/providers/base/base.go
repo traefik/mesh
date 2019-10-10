@@ -78,6 +78,8 @@ func AddBaseSMIMiddlewares(config *dynamic.Configuration) {
 	config.HTTP.Middlewares[k8s.BlockAllMiddlewareKey] = blockAll
 }
 
+// GetScheme returns the scheme if available in annotations.
+// Otherwise returns "http".
 func GetScheme(annotations map[string]string) string {
 	scheme := annotations[k8s.AnnotationScheme]
 
@@ -88,6 +90,8 @@ func GetScheme(annotations map[string]string) string {
 	return scheme
 }
 
+// GetServiceMode returns the service type if available in annotations.
+// Otherwise returns default mode pass in parameters.
 func GetServiceMode(annotations map[string]string, defaultMode string) string {
 	mode := annotations[k8s.AnnotationServiceType]
 
