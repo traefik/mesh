@@ -127,26 +127,29 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 					whitelistKey := groupedTrafficTarget.Name + "-" + groupedTrafficTarget.Namespace + "-" + key + "-whitelist"
 					whitelistMiddleware := k8s.BlockAllMiddlewareKey
 
-					if serviceMode == k8s.ServiceTypeHTTP {
+					switch serviceMode {
+					case k8s.ServiceTypeHTTP:
 						if len(sourceIPs) > 0 {
 							config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
 							whitelistMiddleware = whitelistKey
 						}
 
+						scheme := base.GetScheme(service.Annotations)
+
 						trafficSplit := base.GetTrafficSplitFromList(service.Name, trafficSplitsInNamespace)
 						if trafficSplit == nil {
 							config.HTTP.Routers[key] = p.buildHTTPRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
-							config.HTTP.Services[key] = p.buildHTTPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
+							config.HTTP.Services[key] = p.buildHTTPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget, scheme)
 
 							continue
 						}
 
-						p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware)
+						p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware, scheme)
+					case k8s.ServiceTypeTCP:
+						meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
+						config.TCP.Routers[key] = p.buildTCPRouterFromTrafficTarget(groupedTrafficTarget, meshPort, key)
+						config.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
 					}
-
-					meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
-					config.TCP.Routers[key] = p.buildTCPRouterFromTrafficTarget(groupedTrafficTarget, meshPort, key)
-					config.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
 				}
 			}
 		}
@@ -362,7 +365,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 	return strings.Join(result, " && ")
 }
 
-func (p *Provider) buildHTTPServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget) *dynamic.Service {
+func (p *Provider) buildHTTPServiceFromTrafficTarget(endpoints *corev1.Endpoints, trafficTarget *accessv1alpha1.TrafficTarget, scheme string) *dynamic.Service {
 	var servers []dynamic.Server
 
 	if endpoints.Namespace != trafficTarget.Destination.Namespace {
@@ -401,7 +404,7 @@ func (p *Provider) buildHTTPServiceFromTrafficTarget(endpoints *corev1.Endpoints
 
 				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
 					server := dynamic.Server{
-						URL: "http://" + net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10)),
+						URL: fmt.Sprintf("%s://%s", scheme, net.JoinHostPort(address.IP, strconv.FormatInt(int64(endpointPort.Port), 10))),
 					}
 					servers = append(servers, server)
 				}
@@ -480,7 +483,8 @@ func (p *Provider) getServiceMode(mode string) string {
 	return mode
 }
 
-func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit *splitv1alpha1.TrafficSplit, sp corev1.ServicePort, id int, trafficTarget *accessv1alpha1.TrafficTarget, whitelistMiddleware string) {
+func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit *splitv1alpha1.TrafficSplit,
+	sp corev1.ServicePort, id int, trafficTarget *accessv1alpha1.TrafficTarget, whitelistMiddleware string, scheme string) {
 	var WRRServices []dynamic.WRRService
 
 	for _, backend := range trafficSplit.Spec.Backends {
@@ -496,7 +500,7 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 		}
 
 		splitKey := buildKey(backend.Service, trafficSplit.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
-		config.HTTP.Services[splitKey] = p.buildHTTPServiceFromTrafficTarget(endpoints, trafficTarget)
+		config.HTTP.Services[splitKey] = p.buildHTTPServiceFromTrafficTarget(endpoints, trafficTarget, scheme)
 
 		WRRServices = append(WRRServices, dynamic.WRRService{
 			Name:   splitKey,
