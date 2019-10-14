@@ -27,7 +27,7 @@ kubedns: false
 
 mesh:
   image:
-    name: traefik:v2.0.0
+    name: traefik:v2.0
     # (Optional)
     # pullPolicy: IfNotPresent
     # (Optional)

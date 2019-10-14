@@ -5,7 +5,7 @@ go 1.13
 // Kubernetes version kubernetes-1.15.3
 require (
 	github.com/cenkalti/backoff/v3 v3.0.0
-	github.com/containous/traefik/v2 v2.0.0
+	github.com/containous/traefik/v2 v2.0.2
 	github.com/deislabs/smi-sdk-go v0.0.0-20190819154013-e53a9b2d8c1a
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	github.com/google/uuid v1.1.1

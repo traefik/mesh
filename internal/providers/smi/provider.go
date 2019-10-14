@@ -414,7 +414,7 @@ func (p *Provider) buildHTTPServiceFromTrafficTarget(endpoints *corev1.Endpoints
 
 	return &dynamic.Service{
 		LoadBalancer: &dynamic.ServersLoadBalancer{
-			PassHostHeader: true,
+			PassHostHeader: base.Bool(true),
 			Servers:        servers,
 		},
 	}

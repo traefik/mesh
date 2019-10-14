@@ -7,6 +7,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// Bool returns reference of the bool value.
+func Bool(v bool) *bool { return &v }
+
 // Provider is an interface for providers that allows the controller to interact with providers
 // without having to deal with specifics of said providers.
 type Provider interface {
@@ -28,6 +31,7 @@ func CreateBaseConfigWithReadiness() *dynamic.Configuration {
 			Services: map[string]*dynamic.Service{
 				"readiness": {
 					LoadBalancer: &dynamic.ServersLoadBalancer{
+						PassHostHeader: Bool(true),
 						Servers: []dynamic.Server{
 							{
 								URL: "http://127.0.0.1:8080",

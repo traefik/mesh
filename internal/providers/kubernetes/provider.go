@@ -86,7 +86,7 @@ func (p *Provider) buildService(endpoints *corev1.Endpoints, scheme string) *dyn
 	}
 
 	lb := &dynamic.ServersLoadBalancer{
-		PassHostHeader: true,
+		PassHostHeader: base.Bool(true),
 		Servers:        servers,
 	}
 
