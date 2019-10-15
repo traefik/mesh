@@ -3,6 +3,8 @@ package smi
 import (
 	"testing"
 
+	"github.com/containous/maesh/internal/providers/base"
+
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
@@ -934,7 +936,7 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 			},
 			expected: &dynamic.Service{
 				LoadBalancer: &dynamic.ServersLoadBalancer{
-					PassHostHeader: true,
+					PassHostHeader: base.Bool(true),
 					Servers: []dynamic.Server{
 						{
 							URL: "http://10.1.1.10:5080",
@@ -1058,7 +1060,7 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 			},
 			expected: &dynamic.Service{
 				LoadBalancer: &dynamic.ServersLoadBalancer{
-					PassHostHeader: true,
+					PassHostHeader: base.Bool(true),
 					Servers:        nil,
 				},
 			},
@@ -1120,7 +1122,7 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 			},
 			expected: &dynamic.Service{
 				LoadBalancer: &dynamic.ServersLoadBalancer{
-					PassHostHeader: true,
+					PassHostHeader: base.Bool(true),
 					Servers:        nil,
 				},
 			},
@@ -1183,7 +1185,7 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 			},
 			expected: &dynamic.Service{
 				LoadBalancer: &dynamic.ServersLoadBalancer{
-					PassHostHeader: true,
+					PassHostHeader: base.Bool(true),
 					Servers:        nil,
 				},
 			},
@@ -1381,7 +1383,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Services: map[string]*dynamic.Service{
 						"demo-servi-default-80-api-servic-default-5bb66e727779b5ba": {
 							LoadBalancer: &dynamic.ServersLoadBalancer{
-								PassHostHeader: true,
+								PassHostHeader: base.Bool(true),
 								Servers: []dynamic.Server{
 									{
 										URL: "http://10.1.1.50:50",
@@ -1391,7 +1393,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						"readiness": {
 							LoadBalancer: &dynamic.ServersLoadBalancer{
-								PassHostHeader: false,
+								PassHostHeader: base.Bool(true),
 								Servers: []dynamic.Server{
 									{
 										URL:    "http://127.0.0.1:8080",

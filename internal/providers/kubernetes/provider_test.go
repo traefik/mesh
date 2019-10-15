@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"testing"
 
+	"github.com/containous/maesh/internal/providers/base"
+
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/stretchr/testify/assert"
@@ -95,7 +97,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Services: map[string]*dynamic.Service{
 						"readiness": {
 							LoadBalancer: &dynamic.ServersLoadBalancer{
-								PassHostHeader: false,
+								PassHostHeader: base.Bool(true),
 								Servers: []dynamic.Server{
 									{
 										URL:    "http://127.0.0.1:8080",
@@ -107,7 +109,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.ServersLoadBalancer{
-								PassHostHeader: true,
+								PassHostHeader: base.Bool(true),
 								Servers: []dynamic.Server{
 									{
 										URL:    "http://10.0.0.1:80",
@@ -158,7 +160,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Services: map[string]*dynamic.Service{
 						"readiness": {
 							LoadBalancer: &dynamic.ServersLoadBalancer{
-								PassHostHeader: false,
+								PassHostHeader: base.Bool(true),
 								Servers: []dynamic.Server{
 									{
 										URL:    "http://127.0.0.1:8080",
@@ -170,7 +172,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						"test-foo-80-6653beb49ee354ea": {
 							LoadBalancer: &dynamic.ServersLoadBalancer{
-								PassHostHeader: true,
+								PassHostHeader: base.Bool(true),
 								Servers: []dynamic.Server{
 									{
 										URL:    "http://10.0.0.1:80",
@@ -209,7 +211,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Services: map[string]*dynamic.Service{
 						"readiness": {
 							LoadBalancer: &dynamic.ServersLoadBalancer{
-								PassHostHeader: false,
+								PassHostHeader: base.Bool(true),
 								Servers: []dynamic.Server{
 									{
 										URL:    "http://127.0.0.1:8080",
@@ -320,7 +322,7 @@ func TestBuildService(t *testing.T) {
 			scheme: "http",
 			expected: &dynamic.Service{
 				LoadBalancer: &dynamic.ServersLoadBalancer{
-					PassHostHeader: true,
+					PassHostHeader: base.Bool(true),
 					Servers: []dynamic.Server{
 						{
 							URL: "http://10.0.0.1:80",
@@ -361,7 +363,7 @@ func TestBuildService(t *testing.T) {
 			scheme: "h2c",
 			expected: &dynamic.Service{
 				LoadBalancer: &dynamic.ServersLoadBalancer{
-					PassHostHeader: true,
+					PassHostHeader: base.Bool(true),
 					Servers: []dynamic.Server{
 						{
 							URL: "h2c://10.0.0.1:80",
