@@ -105,25 +105,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 					key := buildKey(service.Name, service.Namespace, sp.Port, groupedTrafficTarget.Name, groupedTrafficTarget.Namespace)
 
 					//	For each source in the trafficTarget, get a list of IPs to whitelist.
-					var sourceIPs []string
-
-					for _, source := range groupedTrafficTarget.Sources {
-						fieldSelector := fmt.Sprintf("spec.serviceAccountName=%s", source.Name)
-						// Get all pods with the associated source serviceAccount (can only be in the source namespaces).
-						podList, err := p.client.ListPodWithOptions(source.Namespace, metav1.ListOptions{FieldSelector: fieldSelector})
-						if err != nil {
-							log.Errorf("Could not list pods: %v", err)
-							continue
-						}
-
-						// Retrieve a list of sourceIPs from the list of pods.
-						for _, pod := range podList.Items {
-							if pod.Status.PodIP != "" {
-								sourceIPs = append(sourceIPs, pod.Status.PodIP)
-							}
-						}
-					}
-
+					sourceIPs := p.getSourceIPFromSourceSlice(groupedTrafficTarget.Sources)
 					whitelistKey := groupedTrafficTarget.Name + "-" + groupedTrafficTarget.Namespace + "-" + key + "-whitelist"
 					whitelistMiddleware := k8s.BlockAllMiddlewareKey
 
@@ -156,6 +138,29 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	}
 
 	return config, nil
+}
+
+func (p *Provider) getSourceIPFromSourceSlice(sources []accessv1alpha1.IdentityBindingSubject) []string {
+	var result []string
+
+	for _, source := range sources {
+		fieldSelector := fmt.Sprintf("spec.serviceAccountName=%s", source.Name)
+		// Get all pods with the associated source serviceAccount (can only be in the source namespaces).
+		podList, err := p.client.ListPodWithOptions(source.Namespace, metav1.ListOptions{FieldSelector: fieldSelector})
+		if err != nil {
+			log.Errorf("Could not list pods: %v", err)
+			continue
+		}
+
+		// Retrieve a list of sourceIPs from the list of pods.
+		for _, pod := range podList.Items {
+			if pod.Status.PodIP != "" {
+				result = append(result, pod.Status.PodIP)
+			}
+		}
+	}
+
+	return result
 }
 
 func (p *Provider) getTrafficTargetsWithDestinationInNamespace(namespace string, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
