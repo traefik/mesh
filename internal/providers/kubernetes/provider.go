@@ -72,7 +72,7 @@ func (p *Provider) buildTCPRouter(port int, serviceName string) *dynamic.TCPRout
 func (p *Provider) buildService(endpoints *corev1.Endpoints, scheme string) *dynamic.Service {
 	var servers []dynamic.Server
 
-	if endpoints.Subsets != nil {
+	if endpoints != nil && endpoints.Subsets != nil {
 		for _, subset := range endpoints.Subsets {
 			for _, endpointPort := range subset.Ports {
 				for _, address := range subset.Addresses {
