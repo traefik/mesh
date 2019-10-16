@@ -44,7 +44,7 @@ func patchCommand(pConfig *cmd.PrepareConfig) error {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
-	if err = clients.InitCluster(pConfig.Namespace); err != nil {
+	if err = clients.InitCluster(pConfig.Namespace, pConfig.ClusterDomain); err != nil {
 		return fmt.Errorf("error initializing cluster: %v", err)
 	}
 
