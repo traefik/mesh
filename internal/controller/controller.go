@@ -142,7 +142,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 				return err
 			}
 
-			if message == "force" || !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
+			if message == k8s.ConfigMessageChanForce || !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
 				c.lastConfiguration.Set(conf)
 
 				if deployErr := c.deployConfiguration(conf); deployErr != nil {
