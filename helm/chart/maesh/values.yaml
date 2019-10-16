@@ -44,6 +44,7 @@ mesh:
   logging: INFO
   defaultMode: http
   # Added so we can launch on nodes with restrictions
+  nodeSelector: {}
   tolerations: []
 
 #

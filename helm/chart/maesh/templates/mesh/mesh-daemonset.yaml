@@ -31,6 +31,10 @@ spec:
         runAsNonRoot: true
         runAsUser: 999
       terminationGracePeriodSeconds: 30
+      {{- with .Values.mesh.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+      {{- end }}
       {{- with .Values.mesh.tolerations }}
       tolerations:
 {{ toYaml . | indent 8 }}
