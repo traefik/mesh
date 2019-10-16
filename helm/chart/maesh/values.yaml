@@ -24,7 +24,7 @@ controller:
   affinity: {}
 
 kubedns: false
-clusterDomain: cluster.local
+#clusterDomain: cluster.local
 
 mesh:
   image:

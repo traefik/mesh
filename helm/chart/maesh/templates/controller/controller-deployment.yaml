@@ -102,6 +102,8 @@ spec:
             {{- if .Values.controller.logging.debug }}
             - "--debug"
             {{- end }}
+            - "--clusterdomain"
+            - {{ default "cluster.local" .Values.clusterDomain | quote }}
           securityContext:
             capabilities:
               drop:

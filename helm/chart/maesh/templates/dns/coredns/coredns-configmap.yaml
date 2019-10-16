@@ -14,7 +14,7 @@ data:
     .:53 {
         errors
         health
-        kubernetes {{ .Values.clusterDomain }} in-addr.arpa ip6.arpa {
+        kubernetes {{ default "cluster.local" .Values.clusterDomain }} in-addr.arpa ip6.arpa {
           pods insecure
           upstream
           fallthrough in-addr.arpa ip6.arpa
@@ -30,10 +30,10 @@ data:
     maesh:53 {
         errors
         rewrite continue {
-            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh maesh-{1}-{2}.maesh.svc.{{ .Values.clusterDomain }}
-            answer name maesh-([a-zA-Z0-9-_]*)-([a-zA-Z0-9-_]*)\.maesh\.svc\.{{ .Values.clusterDomain | replace "." "\\." }} {1}.{2}.maesh
+            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh maesh-{1}-{2}.maesh.svc.{{ default "cluster.local" .Values.clusterDomain }}
+            answer name maesh-([a-zA-Z0-9-_]*)-([a-zA-Z0-9-_]*)\.maesh\.svc\.{{ default "cluster.local" .Values.clusterDomain | replace "." "\\." }} {1}.{2}.maesh
         }
-        kubernetes {{ .Values.clusterDomain }} in-addr.arpa ip6.arpa {
+        kubernetes {{ default "cluster.local" .Values.clusterDomain }} in-addr.arpa ip6.arpa {
             pods insecure
             upstream
         	fallthrough in-addr.arpa ip6.arpa
