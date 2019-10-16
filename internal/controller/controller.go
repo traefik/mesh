@@ -32,7 +32,6 @@ import (
 type Controller struct {
 	clients           *k8s.ClientWrapper
 	kubernetesFactory informers.SharedInformerFactory
-	meshFactory       informers.SharedInformerFactory
 	smiAccessFactory  smiAccessExternalversions.SharedInformerFactory
 	smiSpecsFactory   smiSpecsExternalversions.SharedInformerFactory
 	smiSplitFactory   smiSplitExternalversions.SharedInformerFactory
