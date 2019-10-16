@@ -95,7 +95,7 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 		}
 
 		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
-		// Since this is a mesh pod update, trigger a force deploy.'
+		// Since this is a mesh pod update, trigger a force deploy.
 		h.configRefreshChan <- k8s.ConfigMessageChanForce
 
 		return
