@@ -31,8 +31,6 @@ mesh:
     # (Optional)
     # pullPolicy: IfNotPresent
     # (Optional)
-    # tag: v0.0.1
-    # (Optional)
     # pullSecret: xxx
   resources:
     limit:
