@@ -32,13 +32,11 @@ import (
 type Controller struct {
 	clients           *k8s.ClientWrapper
 	kubernetesFactory informers.SharedInformerFactory
-	meshFactory       informers.SharedInformerFactory
 	smiAccessFactory  smiAccessExternalversions.SharedInformerFactory
 	smiSpecsFactory   smiSpecsExternalversions.SharedInformerFactory
 	smiSplitFactory   smiSplitExternalversions.SharedInformerFactory
 	handler           *Handler
-	meshHandler       *Handler
-	configRefreshChan chan bool
+	configRefreshChan chan string
 	provider          base.Provider
 	ignored           k8s.IgnoreWrapper
 	smiEnabled        bool
@@ -52,18 +50,13 @@ type Controller struct {
 // and return an initialized mesh controller object.
 func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string) *Controller {
 	ignored := k8s.NewIgnored(meshNamespace, ignoreNamespaces)
-
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
-	configRefreshChan := make(chan bool)
-
+	configRefreshChan := make(chan string)
 	handler := NewHandler(ignored, configRefreshChan)
-	// Create a new mesh handler to handle mesh events (pods)
-	meshHandler := NewHandler(ignored.WithoutMesh(), configRefreshChan)
 
 	c := &Controller{
 		clients:           clients,
 		handler:           handler,
-		meshHandler:       meshHandler,
 		configRefreshChan: configRefreshChan,
 		ignored:           ignored,
 		smiEnabled:        smiEnabled,
@@ -82,22 +75,12 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 func (c *Controller) Init() error {
 	// Register handler funcs to controller funcs.
 	c.handler.RegisterMeshHandlers(c.createMeshService, c.updateMeshService, c.deleteMeshService)
-	c.meshHandler.RegisterMeshHandlers(c.createMeshService, c.updateMeshService, c.deleteMeshService)
 
 	// Create a new SharedInformerFactory, and register the event handler to informers.
 	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient, k8s.ResyncPeriod)
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
-
-	// Create a new SharedInformerFactory, and register the event handler to informers.
-	c.meshFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient,
-		k8s.ResyncPeriod,
-		informers.WithNamespace(c.meshNamespace),
-		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.LabelSelector = "component==maesh-mesh"
-		}),
-	)
-	c.meshFactory.Core().V1().Pods().Informer().AddEventHandler(c.meshHandler)
+	c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
 
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
 
@@ -151,14 +134,14 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		case <-stopCh:
 			log.Info("Shutting down workers")
 			return nil
-		case <-c.configRefreshChan:
+		case message := <-c.configRefreshChan:
 			// Reload the configuration
 			conf, err := c.provider.BuildConfig()
 			if err != nil {
 				return err
 			}
 
-			if !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
+			if message == k8s.ConfigMessageChanForce || !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
 				c.lastConfiguration.Set(conf)
 
 				if deployErr := c.deployConfiguration(conf); deployErr != nil {
@@ -175,14 +158,6 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 	c.kubernetesFactory.Start(stopCh)
 
 	for t, ok := range c.kubernetesFactory.WaitForCacheSync(stopCh) {
-		if !ok {
-			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
-		}
-	}
-
-	c.meshFactory.Start(stopCh)
-
-	for t, ok := range c.meshFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
