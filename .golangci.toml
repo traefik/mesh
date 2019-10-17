@@ -10,7 +10,7 @@
     min-confidence = 0.0
 
   [linters-settings.gocyclo]
-    min-complexity = 20.0
+    min-complexity = 15.0
 
   [linters-settings.maligned]
     suggest-new = true
