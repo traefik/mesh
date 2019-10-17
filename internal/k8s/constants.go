@@ -34,8 +34,8 @@ const (
 	// TCPStateConfigMapName TCP config map name.
 	TCPStateConfigMapName string = "tcp-state-table"
 
-	//ConfigMessageChanRebuild rebuild.
+	// ConfigMessageChanRebuild rebuild.
 	ConfigMessageChanRebuild string = "rebuild"
-	//ConfigMessageChanForce force.
+	// ConfigMessageChanForce force.
 	ConfigMessageChanForce string = "force"
 )
