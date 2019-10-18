@@ -9,14 +9,14 @@ import (
 // Handler is an implementation of a ResourceEventHandler.
 type Handler struct {
 	ignored               k8s.IgnoreWrapper
-	configRefreshChan     chan bool
+	configRefreshChan     chan string
 	createMeshServiceFunc func(service *corev1.Service) error
 	updateMeshServiceFunc func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error)
 	deleteMeshServiceFunc func(serviceName, serviceNamespace string) error
 }
 
 // NewHandler creates a handler.
-func NewHandler(ignored k8s.IgnoreWrapper, configRefreshChan chan bool) *Handler {
+func NewHandler(ignored k8s.IgnoreWrapper, configRefreshChan chan string) *Handler {
 	h := &Handler{
 		ignored:           ignored,
 		configRefreshChan: configRefreshChan,
@@ -63,8 +63,8 @@ func (h *Handler) OnAdd(obj interface{}) {
 		}
 	}
 
-	// Trigger a configuration refresh.
-	h.configRefreshChan <- true
+	// Trigger a configuration rebuild.
+	h.configRefreshChan <- k8s.ConfigMessageChanRebuild
 }
 
 // OnUpdate executed when an object is updated.
@@ -90,14 +90,19 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 	case *corev1.Pod:
 		if !isMeshPod(obj) {
+			// We don't track updates of user pods, updates are done through endpoints.
 			return
 		}
 
 		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
+		// Since this is a mesh pod update, trigger a force deploy.
+		h.configRefreshChan <- k8s.ConfigMessageChanForce
+
+		return
 	}
 
-	// Trigger a configuration refresh.
-	h.configRefreshChan <- true
+	// Trigger a configuration rebuild.
+	h.configRefreshChan <- k8s.ConfigMessageChanRebuild
 }
 
 // OnDelete executed when an object is deleted.
@@ -124,6 +129,6 @@ func (h *Handler) OnDelete(obj interface{}) {
 		return
 	}
 
-	// Trigger a configuration refresh.
-	h.configRefreshChan <- true
+	// Trigger a configuration rebuild.
+	h.configRefreshChan <- k8s.ConfigMessageChanRebuild
 }
