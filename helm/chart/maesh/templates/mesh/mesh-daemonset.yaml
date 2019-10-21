@@ -59,10 +59,10 @@ spec:
           imagePullPolicy: {{ .Values.mesh.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "--entryPoints.readiness.address=:1081"
-          {{- range $i, $e := until (.Values.limits.http|int) }}
+          {{- range $i, $e := until (.Values.limits.http|toString|int) }}
             - {{ printf "\"--entryPoints.http-%d.address=:%d\"" (add $i 5000) (add $i 5000) }}
           {{- end }}
-          {{- range $i, $e := until (.Values.limits.tcp|int) }}
+          {{- range $i, $e := until (.Values.limits.tcp|toString|int) }}
             - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" (add $i 10000) (add $i 10000) }}
           {{- end }}
             - "--providers.rest"
