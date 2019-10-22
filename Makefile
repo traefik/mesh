@@ -103,7 +103,7 @@ tidy:
 	go mod tidy
 
 helm:
-	@command -v helm >/dev/null 2>&1 || curl https://raw.githubusercontent.com/helm/helm/v2.14.1/scripts/get | bash
+	@command -v helm >/dev/null 2>&1 || curl -L https://git.io/get_helm.sh | bash -s -- -v v2.14.3
 	@helm init --client-only
 
 helm-lint: helm
