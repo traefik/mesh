@@ -46,7 +46,7 @@ func Test(t *testing.T) {
 	images = append(images, image{"coredns/coredns:1.4.0", true})
 	images = append(images, image{"coredns/coredns:1.5.2", true})
 	images = append(images, image{"coredns/coredns:1.6.3", true})
-	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.1", true})
+	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.14.3", true})
 	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7", true})
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7", true})
