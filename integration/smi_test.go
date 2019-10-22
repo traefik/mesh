@@ -83,13 +83,13 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 			path:        "/test",
 			expected:    404,
 		},
-		//{
-		//	desc:        "Pod C -> Service B.maesh /foo returns 200",
-		//	source:      "c-tools",
-		//	destination: "b.default.maesh",
-		//	path:        "/foo",
-		//	expected:    200,
-		//},
+		{
+			desc:        "Pod C -> Service B.maesh /foo returns 200",
+			source:      "c-tools",
+			destination: "b.default.maesh",
+			path:        "/foo",
+			expected:    200,
+		},
 		{
 			desc:        "Pod A -> Service B /test returns 200",
 			source:      "a-tools",
