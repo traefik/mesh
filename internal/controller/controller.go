@@ -125,28 +125,35 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Create the mesh services here to ensure that they exist
 	log.Info("Creating initial mesh services")
 
-	if err := c.createMeshServices(); err != nil {
+	if err = c.createMeshServices(); err != nil {
 		log.Errorf("could not create mesh services: %v", err)
 	}
 
 	for {
+		timer := time.NewTimer(10 * time.Second)
 		select {
 		case <-stopCh:
 			log.Info("Shutting down workers")
 			return nil
 		case message := <-c.configRefreshChan:
 			// Reload the configuration
-			conf, err := c.provider.BuildConfig()
-			if err != nil {
-				return err
+			conf, confErr := c.provider.BuildConfig()
+			if confErr != nil {
+				return confErr
 			}
 
 			if message == k8s.ConfigMessageChanForce || !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
 				c.lastConfiguration.Set(conf)
 
 				if deployErr := c.deployConfiguration(conf); deployErr != nil {
-					return err
+					return deployErr
 				}
+			}
+		case <-timer.C:
+			log.Debug("Deploying configuration to unready nodes")
+
+			if deployErr := c.deployConfigurationToUnreadyNodes(c.lastConfiguration.Get().(*dynamic.Configuration)); deployErr != nil {
+				return deployErr
 			}
 		}
 	}
@@ -519,6 +526,40 @@ func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration)
 
 	if err != nil {
 		return fmt.Errorf("unable to deploy configuration: %v", err)
+	}
+
+	return nil
+}
+
+// deployConfigurationToUnreadyNodes deploys the configuration to the mesh pods.
+func (c *Controller) deployConfigurationToUnreadyNodes(config *dynamic.Configuration) error {
+	podList, err := c.clients.ListPodWithOptions(c.meshNamespace, metav1.ListOptions{
+		LabelSelector: "component==maesh-mesh",
+	})
+	if err != nil {
+		return fmt.Errorf("unable to retrieve pod list: %v", err)
+	}
+
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
+	}
+
+	for _, pod := range podList.Items {
+		needsDeploy := false
+
+		for _, status := range pod.Status.ContainerStatuses {
+			if !status.Ready {
+				// If there is a non-ready container, trigger needs deploy, and break.
+				needsDeploy = true
+				break
+			}
+		}
+
+		if needsDeploy {
+			if deployErr := c.deployToPod(pod.Name, pod.Status.PodIP, config); deployErr != nil {
+				log.Debugf("Error deploying configuration: %v", deployErr)
+			}
+		}
 	}
 
 	return nil
