@@ -21,11 +21,11 @@ controller:
 
 mesh:
   image:
-    name: traefik:v2.0.0
+    name: traefik
     # (Optional)
     # pullPolicy: IfNotPresent
     # (Optional)
-    # tag: v0.0.1
+    tag: v2.0.2
     # (Optional)
     # pullSecret: xxx
   resources:
