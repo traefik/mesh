@@ -117,7 +117,7 @@ data:
     - name: prometheus
       type: prometheus
       orgId: 1
-      url: http://prometheus.{{ .Release.Namespace }}.svc.cluster.local:9090
+      url: http://prometheus.{{ .Release.Namespace }}.svc.{{ default "cluster.local" .Values.clusterDomain }}:9090
       isDefault: true
       access: proxy
       jsonData:

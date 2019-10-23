@@ -71,12 +71,12 @@ spec:
               {{- if .Values.tracing.jaeger.localagenthostport }}
             - "--tracing.jaeger.localagenthostport={{ .Values.tracing.jaeger.localagenthostport }}"
               {{- else }}
-            - "--tracing.jaeger.localagenthostport=jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:6831"
+            - {{ printf "--tracing.jaeger.localagenthostport=jaeger-agent.%s.svc.%s:6831" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
               {{- end }}
               {{- if .Values.tracing.jaeger.localagenthostport }}
             - "--tracing.jaeger.samplingserverurl={{ .Values.tracing.jaeger.samplingserverurl }}"
               {{- else }}
-            - "--tracing.jaeger.samplingserverurl=http://jaeger-agent.{{ .Release.Namespace }}.svc.cluster.local:5778/sampling"
+            - {{ printf "--tracing.jaeger.samplingserverurl=http://jaeger-agent.%s.svc.%s:5778/sampling" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
               {{- end }}
             {{- end }}
             - "--api.dashboard"

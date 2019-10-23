@@ -29,17 +29,19 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 
 // PrepareConfig .
 type PrepareConfig struct {
-	KubeConfig string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
-	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
-	Debug      bool   `description:"Debug mode" export:"true"`
-	Namespace  string `description:"The namespace that maesh is installed in." export:"true"`
+	KubeConfig    string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
+	MasterURL     string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
+	Debug         bool   `description:"Debug mode" export:"true"`
+	Namespace     string `description:"The namespace that maesh is installed in." export:"true"`
+	ClusterDomain string `description:"Your internal K8s cluster domain." export:"true"`
 }
 
 // NewPrepareConfig creates PrepareConfig.
 func NewPrepareConfig() *PrepareConfig {
 	return &PrepareConfig{
-		KubeConfig: os.Getenv("KUBECONFIG"),
-		Debug:      false,
-		Namespace:  "maesh",
+		KubeConfig:    os.Getenv("KUBECONFIG"),
+		Debug:         false,
+		Namespace:     "maesh",
+		ClusterDomain: "cluster.local",
 	}
 }

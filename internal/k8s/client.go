@@ -239,11 +239,11 @@ func isCoreDNSVersionSupported(versionLine string) bool {
 }
 
 // InitCluster is used to initialize a kubernetes cluster with a variety of configuration options.
-func (w *ClientWrapper) InitCluster(namespace string) error {
+func (w *ClientWrapper) InitCluster(namespace string, clusterDomain string) error {
 	log.Infoln("Preparing Cluster...")
 	log.Debugln("Patching DNS...")
 
-	if err := w.patchDNS(metav1.NamespaceSystem); err != nil {
+	if err := w.patchDNS(metav1.NamespaceSystem, clusterDomain); err != nil {
 		return err
 	}
 
@@ -252,7 +252,7 @@ func (w *ClientWrapper) InitCluster(namespace string) error {
 	return nil
 }
 
-func (w *ClientWrapper) patchDNS(namespace string) error {
+func (w *ClientWrapper) patchDNS(namespace string, clusterDomain string) error {
 	deployment, exist, err := w.GetDeployment(namespace, "coredns")
 	if err != nil {
 		return err
@@ -264,7 +264,7 @@ func (w *ClientWrapper) patchDNS(namespace string) error {
 
 		var patched bool
 
-		patched, err = w.patchCoreDNSConfigMap(deployment)
+		patched, err = w.patchCoreDNSConfigMap(deployment, clusterDomain)
 		if err != nil {
 			return err
 		}
@@ -336,7 +336,7 @@ func (w *ClientWrapper) patchDNS(namespace string) error {
 	return nil
 }
 
-func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment) (bool, error) {
+func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment, clusterDomain string) (bool, error) {
 	var coreConfigMapName string
 
 	if len(coreDeployment.Spec.Template.Spec.Volumes) == 0 {
@@ -357,15 +357,15 @@ func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment)
 		}
 	}
 
-	serverBlock :=
+	serverBlock := fmt.Sprintf(
 		`
 maesh:53 {
     errors
     rewrite continue {
-        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh maesh-{1}-{2}.maesh.svc.cluster.local
-        answer name maesh-([a-zA-Z0-9-_]*)-([a-zA-Z0-9-_]*)\.maesh\.svc\.cluster\.local {1}.{2}.maesh
+        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh maesh-{1}-{2}.maesh.svc.%[1]s
+        answer name maesh-([a-zA-Z0-9-_]*)-([a-zA-Z0-9-_]*)\.maesh\.svc\.%[2]s {1}.{2}.maesh
     }
-    kubernetes cluster.local in-addr.arpa ip6.arpa {
+    kubernetes %[1]s in-addr.arpa ip6.arpa {
         pods insecure
         upstream
     	fallthrough in-addr.arpa ip6.arpa
@@ -376,7 +376,10 @@ maesh:53 {
     reload
     loadbalance
 }
-`
+`,
+		clusterDomain,
+		strings.Replace(clusterDomain, ".", "\\.", -1))
+
 	originalBlock := coreConfigMap.Data["Corefile"]
 	newBlock := originalBlock + serverBlock
 	coreConfigMap.Data["Corefile"] = newBlock
