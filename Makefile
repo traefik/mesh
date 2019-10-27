@@ -25,7 +25,7 @@ $(DIST_DIR):
 	mkdir -p $(DIST_DIR)
 
 clean:
-	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
+	rm -rf $(CURDIR)/dist/ coverage.txt $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
 
 # Static linting of source files. See .golangci.toml for options
 local-check: $(DIST_DIR) helm-lint
@@ -40,7 +40,7 @@ local-build: $(DIST_DIR)
 	$(CURDIR)/cmd/$(BINARY_NAME)/*.go
 
 local-test: clean
-	go test -v -cover ./...
+	go test -v -coverprofile=coverage.txt -covermode=atomic ./...
 
 # Integration test
 local-test-integration: $(DIST_DIR) kubectl helm build
@@ -130,6 +130,9 @@ helm-package: helm-lint pages
 	mv *.tgz index.md $(CURDIR)/pages/charts/
 	helm repo index $(CURDIR)/pages/charts/
 
+codecov: local-test
+	curl -s https://codecov.io/bash | bash -s
+
 .PHONY: local-check local-build local-test check build test publish-images \
-		vendor kubectl test-integration local-test-integration pages
+		vendor kubectl test-integration local-test-integration pages codecov
 .PHONY: helm helm-lint helm-package
