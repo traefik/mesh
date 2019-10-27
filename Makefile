@@ -131,7 +131,7 @@ helm-package: helm-lint pages
 	helm repo index $(CURDIR)/pages/charts/
 
 codecov: local-test
-	curl -s https://codecov.io/bash | bash -s
+	curl -s https://codecov.io/bash | bash -s -- -K -F unittests
 
 .PHONY: local-check local-build local-test check build test publish-images \
 		vendor kubectl test-integration local-test-integration pages codecov
