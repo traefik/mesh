@@ -14,9 +14,6 @@ BUILD_DATE := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 
 INTEGRATION_TEST_OPTS := -test.timeout=20m -check.vv -v
 
-DOCKER_INTEGRATION_TEST_NAME := $(DOCKER_IMAGE_NAME)-integration-tests
-DOCKER_INTEGRATION_TEST_OTPS := -v $(CURDIR):/maesh --privileged -e INTEGRATION_TEST_OPTS
-
 export GO111MODULE=on
 
 default: clean check test build
@@ -43,12 +40,8 @@ local-test: clean
 	go test -v -cover ./...
 
 # Integration test
-local-test-integration: $(DIST_DIR) kubectl helm build
+test-integration: $(DIST_DIR) kubectl helm build
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS)
-
-test-integration:
-	docker build -t $(DOCKER_INTEGRATION_TEST_NAME) integration/resources/build
-	docker run --rm $(DOCKER_INTEGRATION_TEST_OTPS) $(DOCKER_INTEGRATION_TEST_NAME) make local-test-integration
 
 kubectl:
 	@command -v kubectl >/dev/null 2>&1 || (curl -LO https://storage.googleapis.com/kubernetes-release/release/$(shell curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl)
