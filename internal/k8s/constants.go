@@ -17,6 +17,10 @@ const (
 	AnnotationRetryAttempts = baseAnnotation + "retry-attempts"
 	// AnnotationCircuitBreakerExpression circuit breaker expression annotation.
 	AnnotationCircuitBreakerExpression = baseAnnotation + "circuit-breaker-expression"
+	// AnnotationRateLimitAverage sets the average value for rate limiting.
+	AnnotationRateLimitAverage = baseAnnotation + "ratelimit-average"
+	// AnnotationRateLimitBurst sets the burst value for rate limiting.
+	AnnotationRateLimitBurst = baseAnnotation + "ratelimit-burst"
 
 	// ServiceTypeHTTP HTTP service type.
 	ServiceTypeHTTP string = "http"

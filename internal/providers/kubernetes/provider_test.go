@@ -554,6 +554,35 @@ func TestBuildHTTPMiddlewares(t *testing.T) {
 			},
 			expected: nil,
 		},
+		{
+			desc: "parseable rate limit",
+			annotations: map[string]string{
+				k8s.AnnotationRateLimitAverage: "100",
+				k8s.AnnotationRateLimitBurst:   "200",
+			},
+			expected: &dynamic.Middleware{
+				RateLimit: &dynamic.RateLimit{
+					Average: 100,
+					Burst:   200,
+				},
+			},
+		},
+		{
+			desc: "empty rate limit",
+			annotations: map[string]string{
+				k8s.AnnotationRateLimitAverage: "",
+				k8s.AnnotationRateLimitBurst:   "",
+			},
+			expected: nil,
+		},
+		{
+			desc: "unparseable rate limit",
+			annotations: map[string]string{
+				k8s.AnnotationRateLimitAverage: "foo",
+				k8s.AnnotationRateLimitBurst:   "bar",
+			},
+			expected: nil,
+		},
 	}
 
 	for _, test := range testCases {
