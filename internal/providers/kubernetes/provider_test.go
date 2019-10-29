@@ -28,7 +28,10 @@ func TestBuildRouter(t *testing.T) {
 		Service:     "bar",
 	}
 
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+	ignored := k8s.NewIgnored()
+	ignored.SetMeshNamespace(meshNamespace)
+
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 
 	name := "test"
 	namespace := "foo"
@@ -49,7 +52,10 @@ func TestBuildTCPRouter(t *testing.T) {
 		Service:     "bar",
 	}
 
-	provider := New(nil, k8s.ServiceTypeTCP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+	ignored := k8s.NewIgnored()
+	ignored.SetMeshNamespace(meshNamespace)
+
+	provider := New(nil, k8s.ServiceTypeTCP, meshNamespace, nil, ignored)
 
 	port := 10000
 	associatedService := "bar"
@@ -275,7 +281,10 @@ func TestBuildConfiguration(t *testing.T) {
 				clientMock.EnableServiceError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, stateTable, k8s.NewIgnored(meshNamespace, []string{}))
+			ignored := k8s.NewIgnored()
+			ignored.SetMeshNamespace(meshNamespace)
+
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, stateTable, ignored)
 			config, err := provider.BuildConfig()
 			assert.Equal(t, test.expected, config)
 			if test.endpointsError || test.serviceError {
@@ -383,7 +392,10 @@ func TestBuildService(t *testing.T) {
 			t.Parallel()
 
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+			ignored := k8s.NewIgnored()
+			ignored.SetMeshNamespace(meshNamespace)
+
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 			actual := provider.buildService(test.endpoints, test.scheme)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -454,7 +466,10 @@ func TestBuildTCPService(t *testing.T) {
 			t.Parallel()
 
 			clientMock := k8s.NewCoreV1ClientMock(test.mockFile)
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, stateTable, k8s.NewIgnored(meshNamespace, []string{}))
+			ignored := k8s.NewIgnored()
+			ignored.SetMeshNamespace(meshNamespace)
+
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, stateTable, ignored)
 			actual := provider.buildTCPService(test.endpoints)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -500,7 +515,10 @@ func TestGetMeshPort(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, stateTable, k8s.NewIgnored(meshNamespace, []string{}))
+			ignored := k8s.NewIgnored()
+			ignored.SetMeshNamespace(meshNamespace)
+
+			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, stateTable, ignored)
 			actual := provider.getMeshPort(test.name, test.namespace, test.port)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -590,7 +608,7 @@ func TestBuildHTTPMiddlewares(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+			provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored())
 			actual := provider.buildHTTPMiddlewares(test.annotations)
 			assert.Equal(t, test.expected, actual)
 		})

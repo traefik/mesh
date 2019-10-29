@@ -1,9 +1,5 @@
 package k8s
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
 // IgnoreWrapper holds namespaces and services to ignore.
 type IgnoreWrapper struct {
 	Namespaces    Namespaces
@@ -11,16 +7,43 @@ type IgnoreWrapper struct {
 	MeshNamespace string
 }
 
-// Ignored returns if the selected name or namespace combo should be ignored.
-func (i *IgnoreWrapper) Ignored(name, namespace string) bool {
+// NewIgnored returns a new IgnoreWrapper.
+func NewIgnored() IgnoreWrapper {
+	return IgnoreWrapper{
+		Namespaces:    Namespaces{},
+		Services:      Services{},
+		MeshNamespace: "",
+	}
+}
+
+// SetMeshNamespace sets the meshNamespace.
+func (i *IgnoreWrapper) SetMeshNamespace(namespace string) {
+	i.MeshNamespace = namespace
+}
+
+// AddIgnoredNamespace adds a namespace to the list of ignored namespaces.
+func (i *IgnoreWrapper) AddIgnoredNamespace(namespace string) {
+	i.Namespaces = append(i.Namespaces, namespace)
+}
+
+// AddIgnoredService adds a service to the list of ignored services.
+func (i *IgnoreWrapper) AddIgnoredService(serviceName, serviceNamespace string) {
+	i.Services = append(i.Services, Service{Name: serviceName, Namespace: serviceNamespace})
+}
+
+// IsIgnoredService returns if the service's events should be ignored.
+func (i *IgnoreWrapper) IsIgnoredService(name, namespace string) bool {
+	// Is the service's namespace ignored?
 	if i.Namespaces.Contains(namespace) {
 		return true
 	}
 
+	// Is the service explicitly ignored?
 	if i.Services.Contains(name, namespace) {
 		return true
 	}
 
+	// Is the service in the mesh namespace?
 	if i.MeshNamespace != "" && namespace == i.MeshNamespace {
 		return true
 	}
@@ -28,34 +51,17 @@ func (i *IgnoreWrapper) Ignored(name, namespace string) bool {
 	return false
 }
 
-// WithoutMesh returns an IgnoreWrapper without the mesh namespace.
-func (i *IgnoreWrapper) WithoutMesh() IgnoreWrapper {
-	return IgnoreWrapper{
-		Namespaces: i.Namespaces,
-		Services:   i.Services,
-	}
-}
-
-// NewIgnored returns a new IgnoreWrapper.
-func NewIgnored(meshNamespace string, namespacesIgnore []string) IgnoreWrapper {
-	ignoredNamespaces := Namespaces{metav1.NamespaceSystem}
-
-	for _, ns := range namespacesIgnore {
-		if !ignoredNamespaces.Contains(ns) {
-			ignoredNamespaces = append(ignoredNamespaces, ns)
-		}
+// IsIgnoredNamespace returns if the service's events should be ignored.
+func (i *IgnoreWrapper) IsIgnoredNamespace(namespace string) bool {
+	// Is the namespace ignored?
+	if i.Namespaces.Contains(namespace) {
+		return true
 	}
 
-	ignoredServices := Services{
-		{
-			Name:      "kubernetes",
-			Namespace: metav1.NamespaceDefault,
-		},
+	// Is the namespace the mesh namespace?
+	if i.MeshNamespace != "" && namespace == i.MeshNamespace {
+		return true
 	}
 
-	return IgnoreWrapper{
-		Namespaces:    ignoredNamespaces,
-		Services:      ignoredServices,
-		MeshNamespace: meshNamespace,
-	}
+	return false
 }
