@@ -163,18 +163,21 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 				c.lastConfiguration.Set(conf)
 
 				if deployErr := c.deployConfiguration(conf); deployErr != nil {
-					return deployErr
+					break
 				}
-			}
 
-			// Configuration successfully deployed, enable readiness in the api.
-			c.api.EnableReadiness()
+				// Configuration successfully deployed, enable readiness in the api.
+				c.api.EnableReadiness()
+			}
 		case <-timer.C:
 			log.Debug("Deploying configuration to unready nodes")
 
 			if deployErr := c.deployConfigurationToUnreadyNodes(c.lastConfiguration.Get().(*dynamic.Configuration)); deployErr != nil {
-				return deployErr
+				break
 			}
+
+			// Configuration successfully deployed, enable readiness in the api.
+			c.api.EnableReadiness()
 		}
 	}
 }
@@ -508,7 +511,7 @@ func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
 		log.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
 
 		if deployErr := c.deployToPod(pod.Name, pod.Status.PodIP, config); deployErr != nil {
-			log.Debugf("Error deploying configuration: %v", deployErr)
+			return fmt.Errorf("error deploying configuration: %v", deployErr)
 		}
 	}
 
@@ -542,11 +545,17 @@ func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration)
 		if _, bodyErr := ioutil.ReadAll(resp.Body); bodyErr != nil {
 			return fmt.Errorf("unable to read response body: %v", bodyErr)
 		}
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("received non-ok response code: %d", resp.StatusCode)
+		}
 	}
 
 	if err != nil {
 		return fmt.Errorf("unable to deploy configuration: %v", err)
 	}
+
+	log.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
 
 	return nil
 }

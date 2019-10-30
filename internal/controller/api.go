@@ -59,7 +59,11 @@ func (a *API) Run() {
 
 // EnableReadiness enables the readiness flag in the API.
 func (a *API) EnableReadiness() {
-	a.readiness = true
+	if !a.readiness {
+		log.Debug("Controller Readiness enabled")
+
+		a.readiness = true
+	}
 }
 
 // getCurrentConfiguration returns the current configuration.
