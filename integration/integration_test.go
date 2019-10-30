@@ -26,6 +26,8 @@ var (
 	masterURL      = "https://localhost:8443"
 	images         []image
 	k3dClusterName = "maesh-integration"
+	k3sImage       = "rancher/k3s"
+	k3sVersion     = "v0.10.1"
 )
 
 func Test(t *testing.T) {
@@ -95,6 +97,7 @@ func (s *BaseSuite) startk3s(c *check.C) {
 		"--workers", "1",
 		"--server-arg", "--no-deploy=traefik",
 		"--server-arg", "--no-deploy=coredns",
+		"--image", fmt.Sprintf("%s:%s", k3sImage, k3sVersion),
 	)
 	cmd.Env = os.Environ()
 
