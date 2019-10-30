@@ -17,7 +17,10 @@ import (
 const meshNamespace string = "maesh"
 
 func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+	ignored := k8s.NewIgnored()
+	ignored.SetMeshNamespace(meshNamespace)
+
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 
 	testCases := []struct {
 		desc     string
@@ -66,7 +69,10 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 
 func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 	clientMock := k8s.NewClientMock("mock.yaml")
-	provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+	ignored := k8s.NewIgnored()
+	ignored.SetMeshNamespace(meshNamespace)
+
+	provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 
 	expected := []*accessv1alpha1.TrafficTarget{
 		{
@@ -333,7 +339,10 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 			if test.httpError {
 				clientMock.EnableHTTPRouteGroupError()
 			}
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+			ignored := k8s.NewIgnored()
+			ignored.SetMeshNamespace(meshNamespace)
+
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 			middleware := "block-all"
 			actual := provider.buildHTTPRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
 			assert.Equal(t, test.expected, actual)
@@ -474,7 +483,10 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 			if test.tcpError {
 				clientMock.EnableTCPRouteError()
 			}
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+			ignored := k8s.NewIgnored()
+			ignored.SetMeshNamespace(meshNamespace)
+
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 			actual := provider.buildTCPRouterFromTrafficTarget(test.trafficTarget, test.port, test.key)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -482,7 +494,10 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 }
 
 func TestGetServiceMode(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+	ignored := k8s.NewIgnored()
+	ignored.SetMeshNamespace(meshNamespace)
+
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 
 	testCases := []struct {
 		desc     string
@@ -863,7 +878,10 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 				clientMock.EnablePodError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+			ignored := k8s.NewIgnored()
+			ignored.SetMeshNamespace(meshNamespace)
+
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 
 			actual := provider.getApplicableTrafficTargets(test.endpoints, test.trafficTargets)
 			assert.Equal(t, test.expected, actual)
@@ -1202,7 +1220,10 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 				clientMock.EnablePodError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+			ignored := k8s.NewIgnored()
+			ignored.SetMeshNamespace(meshNamespace)
+
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 
 			actual := provider.buildHTTPServiceFromTrafficTarget(test.endpoints, test.trafficTarget, k8s.SchemeHTTP)
 			assert.Equal(t, test.expected, actual)
@@ -1211,7 +1232,10 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 }
 
 func TestGroupTrafficTargetsByDestination(t *testing.T) {
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+	ignored := k8s.NewIgnored()
+	ignored.SetMeshNamespace(meshNamespace)
+
+	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 
 	trafficTargets := []*accessv1alpha1.TrafficTarget{
 		{
@@ -1449,7 +1473,10 @@ func TestBuildConfiguration(t *testing.T) {
 				clientMock.EnableServiceError()
 			}
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, k8s.NewIgnored(meshNamespace, []string{}))
+			ignored := k8s.NewIgnored()
+			ignored.SetMeshNamespace(meshNamespace)
+
+			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
 			config, err := provider.BuildConfig()
 			assert.Equal(t, test.expected, config)
 			if test.endpointsError || test.serviceError {

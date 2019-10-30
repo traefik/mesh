@@ -49,7 +49,15 @@ type Controller struct {
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
 func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string) *Controller {
-	ignored := k8s.NewIgnored(meshNamespace, ignoreNamespaces)
+	ignored := k8s.NewIgnored()
+	ignored.SetMeshNamespace(meshNamespace)
+
+	for _, ns := range ignoreNamespaces {
+		ignored.AddIgnoredNamespace(ns)
+	}
+
+	ignored.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
+
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	configRefreshChan := make(chan string)
 	handler := NewHandler(ignored, configRefreshChan)
@@ -204,7 +212,7 @@ func (c *Controller) createMeshServices() error {
 	}
 
 	for _, service := range services {
-		if c.ignored.Ignored(service.Name, service.Namespace) {
+		if c.ignored.IsIgnoredService(service.Name, service.Namespace) {
 			continue
 		}
 

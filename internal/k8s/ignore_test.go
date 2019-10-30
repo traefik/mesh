@@ -4,44 +4,32 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestIgnored(t *testing.T) {
+func TestIgnoredNamespace(t *testing.T) {
 	meshNamespace := "maesh"
 	testCases := []struct {
 		desc      string
-		name      string
 		namespace string
 		expected  bool
 	}{
 		{
 			desc:      "empty ignored",
-			name:      "",
 			namespace: "",
 			expected:  false,
 		},
 		{
-			desc:      "ignored k8s default namespace",
-			name:      "foo",
-			namespace: metav1.NamespaceSystem,
-			expected:  true,
+			desc:      "not ignored namespace",
+			namespace: "foo",
+			expected:  false,
 		},
 		{
-			desc:      "ignored another namespace",
-			name:      "foo",
+			desc:      "ignored namespace",
 			namespace: "someNamespace",
 			expected:  true,
 		},
 		{
-			desc:      "ignored service",
-			name:      "kubernetes",
-			namespace: metav1.NamespaceDefault,
-			expected:  true,
-		},
-		{
-			desc:      "ignored mesh service",
-			name:      "omg",
+			desc:      "ignored mesh namespace",
 			namespace: "maesh",
 			expected:  true,
 		},
@@ -51,14 +39,16 @@ func TestIgnored(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			i := NewIgnored(meshNamespace, []string{"someNamespace"})
-			actual := i.Ignored(test.name, test.namespace)
+			i := NewIgnored()
+			i.SetMeshNamespace(meshNamespace)
+			i.AddIgnoredNamespace("someNamespace")
+			actual := i.IsIgnoredNamespace(test.namespace)
 			assert.Equal(t, test.expected, actual)
 		})
 	}
 }
 
-func TestWithoutMesh(t *testing.T) {
+func TestIgnoredService(t *testing.T) {
 	meshNamespace := "maesh"
 	testCases := []struct {
 		desc      string
@@ -73,28 +63,22 @@ func TestWithoutMesh(t *testing.T) {
 			expected:  false,
 		},
 		{
-			desc:      "ignored k8s default namespace",
-			name:      "foo",
-			namespace: metav1.NamespaceSystem,
-			expected:  true,
-		},
-		{
-			desc:      "ignored another namespace",
+			desc:      "ignored service due to namespace",
 			name:      "foo",
 			namespace: "someNamespace",
 			expected:  true,
 		},
 		{
-			desc:      "ignored service",
-			name:      "kubernetes",
-			namespace: metav1.NamespaceDefault,
+			desc:      "explicit ignored service",
+			name:      "foo",
+			namespace: "bar",
 			expected:  true,
 		},
 		{
 			desc:      "ignored mesh service",
 			name:      "omg",
 			namespace: "maesh",
-			expected:  false,
+			expected:  true,
 		},
 	}
 
@@ -102,9 +86,11 @@ func TestWithoutMesh(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			i := NewIgnored(meshNamespace, []string{"someNamespace"})
-			i = i.WithoutMesh()
-			actual := i.Ignored(test.name, test.namespace)
+			i := NewIgnored()
+			i.SetMeshNamespace(meshNamespace)
+			i.AddIgnoredNamespace("someNamespace")
+			i.AddIgnoredService("foo", "bar")
+			actual := i.IsIgnoredService(test.name, test.namespace)
 			assert.Equal(t, test.expected, actual)
 		})
 	}
