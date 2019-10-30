@@ -40,7 +40,7 @@ local-test: clean
 	go test -v -cover ./...
 
 # Integration test
-test-integration: $(DIST_DIR) kubectl helm build
+test-integration: $(DIST_DIR) kubectl helm build k3d
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS)
 
 kubectl:
@@ -102,6 +102,9 @@ helm:
 helm-lint: helm
 	helm lint helm/chart/maesh
 
+k3d:
+	curl -s https://raw.githubusercontent.com/rancher/k3d/v1.3.4/install.sh | bash
+
 pages:
 	mkdir -p $(CURDIR)/pages
 	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
@@ -124,5 +127,5 @@ helm-package: helm-lint pages
 	helm repo index $(CURDIR)/pages/charts/
 
 .PHONY: local-check local-build local-test check build test publish-images \
-		vendor kubectl test-integration local-test-integration pages
-.PHONY: helm helm-lint helm-package
+		vendor kubectl test-integration local-test-integration pages \
+		helm helm-lint helm-package k3d
