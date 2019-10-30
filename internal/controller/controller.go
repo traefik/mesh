@@ -57,6 +57,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 	}
 
 	ignored.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
+	ignored.AddIgnoredNamespace(metav1.NamespaceSystem)
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	configRefreshChan := make(chan string)
