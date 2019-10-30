@@ -69,3 +69,17 @@ The circuit breaker protects your system from stacking requests to unhealthy ser
 When your system is healthy, the circuit is closed (normal operations). When your system becomes unhealthy, the circuit opens, and requests are no longer forwarded (but handled by a fallback mechanism).
 
 All configuration options are available [here](https://docs.traefik.io/v2.0/middlewares/circuitbreaker/#configuration-options)
+
+### Rate Limit
+
+Rate limiting can be enabled by using the following annotations:
+
+```yaml
+maesh.containo.us/ratelimit-average: "100"
+maesh.containo.us/ratelimit-burst: "200"
+```
+
+These annotation sets average and burst requests per second limit for the service.
+Please note that this value is a string, and needs to be quoted.
+
+Further details about the rate limiting can be found [here](https://docs.traefik.io/v2.0/middlewares/ratelimit/#configuration-options)

@@ -174,13 +174,15 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.Middleware {
 	circuitBreaker := buildCircuitBreakerMiddleware(annotations)
 	retry := buildRetryMiddleware(annotations)
+	rateLimit := buildRateLimitMiddleware(annotations)
 
-	if circuitBreaker == nil && retry == nil {
+	if circuitBreaker == nil && retry == nil && rateLimit == nil {
 		return nil
 	}
 
 	return &dynamic.Middleware{
 		CircuitBreaker: circuitBreaker,
+		RateLimit:      rateLimit,
 		Retry:          retry,
 	}
 }
@@ -208,6 +210,29 @@ func buildRetryMiddleware(annotations map[string]string) *dynamic.Retry {
 		if retryAttempts > 0 {
 			return &dynamic.Retry{
 				Attempts: retryAttempts,
+			}
+		}
+	}
+
+	return nil
+}
+
+func buildRateLimitMiddleware(annotations map[string]string) *dynamic.RateLimit {
+	if annotations[k8s.AnnotationRateLimitAverage] != "" || annotations[k8s.AnnotationRateLimitBurst] != "" {
+		rlAverage, err := strconv.Atoi(annotations[k8s.AnnotationRateLimitAverage])
+		if err != nil {
+			log.Errorf("Could not parse rateLimit average annotation: %v", err)
+		}
+
+		rlBurst, err := strconv.Atoi(annotations[k8s.AnnotationRateLimitBurst])
+		if err != nil {
+			log.Errorf("Could not parse rateLimit burst annotation: %v", err)
+		}
+
+		if rlAverage > 0 && rlBurst > 1 {
+			return &dynamic.RateLimit{
+				Average: int64(rlAverage),
+				Burst:   int64(rlBurst),
 			}
 		}
 	}
