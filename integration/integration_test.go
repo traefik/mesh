@@ -196,12 +196,12 @@ func (s *BaseSuite) startAndWaitForKubeDNS(c *check.C) {
 }
 
 func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
-	err := s.try.WaitReadyDeployment("maesh-controller", "maesh", 60*time.Second)
+	err := s.try.WaitReadyDeployment("maesh-controller", "maesh", 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
 func (s *BaseSuite) waitForMaeshControllerStartedWithReturn() error {
-	return s.try.WaitReadyDeployment("maesh-controller", "maesh", 60*time.Second)
+	return s.try.WaitReadyDeployment("maesh-controller", "maesh", 30*time.Second)
 }
 
 func (s *BaseSuite) waitForTiller(c *check.C) {

@@ -96,6 +96,8 @@ func (c *Controller) Init() error {
 
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
 
+	c.api = NewAPI(c.apiPort, &c.lastConfiguration)
+
 	if c.smiEnabled {
 		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
 		// Create new SharedInformerFactories, and register the event handler to informers.
@@ -113,8 +115,6 @@ func (c *Controller) Init() error {
 
 	// If SMI is not configured, use the kubernetes provider.
 	c.provider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
-
-	c.api = NewAPI(c.apiPort, &c.lastConfiguration)
 
 	return nil
 }
