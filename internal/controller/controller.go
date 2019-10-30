@@ -44,11 +44,13 @@ type Controller struct {
 	meshNamespace     string
 	tcpStateTable     *k8s.State
 	lastConfiguration safe.Safe
+	api               *API
+	apiPort           int
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string) *Controller {
+func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int) *Controller {
 	ignored := k8s.NewIgnored()
 	ignored.SetMeshNamespace(meshNamespace)
 
@@ -71,6 +73,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 		smiEnabled:        smiEnabled,
 		defaultMode:       defaultMode,
 		meshNamespace:     meshNamespace,
+		apiPort:           apiPort,
 	}
 
 	if err := c.Init(); err != nil {
@@ -111,6 +114,8 @@ func (c *Controller) Init() error {
 	// If SMI is not configured, use the kubernetes provider.
 	c.provider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
 
+	c.api = NewAPI(c.apiPort, &c.lastConfiguration)
+
 	return nil
 }
 
@@ -138,6 +143,9 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		log.Errorf("could not create mesh services: %v", err)
 	}
 
+	// Start the api, and enable the readiness endpoint
+	c.api.Start()
+
 	for {
 		timer := time.NewTimer(10 * time.Second)
 		select {
@@ -158,6 +166,9 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 					return deployErr
 				}
 			}
+
+			// Configuration successfully deployed, enable readiness in the api.
+			c.api.EnableReadiness()
 		case <-timer.C:
 			log.Debug("Deploying configuration to unready nodes")
 
