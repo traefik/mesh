@@ -201,7 +201,7 @@ func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
 }
 
 func (s *BaseSuite) waitForMaeshControllerStartedWithReturn() error {
-	return s.try.WaitReadyDeployment("maesh-controller", "maesh", 30*time.Second)
+	return s.try.WaitReadyDeployment("maesh-controller", "maesh", 60*time.Second)
 }
 
 func (s *BaseSuite) waitForTiller(c *check.C) {
