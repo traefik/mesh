@@ -93,6 +93,15 @@ spec:
             limits:
               memory: {{ .Values.controller.resources.limit.mem }}
               cpu: {{ .Values.controller.resources.limit.cpu }}
+          ports:
+            - name: api
+              containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /api/status/readiness
+              port: api
+            initialDelaySeconds: 3
+            periodSeconds: 1
       initContainers:
         - name: maesh-prepare
           image: {{ include "maesh.controllerImage" . | quote }}
