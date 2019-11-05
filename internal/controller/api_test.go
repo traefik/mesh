@@ -1,9 +1,11 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/containous/traefik/v2/pkg/testhelpers"
@@ -70,4 +72,25 @@ func TestGetCurrentConfiguration(t *testing.T) {
 	api.getCurrentConfiguration(res, req)
 
 	assert.Equal(t, "\"foo\"\n", res.Body.String())
+}
+
+func TestGetDeployLog(t *testing.T) {
+	config := safe.Safe{}
+	log := NewDeployLog()
+	api := NewAPI(9000, &config, log)
+
+	currentTime := time.Now()
+	log.LogDeploy(currentTime, "foo", "bar", true, "blabla")
+
+	data, err := currentTime.MarshalJSON()
+	assert.NoError(t, err)
+	currentTimeString := string(data)
+	expected := fmt.Sprintf("[{\"TimeStamp\":%s,\"PodName\":\"foo\",\"PodIP\":\"bar\",\"DeploySuccessful\":true,\"Reason\":\"blabla\"}]", currentTimeString)
+
+	res := httptest.NewRecorder()
+	req := testhelpers.MustNewRequest(http.MethodGet, "/api/configuration/current", nil)
+
+	api.getDeployLog(res, req)
+	actual := res.Body.String()
+	assert.Equal(t, expected, actual)
 }
