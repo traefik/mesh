@@ -50,11 +50,11 @@ func (d *DeployLog) LogDeploy(timeStamp time.Time, podName string, podIP string,
 }
 
 // GetLog returns a json representation of the entries list.
-func (d *DeployLog) GetLog() string {
+func (d *DeployLog) GetLog() []byte {
 	data, err := json.Marshal(d.Entries)
 	if err != nil {
 		log.Error("Could not marshal deploylog entries")
 	}
 
-	return string(data)
+	return data
 }

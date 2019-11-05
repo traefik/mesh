@@ -43,6 +43,7 @@ func (a *API) Init() error {
 
 	a.router.HandleFunc("/api/configuration/current", a.getCurrentConfiguration)
 	a.router.HandleFunc("/api/status/readiness", a.getReadiness)
+	a.router.HandleFunc("/api/log/deploylog", a.getDeployLog)
 
 	return nil
 }
@@ -88,4 +89,11 @@ func (a *API) getReadiness(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(a.readiness); err != nil {
 		log.Error(err)
 	}
+}
+
+// getDeployLog returns the current deploylog.
+func (a *API) getDeployLog(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	w.Write(a.deployLog.GetLog())
 }

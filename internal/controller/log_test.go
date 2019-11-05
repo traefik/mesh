@@ -21,9 +21,9 @@ func TestGetLog(t *testing.T) {
 
 	data, err := currentTime.MarshalJSON()
 	assert.NoError(t, err)
-
 	currentTimeString := string(data)
-	actual := log.GetLog()
+
+	actual := string(log.GetLog())
 	expected := fmt.Sprintf("[{\"TimeStamp\":%s,\"PodName\":\"foo\",\"PodIP\":\"bar\",\"DeploySuccessful\":true,\"Reason\":\"blabla\"}]", currentTimeString)
 	assert.Equal(t, expected, actual)
 }
