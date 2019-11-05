@@ -545,18 +545,22 @@ func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration)
 		defer resp.Body.Close()
 
 		if _, bodyErr := ioutil.ReadAll(resp.Body); bodyErr != nil {
+			c.deployLog.LogDeploy(time.Now(), name, ip, false, fmt.Sprintf("unable to read response body: %v", bodyErr))
 			return fmt.Errorf("unable to read response body: %v", bodyErr)
 		}
 
 		if resp.StatusCode != http.StatusOK {
+			c.deployLog.LogDeploy(time.Now(), name, ip, false, fmt.Sprintf("received non-ok response code: %d", resp.StatusCode))
 			return fmt.Errorf("received non-ok response code: %d", resp.StatusCode)
 		}
 	}
 
 	if err != nil {
+		c.deployLog.LogDeploy(time.Now(), name, ip, false, fmt.Sprintf("unable to deploy configuration: %v", err))
 		return fmt.Errorf("unable to deploy configuration: %v", err)
 	}
 
+	c.deployLog.LogDeploy(time.Now(), name, ip, true, "")
 	log.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
 
 	return nil

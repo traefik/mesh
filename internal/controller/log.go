@@ -10,6 +10,7 @@ import (
 type logEntry struct {
 	TimeStamp        time.Time
 	PodName          string
+	PodIP            string
 	DeploySuccessful bool
 	Reason           string
 }
@@ -36,10 +37,11 @@ func (d *DeployLog) Init() error {
 }
 
 // LogDeploy adds a record to the entries list.
-func (d *DeployLog) LogDeploy(timeStamp time.Time, podName string, deploySuccessful bool, reason string) {
+func (d *DeployLog) LogDeploy(timeStamp time.Time, podName string, podIP string, deploySuccessful bool, reason string) {
 	newEntry := logEntry{
 		TimeStamp:        timeStamp,
 		PodName:          podName,
+		PodIP:            podIP,
 		DeploySuccessful: deploySuccessful,
 		Reason:           reason,
 	}
