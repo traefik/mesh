@@ -44,11 +44,13 @@ type Controller struct {
 	meshNamespace     string
 	tcpStateTable     *k8s.State
 	lastConfiguration safe.Safe
+	api               *API
+	apiPort           int
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string) *Controller {
+func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int) *Controller {
 	ignored := k8s.NewIgnored()
 	ignored.SetMeshNamespace(meshNamespace)
 
@@ -71,6 +73,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 		smiEnabled:        smiEnabled,
 		defaultMode:       defaultMode,
 		meshNamespace:     meshNamespace,
+		apiPort:           apiPort,
 	}
 
 	if err := c.Init(); err != nil {
@@ -92,6 +95,8 @@ func (c *Controller) Init() error {
 	c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
 
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
+
+	c.api = NewAPI(c.apiPort, &c.lastConfiguration)
 
 	if c.smiEnabled {
 		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
@@ -138,6 +143,9 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		log.Errorf("could not create mesh services: %v", err)
 	}
 
+	// Start the api, and enable the readiness endpoint
+	c.api.Start()
+
 	for {
 		timer := time.NewTimer(10 * time.Second)
 		select {
@@ -155,15 +163,21 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 				c.lastConfiguration.Set(conf)
 
 				if deployErr := c.deployConfiguration(conf); deployErr != nil {
-					return deployErr
+					break
 				}
+
+				// Configuration successfully deployed, enable readiness in the api.
+				c.api.EnableReadiness()
 			}
 		case <-timer.C:
 			log.Debug("Deploying configuration to unready nodes")
 
 			if deployErr := c.deployConfigurationToUnreadyNodes(c.lastConfiguration.Get().(*dynamic.Configuration)); deployErr != nil {
-				return deployErr
+				break
 			}
+
+			// Configuration successfully deployed, enable readiness in the api.
+			c.api.EnableReadiness()
 		}
 	}
 }
@@ -497,7 +511,7 @@ func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
 		log.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
 
 		if deployErr := c.deployToPod(pod.Name, pod.Status.PodIP, config); deployErr != nil {
-			log.Debugf("Error deploying configuration: %v", deployErr)
+			return fmt.Errorf("error deploying configuration: %v", deployErr)
 		}
 	}
 
@@ -531,11 +545,17 @@ func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration)
 		if _, bodyErr := ioutil.ReadAll(resp.Body); bodyErr != nil {
 			return fmt.Errorf("unable to read response body: %v", bodyErr)
 		}
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("received non-ok response code: %d", resp.StatusCode)
+		}
 	}
 
 	if err != nil {
 		return fmt.Errorf("unable to deploy configuration: %v", err)
 	}
+
+	log.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
 
 	return nil
 }

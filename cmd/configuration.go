@@ -13,6 +13,7 @@ type MaeshConfiguration struct {
 	DefaultMode      string   `description:"Default mode for mesh services" export:"true"`
 	Namespace        string   `description:"The namespace that maesh is installed in." export:"true"`
 	IgnoreNamespaces []string `description:"The namespace that maesh should be ignoring." export:"true"`
+	APIPort          int      `description:"API port for the controller" export:"true"`
 }
 
 // NewMaeshConfiguration creates a MaeshConfiguration with default values.
@@ -24,6 +25,7 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 		SMI:         false,
 		DefaultMode: "http",
 		Namespace:   "maesh",
+		APIPort:     9000,
 	}
 }
 
