@@ -15,10 +15,12 @@ type logEntry struct {
 	Reason           string
 }
 
+// DeployLog holds a slice of log entries.
 type DeployLog struct {
 	Entries []logEntry
 }
 
+// NewDeployLog returns an initialized DeployLog.
 func NewDeployLog() *DeployLog {
 	d := &DeployLog{}
 

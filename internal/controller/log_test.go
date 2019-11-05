@@ -21,6 +21,7 @@ func TestGetLog(t *testing.T) {
 
 	data, err := currentTime.MarshalJSON()
 	assert.NoError(t, err)
+
 	currentTimeString := string(data)
 
 	actual := string(log.GetLog())

@@ -95,5 +95,7 @@ func (a *API) getReadiness(w http.ResponseWriter, r *http.Request) {
 func (a *API) getDeployLog(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	w.Write(a.deployLog.GetLog())
+	if _, err := w.Write(a.deployLog.GetLog()); err != nil {
+		log.Error(err)
+	}
 }

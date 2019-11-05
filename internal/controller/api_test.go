@@ -24,7 +24,6 @@ func TestEnableReadiness(t *testing.T) {
 }
 
 func TestGetReadiness(t *testing.T) {
-
 	testCases := []struct {
 		desc               string
 		readiness          bool
@@ -84,6 +83,7 @@ func TestGetDeployLog(t *testing.T) {
 
 	data, err := currentTime.MarshalJSON()
 	assert.NoError(t, err)
+
 	currentTimeString := string(data)
 	expected := fmt.Sprintf("[{\"TimeStamp\":%s,\"PodName\":\"foo\",\"PodIP\":\"bar\",\"DeploySuccessful\":true,\"Reason\":\"blabla\"}]", currentTimeString)
 
