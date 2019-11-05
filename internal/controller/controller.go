@@ -46,6 +46,7 @@ type Controller struct {
 	lastConfiguration safe.Safe
 	api               *API
 	apiPort           int
+	deployLog         *DeployLog
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
@@ -96,7 +97,8 @@ func (c *Controller) Init() error {
 
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
 
-	c.api = NewAPI(c.apiPort, &c.lastConfiguration)
+	c.deployLog = NewDeployLog()
+	c.api = NewAPI(c.apiPort, &c.lastConfiguration, c.deployLog)
 
 	if c.smiEnabled {
 		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)

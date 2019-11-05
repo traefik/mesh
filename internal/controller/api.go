@@ -16,14 +16,16 @@ type API struct {
 	readiness         bool
 	lastConfiguration *safe.Safe
 	apiPort           int
+	deployLog         *DeployLog
 }
 
 // NewAPI creates a new api.
-func NewAPI(apiPort int, lastConfiguration *safe.Safe) *API {
+func NewAPI(apiPort int, lastConfiguration *safe.Safe, deployLog *DeployLog) *API {
 	a := &API{
 		readiness:         false,
 		lastConfiguration: lastConfiguration,
 		apiPort:           apiPort,
+		deployLog:         deployLog,
 	}
 
 	if err := a.Init(); err != nil {
