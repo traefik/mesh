@@ -14,7 +14,7 @@ import (
 
 func TestEnableReadiness(t *testing.T) {
 	config := safe.Safe{}
-	api := NewAPI(9000, &config, nil)
+	api := NewAPI(9000, &config, nil, nil, "foo")
 
 	assert.Equal(t, false, api.readiness)
 
@@ -46,7 +46,7 @@ func TestGetReadiness(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			config := safe.Safe{}
-			api := NewAPI(9000, &config, nil)
+			api := NewAPI(9000, &config, nil, nil, "foo")
 			api.readiness = test.readiness
 
 			res := httptest.NewRecorder()
@@ -61,7 +61,7 @@ func TestGetReadiness(t *testing.T) {
 
 func TestGetCurrentConfiguration(t *testing.T) {
 	config := safe.Safe{}
-	api := NewAPI(9000, &config, nil)
+	api := NewAPI(9000, &config, nil, nil, "foo")
 
 	config.Set("foo")
 
@@ -76,7 +76,7 @@ func TestGetCurrentConfiguration(t *testing.T) {
 func TestGetDeployLog(t *testing.T) {
 	config := safe.Safe{}
 	log := NewDeployLog()
-	api := NewAPI(9000, &config, log)
+	api := NewAPI(9000, &config, log, nil, "foo")
 
 	currentTime := time.Now()
 	log.LogDeploy(currentTime, "foo", "bar", true, "blabla")
@@ -91,6 +91,6 @@ func TestGetDeployLog(t *testing.T) {
 	req := testhelpers.MustNewRequest(http.MethodGet, "/api/configuration/current", nil)
 
 	api.getDeployLog(res, req)
-	actual := res.Body.String()
-	assert.Equal(t, expected, actual)
+	assert.Equal(t, expected, res.Body.String())
+	assert.Equal(t, http.StatusOK, res.Code)
 }
