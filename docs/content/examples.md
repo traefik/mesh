@@ -34,12 +34,15 @@ metadata:
 ```yaml tab="deployment.yaml"
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: whoami
   namespace: whoami
 spec:
   replicas: 2
+  selector:
+    matchLabels:
+      app: whoami
   template:
     metadata:
       labels:
@@ -53,12 +56,15 @@ spec:
 
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: whoami-tcp
   namespace: whoami
 spec:
   replicas: 2
+  selector:
+    matchLabels:
+      app: whoami-tcp
   template:
     metadata:
       labels:
@@ -118,7 +124,7 @@ spec:
       - "3600"
 ```
 
-You should now see the following when running `kubectl get pods -n whoami`:
+You should now see the following when running `kubectl get all -n whoami`:
 
 ```text
 NAME                             READY   STATUS    RESTARTS   AGE
