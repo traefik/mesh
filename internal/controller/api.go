@@ -16,14 +16,16 @@ type API struct {
 	readiness         bool
 	lastConfiguration *safe.Safe
 	apiPort           int
+	deployLog         *DeployLog
 }
 
 // NewAPI creates a new api.
-func NewAPI(apiPort int, lastConfiguration *safe.Safe) *API {
+func NewAPI(apiPort int, lastConfiguration *safe.Safe, deployLog *DeployLog) *API {
 	a := &API{
 		readiness:         false,
 		lastConfiguration: lastConfiguration,
 		apiPort:           apiPort,
+		deployLog:         deployLog,
 	}
 
 	if err := a.Init(); err != nil {
@@ -41,6 +43,7 @@ func (a *API) Init() error {
 
 	a.router.HandleFunc("/api/configuration/current", a.getCurrentConfiguration)
 	a.router.HandleFunc("/api/status/readiness", a.getReadiness)
+	a.router.HandleFunc("/api/log/deploylog", a.getDeployLog)
 
 	return nil
 }
@@ -84,6 +87,15 @@ func (a *API) getReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(a.readiness); err != nil {
+		log.Error(err)
+	}
+}
+
+// getDeployLog returns the current deploylog.
+func (a *API) getDeployLog(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if _, err := w.Write(a.deployLog.GetLog()); err != nil {
 		log.Error(err)
 	}
 }
