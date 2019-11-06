@@ -33,5 +33,3 @@ Otherwise, it will return a 500.
 This endpoint provides a json array containing details about configuration deployments made by the controller.
 This array is currently capped at 1000 entries to avoid memory issues.
 If this is not enough, please open a github issue and we will look into updating this to be configurable.
-
-
