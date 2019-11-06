@@ -186,6 +186,7 @@ metadata:
   namespace: whoami
   labels:
     app: whoami
+  # These annotations enable Maesh for this service:
   annotations:
     maesh.containo.us/traffic-type: "http"
     maesh.containo.us/retry-attempts: "2"
@@ -205,6 +206,7 @@ metadata:
   namespace: whoami
   labels:
     app: whoami-tcp
+  # These annotations enable Maesh for this service:
   annotations:
     maesh.containo.us/traffic-type: "tcp"
 spec:
