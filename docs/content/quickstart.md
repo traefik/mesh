@@ -37,3 +37,7 @@ helm installation to perform all steps it needs is to edit the
 
 Assuming `tiller` is deployed in your `kube-system` namespace, this will
 give it very open permissions.
+
+### Installation Examples
+
+See the [examples page](examples.md) to see how to easily deploy Maesh and configure your services to use it.
