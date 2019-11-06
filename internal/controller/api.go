@@ -123,7 +123,7 @@ func (a *API) getMeshNodes(w http.ResponseWriter, r *http.Request) {
 		LabelSelector: "component==maesh-mesh",
 	})
 	if err != nil {
-		writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod list: %v", err))
+		writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod list: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -159,18 +159,18 @@ func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 
 	pod, exists, err := a.clients.GetPod(a.meshNamespace, vars["node"])
 	if err != nil {
-		writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod: %v", err))
+		writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	if !exists {
-		writeErrorResponse(w, fmt.Sprintf("unable to find pod: %s", vars["node"]))
+		writeErrorResponse(w, fmt.Sprintf("unable to find pod: %s", vars["node"]), http.StatusNotFound)
 		return
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://%s:8080/api/rawdata", pod.Status.PodIP))
 	if err != nil {
-		writeErrorResponse(w, fmt.Sprintf("unable to get configuration from pod: %v", err))
+		writeErrorResponse(w, fmt.Sprintf("unable to get configuration from pod: %v", err), http.StatusBadGateway)
 		return
 	}
 
@@ -178,7 +178,7 @@ func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		writeErrorResponse(w, fmt.Sprintf("unable to get configuration response body from pod: %v", err))
+		writeErrorResponse(w, fmt.Sprintf("unable to get configuration response body from pod: %v", err), http.StatusBadGateway)
 		return
 	}
 
@@ -189,8 +189,8 @@ func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeErrorResponse(w http.ResponseWriter, errorMessage string) {
-	w.WriteHeader(http.StatusInternalServerError)
+func writeErrorResponse(w http.ResponseWriter, errorMessage string, status int) {
+	w.WriteHeader(status)
 	log.Error(errorMessage)
 
 	w.Header().Set("Content-Type", "text/plain; charset=us-ascii")
