@@ -559,7 +559,7 @@ func deployToPods(pods []corev1.Pod, config *dynamic.Configuration) error {
 
 		errg.Go(func() error {
 			b := backoff.NewExponentialBackOff()
-			b.MaxElapsedTime = time.Minute
+			b.MaxElapsedTime = 15 * time.Second
 
 			op := func() error {
 				return deployToPod(pod.Name, pod.Status.PodIP, config)
