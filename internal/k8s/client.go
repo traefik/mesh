@@ -73,6 +73,8 @@ type CoreV1Client interface {
 	GetConfigMap(namespace, name string) (*corev1.ConfigMap, bool, error)
 	UpdateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
 	CreateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
+
+	GetKubernetesClient() *kubernetes.Clientset
 }
 
 // AppsV1Client AppsV1 client.
@@ -91,17 +93,20 @@ type SMIClient interface {
 // SMIAccessV1Alpha1Client SMI Access v1Alpha client.
 type SMIAccessV1Alpha1Client interface {
 	GetTrafficTargets() ([]*smiAccessv1alpha1.TrafficTarget, error)
+	GetSMIAccessClient() *smiAccessClientset.Clientset
 }
 
 // SMISpecsV1Alpha1Client SMI Specs v1Alpha client.
 type SMISpecsV1Alpha1Client interface {
 	GetHTTPRouteGroup(namespace, name string) (*smiSpecsv1alpha1.HTTPRouteGroup, bool, error)
 	GetTCPRoute(namespace, name string) (*smiSpecsv1alpha1.TCPRoute, bool, error)
+	GetSMISpecsClient() *smiSpecsClientset.Clientset
 }
 
 // SMISplitV1Alpha1Client SMI Split v1Alpha client.
 type SMISplitV1Alpha1Client interface {
 	GetTrafficSplits() ([]*smiSplitv1alpha1.TrafficSplit, error)
+	GetSMISplitClient() *smiSplitClientset.Clientset
 }
 
 // ClientWrapper holds the clients for the various resource controllers.
@@ -145,6 +150,26 @@ func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {
 		SmiSpecsClient:  smiSpecsClient,
 		SmiSplitClient:  smiSplitClient,
 	}, nil
+}
+
+// GetKubernetesClient is used to get the kubernetes clientset.
+func (w *ClientWrapper) GetKubernetesClient() *kubernetes.Clientset {
+	return w.KubeClient
+}
+
+// GetSMIAccessClient is used to get the SMI Access clientset.
+func (w *ClientWrapper) GetSMIAccessClient() *smiAccessClientset.Clientset {
+	return w.SmiAccessClient
+}
+
+// GetSMISpecsClient is used to get the SMI Specs clientset.
+func (w *ClientWrapper) GetSMISpecsClient() *smiSpecsClientset.Clientset {
+	return w.SmiSpecsClient
+}
+
+// GetSMISplitClient is used to get the SMI Split clientset.
+func (w *ClientWrapper) GetSMISplitClient() *smiSplitClientset.Clientset {
+	return w.SmiSplitClient
 }
 
 // CheckCluster is used to check the cluster.

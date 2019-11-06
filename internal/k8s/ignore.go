@@ -26,6 +26,11 @@ func (i *IgnoreWrapper) AddIgnoredNamespace(namespace string) {
 	i.Namespaces = append(i.Namespaces, namespace)
 }
 
+// GetIgnoredNamespaces gets a list of ignored namespaces.
+func (i *IgnoreWrapper) GetIgnoredNamespaces() []string {
+	return i.Namespaces
+}
+
 // AddIgnoredService adds a service to the list of ignored services.
 func (i *IgnoreWrapper) AddIgnoredService(serviceName, serviceNamespace string) {
 	i.Services = append(i.Services, Service{Name: serviceName, Namespace: serviceNamespace})

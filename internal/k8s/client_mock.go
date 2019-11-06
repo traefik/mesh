@@ -13,12 +13,16 @@ import (
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	splitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
+	smiAccessClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	smiSpecsClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
+	smiSplitClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -387,6 +391,11 @@ func (c *CoreV1ClientMock) EnablePodError() {
 	c.apiPodError = errors.New("pod error")
 }
 
+// GetKubernetesClient returns a nil clientset.
+func (c *CoreV1ClientMock) GetKubernetesClient() *kubernetes.Clientset {
+	return nil
+}
+
 // GetDeployment returns mocked data for deployment.
 func (a *AppsV1ClientMock) GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error) {
 	if a.apiDeploymentError != nil {
@@ -473,6 +482,21 @@ func (s *SMIClientMock) EnableTCPRouteError() {
 // EnableTrafficSplitError enables error on traffic split.
 func (s *SMIClientMock) EnableTrafficSplitError() {
 	s.apiTrafficSplitError = errors.New("trafficSplit error")
+}
+
+// GetSMIAccessClient returns a nil clientset.
+func (s *SMIClientMock) GetSMIAccessClient() *smiAccessClientset.Clientset {
+	return nil
+}
+
+// GetSMISpecsClient returns a nil clientset.
+func (s *SMIClientMock) GetSMISpecsClient() *smiSpecsClientset.Clientset {
+	return nil
+}
+
+// GetSMISplitClient returns a nil clientset.
+func (s *SMIClientMock) GetSMISplitClient() *smiSplitClientset.Clientset {
+	return nil
 }
 
 // MustParseYaml parses a YAML to objects.

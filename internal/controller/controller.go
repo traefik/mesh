@@ -30,7 +30,7 @@ import (
 
 // Controller hold controller configuration.
 type Controller struct {
-	clients           *k8s.ClientWrapper
+	clients           k8s.Client
 	kubernetesFactory informers.SharedInformerFactory
 	smiAccessFactory  smiAccessExternalversions.SharedInformerFactory
 	smiSpecsFactory   smiSpecsExternalversions.SharedInformerFactory
@@ -51,7 +51,7 @@ type Controller struct {
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int) *Controller {
+func NewMeshController(clients k8s.Client, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int) *Controller {
 	ignored := k8s.NewIgnored()
 	ignored.SetMeshNamespace(meshNamespace)
 
@@ -90,7 +90,7 @@ func (c *Controller) Init() error {
 	c.handler.RegisterMeshHandlers(c.createMeshService, c.updateMeshService, c.deleteMeshService)
 
 	// Create a new SharedInformerFactory, and register the event handler to informers.
-	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient, k8s.ResyncPeriod)
+	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.GetKubernetesClient(), k8s.ResyncPeriod)
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
@@ -103,13 +103,13 @@ func (c *Controller) Init() error {
 	if c.smiEnabled {
 		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
 		// Create new SharedInformerFactories, and register the event handler to informers.
-		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
+		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.GetSMIAccessClient(), k8s.ResyncPeriod)
 		c.smiAccessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
 
-		c.smiSpecsFactory = smiSpecsExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiSpecsClient, k8s.ResyncPeriod)
+		c.smiSpecsFactory = smiSpecsExternalversions.NewSharedInformerFactoryWithOptions(c.clients.GetSMISpecsClient(), k8s.ResyncPeriod)
 		c.smiSpecsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
 
-		c.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiSplitClient, k8s.ResyncPeriod)
+		c.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(c.clients.GetSMISplitClient(), k8s.ResyncPeriod)
 		c.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(c.handler)
 
 		return nil

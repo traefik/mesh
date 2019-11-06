@@ -20,7 +20,7 @@ type API struct {
 	lastConfiguration *safe.Safe
 	apiPort           int
 	deployLog         *DeployLog
-	clients           *k8s.ClientWrapper
+	clients           k8s.CoreV1Client
 	meshNamespace     string
 }
 
@@ -31,7 +31,7 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(apiPort int, lastConfiguration *safe.Safe, deployLog *DeployLog, clients *k8s.ClientWrapper, meshNamespace string) *API {
+func NewAPI(apiPort int, lastConfiguration *safe.Safe, deployLog *DeployLog, clients k8s.CoreV1Client, meshNamespace string) *API {
 	a := &API{
 		readiness:         false,
 		lastConfiguration: lastConfiguration,
