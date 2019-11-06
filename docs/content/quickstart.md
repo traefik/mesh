@@ -11,6 +11,12 @@ helm repo update
 helm install --name=maesh --namespace=maesh maesh/maesh
 ```
 
+## Prerequisites
+
+- Kubernetes 1.11+
+- CoreDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.3+ supported)
+- Helm v2 with a [working tiller service account](https://helm.sh/docs/using_helm/#installing-tiller)
+
 ## RBAC
 
 Depending on the tool you used to deploy your cluster you might need
@@ -31,3 +37,7 @@ helm installation to perform all steps it needs is to edit the
 
 Assuming `tiller` is deployed in your `kube-system` namespace, this will
 give it very open permissions.
+
+### Installation Examples
+
+See the [examples page](examples.md) to see how to easily deploy Maesh and configure your services to use it.

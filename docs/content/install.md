@@ -53,8 +53,36 @@ helm install --name=maesh --namespace=maesh maesh/maesh --set clusterDomain=my.c
 
 ## Installation namespace
 
-Maesh does not _need_ to be installed into the maesh namespace, 
+Maesh does not _need_ to be installed into the `maesh` namespace, 
 but it does need to be installed into its _own_ namespace, separate from user namespaces.
+
+## Verify your installation
+
+You can check that Maesh has been installed properly by running the following command:
+
+```bash tab="Command"
+kubectl get all -n maesh
+```
+
+```text tab="Expected Output"
+
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/maesh-controller-676fb86b89-pj8ph   1/1     Running   0          11s
+pod/maesh-mesh-w62z5                    1/1     Running   0          11s
+pod/maesh-mesh-zjlpf                    1/1     Running   0          11s
+
+NAME                     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/maesh-mesh-api   ClusterIP   100.69.177.254   <none>        8080/TCP   29s
+
+NAME                        DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+daemonset.apps/maesh-mesh   2         2         0       2            0           <none>          29s
+
+NAME                               DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/maesh-controller   1         1         1            0           28s
+
+NAME                                          DESIRED   CURRENT   READY   AGE
+replicaset.apps/maesh-controller-676fb86b89   1         1         0       28s
+```
 
 ## Usage
 
