@@ -302,6 +302,9 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      meshServiceName,
 				Namespace: c.meshNamespace,
+				Labels: map[string]string{
+					"app": "maesh",
+				},
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: ports,
