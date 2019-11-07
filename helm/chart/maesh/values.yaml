@@ -68,7 +68,9 @@ metrics:
   prometheus:
     enabled: true
 
-smi: false
+smi:
+  deploy: true
+  enable: false
 
 limits:
   http: 10
