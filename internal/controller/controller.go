@@ -511,7 +511,7 @@ func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
 		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
 	}
 
-	if err := deployToPods(podList.Items, config); err != nil {
+	if err := c.deployToPods(podList.Items, config); err != nil {
 		return fmt.Errorf("error deploying configuration: %v", err)
 	}
 
@@ -542,14 +542,14 @@ func (c *Controller) deployConfigurationToUnreadyNodes(config *dynamic.Configura
 		}
 	}
 
-	if err := deployToPods(unreadyPods, config); err != nil {
+	if err := c.deployToPods(unreadyPods, config); err != nil {
 		return fmt.Errorf("error deploying configuration: %v", err)
 	}
 
 	return nil
 }
 
-func deployToPods(pods []corev1.Pod, config *dynamic.Configuration) error {
+func (c *Controller) deployToPods(pods []corev1.Pod, config *dynamic.Configuration) error {
 	var errg errgroup.Group
 
 	for _, p := range pods {
@@ -562,7 +562,7 @@ func deployToPods(pods []corev1.Pod, config *dynamic.Configuration) error {
 			b.MaxElapsedTime = 15 * time.Second
 
 			op := func() error {
-				return deployToPod(pod.Name, pod.Status.PodIP, config)
+				return c.deployToPod(pod.Name, pod.Status.PodIP, config)
 			}
 
 			return backoff.Retry(safe.OperationWithRecover(op), b)
@@ -572,7 +572,7 @@ func deployToPods(pods []corev1.Pod, config *dynamic.Configuration) error {
 	return errg.Wait()
 }
 
-func deployToPod(name, ip string, config *dynamic.Configuration) error {
+func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration) error {
 	if name == "" || ip == "" {
 		// If there is no name or ip, then just return.
 		return fmt.Errorf("pod has no name or IP")
