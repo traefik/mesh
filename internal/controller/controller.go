@@ -55,7 +55,6 @@ type Controller struct {
 // and return an initialized mesh controller object.
 func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int) *Controller {
 	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
 
 	for _, ns := range ignoreNamespaces {
 		ignored.AddIgnoredNamespace(ns)
@@ -63,6 +62,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 
 	ignored.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
 	ignored.AddIgnoredNamespace(metav1.NamespaceSystem)
+	ignored.AddIgnoredApps("maesh", "jaeger")
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	configRefreshChan := make(chan string)
@@ -225,34 +225,52 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 }
 
 func (c *Controller) createMeshServices() error {
-	services, err := c.clients.GetServices(metav1.NamespaceAll)
+	potentialSvcs, err := c.clients.GetServicesWithSelectors(
+		metav1.NamespaceAll,
+		c.ignored.LabelSelector(),
+		c.ignored.FieldSelector(),
+	)
 	if err != nil {
 		return fmt.Errorf("unable to get services: %v", err)
 	}
 
-	for _, service := range services {
-		if c.ignored.IsIgnoredService(service.Name, service.Namespace) {
-			continue
-		}
+	maeshSvcs, err := c.clients.GetServicesWithSelectors(c.meshNamespace, "app==maesh", "")
+	if err != nil {
+		return fmt.Errorf("unable to get maesh services: %v", err)
+	}
 
+	// Use a map here to have lookups in log(N), so were O(n*log(n)) and not O(n^2) on this algorithm.
+	// N being the amount of services in the cluster, this can be important.
+	maeshSvcsByName := reduceServicesByName(maeshSvcs)
+
+	for _, service := range potentialSvcs {
 		log.Debugf("Creating mesh for service: %v", service.Name)
+
 		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
 
-		for _, subservice := range services {
-			// If there is already a mesh service created, don't bother recreating
-			if subservice.Name == meshServiceName && subservice.Namespace == c.meshNamespace {
-				continue
-			}
+		if _, found := maeshSvcsByName[meshServiceName]; found {
+			log.Debugf("Skipping already created maesh service: %s", service.Name)
+			continue
 		}
 
 		log.Infof("Creating associated mesh service: %s", meshServiceName)
 
 		if err := c.createMeshService(service); err != nil {
-			return fmt.Errorf("unable to get create mesh service: %v", err)
+			return fmt.Errorf("unable to create mesh service: %v", err)
 		}
 	}
 
 	return nil
+}
+
+func reduceServicesByName(svcs []*corev1.Service) map[string]*corev1.Service {
+	byName := make(map[string]*corev1.Service, len(svcs))
+
+	for _, svc := range svcs {
+		byName[svc.GetName()] = svc
+	}
+
+	return byName
 }
 
 func (c *Controller) createMeshService(service *corev1.Service) error {
@@ -303,7 +321,8 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 				Name:      meshServiceName,
 				Namespace: c.meshNamespace,
 				Labels: map[string]string{
-					"app": "maesh",
+					"app":       "maesh",
+					"component": "maesh-svc",
 				},
 			},
 			Spec: corev1.ServiceSpec{

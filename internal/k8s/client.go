@@ -585,9 +585,16 @@ func (w *ClientWrapper) GetService(namespace, name string) (*corev1.Service, boo
 
 // GetServices retrieves the services from the specified namespace.
 func (w *ClientWrapper) GetServices(namespace string) ([]*corev1.Service, error) {
+	return w.GetServicesWithSelectors(namespace, "", "")
+}
+
+// GetServicesWithSelectors retrieves the services from the specified namespace and given selectors.
+func (w *ClientWrapper) GetServicesWithSelectors(namespace string, labelSelectors, fieldSelector string) ([]*corev1.Service, error) {
 	var result []*corev1.Service
 
-	list, err := w.KubeClient.CoreV1().Services(namespace).List(metav1.ListOptions{})
+	list, err := w.KubeClient.CoreV1().Services(namespace).List(
+		metav1.ListOptions{LabelSelector: labelSelectors, FieldSelector: fieldSelector},
+	)
 	if err != nil {
 		return result, err
 	}
