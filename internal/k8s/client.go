@@ -192,10 +192,9 @@ func (w *ClientWrapper) CoreDNSMatch() (bool, error) {
 			continue
 		}
 
-		split := strings.Split(c.Image, ":")
-		if len(split) == 2 {
-			version = split[1]
-		}
+		sp := strings.Split(c.Image, ":")
+		version = sp[len(sp)-1]
+
 	}
 
 	if !isCoreDNSVersionSupported(version) {
