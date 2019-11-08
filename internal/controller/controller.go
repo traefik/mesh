@@ -118,7 +118,7 @@ func (c *Controller) Init() error {
 	}
 
 	// If SMI is not configured, use the kubernetes provider.
-	c.provider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
+	c.provider = kubernetes.New(c.clients, c.defaultMode, c.tcpStateTable, c.ignored)
 
 	return nil
 }

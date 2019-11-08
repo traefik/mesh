@@ -19,7 +19,6 @@ import (
 type Provider struct {
 	client        k8s.CoreV1Client
 	defaultMode   string
-	meshNamespace string
 	tcpStateTable *k8s.State
 	ignored       k8s.IgnoreWrapper
 }
@@ -30,11 +29,10 @@ func (p *Provider) Init() {
 }
 
 // New creates a new provider.
-func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
+func New(client k8s.CoreV1Client, defaultMode string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
 	p := &Provider{
 		client:        client,
 		defaultMode:   defaultMode,
-		meshNamespace: meshNamespace,
 		tcpStateTable: tcpStateTable,
 		ignored:       ignored,
 	}
@@ -47,7 +45,7 @@ func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string, tcpS
 func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string, addMiddlewares bool) *dynamic.Router {
 	if addMiddlewares {
 		return &dynamic.Router{
-			Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
+			Rule:        fmt.Sprintf("Host(`%s.%s.maesh`) || Host(`%s`)", name, namespace, ip),
 			EntryPoints: []string{fmt.Sprintf("http-%d", port)},
 			Middlewares: []string{serviceName},
 			Service:     serviceName,
@@ -55,7 +53,7 @@ func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName
 	}
 
 	return &dynamic.Router{
-		Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
+		Rule:        fmt.Sprintf("Host(`%s.%s.maesh`) || Host(`%s`)", name, namespace, ip),
 		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
 		Service:     serviceName,
 	}
