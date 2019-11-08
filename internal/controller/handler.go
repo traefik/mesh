@@ -48,7 +48,7 @@ func (h *Handler) OnAdd(obj interface{}) {
 	// assert the type to an object to pull out relevant data
 	switch obj := obj.(type) {
 	case *corev1.Service:
-		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace) {
+		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace, obj.GetLabels()["app"]) {
 			return
 		}
 
@@ -72,7 +72,7 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 	// Assert the type to an object to pull out relevant data.
 	switch obj := newObj.(type) {
 	case *corev1.Service:
-		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace) {
+		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace, obj.GetLabels()["app"]) {
 			return
 		}
 
@@ -84,7 +84,7 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 	case *corev1.Endpoints:
 		// We can use the same ignore for services and endpoints.
-		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace) {
+		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace, obj.GetLabels()["app"]) {
 			return
 		}
 
@@ -111,7 +111,7 @@ func (h *Handler) OnDelete(obj interface{}) {
 	// Assert the type to an object to pull out relevant data.
 	switch obj := obj.(type) {
 	case *corev1.Service:
-		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace) {
+		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace, obj.GetLabels()["app"]) {
 			return
 		}
 
@@ -122,7 +122,7 @@ func (h *Handler) OnDelete(obj interface{}) {
 		}
 	case *corev1.Endpoints:
 		// We can use the same ignore for services and endpoints.
-		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace) {
+		if h.ignored.IsIgnoredService(obj.Name, obj.Namespace, obj.GetLabels()["app"]) {
 			return
 		}
 
