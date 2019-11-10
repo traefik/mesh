@@ -41,7 +41,7 @@ func (i *IgnoreWrapper) FieldSelector() string {
 		selectors = append(selectors, "metadata.namespace!="+n)
 	}
 
-	// TODO: loosing the filter by specifng namespace and service name here, but not sure if it's needed.
+	// We are loosing the filter by specifng namespace and service name here, but not sure if it's needed.
 	for _, n := range i.Services {
 		selectors = append(selectors, "metadata.name!="+n.Name)
 	}
@@ -82,10 +82,5 @@ func (i *IgnoreWrapper) IsIgnoredService(name, namespace, app string) bool {
 
 // IsIgnoredNamespace returns if the service's events should be ignored.
 func (i *IgnoreWrapper) IsIgnoredNamespace(namespace string) bool {
-	// Is the namespace ignored?
-	if i.Namespaces.Contains(namespace) {
-		return true
-	}
-
-	return false
+	return i.Namespaces.Contains(namespace)
 }

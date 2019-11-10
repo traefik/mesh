@@ -103,7 +103,7 @@ func (c *Controller) Init() error {
 	c.api = NewAPI(c.apiPort, &c.lastConfiguration, c.deployLog, c.clients, c.meshNamespace)
 
 	if c.smiEnabled {
-		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
+		c.provider = smi.New(c.clients, c.defaultMode, c.tcpStateTable, c.ignored)
 		// Create new SharedInformerFactories, and register the event handler to informers.
 		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
 		c.smiAccessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
