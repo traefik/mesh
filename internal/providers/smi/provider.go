@@ -23,7 +23,6 @@ import (
 type Provider struct {
 	client        k8s.Client
 	defaultMode   string
-	meshNamespace string
 	tcpStateTable *k8s.State
 	ignored       k8s.IgnoreWrapper
 }
@@ -39,11 +38,10 @@ type destinationKey struct {
 func (p *Provider) Init() {}
 
 // New creates a new provider.
-func New(client k8s.Client, defaultMode string, meshNamespace string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
+func New(client k8s.Client, defaultMode string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
 	p := &Provider{
 		client:        client,
 		defaultMode:   defaultMode,
-		meshNamespace: meshNamespace,
 		tcpStateTable: tcpStateTable,
 		ignored:       ignored,
 	}
@@ -376,7 +374,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 		result = append(result, fmt.Sprintf("Method(`%s`)", methods))
 	}
 
-	result = append(result, fmt.Sprintf("(Host(`%s.%s.%s`) || Host(`%s`))", name, namespace, p.meshNamespace, ip))
+	result = append(result, fmt.Sprintf("(Host(`%s.%s.maesh`) || Host(`%s`))", name, namespace, ip))
 
 	return strings.Join(result, " && ")
 }

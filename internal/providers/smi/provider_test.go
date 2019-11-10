@@ -14,13 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const meshNamespace string = "maesh"
-
 func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
-
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+	provider := New(nil, k8s.ServiceTypeHTTP, nil, ignored)
 
 	testCases := []struct {
 		desc     string
@@ -70,9 +66,8 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 	clientMock := k8s.NewClientMock("mock.yaml")
 	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
 
-	provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+	provider := New(clientMock, k8s.ServiceTypeHTTP, nil, ignored)
 
 	expected := []*accessv1alpha1.TrafficTarget{
 		{
@@ -340,9 +335,8 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 				clientMock.EnableHTTPRouteGroupError()
 			}
 			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, nil, ignored)
 			middleware := "block-all"
 			actual := provider.buildHTTPRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
 			assert.Equal(t, test.expected, actual)
@@ -484,9 +478,8 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 				clientMock.EnableTCPRouteError()
 			}
 			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, nil, ignored)
 			actual := provider.buildTCPRouterFromTrafficTarget(test.trafficTarget, test.port, test.key)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -495,9 +488,8 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 
 func TestGetServiceMode(t *testing.T) {
 	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
 
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+	provider := New(nil, k8s.ServiceTypeHTTP, nil, ignored)
 
 	testCases := []struct {
 		desc     string
@@ -879,9 +871,8 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 			}
 
 			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, nil, ignored)
 
 			actual := provider.getApplicableTrafficTargets(test.endpoints, test.trafficTargets)
 			assert.Equal(t, test.expected, actual)
@@ -1221,9 +1212,8 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 			}
 
 			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, nil, ignored)
 
 			actual := provider.buildHTTPServiceFromTrafficTarget(test.endpoints, test.trafficTarget, k8s.SchemeHTTP)
 			assert.Equal(t, test.expected, actual)
@@ -1233,9 +1223,8 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 
 func TestGroupTrafficTargetsByDestination(t *testing.T) {
 	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
 
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+	provider := New(nil, k8s.ServiceTypeHTTP, nil, ignored)
 
 	trafficTargets := []*accessv1alpha1.TrafficTarget{
 		{
@@ -1474,9 +1463,8 @@ func TestBuildConfiguration(t *testing.T) {
 			}
 
 			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			provider := New(clientMock, k8s.ServiceTypeHTTP, nil, ignored)
 			config, err := provider.BuildConfig()
 			assert.Equal(t, test.expected, config)
 			if test.endpointsError || test.serviceError {
