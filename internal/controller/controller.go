@@ -239,8 +239,6 @@ func (c *Controller) createMeshServices() error {
 		return fmt.Errorf("unable to get maesh services: %v", err)
 	}
 
-	// Use a map here to have lookups in log(N), so were O(n*log(n)) and not O(n^2) on this algorithm.
-	// N being the amount of services in the cluster, this can be important.
 	maeshSvcsByName := reduceServicesByName(maeshSvcs)
 
 	for _, service := range potentialSvcs {
