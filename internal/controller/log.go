@@ -51,8 +51,8 @@ func (d *DeployLog) LogDeploy(timeStamp time.Time, podName string, podIP string,
 		Reason:           reason,
 	}
 
-	for len(d.entries) > d.maxEntries {
-		// Pull elements off the front of the slice to make sure that the newly appended record is under the max record value.
+	for len(d.entries) >= d.maxEntries {
+		// Pull elements off the front of the slice to make sure that the newly appended record is one under the max record value.
 		d.entries = d.entries[1:]
 	}
 
