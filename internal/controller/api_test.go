@@ -75,7 +75,7 @@ func TestGetCurrentConfiguration(t *testing.T) {
 
 func TestGetDeployLog(t *testing.T) {
 	config := safe.Safe{}
-	log := NewDeployLog()
+	log := NewDeployLog(1000)
 	api := NewAPI(9000, &config, log, nil, "foo")
 
 	currentTime := time.Now()

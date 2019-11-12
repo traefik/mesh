@@ -108,9 +108,17 @@ func (a *API) getReadiness(w http.ResponseWriter, r *http.Request) {
 
 // getDeployLog returns the current deploylog.
 func (a *API) getDeployLog(w http.ResponseWriter, r *http.Request) {
+	entries := a.deployLog.GetLog()
+
+	data, err := json.Marshal(entries)
+	if err != nil {
+		writeErrorResponse(w, fmt.Sprintf("unable to marshal deploy log entries: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 
-	if _, err := w.Write(a.deployLog.GetLog()); err != nil {
+	if _, err := w.Write(data); err != nil {
 		log.Error(err)
 	}
 }

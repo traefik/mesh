@@ -99,7 +99,7 @@ func (c *Controller) Init() error {
 
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
 
-	c.deployLog = NewDeployLog()
+	c.deployLog = NewDeployLog(1000)
 	c.api = NewAPI(c.apiPort, &c.lastConfiguration, c.deployLog, c.clients, c.meshNamespace)
 
 	if c.smiEnabled {

@@ -1,13 +1,13 @@
 package controller
 
 import (
-	"encoding/json"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
-type logEntry struct {
+// Entry holds the details of a deployment.
+type Entry struct {
 	TimeStamp        time.Time
 	PodName          string
 	PodIP            string
@@ -17,12 +17,15 @@ type logEntry struct {
 
 // DeployLog holds a slice of log entries.
 type DeployLog struct {
-	Entries []logEntry
+	entries    []Entry
+	maxEntries int
 }
 
 // NewDeployLog returns an initialized DeployLog.
-func NewDeployLog() *DeployLog {
-	d := &DeployLog{}
+func NewDeployLog(maxEntries int) *DeployLog {
+	d := &DeployLog{
+		maxEntries: maxEntries,
+	}
 
 	if err := d.Init(); err != nil {
 		log.Error("Could not initialize DeployLog")
@@ -40,7 +43,7 @@ func (d *DeployLog) Init() error {
 
 // LogDeploy adds a record to the entries list.
 func (d *DeployLog) LogDeploy(timeStamp time.Time, podName string, podIP string, deploySuccessful bool, reason string) {
-	newEntry := logEntry{
+	newEntry := Entry{
 		TimeStamp:        timeStamp,
 		PodName:          podName,
 		PodIP:            podIP,
@@ -48,15 +51,15 @@ func (d *DeployLog) LogDeploy(timeStamp time.Time, podName string, podIP string,
 		Reason:           reason,
 	}
 
-	d.Entries = append(d.Entries, newEntry)
+	for len(d.entries) >= d.maxEntries {
+		// Pull elements off the front of the slice to make sure that the newly appended record is one under the max record value.
+		d.entries = d.entries[1:]
+	}
+
+	d.entries = append(d.entries, newEntry)
 }
 
 // GetLog returns a json representation of the entries list.
-func (d *DeployLog) GetLog() []byte {
-	data, err := json.Marshal(d.Entries)
-	if err != nil {
-		log.Error("Could not marshal deploylog entries")
-	}
-
-	return data
+func (d *DeployLog) GetLog() []Entry {
+	return d.entries
 }
