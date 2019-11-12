@@ -41,10 +41,8 @@ func TestLogRotationAndGetLogLength(t *testing.T) {
 	}
 
 	assert.Equal(t, 10, len(log.entries))
-	assert.Equal(t, 10, log.Len())
 
 	log.LogDeploy(time.Now(), "foo", "bar", true, "blabla")
 
 	assert.Equal(t, 10, len(log.entries))
-	assert.Equal(t, 10, log.Len())
 }

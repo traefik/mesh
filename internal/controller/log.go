@@ -63,8 +63,3 @@ func (d *DeployLog) LogDeploy(timeStamp time.Time, podName string, podIP string,
 func (d *DeployLog) GetLog() []Entry {
 	return d.entries
 }
-
-// Len returns the number of records in the entries slice.
-func (d *DeployLog) Len() int {
-	return len(d.entries)
-}
