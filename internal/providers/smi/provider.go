@@ -85,17 +85,17 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 		serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
 		// Get all traffic targets in the service's namespace.
 		trafficTargetsInNamespace := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace, trafficTargets)
-		log.Debugf("Found traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, trafficTargets)
+		log.Debugf("Found traffictargets for service %s/%s: %+v", service.Namespace, service.Name, trafficTargets)
 		// Find all traffic targets that are applicable to the service in question.
 		applicableTrafficTargets := p.getApplicableTrafficTargets(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), trafficTargetsInNamespace)
-		log.Debugf("Found applicable traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, applicableTrafficTargets)
+		log.Debugf("Found applicable traffictargets for service %s/%s: %+v", service.Namespace, service.Name, applicableTrafficTargets)
 		// Group the traffic targets by destination, so that they can be built separately.
 		groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
-		log.Debugf("Found grouped traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
+		log.Debugf("Found grouped traffictargets for service %s/%s: %+v", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
 
 		// Get all traffic split in the service's namespace.
 		trafficSplitsInNamespace := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace, trafficSplits)
-		log.Debugf("Found trafficsplits for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplitsInNamespace)
+		log.Debugf("Found trafficsplits for service %s/%s: %+v", service.Namespace, service.Name, trafficSplitsInNamespace)
 
 		for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 			for _, groupedTrafficTarget := range groupedTrafficTargets {
