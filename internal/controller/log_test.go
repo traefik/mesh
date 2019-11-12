@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -24,7 +25,10 @@ func TestGetLog(t *testing.T) {
 
 	currentTimeString := string(data)
 
-	actual := string(log.GetLog())
+	data, err = json.Marshal(log.GetLog())
+	assert.NoError(t, err)
+
+	actual := string(data)
 	expected := fmt.Sprintf("[{\"TimeStamp\":%s,\"PodName\":\"foo\",\"PodIP\":\"bar\",\"DeploySuccessful\":true,\"Reason\":\"blabla\"}]", currentTimeString)
 	assert.Equal(t, expected, actual)
 }
@@ -37,10 +41,10 @@ func TestLogRotationAndGetLogLength(t *testing.T) {
 	}
 
 	assert.Equal(t, 10, len(log.entries))
-	assert.Equal(t, 10, log.GetLogLength())
+	assert.Equal(t, 10, log.Len())
 
 	log.LogDeploy(time.Now(), "foo", "bar", true, "blabla")
 
 	assert.Equal(t, 10, len(log.entries))
-	assert.Equal(t, 10, log.GetLogLength())
+	assert.Equal(t, 10, log.Len())
 }

@@ -1,13 +1,13 @@
 package controller
 
 import (
-	"encoding/json"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
-type logEntry struct {
+// Entry holds the details of a deployment.
+type Entry struct {
 	TimeStamp        time.Time
 	PodName          string
 	PodIP            string
@@ -17,7 +17,7 @@ type logEntry struct {
 
 // DeployLog holds a slice of log entries.
 type DeployLog struct {
-	entries    []logEntry
+	entries    []Entry
 	maxEntries int
 }
 
@@ -43,7 +43,7 @@ func (d *DeployLog) Init() error {
 
 // LogDeploy adds a record to the entries list.
 func (d *DeployLog) LogDeploy(timeStamp time.Time, podName string, podIP string, deploySuccessful bool, reason string) {
-	newEntry := logEntry{
+	newEntry := Entry{
 		TimeStamp:        timeStamp,
 		PodName:          podName,
 		PodIP:            podIP,
@@ -51,25 +51,20 @@ func (d *DeployLog) LogDeploy(timeStamp time.Time, podName string, podIP string,
 		Reason:           reason,
 	}
 
-	if len(d.entries) >= d.maxEntries {
+	for len(d.entries) > d.maxEntries {
 		// Pull elements off the front of the slice to make sure that the newly appended record is under the max record value.
-		d.entries = d.entries[(len(d.entries)-d.maxEntries)+1:]
+		d.entries = d.entries[1:]
 	}
 
 	d.entries = append(d.entries, newEntry)
 }
 
 // GetLog returns a json representation of the entries list.
-func (d *DeployLog) GetLog() []byte {
-	data, err := json.Marshal(d.entries)
-	if err != nil {
-		log.Error("Could not marshal deploylog entries")
-	}
-
-	return data
+func (d *DeployLog) GetLog() []Entry {
+	return d.entries
 }
 
-// GetLogLength returns the number of records in the entries slice.
-func (d *DeployLog) GetLogLength() int {
+// Len returns the number of records in the entries slice.
+func (d *DeployLog) Len() int {
 	return len(d.entries)
 }
