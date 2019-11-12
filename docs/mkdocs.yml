@@ -67,3 +67,4 @@ nav:
   - 'Installation': 'install.md'
   - 'Configuration': 'configuration.md'
   - 'Examples': 'examples.md'
+  - 'API': 'api.md'
