@@ -58,7 +58,7 @@ func (a *API) Init() error {
 	a.router.HandleFunc("/api/status/nodes", a.getMeshNodes)
 	a.router.HandleFunc("/api/status/node/{node}/configuration", a.getMeshNodeConfiguration)
 	a.router.HandleFunc("/api/status/readiness", a.getReadiness)
-	a.router.HandleFunc("/api/log/deploylog", a.getDeployLog)
+	a.router.HandleFunc("/api/log/deployment", a.getDeployLog)
 
 	return nil
 }
