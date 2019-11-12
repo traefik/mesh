@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cenkalti/backoff/v3"
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/maesh/internal/providers/base"
 	"github.com/containous/maesh/internal/providers/kubernetes"
@@ -20,6 +21,7 @@ import (
 	smiSpecsExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	smiSplitExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -509,15 +511,65 @@ func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
 		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
 	}
 
-	for _, pod := range podList.Items {
-		log.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
-
-		if deployErr := c.deployToPod(pod.Name, pod.Status.PodIP, config); deployErr != nil {
-			return fmt.Errorf("error deploying configuration: %v", deployErr)
-		}
+	if err := c.deployToPods(podList.Items, config); err != nil {
+		return fmt.Errorf("error deploying configuration: %v", err)
 	}
 
 	return nil
+}
+
+// deployConfigurationToUnreadyNodes deploys the configuration to the mesh pods.
+func (c *Controller) deployConfigurationToUnreadyNodes(config *dynamic.Configuration) error {
+	podList, err := c.clients.ListPodWithOptions(c.meshNamespace, metav1.ListOptions{
+		LabelSelector: "component==maesh-mesh",
+	})
+	if err != nil {
+		return fmt.Errorf("unable to retrieve pod list: %v", err)
+	}
+
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
+	}
+
+	var unreadyPods []corev1.Pod
+
+	for _, pod := range podList.Items {
+		for _, status := range pod.Status.ContainerStatuses {
+			if !status.Ready {
+				unreadyPods = append(unreadyPods, pod)
+				break
+			}
+		}
+	}
+
+	if err := c.deployToPods(unreadyPods, config); err != nil {
+		return fmt.Errorf("error deploying configuration: %v", err)
+	}
+
+	return nil
+}
+
+func (c *Controller) deployToPods(pods []corev1.Pod, config *dynamic.Configuration) error {
+	var errg errgroup.Group
+
+	for _, p := range pods {
+		pod := p
+
+		log.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
+
+		errg.Go(func() error {
+			b := backoff.NewExponentialBackOff()
+			b.MaxElapsedTime = 15 * time.Second
+
+			op := func() error {
+				return c.deployToPod(pod.Name, pod.Status.PodIP, config)
+			}
+
+			return backoff.Retry(safe.OperationWithRecover(op), b)
+		})
+	}
+
+	return errg.Wait()
 }
 
 func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration) error {
@@ -562,40 +614,6 @@ func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration)
 
 	c.deployLog.LogDeploy(time.Now(), name, ip, true, "")
 	log.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
-
-	return nil
-}
-
-// deployConfigurationToUnreadyNodes deploys the configuration to the mesh pods.
-func (c *Controller) deployConfigurationToUnreadyNodes(config *dynamic.Configuration) error {
-	podList, err := c.clients.ListPodWithOptions(c.meshNamespace, metav1.ListOptions{
-		LabelSelector: "component==maesh-mesh",
-	})
-	if err != nil {
-		return fmt.Errorf("unable to retrieve pod list: %v", err)
-	}
-
-	if len(podList.Items) == 0 {
-		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
-	}
-
-	for _, pod := range podList.Items {
-		needsDeploy := false
-
-		for _, status := range pod.Status.ContainerStatuses {
-			if !status.Ready {
-				// If there is a non-ready container, trigger needs deploy, and break.
-				needsDeploy = true
-				break
-			}
-		}
-
-		if needsDeploy {
-			if deployErr := c.deployToPod(pod.Name, pod.Status.PodIP, config); deployErr != nil {
-				log.Debugf("Error deploying configuration: %v", deployErr)
-			}
-		}
-	}
 
 	return nil
 }
