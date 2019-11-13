@@ -269,7 +269,7 @@ func (s *BaseSuite) installHelmMaesh(_ *check.C, smi bool, kubeDNS bool) error {
 	argSlice := []string{"install", "../helm/chart/maesh", "--values", "resources/values.yaml", "--name", "powpow", "--namespace", "maesh"}
 
 	if smi {
-		argSlice = append(argSlice, "--set", "smi=true")
+		argSlice = append(argSlice, "--set", "smi.enable=true")
 	}
 
 	if kubeDNS {
