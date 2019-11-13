@@ -311,8 +311,7 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 				Name:      meshServiceName,
 				Namespace: c.meshNamespace,
 				Labels: map[string]string{
-					"app":       "maesh",
-					"component": "maesh-svc",
+					"app": "maesh",
 				},
 			},
 			Spec: corev1.ServiceSpec{
