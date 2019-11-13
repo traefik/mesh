@@ -1,6 +1,10 @@
 package k8s
 
-import "strings"
+import (
+	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // IgnoreWrapper holds namespaces and services to ignore.
 type IgnoreWrapper struct {
@@ -60,20 +64,20 @@ func (i *IgnoreWrapper) LabelSelector() string {
 	return strings.Join(selectors, ",")
 }
 
-// IsIgnoredService returns if the service's events should be ignored.
-func (i *IgnoreWrapper) IsIgnoredService(name, namespace, app string) bool {
-	// Is the service's namespace ignored?
-	if i.Namespaces.Contains(namespace) {
+// IsIgnored returns if the object events should be ignored.
+func (i *IgnoreWrapper) IsIgnored(obj metav1.ObjectMeta) bool {
+	// Is the object's namespace ignored?
+	if i.Namespaces.Contains(obj.GetNamespace()) {
 		return true
 	}
 
-	// Is the service explicitly ignored?
-	if i.Services.Contains(name, namespace) {
+	// Is the object explicitly ignored?
+	if i.Services.Contains(obj.GetName(), obj.GetNamespace()) {
 		return true
 	}
 
 	// Is the app ignored ?
-	if contains(i.Apps, app) {
+	if contains(i.Apps, obj.GetLabels()["app"]) {
 		return true
 	}
 

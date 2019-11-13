@@ -134,7 +134,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	config := base.CreateBaseConfigWithReadiness()
 
 	for _, service := range services {
-		if p.ignored.IsIgnoredService(service.Name, service.Namespace, service.GetLabels()["app"]) {
+		if p.ignored.IsIgnored(service.ObjectMeta) {
 			continue
 		}
 

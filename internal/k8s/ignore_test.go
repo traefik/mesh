@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestIgnoredNamespace(t *testing.T) {
@@ -92,8 +93,18 @@ func TestIgnoredService(t *testing.T) {
 			i.AddIgnoredNamespace("someNamespace")
 			i.AddIgnoredService("foo", "bar")
 			i.AddIgnoredApps("ignoredapp")
-			actual := i.IsIgnoredService(test.name, test.namespace, test.app)
+			actual := i.IsIgnored(buildMeta(test.name, test.namespace, test.app))
 			assert.Equal(t, test.expected, actual)
 		})
+	}
+}
+
+func buildMeta(name, ns, app string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: ns,
+		Labels: map[string]string{
+			"app": app,
+		},
 	}
 }
