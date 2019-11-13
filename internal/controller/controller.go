@@ -232,12 +232,12 @@ func (c *Controller) createMeshServices() error {
 
 	sel, err := c.ignored.LabelSelector()
 	if err != nil {
-		return fmt.Errorf("unable to build label selectors: %v", err)
+		return fmt.Errorf("unable to build label selectors: %w", err)
 	}
 
 	potentialSvcs, err := svcs.List(sel)
 	if err != nil {
-		return fmt.Errorf("unable to get services: %v", err)
+		return fmt.Errorf("unable to get services: %w", err)
 	}
 
 	for _, service := range potentialSvcs {
