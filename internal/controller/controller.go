@@ -226,29 +226,34 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 }
 
 func (c *Controller) createMeshServices() error {
-	potentialSvcs, err := c.clients.GetServicesWithSelectors(
-		metav1.NamespaceAll,
-		c.ignored.LabelSelector(),
-		c.ignored.FieldSelector(),
-	)
+	// Because createMeshServices is called after startInformers,
+	// then we already have the cache built, so we can use it.
+	svcs := c.kubernetesFactory.Core().V1().Services().Lister()
+
+	sel, err := c.ignored.LabelSelector()
+	if err != nil {
+		return fmt.Errorf("unable to build label selectors: %v", err)
+	}
+
+	potentialSvcs, err := svcs.List(sel)
 	if err != nil {
 		return fmt.Errorf("unable to get services: %v", err)
 	}
 
-	// Because createMeshServices is called after startInformers,
-	// then we already have the cache built, so we can use it.
-	maeshSvcs := c.kubernetesFactory.Core().V1().Services().Lister().Services(c.meshNamespace)
-
 	for _, service := range potentialSvcs {
+		if c.ignored.IsIgnored(service.ObjectMeta) {
+			continue
+		}
+
 		log.Debugf("Creating mesh for service: %v", service.Name)
 
 		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
 
-		_, err := maeshSvcs.Get(meshServiceName)
+		_, err := svcs.Services(c.meshNamespace).Get(meshServiceName)
 		if err == nil {
 			continue
 		}
-		// We're expecting an IsNotFound error here, to only create the maesh service if it isn't found.
+		// We're expecting an IsNotFound error here, to only create the maesh service if it does not exist.
 		if err != nil && !errors.IsNotFound(err) {
 			return fmt.Errorf("unable to check if maesh service exists: %w", err)
 		}

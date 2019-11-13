@@ -1,9 +1,9 @@
 package k8s
 
 import (
-	"strings"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 // IgnoreWrapper holds namespaces and services to ignore.
@@ -37,31 +37,18 @@ func (i *IgnoreWrapper) AddIgnoredApps(app ...string) {
 	i.Apps = append(i.Apps, app...)
 }
 
-// FieldSelector returns the field selectors query representing the ignored namespace and services.
-func (i *IgnoreWrapper) FieldSelector() string {
-	var selectors []string
+// LabelSelector returns the labels.Selector image of the ignored object.
+func (i *IgnoreWrapper) LabelSelector() (labels.Selector, error) {
+	sel := labels.Everything()
 
-	for _, n := range i.Namespaces {
-		selectors = append(selectors, "metadata.namespace!="+n)
+	r, err := labels.NewRequirement("app", selection.NotIn, i.Apps)
+	if err != nil {
+		return nil, err
 	}
 
-	// We are loosing the filter by specifng namespace and service name here, but not sure if it's needed.
-	for _, n := range i.Services {
-		selectors = append(selectors, "metadata.name!="+n.Name)
-	}
+	sel = sel.Add(*r)
 
-	return strings.Join(selectors, ",")
-}
-
-// LabelSelector returns the label selector representing the ignored apps.
-func (i *IgnoreWrapper) LabelSelector() string {
-	var selectors []string
-
-	for _, a := range i.Apps {
-		selectors = append(selectors, "app!="+a)
-	}
-
-	return strings.Join(selectors, ",")
+	return sel, nil
 }
 
 // IsIgnored returns if the object events should be ignored.
