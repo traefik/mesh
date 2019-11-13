@@ -23,6 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -234,41 +235,32 @@ func (c *Controller) createMeshServices() error {
 		return fmt.Errorf("unable to get services: %v", err)
 	}
 
-	maeshSvcs, err := c.clients.GetServicesWithSelectors(c.meshNamespace, "app==maesh", "")
-	if err != nil {
-		return fmt.Errorf("unable to get maesh services: %v", err)
-	}
-
-	maeshSvcsByName := reduceServicesByName(maeshSvcs)
+	// Because createMeshServices is called after startInformers,
+	// then we already have the cache built, so we can use it.
+	maeshSvcs := c.kubernetesFactory.Core().V1().Services().Lister().Services(c.meshNamespace)
 
 	for _, service := range potentialSvcs {
 		log.Debugf("Creating mesh for service: %v", service.Name)
 
 		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
 
-		if _, found := maeshSvcsByName[meshServiceName]; found {
-			log.Debugf("Skipping already created maesh service: %s", service.Name)
+		_, err := maeshSvcs.Get(meshServiceName)
+		if err == nil {
 			continue
+		}
+		// We're expecting an IsNotFound error here, to only create the maesh service if it isn't found.
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("unable to check if maesh service exists: %w", err)
 		}
 
 		log.Infof("Creating associated mesh service: %s", meshServiceName)
 
 		if err := c.createMeshService(service); err != nil {
-			return fmt.Errorf("unable to create mesh service: %v", err)
+			return fmt.Errorf("unable to create mesh service: %w", err)
 		}
 	}
 
 	return nil
-}
-
-func reduceServicesByName(svcs []*corev1.Service) map[string]*corev1.Service {
-	byName := make(map[string]*corev1.Service, len(svcs))
-
-	for _, svc := range svcs {
-		byName[svc.GetName()] = svc
-	}
-
-	return byName
 }
 
 func (c *Controller) createMeshService(service *corev1.Service) error {
