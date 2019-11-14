@@ -1,7 +1,7 @@
 # Configuration
 
-The configuration for maesh is broken into two parts: the static configuration, and the dynamic configuration. 
-The static configuration is configured when the maesh service mesh is installed, 
+The configuration for maesh is broken into two parts: the static configuration, and the dynamic configuration.
+The static configuration is configured when the maesh service mesh is installed,
 and is configured via the values.yaml file in the helm install.
 
 ## Static configuration
