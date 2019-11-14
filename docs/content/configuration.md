@@ -111,7 +111,9 @@ matches:
 ```
 
 In this example, we define a set of HTTP routes for our `server` application.
+
 More precisely, the `server` app is composed by two routes:
+
 - The `api` route under the `/api` path, accepting all methods
 - The `metrics` routes under the `/metrics` path, accepting only a `GET` request
 
@@ -143,6 +145,34 @@ sources:
 
 In this example, we grant access to all pods running with the service account `client` under the namespace `client` to the HTTP route `api` specified by on the group `server-routes` on all pods running with the service account `server` under the namespace `server`.
 
+Any client running with the service account `client` under the `client` namespace accessing `server.server.maesh/api` is allowed to access the `/api` resource. Other will receive a 404 answer from the Maesh node.
+
 More information can be found [in the specification](https://github.com/deislabs/smi-spec/blob/master/traffic-access-control.md).
 
 #### Traffic Splitting
+
+SMI defines the `TrafficSplit` resource which allows to direct incrementally a subset of the traffic to a different services.
+
+```yaml
+apiVersion: split.smi-spec.io/v1alpha1
+kind: TrafficSplit
+metadata:
+  name: server-split
+  namespace server
+spec:
+  service: server
+  backends:
+  - service: server-v1
+    weight: 80
+  - service: server-v2
+    weight: 20
+```
+
+In this example, we define a traffic split for our server service between two version of our server, v1 and v2.
+`server.server.maesh` directs 80% of the traffic to the server-v1 pods, and  20% of the traffic to the server-v2 pods.
+
+More information can be found [in the specification](https://github.com/deislabs/smi-spec/blob/master/traffic-split.md).
+
+#### Traffic Metrics
+
+At the moment, Maesh does not implement the [Traffic Metrics specification](https://github.com/deislabs/smi-spec/blob/master/traffic-metrics.md).
