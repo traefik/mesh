@@ -169,7 +169,7 @@ spec:
 ```
 
 In this example, we define a traffic split for our server service between two version of our server, v1 and v2.
-`server.server.maesh` directs 80% of the traffic to the server-v1 pods, and  20% of the traffic to the server-v2 pods.
+`server.server.maesh` directs 80% of the traffic to the server-v1 pods, and 20% of the traffic to the server-v2 pods.
 
 More information can be found [in the specification](https://github.com/deislabs/smi-spec/blob/master/traffic-split.md).
 
