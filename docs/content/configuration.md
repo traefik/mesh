@@ -22,7 +22,11 @@ and is configured via the values.yaml file in the helm install.
 
 ## Dynamic configuration
 
-### Traffic type
+Dynamic configuration can be provided to Maesh using either annotations on kubernetes services (default mode) or SMI resources if Maesh is installed with [SMI enabled](./install.md#service-mesh-interface).
+
+### With Kubernetes Services
+
+#### Traffic type
 
 Annotations on services are the main way to configure maesh behavior.
 
@@ -35,7 +39,7 @@ maesh.containo.us/traffic-type: "http"
 This annotation can be set to either `http` or `tcp`, and will specify the mode for that service operation.
 If this annotation is not present, the mesh service will operate in the default mode specified in the static configuration.
 
-### Scheme
+#### Scheme
 
 The scheme used to define custom scheme for request:
 
@@ -45,7 +49,7 @@ maesh.containo.us/scheme: "h2c"
 
 This annotation can be set to either `http` or `h2c` and is available for `maesh.containo.us/traffic-type: "http"`.
 
-### Retry
+#### Retry
 
 Retries can be enabled by using the following annotation:
 
@@ -56,7 +60,7 @@ maesh.containo.us/retry-attempts: "2"
 This annotation sets the number of retry attempts that maesh will make if a network error occurrs.
 Please note that this value is a string, and needs to be quoted.
 
-### Circuit breaker
+#### Circuit breaker
 
 Circuit breaker can be enabled by using the following annotation:
 
@@ -64,13 +68,13 @@ Circuit breaker can be enabled by using the following annotation:
 maesh.containo.us/circuit-breaker-expression: "Expression"
 ```
 
-This annotation sets the expression for circuit breaking. 
+This annotation sets the expression for circuit breaking.
 The circuit breaker protects your system from stacking requests to unhealthy services (resulting in cascading failures).
 When your system is healthy, the circuit is closed (normal operations). When your system becomes unhealthy, the circuit opens, and requests are no longer forwarded (but handled by a fallback mechanism).
 
 All configuration options are available [here](https://docs.traefik.io/v2.0/middlewares/circuitbreaker/#configuration-options)
 
-### Rate Limit
+#### Rate Limit
 
 Rate limiting can be enabled by using the following annotations:
 
@@ -83,3 +87,62 @@ These annotation sets average and burst requests per second limit for the servic
 Please note that this value is a string, and needs to be quoted.
 
 Further details about the rate limiting can be found [here](https://docs.traefik.io/v2.0/middlewares/ratelimit/#configuration-options)
+
+### With Service Mesh Interface
+
+#### Access Control
+
+The first step is to describe what the traffic of our server application looks like.
+
+```yaml
+---
+apiVersion: specs.smi-spec.io/v1alpha1
+kind: HTTPRouteGroup
+metadata:
+  name: server-routes
+  namespace: server
+matches:
+  - name: api
+    pathRegex: /api
+    methods: ["*"]
+  - name: metrics
+    pathRegex: /metrics
+    methods: ["GET"]
+```
+
+In this example, we define a set of HTTP routes for our `server` application.
+More precisely, the `server` app is composed by two routes:
+- The `api` route under the `/api` path, accepting all methods
+- The `metrics` routes under the `/metrics` path, accepting only a `GET` request
+
+Other types of route groups and detailed information are available [in the specification](https://github.com/deislabs/smi-spec/blob/master/traffic-specs.md).
+
+By default, all traffic is denied so we need to grant access to clients to our application. This is done by defining a `TrafficTarget`.
+
+```yaml
+---
+apiVersion: access.smi-spec.io/v1alpha1
+kind: TrafficTarget
+metadata:
+  name: client-server-target
+  namespace: server
+destination:
+  kind: ServiceAccount
+  name: server
+  namespace: server
+specs:
+  - kind: HTTPRouteGroup
+    name: server-routes
+    matches:
+      - api
+sources:
+  - kind: ServiceAccount
+    name: client
+    namespace: client
+```
+
+In this example, we grant access to all pods running with the service account `client` under the namespace `client` to the HTTP route `api` specified by on the group `server-routes` on all pods running with the service account `server` under the namespace `server`.
+
+More information can be found [in the specification](https://github.com/deislabs/smi-spec/blob/master/traffic-access-control.md).
+
+#### Traffic Splitting
