@@ -241,6 +241,10 @@ func buildRateLimitMiddleware(annotations map[string]string) *dynamic.RateLimit 
 }
 
 func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {
+	if p.tcpStateTable == nil {
+		return 0
+	}
+
 	for port, v := range p.tcpStateTable.Table {
 		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
 			return port
