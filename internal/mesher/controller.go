@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/containous/maesh/internal/resource"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/informers"
@@ -63,6 +63,21 @@ func (c *Controller) Run() {
 	}
 }
 
+// ShutDown shutdowns the controller.
+func (c *Controller) ShutDown() {
+	c.queue.ShutDown()
+}
+
+// Wait waits for the termination of the controller loop.
+func (c *Controller) Wait(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-c.exited:
+		return nil
+	}
+}
+
 func (c *Controller) processEvent() bool {
 	item, shutdown := c.queue.Get()
 	if shutdown {
@@ -95,20 +110,6 @@ func (c *Controller) processEvent() bool {
 
 	c.queue.Forget(item)
 	return true
-}
-
-// ShutDown shutdowns the controller.
-func (c *Controller) ShutDown() {
-	c.queue.ShutDown()
-}
-
-func (c *Controller) Wait(ctx context.Context) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-c.exited:
-		return nil
-	}
 }
 
 const (
@@ -232,13 +233,6 @@ func (c *Controller) deleteMeshService(key string) error {
 
 const (
 	portRangeStart = 5000
-
-	appLabel       = "app"
-	componentLabel = "component"
-
-	appLabelMaesh          = "maesh"
-	componentLabelMeshSvc  = "mesh-svc"
-	componentLabelMeshNode = "mesh-node"
 )
 
 func (c *Controller) buildMeshSvc(name string, sourceSvc *corev1.Service) *corev1.Service {
@@ -246,16 +240,10 @@ func (c *Controller) buildMeshSvc(name string, sourceSvc *corev1.Service) *corev
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: c.currentNamespace,
-			Labels: map[string]string{
-				appLabel:       appLabelMaesh,
-				componentLabel: componentLabelMeshSvc,
-			},
+			Labels:    resource.MeshServiceLabels(),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				appLabel:       appLabelMaesh,
-				componentLabel: componentLabelMeshNode,
-			},
+			Selector: resource.MeshServiceSelector(),
 		},
 	}
 
@@ -277,22 +265,8 @@ func meshServiceName(name, ns, currentNs string) string {
 	return fmt.Sprintf("%s-%s-%s", currentNs, name, ns)
 }
 
-func isMeshService(obj interface{}) (bool, error) {
-	objMeta, err := meta.Accessor(obj)
-	if err != nil {
-		return false, err
-	}
-
-	objLabels := objMeta.GetLabels()
-
-	isMaeshService := objLabels[appLabel] == appLabelMaesh
-	isMeshSvc := objLabels[componentLabel] == componentLabelMeshSvc
-
-	return isMaeshService && isMeshSvc, nil
-}
-
 func enqueueObj(q workqueue.RateLimitingInterface, log logrus.FieldLogger, t eventType, obj interface{}) {
-	isMeshSvc, err := isMeshService(obj)
+	isMeshSvc, err := resource.IsMeshService(obj)
 	if err != nil {
 		log.WithError(err).Error("unable to detect mesh service from event, ignoring")
 		return
