@@ -76,7 +76,7 @@ func maeshCommand(cfg *cmd.MaeshConfiguration) error {
 		clientSet,
 		30*time.Second,
 		informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-			opts.FieldSelector = "metadata.namespace!=kube-system,metadata.name!=kubernetes"
+			opts.FieldSelector = "metadata.namespace!=kube-system,metadata.name!=kubernetes,metadata.namespace!=local-path-storage"
 		}),
 	)
 
