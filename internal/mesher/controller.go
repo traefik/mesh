@@ -18,11 +18,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-// Filter is a type that can match a k8s object.
-type Filter interface {
-	Match(metav1.Object) bool
-}
-
 const moduleName = "mesher"
 
 // Controller is running the control loop to maintain the list of mesh services.
