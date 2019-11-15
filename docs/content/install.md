@@ -56,6 +56,19 @@ helm install --name=maesh --namespace=maesh maesh/maesh --set clusterDomain=my.c
 Maesh does not _need_ to be installed into the `maesh` namespace, 
 but it does need to be installed into its _own_ namespace, separate from user namespaces.
 
+## Platform recommendations
+
+Maesh will work on pretty much any kubernetes environment that conforms to the global kubernetes specification.
+That being said, we have had users encounter issues when using variants such as minikube, microk8s,
+and other development distributions.
+
+Maesh runs without issue on most public clouds (AWS, GKE, Azure, DigitalOcean, and more).
+If you want to run Maesh in development, we would recommend using [k3s](https://k3s.io/), as it is fully conformant.
+We use k3s in Maesh's integration tests, so you can be sure that it works properly.
+
+If you encounter issues on variants such as minikube or microk8s, please try and reproduce the issue on k3s.
+If you are unable to reproduce, it may be an issue with the distribution behaving differently than official kubernetes.
+
 ## Verify your installation
 
 You can check that Maesh has been installed properly by running the following command:
