@@ -13,7 +13,6 @@ func Bool(v bool) *bool { return &v }
 // Provider is an interface for providers that allows the controller to interact with providers
 // without having to deal with specifics of said providers.
 type Provider interface {
-	Init()
 	BuildConfig() (*dynamic.Configuration, error)
 }
 

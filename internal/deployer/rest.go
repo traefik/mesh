@@ -7,9 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cenkalti/backoff/v3"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +21,7 @@ type REST struct {
 
 func NewREST(logger logrus.FieldLogger) *REST {
 	return &REST{
-		client: &http.Client{Timeout: time.Second},
+		client: &http.Client{Timeout: 10 * time.Second},
 		logger: logger.WithField("module", "deployer"),
 	}
 }
@@ -40,24 +38,17 @@ func (pr *REST) Deploy(pods []*corev1.Pod, cfg *dynamic.Configuration) error {
 		pod := p
 
 		errg.Go(func() error {
-			b := backoff.NewExponentialBackOff()
-			b.MaxElapsedTime = 15 * time.Second
+			if err := pr.deployToPod(pod, rawCfg); err != nil {
+				pr.logger.Errorf(
+					"unable to deploy dynamic configuration to pod %q: %v",
+					pod.GetName(),
+					err,
+				)
 
-			op := func() error {
-				if err := pr.deployToPod(pod, rawCfg); err != nil {
-					pr.logger.Errorf(
-						"unable to deploy dynamic configuration to pod %q: %v",
-						pod.GetName(),
-						err,
-					)
-
-					return err
-				}
-
-				return nil
+				return err
 			}
 
-			return backoff.Retry(safe.OperationWithRecover(op), b)
+			return nil
 		})
 	}
 
