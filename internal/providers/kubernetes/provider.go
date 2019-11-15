@@ -12,42 +12,84 @@ import (
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	listersv1 "k8s.io/client-go/listers/core/v1"
 )
 
 // Provider holds a client to access the provider.
 type Provider struct {
-	client        k8s.CoreV1Client
-	defaultMode   string
-	meshNamespace string
-	tcpStateTable *k8s.State
-	ignored       k8s.IgnoreWrapper
-}
-
-// Init the provider.
-func (p *Provider) Init() {
-
+	svcs        listersv1.ServiceLister
+	endpoints   listersv1.EndpointsLister
+	defaultMode string
 }
 
 // New creates a new provider.
-func New(client k8s.CoreV1Client, defaultMode string, meshNamespace string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
-	p := &Provider{
-		client:        client,
-		defaultMode:   defaultMode,
-		meshNamespace: meshNamespace,
-		tcpStateTable: tcpStateTable,
-		ignored:       ignored,
+func New(svcs listersv1.ServiceLister, endpoints listersv1.EndpointsLister, defaultMode string) *Provider {
+	return &Provider{
+		svcs:        svcs,
+		endpoints:   endpoints,
+		defaultMode: defaultMode,
+	}
+}
+
+// BuildConfig builds the configuration for routing
+// from a native kubernetes environment.
+func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
+	services, err := p.svcs.List(labels.Everything())
+	if err != nil {
+		return nil, fmt.Errorf("unable to get services: %v", err)
 	}
 
-	p.Init()
+	endpoints, err := p.endpoints.List(labels.Everything())
+	if err != nil {
+		return nil, fmt.Errorf("unable to get endpoints: %v", err)
+	}
 
-	return p
+	config := base.CreateBaseConfigWithReadiness()
+
+	for _, service := range services {
+		// TODO fix that ?
+		// if p.ignored.IsIgnoredService(service.Name, service.Namespace) {
+		// 	continue
+		// }
+
+		serviceMode := base.GetServiceMode(service.Annotations, p.defaultMode)
+		scheme := base.GetScheme(service.Annotations)
+
+		for id, sp := range service.Spec.Ports {
+			key := buildKey(service.Name, service.Namespace, sp.Port)
+
+			if serviceMode == k8s.ServiceTypeHTTP {
+				config.HTTP.Services[key] = buildService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), scheme)
+				middlewares := buildHTTPMiddlewares(service.Annotations)
+
+				if middlewares != nil {
+					config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, true)
+					config.HTTP.Middlewares[key] = middlewares
+
+					continue
+				}
+
+				config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, false)
+
+				continue
+			}
+
+			// TODO fix that, use cache for this too.
+			// meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
+			meshPort := 10000
+			config.TCP.Routers[key] = p.buildTCPRouter(meshPort, key)
+			config.TCP.Services[key] = p.buildTCPService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints))
+		}
+	}
+
+	return config, nil
 }
 
 func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName string, addMiddlewares bool) *dynamic.Router {
 	if addMiddlewares {
 		return &dynamic.Router{
-			Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
+			Rule:        fmt.Sprintf("Host(`%s.%s.maesh`) || Host(`%s`)", name, namespace, ip),
 			EntryPoints: []string{fmt.Sprintf("http-%d", port)},
 			Middlewares: []string{serviceName},
 			Service:     serviceName,
@@ -55,7 +97,7 @@ func (p *Provider) buildRouter(name, namespace, ip string, port int, serviceName
 	}
 
 	return &dynamic.Router{
-		Rule:        fmt.Sprintf("Host(`%s.%s.%s`) || Host(`%s`)", name, namespace, p.meshNamespace, ip),
+		Rule:        fmt.Sprintf("Host(`%s.%s.maesh`) || Host(`%s`)", name, namespace, ip),
 		EntryPoints: []string{fmt.Sprintf("http-%d", port)},
 		Service:     serviceName,
 	}
@@ -69,7 +111,7 @@ func (p *Provider) buildTCPRouter(port int, serviceName string) *dynamic.TCPRout
 	}
 }
 
-func (p *Provider) buildService(endpoints *corev1.Endpoints, scheme string) *dynamic.Service {
+func buildService(endpoints *corev1.Endpoints, scheme string) *dynamic.Service {
 	var servers []dynamic.Server
 
 	if endpoints != nil && endpoints.Subsets != nil {
@@ -120,58 +162,7 @@ func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *dynamic.TCPServ
 	}
 }
 
-// BuildConfig builds the configuration for routing
-// from a native kubernetes environment.
-func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
-	services, err := p.client.GetServices(metav1.NamespaceAll)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get services: %v", err)
-	}
-
-	endpoints, err := p.client.GetEndpointses(metav1.NamespaceAll)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get endpoints: %v", err)
-	}
-
-	config := base.CreateBaseConfigWithReadiness()
-
-	for _, service := range services {
-		if p.ignored.IsIgnoredService(service.Name, service.Namespace) {
-			continue
-		}
-
-		serviceMode := base.GetServiceMode(service.Annotations, p.defaultMode)
-		scheme := base.GetScheme(service.Annotations)
-
-		for id, sp := range service.Spec.Ports {
-			key := buildKey(service.Name, service.Namespace, sp.Port)
-
-			if serviceMode == k8s.ServiceTypeHTTP {
-				config.HTTP.Services[key] = p.buildService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), scheme)
-				middlewares := p.buildHTTPMiddlewares(service.Annotations)
-
-				if middlewares != nil {
-					config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, true)
-					config.HTTP.Middlewares[key] = middlewares
-
-					continue
-				}
-
-				config.HTTP.Routers[key] = p.buildRouter(service.Name, service.Namespace, service.Spec.ClusterIP, 5000+id, key, false)
-
-				continue
-			}
-
-			meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
-			config.TCP.Routers[key] = p.buildTCPRouter(meshPort, key)
-			config.TCP.Services[key] = p.buildTCPService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints))
-		}
-	}
-
-	return config, nil
-}
-
-func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.Middleware {
+func buildHTTPMiddlewares(annotations map[string]string) *dynamic.Middleware {
 	circuitBreaker := buildCircuitBreakerMiddleware(annotations)
 	retry := buildRetryMiddleware(annotations)
 	rateLimit := buildRateLimitMiddleware(annotations)
@@ -240,15 +231,15 @@ func buildRateLimitMiddleware(annotations map[string]string) *dynamic.RateLimit 
 	return nil
 }
 
-func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {
-	for port, v := range p.tcpStateTable.Table {
-		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
-			return port
-		}
-	}
+// func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {
+// 	for port, v := range p.tcpStateTable.Table {
+// 		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
+// 			return port
+// 		}
+// 	}
 
-	return 0
-}
+// 	return 0
+// }
 
 func buildKey(name, namespace string, port int32) string {
 	// Use the hash of the servicename.namespace.port as the key
