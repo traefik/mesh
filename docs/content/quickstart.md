@@ -40,7 +40,7 @@ helm install --name=maesh --namespace=maesh maesh/maesh
 
 ## Using Maesh
 
-Let's deploy a server application and a client application under the `maesh-test` namespace.
+As an example, let's deploy a server application and a client application under the `maesh-test` namespace.
 
 ```yaml tab="server.yaml"
 ---
@@ -167,7 +167,7 @@ User-Agent: curl/7.64.0
 Accept: */*
 ```
 
-You can note that all this server application is doing is to answer back the content of the request it receives.
+You can note that all this server application is doing is to respond with the content of the request it receives.
 
 Now replace the `svc.cluster.local` suffix by `maesh`, and tada: you are now using Maesh to reach your server!
 
@@ -196,7 +196,7 @@ X-Forwarded-Server: maesh-mesh-w95q2
 X-Real-Ip: 10.42.2.9
 ```
 
-Note the presence of `X-Forwarded` headers as well than other instrumentation headers like `Uber-Trace-Id`, indicating than your request has been processed and instrumented by Maesh.
+Note the presence of `X-Forwarded` headers as well as other instrumentation headers like `Uber-Trace-Id`, indicating than your request has been processed and instrumented by Maesh.
 
 ## What's next
 
