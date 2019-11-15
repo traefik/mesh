@@ -10,7 +10,10 @@ import (
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/cmd/prepare"
 	"github.com/containous/maesh/cmd/version"
+	"github.com/containous/maesh/internal/configurator"
+	"github.com/containous/maesh/internal/deployer"
 	"github.com/containous/maesh/internal/mesher"
+	kprovider "github.com/containous/maesh/internal/providers/kubernetes"
 	"github.com/containous/maesh/internal/signals"
 	"github.com/containous/traefik/v2/pkg/cli"
 	log "github.com/sirupsen/logrus"
@@ -79,18 +82,33 @@ func maeshCommand(cfg *cmd.MaeshConfiguration) error {
 
 	mesher := mesher.NewController(clientSet, informerFactory, cfg.Namespace, logger)
 
+	provider := kprovider.New(
+		informerFactory.Core().V1().Services().Lister(),
+		informerFactory.Core().V1().Endpoints().Lister(),
+		cfg.DefaultMode,
+	)
+
+	deployer := deployer.NewREST(logger)
+
+	configurator := configurator.NewController(informerFactory, provider, deployer, cfg.Namespace, logger)
+
 	go func() {
 		<-signals.SetupSignalHandler()
 		logger.Info("Received signal, stopping...")
 		mesher.ShutDown()
+		configurator.ShutDown()
 	}()
 
 	informerFactory.Start(ctx.Done())
 	informerFactory.WaitForCacheSync(ctx.Done())
 
 	go mesher.Run()
+	go configurator.Run()
 
 	if err := mesher.Wait(ctx); err != nil {
+		return err
+	}
+	if err := configurator.Wait(ctx); err != nil {
 		return err
 	}
 
