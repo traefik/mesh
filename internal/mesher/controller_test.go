@@ -64,6 +64,23 @@ func TestController(t *testing.T) {
 			wantService: generateMeshService(8080),
 		},
 		{
+			name: "creates mesh service on update if deleted",
+			createResources: func(t *testing.T, c *fake.Clientset) {
+				t.Helper()
+				_, err := c.CoreV1().Services("app").Create(generateAppService(9999))
+				require.NoError(t, err)
+			},
+			updateResources: func(t *testing.T, c *fake.Clientset) {
+				t.Helper()
+				err := c.CoreV1().Services(meshNamespace).Delete("maesh-foo-app", nil)
+				require.NoError(t, err)
+
+				_, err = c.CoreV1().Services("app").Update(generateAppService(8080))
+				require.NoError(t, err)
+			},
+			wantService: generateMeshService(8080),
+		},
+		{
 			name: "deletes mesh service",
 			createResources: func(t *testing.T, c *fake.Clientset) {
 				t.Helper()

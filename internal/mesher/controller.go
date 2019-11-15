@@ -162,7 +162,7 @@ func (c *Controller) createMeshService(key string) error {
 	}
 
 	c.logger.Infof(
-		"Created mesh service %q, from created service %q from namespace %q",
+		"Created mesh service %q, because of the creation service %q in namespace %q",
 		meshSvcName,
 		name,
 		ns,
@@ -184,13 +184,27 @@ func (c *Controller) updateMeshService(key string) error {
 
 	meshSvcName := meshServiceName(name, ns, c.currentNamespace)
 
-	_, err = c.svcClient.Update(c.buildMeshSvc(meshSvcName, updatedService))
+	oldMeshSvc, err := c.svcCache.Services(c.currentNamespace).Get(meshSvcName)
+	if errors.IsNotFound(err) {
+		// If the mesh service gets deleted while running.
+		return c.createMeshService(key)
+	}
+	if err != nil {
+		return fmt.Errorf("unable to retrieve old mesh svc from cache: %v", err)
+	}
+
+	newMeshSvc := c.buildMeshSvc(meshSvcName, updatedService)
+
+	newMeshSvc.ObjectMeta.ResourceVersion = oldMeshSvc.ObjectMeta.ResourceVersion
+	newMeshSvc.Spec.ClusterIP = oldMeshSvc.Spec.ClusterIP
+
+	_, err = c.svcClient.Update(newMeshSvc)
 	if err != nil {
 		return fmt.Errorf("unable to update mesh service: %v", err)
 	}
 
 	c.logger.Infof(
-		"Updated mesh service %q, from an updated of service %q from namespace %q",
+		"Updated mesh service %q, because of the update of service %q in namespace %q",
 		meshSvcName,
 		name,
 		ns,
@@ -212,7 +226,7 @@ func (c *Controller) deleteMeshService(key string) error {
 	}
 
 	c.logger.Infof(
-		"Deleted mesh service %q, because of deletion of service %q from namespace %q",
+		"Deleted mesh service %q, because of deletion of service %q in namespace %q",
 		meshSvcName,
 		name,
 		ns,
