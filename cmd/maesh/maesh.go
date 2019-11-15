@@ -1,18 +1,23 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	stdlog "log"
 	"os"
+	"time"
 
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/cmd/prepare"
 	"github.com/containous/maesh/cmd/version"
-	"github.com/containous/maesh/internal/controller"
-	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/internal/mesher"
 	"github.com/containous/maesh/internal/signals"
 	"github.com/containous/traefik/v2/pkg/cli"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func main() {
@@ -48,36 +53,48 @@ func main() {
 	os.Exit(0)
 }
 
-func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
+func maeshCommand(cfg *cmd.MaeshConfiguration) error {
+	ctx := context.Background()
 
-	if iConfig.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
+	logger := log.New().WithFields(log.Fields{"app": "maesh", "component": "controller"})
+	logger.Info("Starting Maesh controller")
 
-	log.Debugln("Starting maesh prepare...")
-	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
-	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)
-
-	clients, err := k8s.NewClientWrapper(iConfig.MasterURL, iConfig.KubeConfig)
+	kcfg, err := clientcmd.BuildConfigFromFlags(cfg.MasterURL, cfg.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("error building clients: %v", err)
+		return err
 	}
 
-	if err = clients.CheckCluster(); err != nil {
-		return fmt.Errorf("error during cluster check: %v", err)
+	clientSet, err := kubernetes.NewForConfig(kcfg)
+	if err != nil {
+		return fmt.Errorf("unable to create kubernetes client: %v", err)
 	}
 
-	// Create a new stop Channel
-	stopCh := signals.SetupSignalHandler()
-	// Create a new ctr.
-	ctr := controller.NewMeshController(clients, iConfig.SMI, iConfig.DefaultMode, iConfig.Namespace, iConfig.IgnoreNamespaces, iConfig.APIPort)
+	informerFactory := informers.NewSharedInformerFactoryWithOptions(
+		clientSet,
+		30*time.Second,
+		informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
+			opts.FieldSelector = "metadata.namespace!=kube-system,metadata.name!=kubernetes"
+		}),
+	)
 
-	// run the ctr loop to process items
-	if err = ctr.Run(stopCh); err != nil {
-		log.Fatalf("Error running ctr: %v", err)
+	mesher := mesher.NewController(clientSet, informerFactory, cfg.Namespace, logger)
+
+	go func() {
+		<-signals.SetupSignalHandler()
+		logger.Info("Received signal, stopping...")
+		mesher.ShutDown()
+	}()
+
+	informerFactory.Start(ctx.Done())
+	informerFactory.WaitForCacheSync(ctx.Done())
+
+	go mesher.Run()
+
+	if err := mesher.Wait(ctx); err != nil {
+		return err
 	}
+
+	logger.Info("Maesh controller stopped")
 
 	return nil
 }
