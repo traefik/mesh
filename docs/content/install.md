@@ -61,12 +61,12 @@ To enable SMI, install maesh in SMI mode by setting the `--smi.enable` and `--sm
 helm install --name=maesh --namespace=maesh maesh/maesh --set smi.enable=true --set smi.deploy=true`
 ```
 
-- The `smi.enable` option tells Maesh to process SMI resources.
-- The `smi.deploy` option controls if the SMI CRDs are deployed with the helm chart.
+- The `smi.enable` option makes Maesh process SMI resources.
+- The `smi.deploy` option makes Maesh deploy the SMI CRDs with the helm chart.
 
 ## Installation namespace
 
-Maesh does not _need_ to be installed into the `maesh` namespace,
+Maesh does not _need_ to be installed in the `maesh` namespace,
 but it does need to be installed into its _own_ namespace, separate from user namespaces.
 
 ## Platform recommendations
