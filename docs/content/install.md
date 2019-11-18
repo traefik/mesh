@@ -55,7 +55,7 @@ helm install --name=maesh --namespace=maesh maesh/maesh --set clusterDomain=my.c
 Maesh supports the [SMI specification](https://smi-spec.io/) which defines a set of custom resources
 to provide a fine-grained control over instrumentation, routing and access control of east-west communications.
 
-To enable SMI, install maesh in SMI mode by setting the `--smi.enable` and `--smi.deploy` options to true.
+To enable SMI, install maesh in SMI mode by setting the `smi.enable` and `smi.deploy` helm chart options to true.
 
 ```bash
 helm install --name=maesh --namespace=maesh maesh/maesh --set smi.enable=true --set smi.deploy=true`
