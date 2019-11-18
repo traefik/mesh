@@ -38,6 +38,20 @@ helm repo update
 helm install --name=maesh --namespace=maesh maesh/maesh
 ```
 
+```bash tab="Expected output"
+[...]
+
+NOTES:
+Thank you for installing maesh.
+
+Your release is named maesh.
+
+To learn more about the release, try:
+
+  $ helm status maesh
+  $ helm get maesh
+```
+
 ## Using Maesh
 
 As an example, let's deploy a server application and a client application under the `maesh-test` namespace.
