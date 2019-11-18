@@ -14,6 +14,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/vdemeester/shakers v0.1.0
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0
 	k8s.io/api v0.0.0-20190819141258-3544db3b9e44
 	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
 	k8s.io/client-go v0.0.0-20190819141724-e14f31a72a77

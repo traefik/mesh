@@ -7,6 +7,7 @@ import (
 	"github.com/containous/maesh/internal/resource"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	listersv1 "k8s.io/client-go/listers/core/v1"
@@ -37,7 +38,11 @@ type Controller struct {
 
 // NewController returns a configurator controller.
 func NewController(informerFactory informers.SharedInformerFactory, provider base.Provider, deployer Deployer, currentNamespace string, l logrus.FieldLogger) *Controller {
-	q := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), moduleName)
+	q := workqueue.NewNamedRateLimitingQueue(
+		// TODO tweak this rate limiting
+		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 2)},
+		moduleName,
+	)
 
 	// Watch the mesh-services
 	svcInformer := informerFactory.Core().V1().Services()
@@ -50,9 +55,10 @@ func NewController(informerFactory informers.SharedInformerFactory, provider bas
 	// Watch all the endpoints.
 	endpointsInformer := informerFactory.Core().V1().Endpoints()
 	endpointsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(_ interface{}) { q.Add(struct{}{}) },
-		UpdateFunc: func(_, _ interface{}) { q.Add(struct{}{}) },
-		DeleteFunc: func(_ interface{}) { q.Add(struct{}{}) },
+		AddFunc: func(_ interface{}) { q.AddRateLimited(struct{}{}) },
+		// We rate limit the update func on endpoints, which can generate a lot of noise, when deploying pods.
+		UpdateFunc: func(_, obj interface{}) { q.AddRateLimited(struct{}{}) },
+		DeleteFunc: func(_ interface{}) { q.AddRateLimited(struct{}{}) },
 	})
 
 	// Watch the mesh nodes pods.
@@ -155,7 +161,7 @@ func enqueueSvcEvent(q workqueue.RateLimitingInterface, obj interface{}, log log
 		return
 	}
 
-	q.Add(struct{}{})
+	q.AddRateLimited(struct{}{})
 }
 
 func enqueuePodEvent(q workqueue.RateLimitingInterface, obj interface{}, log logrus.FieldLogger) {
@@ -168,5 +174,5 @@ func enqueuePodEvent(q workqueue.RateLimitingInterface, obj interface{}, log log
 		return
 	}
 
-	q.Add(struct{}{})
+	q.AddRateLimited(struct{}{})
 }
