@@ -5,3 +5,9 @@ base = "docs"
 
 # Path relative to the "base" directory
 command = "sh -x scripts/netlify-run.sh"
+
+[[headers]]
+  # Define which paths this specific [[headers]] block will cover.
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
