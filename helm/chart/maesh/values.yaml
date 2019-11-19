@@ -69,7 +69,7 @@ metrics:
     enabled: true
 
 smi:
-  deploy: true
+  deploycrds: true
   enable: false
 
 limits:
