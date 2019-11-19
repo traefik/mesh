@@ -47,13 +47,26 @@ KubeDNS will be patched with [stubDomains](https://kubernetes.io/docs/tasks/admi
 If you use a cluster domain other than `cluster.local` set it by using the `clusterDomain` parameter:
 
 ```bash
-
 helm install --name=maesh --namespace=maesh maesh/maesh --set clusterDomain=my.custom.domain.com
 ```
 
+## Service Mesh Interface
+
+Maesh supports the [SMI specification](https://smi-spec.io/) which defines a set of custom resources
+to provide a fine-grained control over instrumentation, routing and access control of east-west communications.
+
+To enable SMI, install maesh in SMI mode by setting the `smi.enable` and `smi.deploy` helm chart options to true.
+
+```bash
+helm install --name=maesh --namespace=maesh maesh/maesh --set smi.enable=true --set smi.deploy=true`
+```
+
+- The `smi.enable` option makes Maesh process SMI resources.
+- The `smi.deploy` option makes Maesh deploy the SMI CRDs with the helm chart.
+
 ## Installation namespace
 
-Maesh does not _need_ to be installed into the `maesh` namespace, 
+Maesh does not _need_ to be installed in the `maesh` namespace,
 but it does need to be installed into its _own_ namespace, separate from user namespaces.
 
 ## Platform recommendations
