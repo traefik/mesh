@@ -10,4 +10,4 @@ command = "sh -x scripts/netlify-run.sh"
   # Define which paths this specific [[headers]] block will cover.
   for = "/*"
   [headers.values]
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload;"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
