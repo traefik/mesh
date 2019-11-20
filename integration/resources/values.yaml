@@ -56,7 +56,10 @@ metrics:
   prometheus:
     enabled: false
 
-smi: false
+smi:
+  deploycrds: false
+  enable: false
+
 kubedns: false
 
 limits:
