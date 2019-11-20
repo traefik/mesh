@@ -57,7 +57,7 @@ metrics:
     enabled: false
 
 smi:
-  deploy: false
+  deploycrds: false
   enable: false
 
 kubedns: false
