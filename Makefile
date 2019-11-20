@@ -96,8 +96,7 @@ tidy:
 	go mod tidy
 
 helm:
-	@command -v helm >/dev/null 2>&1 || curl -L https://git.io/get_helm.sh | bash -s -- -v v2.15.1
-	@helm init --client-only
+	@command -v helm >/dev/null 2>&1 || curl -L https://git.io/get_helm.sh | bash -s -- -v v3.0.0
 
 helm-lint: helm
 	helm lint helm/chart/maesh

@@ -22,9 +22,7 @@ type SMISuite struct{ BaseSuite }
 
 func (s *SMISuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
-	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 	s.startAndWaitForCoreDNS(c)
-	s.installTiller(c)
 }
 
 func (s *SMISuite) TearDownSuite(c *check.C) {
@@ -32,35 +30,11 @@ func (s *SMISuite) TearDownSuite(c *check.C) {
 }
 
 func (s *SMISuite) TestSMIAccessControl(c *check.C) {
-	// Get the tools pod service in whoami namespace
-	// This test needs to test the following requests result in the following responses:
-	// Pod C -> Service B /test returns 200
-	// Pod C -> Service B.maesh /test returns 404
-	// Pod C -> Service B.maesh /foo returns 200
-	// Pod A -> Service B /test returns 200
-	// Pod A -> Service B.maesh /test returns 401
-	// Pod A -> Service B.maesh /foo returns 200
-	// Pod A -> Service D /test returns 200
-	// Pod A -> Service D.maesh /bar returns 403
-	// Pod C -> Service D /test returns 200
-	// Pod C -> Service D.maesh /test returns 403
-	// Pod C -> Service D.maesh /bar returns 200
-	// Pod A -> Service E /test returns 200
-	// Pod B -> Service E /test returns 200
-	// Pod C -> Service E /test returns 200
-	// Pod D -> Service E /test returns 200
-	// Pod A -> Service E.maesh /test returns 404
-	// Pod B -> Service E.maesh /test returns 404
-	// Pod C -> Service E.maesh /test returns 404
-	// Pod D -> Service E.maesh /test returns 404
-	s.createResources(c, "resources/smi")
-	s.createResources(c, "resources/smi/access-control/")
-
-	time.Sleep(10 * time.Second)
-
 	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
+	s.createResources(c, "resources/smi/access-control/")
+	time.Sleep(5 * time.Second)
 
 	testCases := []struct {
 		desc        string
@@ -219,7 +193,6 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 }
 
 func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
-	s.createResources(c, "resources/smi")
 	s.createResources(c, "resources/smi/traffic-split")
 
 	time.Sleep(10 * time.Second)

@@ -42,14 +42,14 @@ To run this app, you require the following:
 
 - Kubernetes 1.11+
 - CoreDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.3+ supported)
-- Helm v2 with a [working tiller service account](https://helm.sh/docs/using_helm/#installing-tiller)
+- Helm v3
 
 ## Install
 
 ```shell
 helm repo add maesh https://containous.github.io/maesh/charts
 helm repo update
-helm install --name=maesh --namespace=maesh maesh/maesh
+helm install maesh --namespace=maesh maesh/maesh
 ```
 
 You can find the complete documentation at https://docs.mae.sh.
