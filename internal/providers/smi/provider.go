@@ -198,6 +198,11 @@ func (p *Provider) getTrafficSplitsWithDestinationInNamespace(namespace string, 
 func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, trafficTargets []*accessv1alpha1.TrafficTarget) []*accessv1alpha1.TrafficTarget {
 	var result []*accessv1alpha1.TrafficTarget
 
+	if endpoints == nil {
+		log.Debugf("No applicable TrafficTargets: no endpoint")
+		return nil
+	}
+
 	if len(endpoints.Subsets) == 0 {
 		log.Debugf("No applicable TrafficTargets for service %s/%s: No endpoint subsets", endpoints.Namespace, endpoints.Name)
 	}
@@ -225,27 +230,7 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 				continue
 			}
 
-			var validPodFound bool
-
-			for _, address := range subset.Addresses {
-				pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name)
-				if err != nil {
-					log.Errorf("Could not get pod %s/%s: %v", address.TargetRef.Namespace, address.TargetRef.Name, err)
-					continue
-				}
-
-				if !exists {
-					log.Errorf("pod %s/%s do not exist", address.TargetRef.Namespace, address.TargetRef.Name)
-					continue
-				}
-
-				if pod.Spec.ServiceAccountName == trafficTarget.Destination.Name {
-					validPodFound = true
-					break
-				}
-			}
-
-			if !validPodFound {
+			if !p.validPodFound(subset.Addresses, trafficTarget.Destination.Name) {
 				// No valid pods with serviceAccount found on the subset, so it is not affected
 				log.Debugf("Endpoints %s/%s has no valid pods with destination service account: %s", endpoints.Namespace, endpoints.Name, trafficTarget.Destination.Name)
 				continue
@@ -257,6 +242,32 @@ func (p *Provider) getApplicableTrafficTargets(endpoints *corev1.Endpoints, traf
 	}
 
 	return result
+}
+
+func (p *Provider) validPodFound(addresses []corev1.EndpointAddress, destinationName string) bool {
+	for _, address := range addresses {
+		if address.TargetRef == nil {
+			log.Error("Address has no target reference")
+			continue
+		}
+
+		pod, exists, err := p.client.GetPod(address.TargetRef.Namespace, address.TargetRef.Name)
+		if err != nil {
+			log.Errorf("Could not get pod %s/%s: %v", address.TargetRef.Namespace, address.TargetRef.Name, err)
+			continue
+		}
+
+		if !exists {
+			log.Errorf("pod %s/%s do not exist", address.TargetRef.Namespace, address.TargetRef.Name)
+			continue
+		}
+
+		if pod.Spec.ServiceAccountName == destinationName {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*accessv1alpha1.TrafficTarget) map[destinationKey][]*accessv1alpha1.TrafficTarget {
@@ -536,6 +547,10 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 }
 
 func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {
+	if p.tcpStateTable == nil {
+		return 0
+	}
+
 	for port, v := range p.tcpStateTable.Table {
 		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
 			return port
