@@ -33,7 +33,7 @@ type Controller struct {
 	logger logrus.FieldLogger
 }
 
-// NewController setup event handlers on the service informer and returns a controller.
+// NewController sets up event handlers on the service informer and returns a controller.
 func NewController(clientSet kubernetes.Interface, informerFactory informers.SharedInformerFactory, ns string, l logrus.FieldLogger) *Controller {
 	q := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), moduleName)
 
@@ -55,7 +55,7 @@ func NewController(clientSet kubernetes.Interface, informerFactory informers.Sha
 	}
 }
 
-// Run process all events coming from the workqueue until shutdown is signaled.
+// Run processes events coming from the workqueue until shutdown.
 func (c *Controller) Run() {
 	defer close(c.exited)
 
@@ -63,7 +63,7 @@ func (c *Controller) Run() {
 	}
 }
 
-// ShutDown shutdowns the controller.
+// ShutDown shuts the controller down.
 func (c *Controller) ShutDown() {
 	c.queue.ShutDown()
 }
@@ -158,7 +158,7 @@ func (c *Controller) createMeshService(key string) error {
 	}
 
 	c.logger.Infof(
-		"Created mesh service %q, because of the creation service %q in namespace %q",
+		"Created mesh service %q, because of the creation of service %q in namespace %q",
 		meshSvcName,
 		name,
 		ns,

@@ -22,7 +22,7 @@ type Deployer interface {
 	Deploy(pods []*corev1.Pod, cfg *dynamic.Configuration) error
 }
 
-// Controller is in charge of watching meaningfull resources and triggering mesh node reconfiguration.
+// Controller is in charge of watching meaningful resources and triggering mesh node reconfiguration.
 type Controller struct {
 	provider base.Provider
 	deployer Deployer
@@ -88,7 +88,7 @@ func (c *Controller) Run() {
 	}
 }
 
-// ShutDown shutdowns the controller.
+// ShutDown shuts the controller down.
 func (c *Controller) ShutDown() {
 	c.queue.ShutDown()
 }
