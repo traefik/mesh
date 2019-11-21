@@ -49,7 +49,7 @@ mesh:
   tolerations: []
 
 #
-# addon jaeger tracing configuration
+# Tracing configuration
 #
 tracing:
   deploy: true
@@ -59,9 +59,18 @@ tracing:
     enabled: true
     localagenthostport: ""
     samplingserverurl: ""
+  datadog:
+    enabled: false
+    # localagenthostport: "127.0.0.1:8126"
+    # (Optional)
+    # debug: true
+    # (Optional)
+    # globalTag: "sample"
+    # (Optional)
+    # prioritySampling: true
 
 #
-# addon metrics configuration
+# Metrics configuration
 #
 metrics:
   deploy: true

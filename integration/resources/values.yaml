@@ -39,7 +39,7 @@ mesh:
   defaultMode: http
 
 #
-# addon jaeger tracing configuration
+# Tracing configuration
 #
 tracing:
   deploy: false
@@ -47,9 +47,11 @@ tracing:
     enabled: false
     localagenthostport: ""
     samplingserverurl: ""
+  datadog:
+    enabled: false
 
 #
-# addon metrics configuration
+# Metrics configuration
 #
 metrics:
   deploy: false
