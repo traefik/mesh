@@ -14,7 +14,9 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: {{ .Values.storageClass }}
+  {{- if .Values.grafana.storageClassName }}
+  storageClassName: "{{ .Values.grafana.storageClassName }}"
+  {{- end }}
 
 ---
 apiVersion: v1
@@ -32,4 +34,6 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: {{ .Values.storageClass }}
+  {{- if .Values.prometheus.storageClassName }}
+  storageClassName: "{{ .Values.prometheus.storageClassName }}"
+  {{- end }}

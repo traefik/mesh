@@ -54,7 +54,7 @@ mesh:
 tracing:
   deploy: true
   jaeger:
-    image: 
+    image:
       name: groundnuty/k8s-wait-for:v1.2
     enabled: true
     localagenthostport: ""
@@ -65,8 +65,11 @@ tracing:
 #
 metrics:
   deploy: true
-  prometheus:
-    enabled: true
+  ## you can override values of the metrics subchart here.
+  ## check charts/metrics/values.yaml for the defaults.
+  ## example:
+  # grafana:
+  #   storageClassName: "metrics-storage"
 
 smi:
   deploycrds: true
