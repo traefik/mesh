@@ -5,9 +5,9 @@ image:
 
 grafana:
   ## storageClassName: "" disables dynamic provisioning
-  ## if undefined (default) or null, no storageClassName spec is
+  ## if undefined or null, no storageClassName spec is
   ##   set, choosing the default provisioner
-  # storageClassName: ""
+  storageClassName: null
   ## resource requests and limits. none if not set.
   # resources:
   #   limit:
@@ -19,9 +19,9 @@ grafana:
 
 prometheus:
   ## storageClassName: "" disables dynamic provisioning
-  ## if undefined (default) or null, no storageClassName spec is
+  ## if undefined or null, no storageClassName spec is
   ##   set, choosing the default provisioner
-  # storageClassName: ""
+  storageClassName: null
   ## resource requests and limits. none if not set.
   # resources:
   #   limit:
