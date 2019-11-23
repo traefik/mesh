@@ -70,6 +70,14 @@ metrics:
   ## example:
   # grafana:
   #   storageClassName: "metrics-storage"
+  # prometheus:
+  #   resources:
+  #     limit:
+  #       mem: "500Mi"
+  #       cpu: "500m"
+  #     request:
+  #       mem: "200Mi"
+  #       cpu: "200m"
 
 smi:
   deploycrds: true

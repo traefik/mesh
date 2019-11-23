@@ -35,13 +35,9 @@ spec:
         ports:
         - name: web
           containerPort: 3000
-        resources:
-          limits:
-            cpu: 100m
-            memory: 100Mi
-          requests:
-            cpu: 100m
-            memory: 100Mi
+        {{- if .Values.grafana.resources }}
+        {{- toYaml .Values.grafana.resources | indent 8 }}
+        {{- end }}
         readinessProbe:
           httpGet:
             path: /api/health

@@ -8,8 +8,25 @@ grafana:
   ## if undefined (default) or null, no storageClassName spec is
   ##   set, choosing the default provisioner
   # storageClassName: ""
+  ## resource requests and limits. none if not set.
+  # resources:
+  #   limit:
+  #     mem: "100Mi"
+  #     cpu: "100m"
+  #   request:
+  #     mem: "100Mi"
+  #     cpu: "100m"
+
 prometheus:
   ## storageClassName: "" disables dynamic provisioning
   ## if undefined (default) or null, no storageClassName spec is
   ##   set, choosing the default provisioner
   # storageClassName: ""
+  ## resource requests and limits. none if not set.
+  # resources:
+  #   limit:
+  #     mem: "500Mi"
+  #     cpu: "500m"
+  #   request:
+  #     mem: "500Mi"
+  #     cpu: "500m"
