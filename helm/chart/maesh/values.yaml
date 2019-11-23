@@ -65,12 +65,14 @@ tracing:
 #
 metrics:
   deploy: true
+  prometheus:
+    # whether to expose Proometheus metrics
+    enabled: true
   ## you can override values of the metrics subchart here.
   ## check charts/metrics/values.yaml for the defaults.
   ## example:
   # grafana:
   #   storageClassName: "metrics-storage"
-  # prometheus:
   #   resources:
   #     limit:
   #       mem: "500Mi"
