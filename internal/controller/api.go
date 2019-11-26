@@ -6,11 +6,13 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeerror "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	listers "k8s.io/client-go/listers/core/v1"
 )
 
 // API is an implementation of an api.
@@ -20,8 +22,8 @@ type API struct {
 	lastConfiguration *safe.Safe
 	apiPort           int
 	deployLog         *DeployLog
-	clients           *k8s.ClientWrapper
 	meshNamespace     string
+	podLister         listers.PodLister
 }
 
 type podInfo struct {
@@ -31,13 +33,13 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(apiPort int, lastConfiguration *safe.Safe, deployLog *DeployLog, clients *k8s.ClientWrapper, meshNamespace string) *API {
+func NewAPI(apiPort int, lastConfiguration *safe.Safe, deployLog *DeployLog, podLister listers.PodLister, meshNamespace string) *API {
 	a := &API{
 		readiness:         false,
 		lastConfiguration: lastConfiguration,
 		apiPort:           apiPort,
 		deployLog:         deployLog,
-		clients:           clients,
+		podLister:         podLister,
 		meshNamespace:     meshNamespace,
 	}
 
@@ -127,15 +129,22 @@ func (a *API) getDeployLog(w http.ResponseWriter, r *http.Request) {
 func (a *API) getMeshNodes(w http.ResponseWriter, r *http.Request) {
 	podInfoList := []podInfo{}
 
-	podList, err := a.clients.ListPodWithOptions(a.meshNamespace, metav1.ListOptions{
-		LabelSelector: "component==maesh-mesh",
-	})
+	sel := labels.Everything()
+
+	requirement, err := labels.NewRequirement("component", selection.Equals, []string{"maesh-mesh"})
+	if err != nil {
+		log.Error(err)
+	}
+
+	sel = sel.Add(*requirement)
+
+	podList, err := a.podLister.Pods(a.meshNamespace).List(sel)
 	if err != nil {
 		writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod list: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	for _, pod := range podList.Items {
+	for _, pod := range podList {
 		readiness := true
 
 		for _, status := range pod.Status.ContainerStatuses {
@@ -165,14 +174,15 @@ func (a *API) getMeshNodes(w http.ResponseWriter, r *http.Request) {
 func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	pod, exists, err := a.clients.GetPod(a.meshNamespace, vars["node"])
+	pod, err := a.podLister.Pods(a.meshNamespace).Get(vars["node"])
 	if err != nil {
-		writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod: %v", err), http.StatusInternalServerError)
-		return
-	}
+		if kubeerror.IsNotFound(err) {
+			writeErrorResponse(w, fmt.Sprintf("unable to find pod: %s", vars["node"]), http.StatusNotFound)
+			return
+		}
 
-	if !exists {
-		writeErrorResponse(w, fmt.Sprintf("unable to find pod: %s", vars["node"]), http.StatusNotFound)
+		writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod: %v", err), http.StatusInternalServerError)
+
 		return
 	}
 

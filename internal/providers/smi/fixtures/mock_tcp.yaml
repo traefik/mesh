@@ -2,6 +2,7 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: example-traffic-target
+  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -18,3 +19,4 @@ kind: TCPRoute
 apiVersion: specs.smi-spec.io/v1alpha1
 metadata:
   name: api-service-routes
+  namespace: default

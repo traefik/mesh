@@ -3,6 +3,7 @@ apiVersion: specs.smi-spec.io/v1alpha1
 kind: HTTPRouteGroup
 metadata:
   name: api-service-routes
+  namespace: default
 matches:
 - name: api
   pathRegex: /api
@@ -16,6 +17,7 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-metrics
+  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -35,6 +37,7 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-api
+  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -58,6 +61,7 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-metrics-2
+  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -77,6 +81,7 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-api-2
+  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -100,6 +105,7 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-metrics-3
+  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -119,6 +125,7 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: api-service-api-3
+  namespace: default
 destination:
   kind: ServiceAccount
   name: api-service
@@ -142,6 +149,7 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: demo-service
+  namespace: default
 subsets:
 - addresses:
   - ip: 10.1.1.50
@@ -156,6 +164,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: example
+  namespace: default
 spec:
   serviceAccountName: api-service
   containers:
@@ -169,6 +178,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: demo-test
+  namespace: default
 spec:
   clusterIP: 10.1.0.1
   ports:

@@ -25,7 +25,7 @@ clean:
 	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
 
 # Static linting of source files. See .golangci.toml for options
-local-check: $(DIST_DIR) helm-lint
+local-check: $(DIST_DIR)
 	golangci-lint run --config .golangci.toml
 
 # Build
