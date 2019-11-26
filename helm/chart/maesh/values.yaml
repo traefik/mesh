@@ -75,8 +75,7 @@ metrics:
   deploy: true
   prometheus:
     enabled: true
-  datadog:
-    enabled: false
+  # datadog:
     # address: "127.0.0.1:8125"
     # (Optional)
     # addEntrypointsLabels: true

@@ -101,7 +101,7 @@ spec:
             {{- if .Values.metrics.prometheus.enabled }}
             - "--metrics.prometheus"
             {{- end }}
-            {{- if .Values.metrics.datadog.enabled }}
+            {{- if .Values.metrics.datadog }}
             - "--metrics.datadog=true"
               {{- if .Values.metrics.datadog.address }}
             - "--metrics.datadog.address={{ .Values.metrics.datadog.address }}"

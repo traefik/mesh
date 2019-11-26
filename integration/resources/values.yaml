@@ -55,8 +55,6 @@ metrics:
   deploy: false
   prometheus:
     enabled: false
-  datadog:
-    enabled: false
 
 smi:
   deploycrds: false
