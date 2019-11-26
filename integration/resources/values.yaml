@@ -47,8 +47,6 @@ tracing:
     enabled: false
     localagenthostport: ""
     samplingserverurl: ""
-  datadog:
-    enabled: false
 
 #
 # Metrics configuration
