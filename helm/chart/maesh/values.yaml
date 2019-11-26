@@ -59,8 +59,7 @@ tracing:
     enabled: true
     localagenthostport: ""
     samplingserverurl: ""
-  datadog:
-    enabled: false
+  # datadog:
     # localagenthostport: "127.0.0.1:8126"
     # (Optional)
     # debug: true

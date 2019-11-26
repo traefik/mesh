@@ -80,7 +80,7 @@ spec:
             - {{ printf "--tracing.jaeger.samplingserverurl=http://jaeger-agent.%s.svc.%s:5778/sampling" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
               {{- end }}
             {{- end }}
-            {{- if .Values.tracing.datadog.enabled }}
+            {{- if .Values.tracing.datadog }}
               {{- if .Values.tracing.datadog.localagenthostport }}
             - "--tracing.datadog.localagenthostport={{ .Values.tracing.datadog.localagenthostport }}"
               {{- end }}
