@@ -101,6 +101,21 @@ spec:
             {{- if .Values.metrics.prometheus.enabled }}
             - "--metrics.prometheus"
             {{- end }}
+            {{- if .Values.metrics.datadog }}
+            - "--metrics.datadog=true"
+              {{- if .Values.metrics.datadog.address }}
+            - "--metrics.datadog.address={{ .Values.metrics.datadog.address }}"
+              {{- end }}
+              {{- if .Values.metrics.datadog.addEntrypointsLabels }}
+            - "--metrics.datadog.addEntryPointsLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.datadog.addServiceLabels }}
+            - "--metrics.datadog.addServicesLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.datadog.pushInterval }}
+            - "--metrics.datadog.pushInterval={{ .Values.metrics.datadog.pushInterval }}"
+              {{- end }}
+            {{- end }}
           ports:
             - name: readiness
               containerPort: 1081
