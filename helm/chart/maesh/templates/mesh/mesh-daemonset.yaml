@@ -60,12 +60,12 @@ spec:
           args:
             - "--entryPoints.readiness.address=:1081"
             - "--entryPoints.liveness.address=:1082"
-          {{- range $i, $e := until (.Values.limits.http|int) }}
+            {{- range $i, $e := until (.Values.limits.http|int) }}
             - {{ printf "\"--entryPoints.http-%d.address=:%d\"" (add $i 5000) (add $i 5000) }}
-          {{- end }}
-          {{- range $i, $e := until (.Values.limits.tcp|int) }}
+            {{- end }}
+            {{- range $i, $e := until (.Values.limits.tcp|int) }}
             - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" (add $i 10000) (add $i 10000) }}
-          {{- end }}
+            {{- end }}
             - "--providers.rest"
             - "--providers.rest.insecure"
             {{- if .Values.tracing.jaeger.enabled }}
@@ -92,6 +92,54 @@ spec:
               {{- end }}
               {{- if .Values.tracing.datadog.prioritySampling }}
             - "--tracing.datadog.prioritySampling=true"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.tracing.zipkin }}
+              {{- if .Values.tracing.zipkin.httpEndpoint }}
+            - "--tracing.zipkin.httpEndpoint={{ .Values.tracing.zipkin.httpEndpoint }}"
+              {{- end }}
+              {{- if .Values.tracing.zipkin.sameSpan }}
+            - "--tracing.zipkin.sameSpan=true"
+              {{- end }}
+              {{- if .Values.tracing.zipkin.id128Bit }}
+            - "--tracing.zipkin.id128Bit=true"
+              {{- end }}
+              {{- if .Values.tracing.zipkin.sampleRate }}
+            - "--tracing.zipkin.sampleRate={{ .Values.tracing.zipkin.sampleRate }}"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.tracing.instana }}
+              {{- if .Values.tracing.instana.localAgentHost }}
+            - "--tracing.instana.localAgentHost={{ .Values.tracing.instana.localAgentHost }}"
+              {{- end }}
+              {{- if .Values.tracing.instana.localAgentPort }}
+            - "--tracing.instana.localAgentPort={{ .Values.tracing.instana.localAgentPort }}"
+              {{- end }}
+              {{- if .Values.tracing.instana.logLevel }}
+            - "--tracing.instana.logLevel={{ .Values.tracing.instana.logLevel }}"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.tracing.haystack }}
+              {{- if .Values.tracing.haystack.localAgentHost }}
+            - "--tracing.haystack.localAgentHost={{ .Values.tracing.haystack.localAgentHost }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.localAgentPort }}
+            - "--tracing.haystack.localAgentPort={{ .Values.tracing.haystack.localAgentPort }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.globalTag }}
+            - "--tracing.haystack.globalTag={{ .Values.tracing.haystack.globalTag }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.traceIDHeaderName }}
+            - "--tracing.haystack.traceIDHeaderName={{ .Values.tracing.haystack.traceIDHeaderName }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.parentIDHeaderName }}
+            - "--tracing.haystack.parentIDHeaderName={{ .Values.tracing.haystack.parentIDHeaderName }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.spanIDHeaderName }}
+            - "--tracing.haystack.spanIDHeaderName={{ .Values.tracing.haystack.spanIDHeaderName }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.baggagePrefixHeaderName }}
+            - "--tracing.haystack.baggagePrefixHeaderName={{ .Values.tracing.haystack.baggagePrefixHeaderName }}"
               {{- end }}
             {{- end }}
             - "--api.dashboard"
