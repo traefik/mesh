@@ -66,7 +66,7 @@ tracing:
 metrics:
   deploy: true
   prometheus:
-    # whether to expose Proometheus metrics
+    # whether to expose Prometheus metrics
     enabled: true
   ## you can override values of the metrics subchart here.
   ## check charts/metrics/values.yaml for the defaults.
