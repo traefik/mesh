@@ -116,13 +116,9 @@ spec:
             path: "/-/healthy"
             port: webui
           initialDelaySeconds: 5
-        resources:
-          requests:
-            cpu: 500m
-            memory: 500M
-          limits:
-            cpu: 500m
-            memory: 500M
+        {{- if .Values.prometheus.resources }}
+        {{- toYaml .Values.prometheus.resources | indent 8 }}
+        {{- end }}
         volumeMounts:
         - name: config-volume
           mountPath: /prometheus/config
