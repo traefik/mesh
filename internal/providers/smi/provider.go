@@ -23,7 +23,6 @@ import (
 type Provider struct {
 	client        k8s.Client
 	defaultMode   string
-	meshNamespace string
 	tcpStateTable *k8s.State
 	ignored       k8s.IgnoreWrapper
 }
@@ -39,11 +38,10 @@ type destinationKey struct {
 func (p *Provider) Init() {}
 
 // New creates a new provider.
-func New(client k8s.Client, defaultMode string, meshNamespace string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
+func New(client k8s.Client, defaultMode string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
 	p := &Provider{
 		client:        client,
 		defaultMode:   defaultMode,
-		meshNamespace: meshNamespace,
 		tcpStateTable: tcpStateTable,
 		ignored:       ignored,
 	}
@@ -80,24 +78,24 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	}
 
 	for _, service := range services {
-		if p.ignored.IsIgnoredService(service.Name, service.Namespace) {
+		if p.ignored.IsIgnored(service.ObjectMeta) {
 			continue
 		}
 
 		serviceMode := p.getServiceMode(service.Annotations[k8s.AnnotationServiceType])
 		// Get all traffic targets in the service's namespace.
 		trafficTargetsInNamespace := p.getTrafficTargetsWithDestinationInNamespace(service.Namespace, trafficTargets)
-		log.Debugf("Found traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, trafficTargets)
+		log.Debugf("Found traffictargets for service %s/%s: %+v", service.Namespace, service.Name, trafficTargets)
 		// Find all traffic targets that are applicable to the service in question.
 		applicableTrafficTargets := p.getApplicableTrafficTargets(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), trafficTargetsInNamespace)
-		log.Debugf("Found applicable traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, applicableTrafficTargets)
+		log.Debugf("Found applicable traffictargets for service %s/%s: %+v", service.Namespace, service.Name, applicableTrafficTargets)
 		// Group the traffic targets by destination, so that they can be built separately.
 		groupedByDestinationTrafficTargets := p.groupTrafficTargetsByDestination(applicableTrafficTargets)
-		log.Debugf("Found grouped traffictargets for service %s/%s: %+v\n", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
+		log.Debugf("Found grouped traffictargets for service %s/%s: %+v", service.Namespace, service.Name, groupedByDestinationTrafficTargets)
 
 		// Get all traffic split in the service's namespace.
 		trafficSplitsInNamespace := p.getTrafficSplitsWithDestinationInNamespace(service.Namespace, trafficSplits)
-		log.Debugf("Found trafficsplits for service %s/%s: %+v\n", service.Namespace, service.Name, trafficSplitsInNamespace)
+		log.Debugf("Found trafficsplits for service %s/%s: %+v", service.Namespace, service.Name, trafficSplitsInNamespace)
 
 		for _, groupedTrafficTargets := range groupedByDestinationTrafficTargets {
 			for _, groupedTrafficTarget := range groupedTrafficTargets {
@@ -376,7 +374,7 @@ func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip strin
 		result = append(result, fmt.Sprintf("Method(`%s`)", methods))
 	}
 
-	result = append(result, fmt.Sprintf("(Host(`%s.%s.%s`) || Host(`%s`))", name, namespace, p.meshNamespace, ip))
+	result = append(result, fmt.Sprintf("(Host(`%s.%s.maesh`) || Host(`%s`))", name, namespace, ip))
 
 	return strings.Join(result, " && ")
 }

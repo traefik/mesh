@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestIgnoredNamespace(t *testing.T) {
-	meshNamespace := "maesh"
 	testCases := []struct {
 		desc      string
 		namespace string
@@ -31,7 +31,7 @@ func TestIgnoredNamespace(t *testing.T) {
 		{
 			desc:      "ignored mesh namespace",
 			namespace: "maesh",
-			expected:  true,
+			expected:  false,
 		},
 	}
 
@@ -40,7 +40,6 @@ func TestIgnoredNamespace(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			i := NewIgnored()
-			i.SetMeshNamespace(meshNamespace)
 			i.AddIgnoredNamespace("someNamespace")
 			actual := i.IsIgnoredNamespace(test.namespace)
 			assert.Equal(t, test.expected, actual)
@@ -49,35 +48,39 @@ func TestIgnoredNamespace(t *testing.T) {
 }
 
 func TestIgnoredService(t *testing.T) {
-	meshNamespace := "maesh"
 	testCases := []struct {
 		desc      string
 		name      string
 		namespace string
+		app       string
 		expected  bool
 	}{
 		{
 			desc:      "empty ignored",
 			name:      "",
 			namespace: "",
+			app:       "",
 			expected:  false,
 		},
 		{
 			desc:      "ignored service due to namespace",
 			name:      "foo",
 			namespace: "someNamespace",
+			app:       "notignored",
 			expected:  true,
 		},
 		{
 			desc:      "explicit ignored service",
 			name:      "foo",
 			namespace: "bar",
+			app:       "notignored",
 			expected:  true,
 		},
 		{
-			desc:      "ignored mesh service",
+			desc:      "ignored app",
 			name:      "omg",
-			namespace: "maesh",
+			namespace: "foo",
+			app:       "ignoredapp",
 			expected:  true,
 		},
 	}
@@ -87,11 +90,21 @@ func TestIgnoredService(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			i := NewIgnored()
-			i.SetMeshNamespace(meshNamespace)
 			i.AddIgnoredNamespace("someNamespace")
 			i.AddIgnoredService("foo", "bar")
-			actual := i.IsIgnoredService(test.name, test.namespace)
+			i.AddIgnoredApps("ignoredapp")
+			actual := i.IsIgnored(buildMeta(test.name, test.namespace, test.app))
 			assert.Equal(t, test.expected, actual)
 		})
+	}
+}
+
+func buildMeta(name, ns, app string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: ns,
+		Labels: map[string]string{
+			"app": app,
+		},
 	}
 }

@@ -243,7 +243,7 @@ func (w *ClientWrapper) InitCluster(namespace string, clusterDomain string) erro
 	log.Infoln("Preparing Cluster...")
 	log.Debugln("Patching DNS...")
 
-	if err := w.patchDNS(metav1.NamespaceSystem, clusterDomain); err != nil {
+	if err := w.patchDNS(metav1.NamespaceSystem, clusterDomain, namespace); err != nil {
 		return err
 	}
 
@@ -252,8 +252,8 @@ func (w *ClientWrapper) InitCluster(namespace string, clusterDomain string) erro
 	return nil
 }
 
-func (w *ClientWrapper) patchDNS(namespace string, clusterDomain string) error {
-	deployment, exist, err := w.GetDeployment(namespace, "coredns")
+func (w *ClientWrapper) patchDNS(coreNamespace, clusterDomain, maeshNamespace string) error {
+	deployment, exist, err := w.GetDeployment(coreNamespace, "coredns")
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func (w *ClientWrapper) patchDNS(namespace string, clusterDomain string) error {
 
 		var patched bool
 
-		patched, err = w.patchCoreDNSConfigMap(deployment, clusterDomain)
+		patched, err = w.patchCoreDNSConfigMap(deployment, clusterDomain, maeshNamespace)
 		if err != nil {
 			return err
 		}
@@ -284,13 +284,13 @@ func (w *ClientWrapper) patchDNS(namespace string, clusterDomain string) error {
 
 	log.Debugln("coredns not available fallback to kube-dns")
 	// If coreDNS does not exist we try to get the kube-dns
-	deployment, exist, err = w.GetDeployment(namespace, "kube-dns")
+	deployment, exist, err = w.GetDeployment(coreNamespace, "kube-dns")
 	if err != nil {
 		return err
 	}
 
 	if !exist {
-		return fmt.Errorf("nor CoreDNS and KubeDNS are available in namespace %q", namespace)
+		return fmt.Errorf("neither CoreDNS or KubeDNS are available in namespace %q", coreNamespace)
 	}
 
 	ebo := backoff.NewConstantBackOff(10 * time.Second)
@@ -336,7 +336,7 @@ func (w *ClientWrapper) patchDNS(namespace string, clusterDomain string) error {
 	return nil
 }
 
-func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment, clusterDomain string) (bool, error) {
+func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment, clusterDomain, maeshNamespace string) (bool, error) {
 	var coreConfigMapName string
 
 	if len(coreDeployment.Spec.Template.Spec.Volumes) == 0 {
@@ -362,8 +362,8 @@ func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment,
 maesh:53 {
     errors
     rewrite continue {
-        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh maesh-{1}-{2}.maesh.svc.%[1]s
-        answer name maesh-([a-zA-Z0-9-_]*)-([a-zA-Z0-9-_]*)\.maesh\.svc\.%[2]s {1}.{2}.maesh
+        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh %[3]s-{1}-{2}.%[3]s.svc.%[1]s
+        answer name %[3]s-([a-zA-Z0-9-_]*)-([a-zA-Z0-9-_]*)\.%[3]s\.svc\.%[2]s {1}.{2}.maesh
     }
     kubernetes %[1]s in-addr.arpa ip6.arpa {
         pods insecure
@@ -378,7 +378,9 @@ maesh:53 {
 }
 `,
 		clusterDomain,
-		strings.Replace(clusterDomain, ".", "\\.", -1))
+		strings.Replace(clusterDomain, ".", "\\.", -1),
+		maeshNamespace,
+	)
 
 	originalBlock := coreConfigMap.Data["Corefile"]
 	newBlock := originalBlock + serverBlock

@@ -23,6 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -55,7 +56,6 @@ type Controller struct {
 // and return an initialized mesh controller object.
 func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int) *Controller {
 	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
 
 	for _, ns := range ignoreNamespaces {
 		ignored.AddIgnoredNamespace(ns)
@@ -63,6 +63,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 
 	ignored.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
 	ignored.AddIgnoredNamespace(metav1.NamespaceSystem)
+	ignored.AddIgnoredApps("maesh", "jaeger")
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	configRefreshChan := make(chan string)
@@ -103,7 +104,7 @@ func (c *Controller) Init() error {
 	c.api = NewAPI(c.apiPort, &c.lastConfiguration, c.deployLog, c.clients, c.meshNamespace)
 
 	if c.smiEnabled {
-		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
+		c.provider = smi.New(c.clients, c.defaultMode, c.tcpStateTable, c.ignored)
 		// Create new SharedInformerFactories, and register the event handler to informers.
 		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
 		c.smiAccessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
@@ -118,7 +119,7 @@ func (c *Controller) Init() error {
 	}
 
 	// If SMI is not configured, use the kubernetes provider.
-	c.provider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
+	c.provider = kubernetes.New(c.clients, c.defaultMode, c.tcpStateTable, c.ignored)
 
 	return nil
 }
@@ -225,30 +226,42 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 }
 
 func (c *Controller) createMeshServices() error {
-	services, err := c.clients.GetServices(metav1.NamespaceAll)
+	// Because createMeshServices is called after startInformers,
+	// then we already have the cache built, so we can use it.
+	svcs := c.kubernetesFactory.Core().V1().Services().Lister()
+
+	sel, err := c.ignored.LabelSelector()
 	if err != nil {
-		return fmt.Errorf("unable to get services: %v", err)
+		return fmt.Errorf("unable to build label selectors: %w", err)
 	}
 
-	for _, service := range services {
-		if c.ignored.IsIgnoredService(service.Name, service.Namespace) {
+	potentialSvcs, err := svcs.List(sel)
+	if err != nil {
+		return fmt.Errorf("unable to get services: %w", err)
+	}
+
+	for _, service := range potentialSvcs {
+		if c.ignored.IsIgnored(service.ObjectMeta) {
 			continue
 		}
 
 		log.Debugf("Creating mesh for service: %v", service.Name)
+
 		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
 
-		for _, subservice := range services {
-			// If there is already a mesh service created, don't bother recreating
-			if subservice.Name == meshServiceName && subservice.Namespace == c.meshNamespace {
-				continue
-			}
+		_, err := svcs.Services(c.meshNamespace).Get(meshServiceName)
+		if err == nil {
+			continue
+		}
+		// We're expecting an IsNotFound error here, to only create the maesh service if it does not exist.
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("unable to check if maesh service exists: %w", err)
 		}
 
 		log.Infof("Creating associated mesh service: %s", meshServiceName)
 
 		if err := c.createMeshService(service); err != nil {
-			return fmt.Errorf("unable to get create mesh service: %v", err)
+			return fmt.Errorf("unable to create mesh service: %w", err)
 		}
 	}
 
@@ -302,6 +315,9 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      meshServiceName,
 				Namespace: c.meshNamespace,
+				Labels: map[string]string{
+					"app": "maesh",
+				},
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: ports,

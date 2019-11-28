@@ -80,12 +80,41 @@ spec:
             - {{ printf "--tracing.jaeger.samplingserverurl=http://jaeger-agent.%s.svc.%s:5778/sampling" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
               {{- end }}
             {{- end }}
+            {{- if .Values.tracing.datadog }}
+              {{- if .Values.tracing.datadog.localagenthostport }}
+            - "--tracing.datadog.localagenthostport={{ .Values.tracing.datadog.localagenthostport }}"
+              {{- end }}
+              {{- if .Values.tracing.datadog.debug }}
+            - "--tracing.datadog.debug=true"
+              {{- end }}
+              {{- if .Values.tracing.datadog.globalTag }}
+            - "--tracing.datadog.globalTag={{ .Values.tracing.datadog.globalTag }}"
+              {{- end }}
+              {{- if .Values.tracing.datadog.prioritySampling }}
+            - "--tracing.datadog.prioritySampling=true"
+              {{- end }}
+            {{- end }}
             - "--api.dashboard"
             - "--api.insecure"
             - "--ping"
             - "--log.level={{ .Values.mesh.logging }}"
             {{- if .Values.metrics.prometheus.enabled }}
             - "--metrics.prometheus"
+            {{- end }}
+            {{- if .Values.metrics.datadog }}
+            - "--metrics.datadog=true"
+              {{- if .Values.metrics.datadog.address }}
+            - "--metrics.datadog.address={{ .Values.metrics.datadog.address }}"
+              {{- end }}
+              {{- if .Values.metrics.datadog.addEntrypointsLabels }}
+            - "--metrics.datadog.addEntryPointsLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.datadog.addServiceLabels }}
+            - "--metrics.datadog.addServicesLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.datadog.pushInterval }}
+            - "--metrics.datadog.pushInterval={{ .Values.metrics.datadog.pushInterval }}"
+              {{- end }}
             {{- end }}
           ports:
             - name: readiness
