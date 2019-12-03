@@ -34,6 +34,17 @@ func (s *KubernetesSuite) TestHTTPCURL(c *check.C) {
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
 }
 
+func (s *KubernetesSuite) TestHTTPCURLWithDashInNamespace(c *check.C) {
+	// Get the tools pod service in whoami namespace
+	pod := s.getToolsPodMaesh(c)
+	c.Assert(pod, checker.NotNil)
+
+	argSlice := []string{
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami-test.maesh", "--max-time", "5",
+	}
+	s.waitKubectlExecCommand(c, argSlice, "whoami")
+}
+
 func (s *KubernetesSuite) TestTCPCURL(c *check.C) {
 	// Get the tools pod service in whoami namespace
 	pod := s.getToolsPodMaesh(c)
@@ -41,6 +52,17 @@ func (s *KubernetesSuite) TestTCPCURL(c *check.C) {
 
 	argSlice := []string{
 		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami.maesh", "--max-time", "5",
+	}
+	s.waitKubectlExecCommand(c, argSlice, "whoami-tcp")
+}
+
+func (s *KubernetesSuite) TestTCPCURLWithDashInNamespace(c *check.C) {
+	// Get the tools pod service in whoami namespace
+	pod := s.getToolsPodMaesh(c)
+	c.Assert(pod, checker.NotNil)
+
+	argSlice := []string{
+		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami-test.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami-tcp")
 }
