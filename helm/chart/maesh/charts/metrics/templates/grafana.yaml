@@ -62,6 +62,16 @@ spec:
         - name: grafana-config
           mountPath: /etc/grafana
           readOnly: true
+      initContainers:
+      - name: metrics-storage-permission-fix
+        image: busybox
+        command: ["chown", "-R", "472:472", "/var/lib/grafana"]
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - name: metrics-storage
+          mountPath: /var/lib/grafana
       volumes:
       - name: metrics-storage
         persistentVolumeClaim:

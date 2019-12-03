@@ -147,6 +147,16 @@ spec:
           requests:
             cpu: 10m
             memory: 10Mi
+      initContainers:
+      - name: prometheus-storage-permission-fix
+        image: busybox
+        command: ["/bin/chown", "-R", "1000:2000", "/prometheus"]
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - name: prometheus-storage
+          mountPath: /prometheus
       volumes:
       - name: prometheus-storage
         persistentVolumeClaim:
