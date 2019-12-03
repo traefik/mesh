@@ -164,6 +164,51 @@ spec:
             - "--metrics.datadog.pushInterval={{ .Values.metrics.datadog.pushInterval }}"
               {{- end }}
             {{- end }}
+            {{- if .Values.metrics.influxdb }}
+            - "--metrics.influxdb=true"
+              {{- if .Values.metrics.influxdb.address }}
+            - "--metrics.influxdb.address={{ .Values.metrics.influxdb.address }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.protocol }}
+            - "--metrics.influxdb.protocol={{ .Values.metrics.influxdb.protocol }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.database }}
+            - "--metrics.influxdb.database={{ .Values.metrics.influxdb.database }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.retentionPolicy }}
+            - "--metrics.influxdb.retentionPolicy={{ .Values.metrics.influxdb.retentionPolicy }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.username }}
+            - "--metrics.influxdb.username={{ .Values.metrics.influxdb.username }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.password }}
+            - "--metrics.influxdb.password={{ .Values.metrics.influxdb.password }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.addEntrypointsLabels }}
+            - "--metrics.influxdb.addEntryPointsLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.addServiceLabels }}
+            - "--metrics.influxdb.addServicesLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.pushInterval }}
+            - "--metrics.influxdb.pushInterval={{ .Values.metrics.influxdb.pushInterval }}"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.metrics.statsd }}
+            - "--metrics.statsd=true"
+              {{- if .Values.metrics.statsd.address }}
+            - "--metrics.statsd.address={{ .Values.metrics.statsd.address }}"
+              {{- end }}
+              {{- if .Values.metrics.statsd.addEntrypointsLabels }}
+            - "--metrics.statsd.addEntryPointsLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.statsd.addServiceLabels }}
+            - "--metrics.statsd.addServicesLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.statsd.pushInterval }}
+            - "--metrics.statsd.pushInterval={{ .Values.metrics.statsd.pushInterval }}"
+              {{- end }}
+            {{- end }}
           ports:
             - name: readiness
               containerPort: 1081
