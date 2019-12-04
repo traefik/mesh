@@ -32,7 +32,7 @@ helm installation to perform all steps it needs is to edit the
 ```bash tab="Command"
 helm repo add maesh https://containous.github.io/maesh/charts
 helm repo update
-helm install maesh --namespace=maesh maesh/maesh
+helm install maesh maesh/maesh
 ```
 
 ```bash tab="Expected output"

@@ -10,7 +10,7 @@ helm repo update
 Install maesh helm chart:
 
 ```bash
-helm install maesh --namespace=maesh maesh/maesh
+helm install maesh maesh/maesh
 ```
 
 ## Install from source
@@ -28,7 +28,7 @@ make
 To deploy the helm chart, run:
 
 ```shell
-helm install maesh helm/chart/maesh --namespace maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
+helm install maesh helm/chart/maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
 ## KubeDNS support
@@ -36,7 +36,7 @@ helm install maesh helm/chart/maesh --namespace maesh --set controller.image.pul
 Maesh can support KubeDNS
 
 ```bash
-helm install maesh --namespace=maesh maesh/maesh --set kubedns=true
+helm install maesh maesh/maesh --set kubedns=true
 ```
 
 With this parameter Maesh will install a CoreDNS as a daemonset.
@@ -47,7 +47,7 @@ KubeDNS will be patched with [stubDomains](https://kubernetes.io/docs/tasks/admi
 If you use a cluster domain other than `cluster.local` set it by using the `clusterDomain` parameter:
 
 ```bash
-helm install maesh --namespace=maesh maesh/maesh --set clusterDomain=my.custom.domain.com
+helm install maesh maesh/maesh --set clusterDomain=my.custom.domain.com
 ```
 
 ## Service Mesh Interface
@@ -69,11 +69,6 @@ helm install maesh --namespace=maesh maesh/maesh --set smi.enable=true`
     If you do not want to install them, or want to avoid the warning during a re-install,
     please use the new `--skip-crds` flag.
     More informationcan be found on the [helm documentation](https://helm.sh/docs/topics/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you)
-
-## Installation namespace
-
-Maesh does not _need_ to be installed in the `maesh` namespace,
-but it does need to be installed into its _own_ namespace, separate from user namespaces.
 
 ## Platform recommendations
 

@@ -28,13 +28,13 @@ helm install maesh maesh/maesh
 ### Deploy Maesh in a Custom Namespace
 
 ```bash
-helm install maesh --namespace=maesh maesh/maesh
+helm install maesh maesh/maesh
 ```
 
 ### Deploy with Custom Configuration
 
 ```bash
-helm install maesh --namespace=maesh --set "key1=val1,key2=val2,..." maesh/maesh
+helm install maesh --set "key1=val1,key2=val2,..." maesh/maesh
 ```
 
 Where `key1=val1`, `key2=val2`, `...` are chart values that you can find at <https://github.com/containous/maesh/blob/master/helm/chart/maesh/values.yaml>.

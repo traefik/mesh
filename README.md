@@ -49,7 +49,7 @@ To run this app, you require the following:
 ```shell
 helm repo add maesh https://containous.github.io/maesh/charts
 helm repo update
-helm install maesh --namespace=maesh maesh/maesh
+helm install maesh maesh/maesh
 ```
 
 You can find the complete documentation at https://docs.mae.sh.
