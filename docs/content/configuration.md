@@ -49,6 +49,10 @@ maesh.containo.us/scheme: "h2c"
 
 This annotation can be set to either `http`, `https` or `h2c` and is available for `maesh.containo.us/traffic-type: "http"`.
 
+??? Note "Limitations"
+    Please keep in mind, that if you set the scheme to `https` your service needs to expose itself via HTTPS as there is no
+    mTLS in Maesh.
+
 #### Retry
 
 Retries can be enabled by using the following annotation:
