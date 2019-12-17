@@ -203,7 +203,7 @@ func (s *BaseSuite) startAndWaitForKubeDNS(c *check.C) {
 }
 
 func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
-	err := s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second)
+	err := s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
