@@ -362,8 +362,8 @@ func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment,
 maesh:53 {
     errors
     rewrite continue {
-        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh %[3]s-{1}-shadow-service-{2}.%[3]s.svc.%[1]s
-        answer name %[3]s-([a-zA-Z0-9-_]*)-shadow-service-([a-zA-Z0-9-_]*)\.%[3]s\.svc\.%[2]s {1}.{2}.maesh
+        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh %[3]s-{1}-bWFlc2g-{2}.%[3]s.svc.%[1]s
+        answer name %[3]s-([a-zA-Z0-9-_]*)-bWFlc2g-([a-zA-Z0-9-_]*)\.%[3]s\.svc\.%[2]s {1}.{2}.maesh
     }
     kubernetes %[1]s in-addr.arpa ip6.arpa {
         pods insecure
