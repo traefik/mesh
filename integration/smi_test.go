@@ -33,8 +33,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
-	s.createResources(c, "resources/smi/access-control/")
-	time.Sleep(5 * time.Second)
+	s.createResources(c, "resources/smi/access-control/", 10*time.Second)
 
 	testCases := []struct {
 		desc        string
@@ -193,9 +192,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 }
 
 func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
-	s.createResources(c, "resources/smi/traffic-split")
-
-	time.Sleep(10 * time.Second)
+	s.createResources(c, "resources/smi/traffic-split", 10*time.Second)
 
 	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
@@ -339,9 +336,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 
 			err = s.client.KubeClient.CoreV1().Services("default").Delete("b", &metav1.DeleteOptions{})
 			c.Assert(err, checker.IsNil)
-			s.createResources(c, "resources/smi/traffic-split")
-
-			time.Sleep(10 * time.Second)
+			s.createResources(c, "resources/smi/traffic-split", 10*time.Second)
 		}
 
 		argSlice := []string{
@@ -397,13 +392,14 @@ func (s *SMISuite) getLineContent(data string) string {
 	return ""
 }
 
-func (s *SMISuite) createResources(c *check.C, dirPath string) {
+func (s *SMISuite) createResources(c *check.C, dirPath string, waitTime time.Duration) {
 	// Create the required objects from the smi directory
 	cmd := exec.Command("kubectl", "apply",
 		"-f", path.Join(s.dir, dirPath))
 	cmd.Env = os.Environ()
 	_, err := cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
+	time.Sleep(waitTime)
 }
 
 func (s *SMISuite) deleteResources(c *check.C, dirPath string, force bool) {
