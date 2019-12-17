@@ -16,7 +16,6 @@ rules:
       - pods
       - endpoints
     verbs:
-      - get
       - list
       - watch
   - apiGroups:
@@ -33,8 +32,9 @@ rules:
     verbs:
       - get
       - create
-      - delete
       - update
+      - list
+      - watch
   - apiGroups:
       - ""
     resources:

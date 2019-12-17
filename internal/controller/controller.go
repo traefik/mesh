@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -161,7 +162,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	log.Debug("Initializing Mesh controller")
 
 	// Start the informers.
-	c.startInformers(stopCh)
+	c.startInformers(stopCh, 10*time.Second)
 
 	// Load the state from the TCP State Configmap before running.
 	c.tcpStateTable, err = c.loadTCPStateTable()
@@ -216,11 +217,15 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 }
 
 // startInformers starts the controller informers.
-func (c *Controller) startInformers(stopCh <-chan struct{}) {
-	// Start the informers
+func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Duration) {
+	// Start the informers with a timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	defer cancel()
+
+	log.Debug("Starting Informers")
 	c.kubernetesFactory.Start(stopCh)
 
-	for t, ok := range c.kubernetesFactory.WaitForCacheSync(stopCh) {
+	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
 			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
@@ -229,7 +234,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 	if c.smiEnabled {
 		c.smiAccessFactory.Start(stopCh)
 
-		for t, ok := range c.smiAccessFactory.WaitForCacheSync(stopCh) {
+		for t, ok := range c.smiAccessFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
@@ -237,7 +242,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 
 		c.smiSpecsFactory.Start(stopCh)
 
-		for t, ok := range c.smiSpecsFactory.WaitForCacheSync(stopCh) {
+		for t, ok := range c.smiSpecsFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
@@ -245,7 +250,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 
 		c.smiSplitFactory.Start(stopCh)
 
-		for t, ok := range c.smiSplitFactory.WaitForCacheSync(stopCh) {
+		for t, ok := range c.smiSplitFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
