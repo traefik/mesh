@@ -362,7 +362,11 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 				if err != nil {
 					return err
 				}
-				percentageResult[s.getLineContent(data)]++
+				result := s.getLineContent(data)
+				if result == "" {
+					c.Log(data)
+				}
+				percentageResult[result]++
 			}
 
 			fmt.Println(percentageResult)
