@@ -10,7 +10,7 @@ helm repo update
 Install maesh helm chart:
 
 ```bash
-helm install --name=maesh --namespace=maesh maesh/maesh
+helm install maesh maesh/maesh
 ```
 
 ## Install from source
@@ -28,7 +28,7 @@ make
 To deploy the helm chart, run:
 
 ```shell
-helm install helm/chart/maesh --namespace maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
+helm install maesh helm/chart/maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
 ## KubeDNS support
@@ -36,7 +36,7 @@ helm install helm/chart/maesh --namespace maesh --set controller.image.pullPolic
 Maesh can support KubeDNS
 
 ```bash
-helm install --name=maesh --namespace=maesh maesh/maesh --set kubedns=true
+helm install maesh maesh/maesh --set kubedns=true
 ```
 
 With this parameter Maesh will install a CoreDNS as a daemonset.
@@ -47,7 +47,7 @@ KubeDNS will be patched with [stubDomains](https://kubernetes.io/docs/tasks/admi
 If you use a cluster domain other than `cluster.local` set it by using the `clusterDomain` parameter:
 
 ```bash
-helm install --name=maesh --namespace=maesh maesh/maesh --set clusterDomain=my.custom.domain.com
+helm install maesh maesh/maesh --set clusterDomain=my.custom.domain.com
 ```
 
 ## Service Mesh Interface
@@ -55,19 +55,20 @@ helm install --name=maesh --namespace=maesh maesh/maesh --set clusterDomain=my.c
 Maesh supports the [SMI specification](https://smi-spec.io/) which defines a set of custom resources
 to provide a fine-grained control over instrumentation, routing and access control of east-west communications.
 
-To enable SMI, install maesh in SMI mode by setting the `smi.enable` and `smi.deploycrds` helm chart options to true.
+To enable SMI, install maesh in SMI mode by setting the `smi.enable` helm chart option to true.
 
 ```bash
-helm install --name=maesh --namespace=maesh maesh/maesh --set smi.enable=true --set smi.deploycrds=true`
+helm install maesh --namespace=maesh maesh/maesh --set smi.enable=true`
 ```
 
 - The `smi.enable` option makes Maesh process SMI resources.
-- The `smi.deploycrds` option makes Maesh deploy the SMI CRDs with the helm chart.
 
-## Installation namespace
-
-Maesh does not _need_ to be installed in the `maesh` namespace,
-but it does need to be installed into its _own_ namespace, separate from user namespaces.
+!!! Note CRDs
+    Helm v3 automatically will install the CRDs in the `/crds` directory.
+    If you are re-installing into a cluster with the CRDs already present, helm may give you a warning.
+    If you do not want to install them, or want to avoid the warning during a re-install,
+    please use the new `--skip-crds` flag.
+    More informationcan be found on the [helm documentation](https://helm.sh/docs/topics/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you)
 
 ## Platform recommendations
 

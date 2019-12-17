@@ -1,8 +1,6 @@
 package integration
 
 import (
-	"os"
-
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 )
@@ -12,9 +10,7 @@ type KubernetesSuite struct{ BaseSuite }
 
 func (s *KubernetesSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
-	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 	s.startAndWaitForCoreDNS(c)
-	s.installTiller(c)
 
 	err := s.installHelmMaesh(c, false, false)
 	c.Assert(err, checker.IsNil)

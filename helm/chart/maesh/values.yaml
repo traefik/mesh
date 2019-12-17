@@ -148,7 +148,6 @@ metrics:
     # pushInterval: 10s
 
 smi:
-  deploycrds: true
   enable: false
 
 limits:

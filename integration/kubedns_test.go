@@ -1,8 +1,6 @@
 package integration
 
 import (
-	"os"
-
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 )
@@ -12,11 +10,9 @@ type KubeDNSSuite struct{ BaseSuite }
 
 func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
-	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 	s.startAndWaitForKubeDNS(c)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
-	s.installTiller(c)
 }
 
 func (s *KubeDNSSuite) TearDownSuite(c *check.C) {
