@@ -30,8 +30,8 @@ data:
     maesh:53 {
         errors
         rewrite continue {
-            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh maesh-{1}-bWFlc2g-{2}.maesh.svc.{{ default "cluster.local" .Values.clusterDomain }}
-            answer name maesh-([a-zA-Z0-9-_]*)-bWFlc2g-([a-zA-Z0-9-_]*)\.maesh\.svc\.{{ default "cluster.local" .Values.clusterDomain | replace "." "\\." }} {1}.{2}.maesh
+            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh maesh-{1}-6d61657368-{2}.maesh.svc.{{ default "cluster.local" .Values.clusterDomain }}
+            answer name maesh-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.maesh\.svc\.{{ default "cluster.local" .Values.clusterDomain | replace "." "\\." }} {1}.{2}.maesh
         }
         kubernetes {{ default "cluster.local" .Values.clusterDomain }} in-addr.arpa ip6.arpa {
             pods insecure

@@ -415,7 +415,7 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 
 // userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.
 func (c *Controller) userServiceToMeshServiceName(serviceName string, namespace string) string {
-	return fmt.Sprintf("%s-%s-bWFlc2g-%s", c.meshNamespace, serviceName, namespace)
+	return fmt.Sprintf("%s-%s-6d61657368-%s", c.meshNamespace, serviceName, namespace)
 }
 
 func (c *Controller) loadTCPStateTable() (*k8s.State, error) {

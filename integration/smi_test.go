@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path"
 	"regexp"
+	"strings"
 	"time"
 
 	splitv1alpha "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
@@ -45,7 +47,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod C -> Service B /test returns 200",
 			source:      "c-tools",
-			destination: "b.default",
+			destination: "b.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
@@ -66,7 +68,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod A -> Service B /test returns 200",
 			source:      "a-tools",
-			destination: "b.default",
+			destination: "b.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
@@ -94,7 +96,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod C -> Service D /test returns 200",
 			source:      "c-tools",
-			destination: "d.default",
+			destination: "d.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
@@ -115,28 +117,28 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod A -> Service E /test returns 200",
 			source:      "a-tools",
-			destination: "e.default",
+			destination: "e.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod B -> Service E /test returns 200",
 			source:      "b-tools",
-			destination: "e.default",
+			destination: "e.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod C -> Service E /test returns 200",
 			source:      "c-tools",
-			destination: "e.default",
+			destination: "e.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod D -> Service E /test returns 200",
 			source:      "d-tools",
-			destination: "e.default",
+			destination: "e.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
@@ -183,6 +185,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		}
 
 		c.Log(test.desc)
+		s.digHost(c, test.source, test.destination)
 		s.waitKubectlExecCommand(c, argSlice, fmt.Sprintf("HTTP/1.1 %d", test.expected))
 	}
 
@@ -199,45 +202,50 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 	s.waitForMaeshControllerStarted(c)
 
 	testCases := []struct {
-		desc         string
-		source       string
-		iteration    int
-		trafficSplit *splitv1alpha.TrafficSplit
-		destination  string
-		expected     map[string]float64
+		desc            string
+		source          string
+		iteration       int
+		trafficSplit    *splitv1alpha.TrafficSplit
+		destinationHost string
+		destinationPath string
+		expected        map[string]float64
 	}{
 		{
-			desc:        "Pod A -> Service B /test returns 200",
-			source:      "a-tools",
-			iteration:   1,
-			destination: "b-v1.default/test",
+			desc:            "Pod A -> Service B /test returns 200",
+			source:          "a-tools",
+			iteration:       1,
+			destinationHost: "b-v1.default.svc.cluster.local",
+			destinationPath: "/test",
 			expected: map[string]float64{
 				"Hostname: b-v1": 100,
 			},
 		},
 		{
-			desc:        "Pod A -> Service B /foo returns 200",
-			source:      "a-tools",
-			iteration:   1,
-			destination: "b-v2.default.maesh/foo",
+			desc:            "Pod A -> Service B /foo returns 200",
+			source:          "a-tools",
+			iteration:       1,
+			destinationHost: "b-v2.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v2": 100,
 			},
 		},
 		{
-			desc:        "Pod A -> Service B v1/foo returns 200",
-			source:      "a-tools",
-			iteration:   1,
-			destination: "b-v1.default.maesh/foo",
+			desc:            "Pod A -> Service B v1/foo returns 200",
+			source:          "a-tools",
+			iteration:       1,
+			destinationHost: "b-v1.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 100,
 			},
 		},
 		{
-			desc:        "Pod A -> Service B v2/foo returns 200",
-			source:      "a-tools",
-			iteration:   1,
-			destination: "b-v2.default.maesh/foo",
+			desc:            "Pod A -> Service B v2/foo returns 200",
+			source:          "a-tools",
+			iteration:       1,
+			destinationHost: "b-v2.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v2": 100,
 			},
@@ -264,7 +272,8 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 					},
 				},
 			},
-			destination: "b.default.maesh/foo",
+			destinationHost: "b.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 50,
 				"Hostname: b-v2": 50,
@@ -292,7 +301,8 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 					},
 				},
 			},
-			destination: "b.default.maesh/foo",
+			destinationHost: "b.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 0,
 				"Hostname: b-v2": 100,
@@ -320,7 +330,8 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 					},
 				},
 			},
-			destination: "b.default.maesh/foo",
+			destinationHost: "b.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 100,
 				"Hostname: b-v2": 0,
@@ -340,7 +351,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 		}
 
 		argSlice := []string{
-			"exec", "-it", test.source, "--", "curl", "-v", test.destination, "--max-time", "5",
+			"exec", "-it", test.source, "--", "curl", "-v", test.destinationHost + test.destinationPath, "--max-time", "5",
 		}
 
 		c.Log(test.desc)
@@ -413,4 +424,17 @@ func (s *SMISuite) deleteResources(c *check.C, dirPath string, force bool) {
 	cmd.Env = os.Environ()
 	_, err := cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
+}
+
+func (s *SMISuite) digHost(c *check.C, source, destination string) {
+	// Dig the host, with a short response for the A record
+	argSlice := []string{
+		"exec", "-i", source, "--", "dig", destination, "+short",
+	}
+
+	output, err := s.waitKubectlExecCommandReturn(c, argSlice)
+	c.Assert(err, checker.IsNil)
+	c.Log(fmt.Sprintf("Dig %s: %s", destination, strings.TrimSpace(output)))
+	IP := net.ParseIP(strings.TrimSpace(output))
+	c.Assert(IP, checker.NotNil)
 }
