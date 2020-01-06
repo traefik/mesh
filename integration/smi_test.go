@@ -12,10 +12,9 @@ import (
 	"strings"
 	"time"
 
-	splitv1alpha "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
+	split "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha2"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -205,7 +204,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 		desc            string
 		source          string
 		iteration       int
-		trafficSplit    *splitv1alpha.TrafficSplit
+		trafficSplit    *split.TrafficSplit
 		destinationHost string
 		destinationPath string
 		expected        map[string]float64
@@ -254,20 +253,20 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:      "Pod A -> Service B v2/foo returns 200 50-50",
 			source:    "a-tools",
 			iteration: 10,
-			trafficSplit: &splitv1alpha.TrafficSplit{
+			trafficSplit: &split.TrafficSplit{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "canary",
 				},
-				Spec: splitv1alpha.TrafficSplitSpec{
+				Spec: split.TrafficSplitSpec{
 					Service: "b",
-					Backends: []splitv1alpha.TrafficSplitBackend{
+					Backends: []split.TrafficSplitBackend{
 						{
 							Service: "b-v1",
-							Weight:  *resource.NewQuantity(int64(500), resource.DecimalSI),
+							Weight:  500,
 						},
 						{
 							Service: "b-v2",
-							Weight:  *resource.NewQuantity(int64(500), resource.DecimalSI),
+							Weight:  500,
 						},
 					},
 				},
@@ -283,20 +282,20 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:      "Pod A -> Service B v2/foo returns 200 0-100",
 			source:    "a-tools",
 			iteration: 10,
-			trafficSplit: &splitv1alpha.TrafficSplit{
+			trafficSplit: &split.TrafficSplit{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "canary",
 				},
-				Spec: splitv1alpha.TrafficSplitSpec{
+				Spec: split.TrafficSplitSpec{
 					Service: "b",
-					Backends: []splitv1alpha.TrafficSplitBackend{
+					Backends: []split.TrafficSplitBackend{
 						{
 							Service: "b-v1",
-							Weight:  *resource.NewQuantity(int64(0), resource.DecimalSI),
+							Weight:  0,
 						},
 						{
 							Service: "b-v2",
-							Weight:  *resource.NewQuantity(int64(1000), resource.DecimalSI),
+							Weight:  1000,
 						},
 					},
 				},
@@ -312,20 +311,20 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:      "Pod A -> Service B v2/foo returns 200 100-0",
 			source:    "a-tools",
 			iteration: 10,
-			trafficSplit: &splitv1alpha.TrafficSplit{
+			trafficSplit: &split.TrafficSplit{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "canary",
 				},
-				Spec: splitv1alpha.TrafficSplitSpec{
+				Spec: split.TrafficSplitSpec{
 					Service: "b",
-					Backends: []splitv1alpha.TrafficSplitBackend{
+					Backends: []split.TrafficSplitBackend{
 						{
 							Service: "b-v1",
-							Weight:  *resource.NewQuantity(int64(1000), resource.DecimalSI),
+							Weight:  1000,
 						},
 						{
 							Service: "b-v2",
-							Weight:  *resource.NewQuantity(int64(0), resource.DecimalSI),
+							Weight:  0,
 						},
 					},
 				},
@@ -340,9 +339,9 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 	}
 
 	for _, test := range testCases {
-		var trafficSplit *splitv1alpha.TrafficSplit
+		var trafficSplit *split.TrafficSplit
 		if test.trafficSplit != nil {
-			trafficSplit, err = s.client.SmiSplitClient.SplitV1alpha1().TrafficSplits("default").Create(test.trafficSplit)
+			trafficSplit, err = s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits("default").Create(test.trafficSplit)
 			c.Assert(err, checker.IsNil)
 
 			err = s.client.KubeClient.CoreV1().Services("default").Delete("b", &metav1.DeleteOptions{})
@@ -363,7 +362,11 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 				if err != nil {
 					return err
 				}
-				percentageResult[s.getLineContent(data)]++
+				result := s.getLineContent(data)
+				if result == "" {
+					c.Log(data)
+				}
+				percentageResult[result]++
 			}
 
 			fmt.Println(percentageResult)
@@ -380,7 +383,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 		c.Assert(err, check.IsNil)
 
 		if trafficSplit != nil {
-			err := s.client.SmiSplitClient.SplitV1alpha1().TrafficSplits("default").Delete(trafficSplit.Name, &metav1.DeleteOptions{})
+			err := s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits("default").Delete(trafficSplit.Name, &metav1.DeleteOptions{})
 			c.Assert(err, checker.IsNil)
 		}
 	}

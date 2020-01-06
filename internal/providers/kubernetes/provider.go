@@ -13,14 +13,17 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers/core/v1"
 )
 
 // Provider holds a client to access the provider.
 type Provider struct {
-	client        k8s.CoreV1Client
-	defaultMode   string
-	tcpStateTable *k8s.State
-	ignored       k8s.IgnoreWrapper
+	defaultMode     string
+	tcpStateTable   *k8s.State
+	ignored         k8s.IgnoreWrapper
+	serviceLister   listers.ServiceLister
+	endpointsLister listers.EndpointsLister
 }
 
 // Init the provider.
@@ -29,12 +32,13 @@ func (p *Provider) Init() {
 }
 
 // New creates a new provider.
-func New(client k8s.CoreV1Client, defaultMode string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper) *Provider {
+func New(defaultMode string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper, serviceLister listers.ServiceLister, endpointsLister listers.EndpointsLister) *Provider {
 	p := &Provider{
-		client:        client,
-		defaultMode:   defaultMode,
-		tcpStateTable: tcpStateTable,
-		ignored:       ignored,
+		defaultMode:     defaultMode,
+		tcpStateTable:   tcpStateTable,
+		ignored:         ignored,
+		serviceLister:   serviceLister,
+		endpointsLister: endpointsLister,
 	}
 
 	p.Init()
@@ -96,7 +100,7 @@ func (p *Provider) buildService(endpoints *corev1.Endpoints, scheme string) *dyn
 func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *dynamic.TCPService {
 	var servers []dynamic.TCPServer
 
-	if endpoints.Subsets != nil {
+	if endpoints != nil && endpoints.Subsets != nil {
 		for _, subset := range endpoints.Subsets {
 			for _, endpointPort := range subset.Ports {
 				for _, address := range subset.Addresses {
@@ -121,12 +125,12 @@ func (p *Provider) buildTCPService(endpoints *corev1.Endpoints) *dynamic.TCPServ
 // BuildConfig builds the configuration for routing
 // from a native kubernetes environment.
 func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
-	services, err := p.client.GetServices(metav1.NamespaceAll)
+	services, err := p.serviceLister.Services(metav1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to get services: %v", err)
 	}
 
-	endpoints, err := p.client.GetEndpointses(metav1.NamespaceAll)
+	endpoints, err := p.endpointsLister.Endpoints(metav1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to get endpoints: %v", err)
 	}

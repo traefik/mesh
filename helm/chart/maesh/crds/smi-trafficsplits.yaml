@@ -5,16 +5,21 @@ metadata:
   name: trafficsplits.split.smi-spec.io
 spec:
   group: split.smi-spec.io
-  version: v1alpha1
+  version: v1alpha2
   scope: Namespaced
   names:
     kind: TrafficSplit
+    listKind: TrafficSplitList
     shortNames:
-      - ts
+    - ts
     plural: trafficsplits
     singular: trafficsplit
+  versions:
+  - name: v1alpha2
+    served: true
+    storage: true
   additionalPrinterColumns:
-    - name: Service
-      type: string
-      description: The apex service of this split.
-      JSONPath: .spec.service
+  - name: Service
+    type: string
+    description: The apex service of this split.
+    JSONPath: .spec.service
