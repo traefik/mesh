@@ -44,7 +44,7 @@ To run this app, you require the following:
 - CoreDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.3+ supported)
 - Helm v3
 
-## Install
+## Install (Helm v2 only)
 
 ```shell
 helm repo add maesh https://containous.github.io/maesh/charts
