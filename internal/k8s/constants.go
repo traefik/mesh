@@ -31,6 +31,8 @@ const (
 	SchemeHTTP string = "http"
 	// SchemeH2c h2c scheme.
 	SchemeH2c string = "h2c"
+	// SchemeHTTPS HTTPS scheme.
+	SchemeHTTPS string = "https"
 
 	// BlockAllMiddlewareKey block all middleware name.
 	BlockAllMiddlewareKey string = "smi-block-all-middleware"

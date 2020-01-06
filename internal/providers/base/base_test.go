@@ -115,6 +115,13 @@ func TestGetScheme(t *testing.T) {
 			expected: k8s.SchemeH2c,
 		},
 		{
+			desc: "HTTPS exist",
+			annotations: map[string]string{
+				k8s.AnnotationScheme: k8s.SchemeHTTPS,
+			},
+			expected: k8s.SchemeHTTPS,
+		},
+		{
 			desc: "Unknown scheme",
 			annotations: map[string]string{
 				k8s.AnnotationScheme: "powpow",

@@ -87,7 +87,7 @@ func AddBaseSMIMiddlewares(config *dynamic.Configuration) {
 func GetScheme(annotations map[string]string) string {
 	scheme := annotations[k8s.AnnotationScheme]
 
-	if scheme != k8s.SchemeHTTP && scheme != k8s.SchemeH2c {
+	if scheme != k8s.SchemeHTTP && scheme != k8s.SchemeH2c && scheme != k8s.SchemeHTTPS {
 		return k8s.SchemeHTTP
 	}
 
