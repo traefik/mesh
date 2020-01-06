@@ -26,7 +26,7 @@ make
 ## Deploy helm chart
 
 ??? Note "Helm V3"
-    Please keep in mind, that our current Helm Chart is v2 compatible only. The v3 compatible Chart will be released with v1.1 of Maesh.
+    Please keep in mind, that our current Helm Chart (v1.0.0) is v2 compatible only. The v3 compatible Chart will be released with v1.1 of Maesh.
 
 To deploy the helm chart, run:
 
