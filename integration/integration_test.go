@@ -29,7 +29,7 @@ var (
 	k3sImage       = "rancher/k3s"
 	k3sVersion     = "v0.10.1"
 	maeshNamespace = "maesh"
-	maeshBinary    = "maesh"
+	maeshBinary    = "../dist/maesh"
 )
 
 func Test(t *testing.T) {
@@ -89,12 +89,14 @@ type BaseSuite struct {
 func (s *BaseSuite) maeshStartControllerWithArgsCmd(args ...string) *exec.Cmd {
 	controllerArgSlice := []string{fmt.Sprintf("--masterurl=%s", masterURL), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")), "--debug", fmt.Sprintf("--namespace=%s", maeshNamespace)}
 	args = append(controllerArgSlice, args...)
+
 	return exec.Command(maeshBinary, args...)
 }
 
 func (s *BaseSuite) maeshPrepareWithArgs(args ...string) *exec.Cmd {
 	prepareArgSlice := []string{"prepare", fmt.Sprintf("--masterurl=%s", masterURL), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")), "--debug", "--clusterdomain=cluster.local", fmt.Sprintf("--namespace=%s", maeshNamespace)}
 	args = append(prepareArgSlice, args...)
+
 	return exec.Command(maeshBinary, args...)
 }
 
@@ -106,6 +108,11 @@ func (s *BaseSuite) startMaeshBinaryCmd(c *check.C) *exec.Cmd {
 	c.Assert(err, checker.IsNil)
 
 	return s.maeshStartControllerWithArgsCmd()
+}
+
+func (s *BaseSuite) stopMaeshBinary(c *check.C, process *os.Process) {
+	err := process.Kill()
+	c.Assert(err, checker.IsNil)
 }
 
 func (s *BaseSuite) startk3s(c *check.C) {

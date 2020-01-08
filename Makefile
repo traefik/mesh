@@ -40,7 +40,7 @@ local-test: clean
 	go test -v -cover ./...
 
 # Integration test
-test-integration: $(DIST_DIR) kubectl helm build k3d
+test-integration: $(DIST_DIR) kubectl helm build local-build k3d
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS)
 
 kubectl:
@@ -49,7 +49,6 @@ kubectl:
 build: $(DIST_DIR)
 	docker build --tag "$(DOCKER_IMAGE_NAME):latest" --build-arg="MAKE_TARGET=local-build" $(CURDIR)/
 	docker run --name=build -t "$(DOCKER_IMAGE_NAME):latest" version
-	docker cp build:/app/$(BINARY_NAME) $(DIST_DIR)/
 	docker rm build
 
 test: $(DIST_DIR)

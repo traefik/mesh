@@ -22,5 +22,5 @@ func (s *KubernetesNewSuite) TestHTTP(c *check.C) {
 	cmd := s.startMaeshBinaryCmd(c)
 	err := cmd.Start()
 	c.Assert(err, checker.IsNil)
-	defer cmd.Process.Kill()
+	defer s.stopMaeshBinary(c, cmd.Process)
 }
