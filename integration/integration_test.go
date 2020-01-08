@@ -29,6 +29,7 @@ var (
 	k3sImage       = "rancher/k3s"
 	k3sVersion     = "v0.10.1"
 	maeshNamespace = "maesh"
+	maeshBinary    = "maesh"
 )
 
 func Test(t *testing.T) {
@@ -37,6 +38,7 @@ func Test(t *testing.T) {
 		return
 	}
 
+	check.Suite(&KubernetesNewSuite{})
 	check.Suite(&SMISuite{})
 	check.Suite(&KubernetesSuite{})
 	check.Suite(&CoreDNSSuite{})
@@ -82,6 +84,28 @@ type BaseSuite struct {
 	kubeConfigPath string
 	try            *try.Try
 	client         *k8s.ClientWrapper
+}
+
+func (s *BaseSuite) maeshStartControllerWithArgsCmd(args ...string) *exec.Cmd {
+	controllerArgSlice := []string{fmt.Sprintf("--masterurl=%s", masterURL), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")), "--debug", fmt.Sprintf("--namespace=%s", maeshNamespace)}
+	args = append(controllerArgSlice, args...)
+	return exec.Command(maeshBinary, args...)
+}
+
+func (s *BaseSuite) maeshPrepareWithArgs(args ...string) *exec.Cmd {
+	prepareArgSlice := []string{"prepare", fmt.Sprintf("--masterurl=%s", masterURL), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")), "--debug", "--clusterdomain=cluster.local", fmt.Sprintf("--namespace=%s", maeshNamespace)}
+	args = append(prepareArgSlice, args...)
+	return exec.Command(maeshBinary, args...)
+}
+
+func (s *BaseSuite) startMaeshBinaryCmd(c *check.C) *exec.Cmd {
+	cmd := s.maeshPrepareWithArgs()
+	cmd.Env = os.Environ()
+
+	_, err := cmd.CombinedOutput()
+	c.Assert(err, checker.IsNil)
+
+	return s.maeshStartControllerWithArgsCmd()
 }
 
 func (s *BaseSuite) startk3s(c *check.C) {
