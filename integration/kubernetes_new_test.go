@@ -29,6 +29,7 @@ func (s *KubernetesNewSuite) TearDownSuite(c *check.C) {
 func (s *KubernetesNewSuite) TestHTTP(c *check.C) {
 	cmd := s.startMaeshBinaryCmd(c)
 	err := cmd.Start()
+
 	c.Assert(err, checker.IsNil)
 	defer s.stopMaeshBinary(c, cmd.Process)
 
@@ -36,12 +37,14 @@ func (s *KubernetesNewSuite) TestHTTP(c *check.C) {
 
 	testFunc := func() error {
 		url := fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort)
+
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
 			return err
 		}
 
 		client := &http.Client{Timeout: 5 * time.Second}
+
 		resp, err := client.Do(req)
 		if err != nil {
 			return err
@@ -49,6 +52,7 @@ func (s *KubernetesNewSuite) TestHTTP(c *check.C) {
 
 		if resp != nil {
 			defer resp.Body.Close()
+
 			if resp.StatusCode != http.StatusOK {
 				return fmt.Errorf("status was not ok: %d", resp.StatusCode)
 			}
@@ -66,11 +70,10 @@ func (s *KubernetesNewSuite) TestHTTP(c *check.C) {
 			}
 
 			fmt.Printf("Parsed config: %+v\n\n", config)
-
 		}
+
 		return nil
 	}
 
 	c.Assert(s.try.WaitFunction(testFunc, 30*time.Second), checker.IsNil)
-
 }
