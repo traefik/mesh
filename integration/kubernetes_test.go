@@ -29,7 +29,7 @@ func (s *KubernetesSuite) TestHTTPCURL(c *check.C) {
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
+		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
 }
@@ -40,7 +40,7 @@ func (s *KubernetesSuite) TestHTTPCURLWithDashInNamespace(c *check.C) {
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami-test.maesh", "--max-time", "5",
+		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami-test.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
 }
@@ -51,7 +51,7 @@ func (s *KubernetesSuite) TestTCPCURL(c *check.C) {
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami.maesh", "--max-time", "5",
+		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami-tcp")
 }
@@ -62,7 +62,7 @@ func (s *KubernetesSuite) TestTCPCURLWithDashInNamespace(c *check.C) {
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami-test.maesh", "--max-time", "5",
+		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami-test.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami-tcp")
 }
