@@ -30,6 +30,7 @@ var (
 	k3sVersion     = "v0.10.1"
 	maeshNamespace = "maesh"
 	maeshBinary    = "../dist/maesh"
+	maeshAPIPort   = 9000
 )
 
 func Test(t *testing.T) {
