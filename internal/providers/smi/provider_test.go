@@ -161,7 +161,11 @@ func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 	assert.NoError(t, err)
 
 	actual := provider.getTrafficTargetsWithDestinationInNamespace("foo", allTrafficTargets)
-	assert.Equal(t, expected, actual)
+	assert.Equal(t, len(actual), len(expected))
+
+	for _, expectedValue := range expected {
+		assert.Contains(t, actual, expectedValue)
+	}
 }
 
 func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
