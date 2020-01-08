@@ -3,6 +3,9 @@ language: go
 sudo: required
 dist: xenial
 
+git:
+  depth: false
+
 notifications:
   email:
     on_success: never
@@ -36,10 +39,18 @@ install:
   - go mod download
 
 before_deploy:
+  - >
+    if ! [ "$BEFORE_DEPLOY_RUN" ]; then
+      export BEFORE_DEPLOY_RUN=1;
+      echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin;
+      curl -sfL https://raw.githubusercontent.com/containous/structor/master/godownloader.sh | bash -s -- -b "${GOPATH}/bin" ${STRUCTOR_VERSION};
+      structor -o containous -r maesh --dockerfile-url="https://raw.githubusercontent.com/containous/maesh/master/docs/docs.Dockerfile" --menu.js-url="https://raw.githubusercontent.com/containous/structor/master/traefik-menu.js.gotmpl" --rqts-url="https://raw.githubusercontent.com/containous/structor/master/requirements-override.txt" --force-edit-url --exp-branch=master --debug;
+    fi
+  # Copy helm packages
+  - cp -r pages/charts site/charts
   # Install linters
   - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
   - golangci-lint --version
-  - if ! [ "$BEFORE_DEPLOY_RUN" ]; then export BEFORE_DEPLOY_RUN=1; echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin; fi
   # Install Docker image multi-arch builder
   - curl -sfL https://raw.githubusercontent.com/ldez/seihon/master/godownloader.sh | bash -s -- -b "${GOPATH}/bin" ${SEIHON_VERSION}
   - seihon --version
@@ -67,7 +78,7 @@ deploy:
     edge: false
     github_token: ${GITHUB_TOKEN}
     target_branch: gh-pages
-    local_dir: pages
+    local_dir: site
     skip_cleanup: true
     keep_history: true
     on:
