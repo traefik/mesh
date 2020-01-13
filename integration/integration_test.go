@@ -210,12 +210,30 @@ func (s *BaseSuite) stopK3s() {
 	fmt.Println(string(output))
 }
 
-func (s *BaseSuite) removeAllKubernetesObjects() {
+func (s *BaseSuite) removeAllKubernetesObjects(c *check.C) {
 	// Delete namespaces.
-	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("maesh", &metav1.DeleteOptions{})
-	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("whoami", &metav1.DeleteOptions{})
-	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("whoami-test", &metav1.DeleteOptions{})
-	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("test", &metav1.DeleteOptions{})
+	namespaces := []string{"maesh", "whoami", "whoami-test", "test"}
+
+	for _, ns := range namespaces {
+		err := s.client.KubeClient.CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{})
+		if err != nil {
+			c.Log(err)
+		}
+
+		ebo := backoff.NewExponentialBackOff()
+		ebo.MaxElapsedTime = 10 * time.Second
+
+		err = backoff.Retry(safe.OperationWithRecover(func() error {
+			_, namespaceErr := s.client.KubeClient.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+			if namespaceErr != nil {
+				return nil
+			}
+			return fmt.Errorf("namespace exists")
+		}), ebo)
+		if err != nil {
+			c.Log(err)
+		}
+	}
 }
 
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {

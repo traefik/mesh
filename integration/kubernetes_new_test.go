@@ -24,7 +24,7 @@ func (s *KubernetesNewSuite) SetUpSuite(c *check.C) {
 
 func (s *KubernetesNewSuite) TearDownSuite(c *check.C) {
 	//s.stopK3s()
-	s.removeAllKubernetesObjects()
+	s.removeAllKubernetesObjects(c)
 }
 
 func (s *KubernetesNewSuite) TestHTTP(c *check.C) {
