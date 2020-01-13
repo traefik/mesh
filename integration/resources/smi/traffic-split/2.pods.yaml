@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: a-tools
+  namespace: test
 spec:
   serviceAccountName: a
   containers:
@@ -17,6 +18,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: b-v1
+  namespace: test
   labels:
     app: b
     version: v1
@@ -32,6 +34,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: b-v2
+  namespace: test
   labels:
     app: b
     version: v2

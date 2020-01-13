@@ -24,6 +24,7 @@ type SMISuite struct{ BaseSuite }
 func (s *SMISuite) SetUpSuite(c *check.C) {
 	// s.startk3s(c)
 	// s.startAndWaitForCoreDNS(c)
+	s.createK8sClient(c)
 	s.createRequiredNamespaces(c)
 }
 
@@ -47,133 +48,133 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod C -> Service B /test returns 200",
 			source:      "c-tools",
-			destination: "b.default.svc.cluster.local",
+			destination: "b.test.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod C -> Service B.maesh /test returns 404",
 			source:      "c-tools",
-			destination: "b.default.maesh",
+			destination: "b.test.maesh",
 			path:        "/test",
 			expected:    404,
 		},
-		//{
-		//	desc:        "Pod C -> Service B.maesh /foo returns 200",
-		//	source:      "c-tools",
-		//	destination: "b.default.maesh",
-		//	path:        "/foo",
-		//	expected:    200,
-		//},
+		{
+			desc:        "Pod C -> Service B.maesh /foo returns 200",
+			source:      "c-tools",
+			destination: "b.test.maesh",
+			path:        "/foo",
+			expected:    200,
+		},
 		{
 			desc:        "Pod A -> Service B /test returns 200",
 			source:      "a-tools",
-			destination: "b.default.svc.cluster.local",
+			destination: "b.test.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod A -> Service B.maesh /test returns 404",
 			source:      "a-tools",
-			destination: "b.default.maesh",
+			destination: "b.test.maesh",
 			path:        "/test",
 			expected:    404,
 		},
 		{
 			desc:        "Pod A -> Service B.maesh /foo returns 200",
 			source:      "a-tools",
-			destination: "b.default.maesh",
+			destination: "b.test.maesh",
 			path:        "/foo",
 			expected:    200,
 		},
 		{
 			desc:        "Pod A -> Service D.maesh /bar returns 403",
 			source:      "a-tools",
-			destination: "d.default.maesh",
+			destination: "d.test.maesh",
 			path:        "/bar",
 			expected:    403,
 		},
 		{
 			desc:        "Pod C -> Service D /test returns 200",
 			source:      "c-tools",
-			destination: "d.default.svc.cluster.local",
+			destination: "d.test.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod C -> Service D.maesh /test returns 404",
 			source:      "c-tools",
-			destination: "d.default.maesh",
+			destination: "d.test.maesh",
 			path:        "/test",
 			expected:    404,
 		},
 		{
 			desc:        "Pod C -> Service D.maesh /bar returns 200",
 			source:      "c-tools",
-			destination: "d.default.maesh",
+			destination: "d.test.maesh",
 			path:        "/bar",
 			expected:    200,
 		},
 		{
 			desc:        "Pod A -> Service E /test returns 200",
 			source:      "a-tools",
-			destination: "e.default.svc.cluster.local",
+			destination: "e.test.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod B -> Service E /test returns 200",
 			source:      "b-tools",
-			destination: "e.default.svc.cluster.local",
+			destination: "e.test.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod C -> Service E /test returns 200",
 			source:      "c-tools",
-			destination: "e.default.svc.cluster.local",
+			destination: "e.test.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod D -> Service E /test returns 200",
 			source:      "d-tools",
-			destination: "e.default.svc.cluster.local",
+			destination: "e.test.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod A -> Service E.maesh /test returns 404",
 			source:      "a-tools",
-			destination: "e.default.maesh",
+			destination: "e.test.maesh",
 			path:        "/test",
 			expected:    404,
 		},
 		{
 			desc:        "Pod B -> Service E.maesh /test returns 404",
 			source:      "b-tools",
-			destination: "e.default.maesh",
+			destination: "e.test.maesh",
 			path:        "/test",
 			expected:    404,
 		},
 		{
 			desc:        "Pod C -> Service E.maesh /test returns 404",
 			source:      "c-tools",
-			destination: "e.default.maesh",
+			destination: "e.test.maesh",
 			path:        "/test",
 			expected:    404,
 		},
 		{
 			desc:        "Pod D -> Service E.maesh /test returns 404",
 			source:      "d-tools",
-			destination: "e.default.maesh",
+			destination: "e.test.maesh",
 			path:        "/test",
 			expected:    404,
 		},
 		{
 			desc:        "Pod D -> Service TCP.maesh returns something",
 			source:      "d-tools",
-			destination: "tcp.default.maesh",
+			destination: "tcp.test.maesh",
 			path:        "/",
 			expected:    200,
 		},
@@ -181,11 +182,11 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 
 	for _, test := range testCases {
 		argSlice := []string{
-			"exec", "-i", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
+			"exec", "-i", test.source, "-n", testNamespace, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
 		}
 
 		c.Log(test.desc)
-		s.digHost(c, test.source, test.destination)
+		s.digHost(c, test.source, testNamespace, test.destination)
 		s.waitKubectlExecCommand(c, argSlice, fmt.Sprintf("HTTP/1.1 %d", test.expected))
 	}
 
@@ -214,7 +215,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:            "Pod A -> Service B /test returns 200",
 			source:          "a-tools",
 			iteration:       1,
-			destinationHost: "b-v1.default.svc.cluster.local",
+			destinationHost: "b-v1.test.svc.cluster.local",
 			destinationPath: "/test",
 			expected: map[string]float64{
 				"Hostname: b-v1": 100,
@@ -224,7 +225,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:            "Pod A -> Service B /foo returns 200",
 			source:          "a-tools",
 			iteration:       1,
-			destinationHost: "b-v2.default.maesh",
+			destinationHost: "b-v2.test.maesh",
 			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v2": 100,
@@ -234,7 +235,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:            "Pod A -> Service B v1/foo returns 200",
 			source:          "a-tools",
 			iteration:       1,
-			destinationHost: "b-v1.default.maesh",
+			destinationHost: "b-v1.test.maesh",
 			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 100,
@@ -244,7 +245,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:            "Pod A -> Service B v2/foo returns 200",
 			source:          "a-tools",
 			iteration:       1,
-			destinationHost: "b-v2.default.maesh",
+			destinationHost: "b-v2.test.maesh",
 			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v2": 100,
@@ -256,7 +257,8 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			iteration: 10,
 			trafficSplit: &split.TrafficSplit{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "canary",
+					Name:      "canary",
+					Namespace: testNamespace,
 				},
 				Spec: split.TrafficSplitSpec{
 					Service: "b",
@@ -272,7 +274,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 					},
 				},
 			},
-			destinationHost: "b.default.maesh",
+			destinationHost: "b.test.maesh",
 			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 50,
@@ -285,7 +287,8 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			iteration: 10,
 			trafficSplit: &split.TrafficSplit{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "canary",
+					Name:      "canary",
+					Namespace: testNamespace,
 				},
 				Spec: split.TrafficSplitSpec{
 					Service: "b",
@@ -301,7 +304,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 					},
 				},
 			},
-			destinationHost: "b.default.maesh",
+			destinationHost: "b.test.maesh",
 			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 0,
@@ -314,7 +317,8 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			iteration: 10,
 			trafficSplit: &split.TrafficSplit{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "canary",
+					Name:      "canary",
+					Namespace: testNamespace,
 				},
 				Spec: split.TrafficSplitSpec{
 					Service: "b",
@@ -330,7 +334,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 					},
 				},
 			},
-			destinationHost: "b.default.maesh",
+			destinationHost: "b.test.maesh",
 			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 100,
@@ -342,16 +346,16 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 	for _, test := range testCases {
 		var trafficSplit *split.TrafficSplit
 		if test.trafficSplit != nil {
-			trafficSplit, err = s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits("default").Create(test.trafficSplit)
+			trafficSplit, err = s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits(testNamespace).Create(test.trafficSplit)
 			c.Assert(err, checker.IsNil)
 
-			err = s.client.KubeClient.CoreV1().Services("default").Delete("b", &metav1.DeleteOptions{})
+			err = s.client.KubeClient.CoreV1().Services(testNamespace).Delete("b", &metav1.DeleteOptions{})
 			c.Assert(err, checker.IsNil)
 			s.createResources(c, "resources/smi/traffic-split", 10*time.Second)
 		}
 
 		argSlice := []string{
-			"exec", "-i", test.source, "--", "curl", "-v", test.destinationHost + test.destinationPath, "--max-time", "5",
+			"exec", "-i", test.source, "-n", testNamespace, "--", "curl", "-v", test.destinationHost + test.destinationPath, "--max-time", "5",
 		}
 
 		c.Log(test.desc)
@@ -384,7 +388,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 		c.Assert(err, check.IsNil)
 
 		if trafficSplit != nil {
-			err := s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits("default").Delete(trafficSplit.Name, &metav1.DeleteOptions{})
+			err := s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits(testNamespace).Delete(trafficSplit.Name, &metav1.DeleteOptions{})
 			c.Assert(err, checker.IsNil)
 		}
 	}
@@ -430,10 +434,10 @@ func (s *SMISuite) deleteResources(c *check.C, dirPath string, force bool) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *SMISuite) digHost(c *check.C, source, destination string) {
+func (s *SMISuite) digHost(c *check.C, source, sourceNamespace, destination string) {
 	// Dig the host, with a short response for the A record
 	argSlice := []string{
-		"exec", "-i", source, "--", "dig", destination, "+short",
+		"exec", "-i", source, "-n", sourceNamespace, "--", "dig", destination, "+short",
 	}
 
 	output, err := s.waitKubectlExecCommandReturn(c, argSlice)

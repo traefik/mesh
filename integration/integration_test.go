@@ -18,6 +18,7 @@ import (
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 	corev1 "k8s.io/api/core/v1"
+	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -145,11 +146,17 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	err = s.loadK3sImages()
 	c.Assert(err, checker.IsNil)
 
+	s.createK8sClient(c)
+	s.createRequiredNamespaces(c)
+	c.Log("k3s start successfully.")
+}
+
+func (s *BaseSuite) createK8sClient(c *check.C) {
 	// Get kubeconfig path.
-	cmd = exec.Command("k3d", "get-kubeconfig", "--name", k3dClusterName)
+	cmd := exec.Command("k3d", "get-kubeconfig", "--name", k3dClusterName)
 	cmd.Env = os.Environ()
 
-	output, err = cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
 
 	s.kubeConfigPath = strings.TrimSuffix(string(output), "\n")
@@ -164,8 +171,6 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	c.Log("Setting new kubeconfig path...")
 	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 
-	s.createRequiredNamespaces(c)
-	c.Log("k3s start successfully.")
 }
 
 func (s *BaseSuite) loadK3sImages() error {
@@ -215,23 +220,20 @@ func (s *BaseSuite) removeAllKubernetesObjects(c *check.C) {
 	namespaces := []string{"maesh", "whoami", "whoami-test", "test"}
 
 	for _, ns := range namespaces {
-		err := s.client.KubeClient.CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{})
-		if err != nil {
-			c.Log(err)
-		}
-
+		_ = s.client.KubeClient.CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{})
 		ebo := backoff.NewExponentialBackOff()
-		ebo.MaxElapsedTime = 10 * time.Second
+		ebo.MaxElapsedTime = 30 * time.Second
 
-		err = backoff.Retry(safe.OperationWithRecover(func() error {
+		err := backoff.Retry(safe.OperationWithRecover(func() error {
 			_, namespaceErr := s.client.KubeClient.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
-			if namespaceErr != nil {
+			if kubeerror.IsNotFound(namespaceErr) {
 				return nil
 			}
-			return fmt.Errorf("namespace exists")
+			// namespace still exists
+			return fmt.Errorf("removing namespace %s...", ns)
 		}), ebo)
 		if err != nil {
-			c.Log(err)
+			c.Log(err.Error())
 		}
 	}
 }

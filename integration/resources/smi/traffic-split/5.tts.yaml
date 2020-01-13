@@ -3,6 +3,7 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: a-b
+  namespace: test
 destination:
   kind: ServiceAccount
   name: b
@@ -10,6 +11,7 @@ destination:
 specs:
 - kind: HTTPRouteGroup
   name: app-routes
+  namespace: test
   matches:
   - foo
 sources:
