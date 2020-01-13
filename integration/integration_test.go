@@ -217,7 +217,6 @@ func (s *BaseSuite) removeAllKubernetesObjects() {
 	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("whoami", &metav1.DeleteOptions{})
 	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("whoami-test", &metav1.DeleteOptions{})
 	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("test", &metav1.DeleteOptions{})
-
 }
 
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
