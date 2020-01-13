@@ -3,40 +3,40 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: a
-  namespace: default
+  namespace: test
 
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: b
-  namespace: default
+  namespace: test
 
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: c
-  namespace: default
+  namespace: test
 
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: d
-  namespace: default
+  namespace: test
 
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: e
-  namespace: default
+  namespace: test
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: tcp
-  namespace: default
+  namespace: test
 
 

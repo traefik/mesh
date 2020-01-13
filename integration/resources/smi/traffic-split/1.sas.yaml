@@ -3,11 +3,11 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: a
-  namespace: default
+  namespace: test
 
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: b
-  namespace: default
+  namespace: test

@@ -31,6 +31,7 @@ var (
 	maeshNamespace = "maesh"
 	maeshBinary    = "../dist/maesh"
 	maeshAPIPort   = 9000
+	testNamespace  = "test"
 )
 
 func Test(t *testing.T) {
@@ -163,8 +164,8 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	c.Log("Setting new kubeconfig path...")
 	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 
-	c.Log("Creating maesh namespace...")
-	s.createMaeshNamespace(c)
+	c.Log("Creating required namespaces...")
+	s.createRequiredNamespaces(c)
 	c.Log("k3s start successfully.")
 }
 
@@ -210,6 +211,15 @@ func (s *BaseSuite) stopK3s() {
 	fmt.Println(string(output))
 }
 
+func (s *BaseSuite) removeAllKubernetesObjects() {
+	// Delete namespaces.
+	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("maesh", &metav1.DeleteOptions{})
+	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("whoami", &metav1.DeleteOptions{})
+	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("whoami-test", &metav1.DeleteOptions{})
+	_ = s.client.KubeClient.CoreV1().Namespaces().Delete("test", &metav1.DeleteOptions{})
+
+}
+
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
 	cmd := exec.Command("kubectl", "apply", "-f", path.Join(s.dir, "resources/coredns"))
 	cmd.Env = os.Environ()
@@ -244,7 +254,7 @@ func (s *BaseSuite) waitForMaeshControllerStartedWithReturn() error {
 }
 
 func (s *BaseSuite) waitForTools(c *check.C) {
-	err := s.try.WaitReadyDeployment("tiny-tools", metav1.NamespaceDefault, 30*time.Second)
+	err := s.try.WaitReadyDeployment("tiny-tools", testNamespace, 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -272,7 +282,7 @@ func (s *BaseSuite) startWhoami(c *check.C) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) createMaeshNamespace(c *check.C) {
+func (s *BaseSuite) createRequiredNamespaces(c *check.C) {
 	// Create maesh namespace, required by helm v3.
 	cmd := exec.Command("kubectl", "create", "namespace", maeshNamespace)
 	cmd.Env = os.Environ()
@@ -281,7 +291,15 @@ func (s *BaseSuite) createMaeshNamespace(c *check.C) {
 
 	fmt.Println(string(output))
 	c.Assert(err, checker.IsNil)
-	c.Log("maesh namespace created successfully.")
+
+	// Create test namespace, for testing objects.
+	cmd = exec.Command("kubectl", "create", "namespace", testNamespace)
+	cmd.Env = os.Environ()
+
+	output, err = cmd.CombinedOutput()
+
+	fmt.Println(string(output))
+	c.Assert(err, checker.IsNil)
 }
 
 func (s *BaseSuite) installHelmMaesh(c *check.C, smi bool, kubeDNS bool) error {
@@ -336,7 +354,7 @@ func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
 }
 
 func (s *BaseSuite) getToolsPodMaesh(c *check.C) *corev1.Pod {
-	podList, err := s.client.ListPodWithOptions(metav1.NamespaceDefault, metav1.ListOptions{
+	podList, err := s.client.ListPodWithOptions(testNamespace, metav1.ListOptions{
 		LabelSelector: "app=tiny-tools",
 	})
 	c.Assert(err, checker.IsNil)

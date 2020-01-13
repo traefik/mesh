@@ -6,7 +6,7 @@ metadata:
 destination:
   kind: ServiceAccount
   name: b
-  namespace: default
+  namespace: test
 specs:
 - kind: HTTPRouteGroup
   name: app-routes
@@ -15,4 +15,4 @@ specs:
 sources:
 - kind: ServiceAccount
   name: a
-  namespace: default
+  namespace: test

@@ -3,6 +3,7 @@ apiVersion: specs.smi-spec.io/v1alpha1
 kind: HTTPRouteGroup
 metadata:
   name: app-routes
+  namespace: test
 matches:
 - name: foo
   pathRegex: /foo

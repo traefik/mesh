@@ -3,19 +3,21 @@ kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: a-b
+  namespace: test
 destination:
   kind: ServiceAccount
   name: b
-  namespace: default
+  namespace: test
 specs:
 - kind: HTTPRouteGroup
   name: app-routes
+  namespace: test
   matches:
   - foo
 sources:
 - kind: ServiceAccount
   name: a
-  namespace: default
+  namespace: test
 
 #---
 #kind: TrafficTarget
@@ -25,7 +27,7 @@ sources:
 #destination:
 #  kind: ServiceAccount
 #  name: b
-#  namespace: default
+#  namespace: test
 #specs:
 #- kind: HTTPRouteGroup
 #  name: app-routes
@@ -34,39 +36,43 @@ sources:
 #sources:
 #- kind: ServiceAccount
 #  name: c
-#  namespace: default
+#  namespace: test
 
 ---
 kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: c-d
+  namespace: test
 destination:
   kind: ServiceAccount
   name: d
-  namespace: default
+  namespace: test
 specs:
 - kind: HTTPRouteGroup
   name: app-routes
+  namespace: test
   matches:
   - bar
 sources:
 - kind: ServiceAccount
   name: c
-  namespace: default
+  namespace: test
 ---
 kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
   name: tcp-access
+  namespace: test
 destination:
   kind: ServiceAccount
   name: tcp
-  namespace: default
+  namespace: test
 specs:
   - kind: TCPRoute
     name: tcp-access
+    namespace: test
 sources:
   - kind: ServiceAccount
     name: d
-    namespace: default
+    namespace: test
