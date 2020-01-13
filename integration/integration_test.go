@@ -164,7 +164,6 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	c.Log("Setting new kubeconfig path...")
 	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 
-	c.Log("Creating required namespaces...")
 	s.createRequiredNamespaces(c)
 	c.Log("k3s start successfully.")
 }
@@ -282,13 +281,14 @@ func (s *BaseSuite) startWhoami(c *check.C) {
 }
 
 func (s *BaseSuite) createRequiredNamespaces(c *check.C) {
+	c.Log("Creating required namespaces...")
 	// Create maesh namespace, required by helm v3.
 	cmd := exec.Command("kubectl", "create", "namespace", maeshNamespace)
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
 
-	fmt.Println(string(output))
+	fmt.Print(string(output))
 	c.Assert(err, checker.IsNil)
 
 	// Create test namespace, for testing objects.
@@ -297,7 +297,7 @@ func (s *BaseSuite) createRequiredNamespaces(c *check.C) {
 
 	output, err = cmd.CombinedOutput()
 
-	fmt.Println(string(output))
+	fmt.Print(string(output))
 	c.Assert(err, checker.IsNil)
 }
 
