@@ -170,7 +170,6 @@ func (s *BaseSuite) createK8sClient(c *check.C) {
 
 	c.Log("Setting new kubeconfig path...")
 	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
-
 }
 
 func (s *BaseSuite) loadK3sImages() error {
@@ -230,7 +229,7 @@ func (s *BaseSuite) removeAllKubernetesObjects(c *check.C) {
 				return nil
 			}
 			// namespace still exists
-			return fmt.Errorf("removing namespace %s...", ns)
+			return fmt.Errorf("removing namespace: %s", ns)
 		}), ebo)
 		if err != nil {
 			c.Log(err.Error())
