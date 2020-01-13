@@ -1,6 +1,4 @@
 # For personnal CI
-# mv /home/runner/workspace/src/github.com/<username>/ /home/runner/workspace/src/github.com/containous/
-# cd /home/runner/workspace/src/github.com/containous/maesh/
 for s in apache2 cassandra elasticsearch memcached mysql mongod postgresql sphinxsearch rethinkdb rabbitmq-server redis-server; do sudo service $s stop; done
 sudo swapoff -a
 sudo dd if=/dev/zero of=/swapfile bs=1M count=3072
@@ -24,7 +22,9 @@ if [ -f "./.semaphoreci/golang.sh" ]; then ./.semaphoreci/golang.sh; fi
 if [ -f "./.semaphoreci/golang.sh" ]; then export GOROOT="/usr/local/golang/${GO_VERSION}/go"; fi
 if [ -f "./.semaphoreci/golang.sh" ]; then export GOTOOLDIR="/usr/local/golang/${GO_VERSION}/go/pkg/tool/linux_amd64"; fi
 go version
-
+mkdir -p /home/runner/src/github.com/containous/maesh
+mv /home/runner/maesh/ /home/runner/src/github.com/containous/maesh
+cd /home/runner/src/github.com/containous/maesh
 if [ -f "./go.mod" ]; then export GO111MODULE=on; fi
 if [ -f "./go.mod" ]; then export GOPROXY=https://proxy.golang.org; fi
 if [ -f "./go.mod" ]; then go mod download; fi
