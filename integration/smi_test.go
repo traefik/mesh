@@ -24,7 +24,6 @@ type SMISuite struct{ BaseSuite }
 func (s *SMISuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
 	s.startAndWaitForCoreDNS(c)
-	s.createRequiredNamespaces(c)
 }
 
 func (s *SMISuite) TearDownSuite(c *check.C) {
