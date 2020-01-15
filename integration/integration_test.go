@@ -28,7 +28,6 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 	checker "github.com/vdemeester/shakers"
 	corev1 "k8s.io/api/core/v1"
-	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -224,29 +223,6 @@ func (s *BaseSuite) stopK3s() {
 	fmt.Println(string(output))
 }
 
-func (s *BaseSuite) removeAllKubernetesObjects(c *check.C) {
-	// Delete namespaces.
-	namespaces := []string{"maesh", "whoami", "whoami-test", "test"}
-
-	for _, ns := range namespaces {
-		_ = s.client.KubeClient.CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{})
-		ebo := backoff.NewExponentialBackOff()
-		ebo.MaxElapsedTime = 30 * time.Second
-
-		err := backoff.Retry(safe.OperationWithRecover(func() error {
-			_, namespaceErr := s.client.KubeClient.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
-			if kubeerror.IsNotFound(namespaceErr) {
-				return nil
-			}
-			// namespace still exists
-			return fmt.Errorf("removing namespace: %s", ns)
-		}), ebo)
-		if err != nil {
-			c.Log(err.Error())
-		}
-	}
-}
-
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
 	cmd := exec.Command("kubectl", "apply", "-f", path.Join(s.dir, "resources/coredns"))
 	cmd.Env = os.Environ()
@@ -398,6 +374,7 @@ func (s *BaseSuite) testConfiguration(c *check.C, path string) {
 	expectedJSON := filepath.FromSlash(path)
 
 	var buf bytes.Buffer
+
 	err = try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 5*time.Second, try.StatusCodeIs(http.StatusOK), matchesConfig(expectedJSON, &buf))
 	if err != nil {
 		c.Error(err)
@@ -411,11 +388,12 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 			return fmt.Errorf("failed to read response body: %s", err)
 		}
 
-		if err := res.Body.Close(); err != nil {
+		if err = res.Body.Close(); err != nil {
 			return err
 		}
 
 		var obtained dynamic.Configuration
+
 		err = json.Unmarshal(body, &obtained)
 		if err != nil {
 			return err
@@ -423,7 +401,8 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 
 		if buf != nil {
 			buf.Reset()
-			if _, err := io.Copy(buf, bytes.NewReader(body)); err != nil {
+
+			if _, err = io.Copy(buf, bytes.NewReader(body)); err != nil {
 				return err
 			}
 		}
@@ -474,6 +453,7 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 		if err != nil {
 			return err
 		}
+
 		return errors.New(text)
 	}
 }

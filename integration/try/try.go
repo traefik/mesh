@@ -244,6 +244,7 @@ func doTryRequest(request *http.Request, timeout time.Duration, transport http.R
 
 func doRequest(action timedAction, timeout time.Duration, request *http.Request, transport http.RoundTripper, conditions ...ResponseCondition) (*http.Response, error) {
 	var resp *http.Response
+
 	return resp, action(timeout, func() error {
 		var err error
 		client := http.DefaultClient
@@ -255,6 +256,7 @@ func doRequest(action timedAction, timeout time.Duration, request *http.Request,
 		if err != nil {
 			return err
 		}
+		defer resp.Body.Close()
 
 		for _, condition := range conditions {
 			if err := condition(resp); err != nil {
@@ -285,10 +287,12 @@ func Do(timeout time.Duration, operation DoCondition) error {
 		fmt.Println("+")
 		return nil
 	}
+
 	fmt.Print("*")
 
 	stopTimer := time.NewTimer(timeout)
 	defer stopTimer.Stop()
+
 	retryTick := time.NewTicker(interval)
 	defer retryTick.Stop()
 
@@ -299,6 +303,7 @@ func Do(timeout time.Duration, operation DoCondition) error {
 			return fmt.Errorf("try operation failed: %s", err)
 		case <-retryTick.C:
 			fmt.Print("*")
+
 			if err = operation(); err == nil {
 				fmt.Println("+")
 				return err

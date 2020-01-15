@@ -32,6 +32,7 @@
     "maligned",
     "gochecknoinits",
     "gochecknoglobals",
+    "gomnd",
     "scopelint",
     "funlen",
   ]

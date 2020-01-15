@@ -31,6 +31,7 @@ func BodyContains(values ...string) ResponseCondition {
 				return fmt.Errorf("could not find '%s' in body '%s'", value, string(body))
 			}
 		}
+
 		return nil
 	}
 }
@@ -50,6 +51,7 @@ func BodyNotContains(values ...string) ResponseCondition {
 				return fmt.Errorf("find '%s' in body '%s'", value, string(body))
 			}
 		}
+
 		return nil
 	}
 }
@@ -69,6 +71,7 @@ func BodyContainsOr(values ...string) ResponseCondition {
 				return nil
 			}
 		}
+
 		return fmt.Errorf("could not find '%v' in body '%s'", values, string(body))
 	}
 }
@@ -85,6 +88,7 @@ func HasBody() ResponseCondition {
 		if len(body) == 0 {
 			return errors.New("response doesn't have body content")
 		}
+
 		return nil
 	}
 }
@@ -122,6 +126,7 @@ func StatusCodeIs(status int) ResponseCondition {
 		if res.StatusCode != status {
 			return fmt.Errorf("got status code %d, wanted %d", res.StatusCode, status)
 		}
+
 		return nil
 	}
 }
@@ -133,6 +138,7 @@ func HasHeader(header string) ResponseCondition {
 		if _, ok := res.Header[header]; !ok {
 			return errors.New("response doesn't contain header: " + header)
 		}
+
 		return nil
 	}
 }
@@ -147,10 +153,12 @@ func HasHeaderValue(header, value string, exactMatch bool) ResponseCondition {
 		}
 
 		matchFound := false
+
 		for _, hdr := range res.Header[header] {
 			if value != hdr && exactMatch {
 				return fmt.Errorf("got header %s with value %s, wanted %s", header, hdr, value)
 			}
+
 			if value == hdr {
 				matchFound = true
 			}
@@ -159,6 +167,7 @@ func HasHeaderValue(header, value string, exactMatch bool) ResponseCondition {
 		if !matchFound {
 			return fmt.Errorf("response doesn't contain header %s with value %s", header, value)
 		}
+
 		return nil
 	}
 }
@@ -177,6 +186,7 @@ func HasHeaderStruct(header http.Header) ResponseCondition {
 				return fmt.Errorf("for header %s got values %v, wanted %v", key, res.Header[key], header[key])
 			}
 		}
+
 		return nil
 	}
 }
