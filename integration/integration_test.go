@@ -1,12 +1,20 @@
 package integration
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -14,8 +22,10 @@ import (
 	"github.com/cenkalti/backoff/v3"
 	"github.com/containous/maesh/integration/try"
 	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/go-check/check"
+	"github.com/pmezard/go-difflib/difflib"
 	checker "github.com/vdemeester/shakers"
 	corev1 "k8s.io/api/core/v1"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
@@ -379,4 +389,91 @@ func (s *BaseSuite) getToolsPodMaesh(c *check.C) *corev1.Pod {
 	c.Assert(len(podList.Items), checker.Equals, 1)
 
 	return &podList.Items[0]
+}
+
+func (s *BaseSuite) testConfiguration(c *check.C, path string) {
+	err := try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 20*time.Second, try.BodyContains(`"service":"readiness"`))
+	c.Assert(err, checker.IsNil)
+
+	expectedJSON := filepath.FromSlash(path)
+
+	var buf bytes.Buffer
+	err = try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 5*time.Second, try.StatusCodeIs(http.StatusOK), matchesConfig(expectedJSON, &buf))
+	if err != nil {
+		c.Error(err)
+	}
+}
+
+func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
+	return func(res *http.Response) error {
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read response body: %s", err)
+		}
+
+		if err := res.Body.Close(); err != nil {
+			return err
+		}
+
+		var obtained dynamic.Configuration
+		err = json.Unmarshal(body, &obtained)
+		if err != nil {
+			return err
+		}
+
+		if buf != nil {
+			buf.Reset()
+			if _, err := io.Copy(buf, bytes.NewReader(body)); err != nil {
+				return err
+			}
+		}
+
+		got, err := json.MarshalIndent(obtained, "", "    ")
+		if err != nil {
+			return err
+		}
+
+		expected, err := ioutil.ReadFile(wantConfig)
+		if err != nil {
+			return err
+		}
+
+		// The pods IPs are dynamic, so we cannot predict them,
+		// which is why we have to ignore them in the comparison.
+		rxURL := regexp.MustCompile(`"(url|address)":\s+(".*")`)
+		sanitizedExpected := rxURL.ReplaceAll(expected, []byte(`"$1": "XXXX"`))
+		sanitizedGot := rxURL.ReplaceAll(got, []byte(`"$1": "XXXX"`))
+
+		rxHostRule := regexp.MustCompile("Host\\(\\`(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)\\`\\)")
+		sanitizedExpected = rxHostRule.ReplaceAll(sanitizedExpected, []byte("Host(`XXXX`)"))
+		sanitizedGot = rxHostRule.ReplaceAll(sanitizedGot, []byte("Host(`XXXX`)"))
+
+		rxServerStatus := regexp.MustCompile(`"http://.*?":\s+(".*")`)
+		sanitizedExpected = rxServerStatus.ReplaceAll(sanitizedExpected, []byte(`"http://XXXX": $1`))
+		sanitizedGot = rxServerStatus.ReplaceAll(sanitizedGot, []byte(`"http://XXXX": $1`))
+
+		// The tcp entrypoints are dynamic, so we cannot predict them,
+		// which is why we have to ignore them in the comparison.
+		rxTCPEntrypoints := regexp.MustCompile(`"tcp-1000(\d)"`)
+		sanitizedExpected = rxTCPEntrypoints.ReplaceAll(sanitizedExpected, []byte(`"tcp-1000X"`))
+		sanitizedGot = rxTCPEntrypoints.ReplaceAll(sanitizedGot, []byte(`"tcp-1000X"`))
+
+		if bytes.Equal(sanitizedExpected, sanitizedGot) {
+			return nil
+		}
+
+		diff := difflib.UnifiedDiff{
+			FromFile: "Expected",
+			A:        difflib.SplitLines(string(sanitizedExpected)),
+			ToFile:   "Got",
+			B:        difflib.SplitLines(string(sanitizedGot)),
+			Context:  3,
+		}
+
+		text, err := difflib.GetUnifiedDiffString(diff)
+		if err != nil {
+			return err
+		}
+		return errors.New(text)
+	}
 }

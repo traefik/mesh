@@ -22,9 +22,8 @@ import (
 type SMISuite struct{ BaseSuite }
 
 func (s *SMISuite) SetUpSuite(c *check.C) {
-	// s.startk3s(c)
-	// s.startAndWaitForCoreDNS(c)
-	s.createK8sClient(c)
+	s.startk3s(c)
+	s.startAndWaitForCoreDNS(c)
 	s.createRequiredNamespaces(c)
 }
 
