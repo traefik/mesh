@@ -19,11 +19,17 @@ func (s *KubernetesSuite) TearDownSuite(c *check.C) {
 }
 
 func (s *KubernetesSuite) TestProviderConfig(c *check.C) {
-	cmd := s.startMaeshBinaryCmd(c)
+	cmd := s.startMaeshBinaryCmd(c, false)
 	err := cmd.Start()
 
 	c.Assert(err, checker.IsNil)
 	defer s.stopMaeshBinary(c, cmd.Process)
 
 	s.testConfiguration(c, "resources/kubernetes/config.json")
+}
+
+func (s *KubernetesSuite) TestHelmInstall(c *check.C) {
+	err := s.installHelmMaesh(c, false, false)
+	c.Assert(err, checker.IsNil)
+	s.waitForMaeshControllerStarted(c)
 }

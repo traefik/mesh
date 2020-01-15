@@ -4,12 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"net"
-	"os"
-	"os/exec"
-	"path"
 	"regexp"
-	"strings"
 	"time"
 
 	split "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha2"
@@ -407,40 +402,4 @@ func (s *SMISuite) getLineContent(data string) string {
 	}
 
 	return ""
-}
-
-func (s *SMISuite) createResources(c *check.C, dirPath string, waitTime time.Duration) {
-	// Create the required objects from the smi directory
-	cmd := exec.Command("kubectl", "apply",
-		"-f", path.Join(s.dir, dirPath))
-	cmd.Env = os.Environ()
-	_, err := cmd.CombinedOutput()
-	c.Assert(err, checker.IsNil)
-	time.Sleep(waitTime)
-}
-
-func (s *SMISuite) deleteResources(c *check.C, dirPath string, force bool) {
-	// Delete the required objects from the smi directory
-	args := []string{"delete", "-f", path.Join(s.dir, dirPath)}
-	if force {
-		args = append(args, "--force", "--grace-period=0")
-	}
-
-	cmd := exec.Command("kubectl", args...)
-	cmd.Env = os.Environ()
-	_, err := cmd.CombinedOutput()
-	c.Assert(err, checker.IsNil)
-}
-
-func (s *SMISuite) digHost(c *check.C, source, sourceNamespace, destination string) {
-	// Dig the host, with a short response for the A record
-	argSlice := []string{
-		"exec", "-i", source, "-n", sourceNamespace, "--", "dig", destination, "+short",
-	}
-
-	output, err := s.waitKubectlExecCommandReturn(c, argSlice)
-	c.Assert(err, checker.IsNil)
-	c.Log(fmt.Sprintf("Dig %s: %s", destination, strings.TrimSpace(output)))
-	IP := net.ParseIP(strings.TrimSpace(output))
-	c.Assert(IP, checker.NotNil)
 }

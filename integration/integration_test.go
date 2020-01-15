@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -50,6 +51,7 @@ func Test(t *testing.T) {
 		return
 	}
 
+	check.Suite(&SMINewSuite{})
 	check.Suite(&SMISuite{})
 	check.Suite(&KubernetesSuite{})
 	check.Suite(&CoreDNSSuite{})
@@ -111,14 +113,20 @@ func (s *BaseSuite) maeshPrepareWithArgs(args ...string) *exec.Cmd {
 	return exec.Command(maeshBinary, args...)
 }
 
-func (s *BaseSuite) startMaeshBinaryCmd(c *check.C) *exec.Cmd {
-	cmd := s.maeshPrepareWithArgs()
-	cmd.Env = os.Environ()
+func (s *BaseSuite) startMaeshBinaryCmd(c *check.C, smi bool) *exec.Cmd {
+	args := []string{}
 
-	_, err := cmd.CombinedOutput()
+	cmd := s.maeshPrepareWithArgs(args...)
+	cmd.Env = os.Environ()
+	output, err := cmd.CombinedOutput()
+	c.Log(string(output))
 	c.Assert(err, checker.IsNil)
 
-	return s.maeshStartControllerWithArgsCmd()
+	if smi {
+		args = []string{"--smi"}
+	}
+
+	return s.maeshStartControllerWithArgsCmd(args...)
 }
 
 func (s *BaseSuite) stopMaeshBinary(c *check.C, process *os.Process) {
@@ -222,27 +230,26 @@ func (s *BaseSuite) stopK3s() {
 	fmt.Println(string(output))
 }
 
-func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
-	cmd := exec.Command("kubectl", "apply", "-f", path.Join(s.dir, "resources/coredns"))
+func (s *BaseSuite) kubectlCommand(c *check.C, args ...string) {
+	args = append(args, fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")))
+	cmd := exec.Command("kubectl", args...)
 	cmd.Env = os.Environ()
-
 	output, err := cmd.CombinedOutput()
-
-	fmt.Println(string(output))
+	c.Log(string(output))
 	c.Assert(err, checker.IsNil)
-	err = s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second)
+}
+
+func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
+	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, "resources/coredns"))
+
+	err := s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
 func (s *BaseSuite) startAndWaitForKubeDNS(c *check.C) {
-	cmd := exec.Command("kubectl", "apply", "-f", path.Join(s.dir, "resources/kubedns"))
-	cmd.Env = os.Environ()
+	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, "resources/kubedns"))
 
-	output, err := cmd.CombinedOutput()
-
-	fmt.Println(string(output))
-	c.Assert(err, checker.IsNil)
-	err = s.try.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second)
+	err := s.try.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
@@ -270,39 +277,19 @@ func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) 
 }
 
 func (s *BaseSuite) startWhoami(c *check.C) {
-	// Init helm with the service account created before.
-	cmd := exec.Command("kubectl", "apply",
-		"-f", path.Join(s.dir, "resources/whoami"))
-	cmd.Env = os.Environ()
+	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, "resources/whoami"))
 
-	output, err := cmd.CombinedOutput()
-
-	fmt.Println(string(output))
-	c.Assert(err, checker.IsNil)
-
-	err = s.try.WaitReadyDeployment("whoami", "whoami", 30*time.Second)
+	err := s.try.WaitReadyDeployment("whoami", "whoami", 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
 func (s *BaseSuite) createRequiredNamespaces(c *check.C) {
 	c.Log("Creating required namespaces...")
 	// Create maesh namespace, required by helm v3.
-	cmd := exec.Command("kubectl", "create", "namespace", maeshNamespace)
-	cmd.Env = os.Environ()
-
-	output, err := cmd.CombinedOutput()
-
-	fmt.Print(string(output))
-	c.Assert(err, checker.IsNil)
+	s.kubectlCommand(c, "create", "namespace", maeshNamespace)
 
 	// Create test namespace, for testing objects.
-	cmd = exec.Command("kubectl", "create", "namespace", testNamespace)
-	cmd.Env = os.Environ()
-
-	output, err = cmd.CombinedOutput()
-
-	fmt.Print(string(output))
-	c.Assert(err, checker.IsNil)
+	s.kubectlCommand(c, "create", "namespace", testNamespace)
 }
 
 func (s *BaseSuite) installHelmMaesh(c *check.C, smi bool, kubeDNS bool) error {
@@ -346,11 +333,7 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 
 func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
 	// Create new tiny tools deployment.
-	cmd := exec.Command("kubectl", "apply",
-		"-f", path.Join(s.dir, "resources/tools/deployment.yaml"))
-	cmd.Env = os.Environ()
-	_, err := cmd.CombinedOutput()
-	c.Assert(err, checker.IsNil)
+	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, "resources/tools/deployment.yaml"))
 
 	// Wait for tools to be initialized.
 	s.waitForTools(c)
@@ -378,6 +361,35 @@ func (s *BaseSuite) testConfiguration(c *check.C, path string) {
 	if err != nil {
 		c.Error(err)
 	}
+}
+
+func (s *BaseSuite) createResources(c *check.C, dirPath string, waitTime time.Duration) {
+	// Create the required objects from the configured directory
+	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, dirPath), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")))
+	time.Sleep(waitTime)
+}
+
+func (s *BaseSuite) deleteResources(c *check.C, dirPath string, force bool) {
+	// Delete the required objects from the configured directory
+	args := []string{"delete", "-f", path.Join(s.dir, dirPath), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG"))}
+	if force {
+		args = append(args, "--force", "--grace-period=0")
+	}
+
+	s.kubectlCommand(c, args...)
+}
+
+func (s *BaseSuite) digHost(c *check.C, source, sourceNamespace, destination string) {
+	// Dig the host, with a short response for the A record
+	argSlice := []string{
+		"exec", "-i", source, "-n", sourceNamespace, "--", "dig", destination, "+short",
+	}
+
+	output, err := s.waitKubectlExecCommandReturn(c, argSlice)
+	c.Assert(err, checker.IsNil)
+	c.Log(fmt.Sprintf("Dig %s: %s", destination, strings.TrimSpace(output)))
+	IP := net.ParseIP(strings.TrimSpace(output))
+	c.Assert(IP, checker.NotNil)
 }
 
 func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
