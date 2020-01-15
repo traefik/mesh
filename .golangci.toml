@@ -12,6 +12,9 @@
   [linters-settings.gocyclo]
     min-complexity = 15.0
 
+  [linters-settings.gocognit]
+    min-complexity = 35.0 # FIXME should be 10-20
+
   [linters-settings.maligned]
     suggest-new = true
 
@@ -25,16 +28,17 @@
 [linters]
   enable-all = true
   disable = [
-    "lll",
-    "gas",
+    "lll", # Long lines are ok.
     "dupl",
     "prealloc",
     "maligned",
     "gochecknoinits",
     "gochecknoglobals",
-    "gomnd",
+    "gomnd", # Currently not needed FIXME in future
+    "gosec", # Does not allow exec.Command with variable
     "scopelint",
     "funlen",
+    "bodyclose", # Too many false positives
   ]
 
 [issues]
