@@ -50,7 +50,6 @@ func Test(t *testing.T) {
 		return
 	}
 
-	check.Suite(&KubernetesNewSuite{})
 	check.Suite(&SMISuite{})
 	check.Suite(&KubernetesSuite{})
 	check.Suite(&CoreDNSSuite{})

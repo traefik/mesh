@@ -11,58 +11,19 @@ type KubernetesSuite struct{ BaseSuite }
 func (s *KubernetesSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
 	s.startAndWaitForCoreDNS(c)
-
-	err := s.installHelmMaesh(c, false, false)
-	c.Assert(err, checker.IsNil)
-	s.waitForMaeshControllerStarted(c)
 	s.startWhoami(c)
-	s.installTinyToolsMaesh(c)
 }
 
 func (s *KubernetesSuite) TearDownSuite(c *check.C) {
 	s.stopK3s()
 }
 
-func (s *KubernetesSuite) TestHTTPCURL(c *check.C) {
-	// Get the tools pod service in whoami namespace
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
+func (s *KubernetesSuite) TestProviderConfig(c *check.C) {
+	cmd := s.startMaeshBinaryCmd(c)
+	err := cmd.Start()
 
-	argSlice := []string{
-		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
-	}
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-}
+	c.Assert(err, checker.IsNil)
+	defer s.stopMaeshBinary(c, cmd.Process)
 
-func (s *KubernetesSuite) TestHTTPCURLWithDashInNamespace(c *check.C) {
-	// Get the tools pod service in whoami namespace
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
-
-	argSlice := []string{
-		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami-test.maesh", "--max-time", "5",
-	}
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-}
-
-func (s *KubernetesSuite) TestTCPCURL(c *check.C) {
-	// Get the tools pod service in whoami namespace
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
-
-	argSlice := []string{
-		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami.maesh", "--max-time", "5",
-	}
-	s.waitKubectlExecCommand(c, argSlice, "whoami-tcp")
-}
-
-func (s *KubernetesSuite) TestTCPCURLWithDashInNamespace(c *check.C) {
-	// Get the tools pod service in whoami namespace
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
-
-	argSlice := []string{
-		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami-tcp.whoami-test.maesh", "--max-time", "5",
-	}
-	s.waitKubectlExecCommand(c, argSlice, "whoami-tcp")
+	s.testConfiguration(c, "resources/kubernetes/config.json")
 }
