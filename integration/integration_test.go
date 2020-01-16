@@ -239,23 +239,34 @@ func (s *BaseSuite) kubectlCommand(c *check.C, args ...string) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
-	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, "resources/coredns"))
+func (s *BaseSuite) createResources(c *check.C, dirPath string, waitTime time.Duration) {
+	// Create the required objects from the configured directory
+	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, dirPath))
+	time.Sleep(waitTime)
+}
 
-	err := s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second)
-	c.Assert(err, checker.IsNil)
+func (s *BaseSuite) deleteResources(c *check.C, dirPath string, force bool) {
+	// Delete the required objects from the configured directory
+	args := []string{"delete", "-f", path.Join(s.dir, dirPath)}
+	if force {
+		args = append(args, "--force", "--grace-period=0")
+	}
+
+	s.kubectlCommand(c, args...)
+}
+
+func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
+	s.createResources(c, "resources/coredns", 1*time.Second)
+	c.Assert(s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 }
 
 func (s *BaseSuite) startAndWaitForKubeDNS(c *check.C) {
-	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, "resources/kubedns"))
-
-	err := s.try.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second)
-	c.Assert(err, checker.IsNil)
+	s.createResources(c, "resources/kubedns", 1*time.Second)
+	c.Assert(s.try.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 }
 
 func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
-	err := s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second)
-	c.Assert(err, checker.IsNil)
+	c.Assert(s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
 }
 
 func (s *BaseSuite) waitForMaeshControllerStartedWithReturn() error {
@@ -263,13 +274,11 @@ func (s *BaseSuite) waitForMaeshControllerStartedWithReturn() error {
 }
 
 func (s *BaseSuite) waitForTools(c *check.C) {
-	err := s.try.WaitReadyDeployment("tiny-tools", testNamespace, 30*time.Second)
-	c.Assert(err, checker.IsNil)
+	c.Assert(s.try.WaitReadyDeployment("tiny-tools", testNamespace, 30*time.Second), checker.IsNil)
 }
 
 func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data string) {
-	err := s.try.WaitCommandExecute("kubectl", argSlice, data, 10*time.Second)
-	c.Assert(err, checker.IsNil)
+	c.Assert(s.try.WaitCommandExecute("kubectl", argSlice, data, 10*time.Second), checker.IsNil)
 }
 
 func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) (string, error) {
@@ -277,10 +286,8 @@ func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) 
 }
 
 func (s *BaseSuite) startWhoami(c *check.C) {
-	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, "resources/whoami"))
-
-	err := s.try.WaitReadyDeployment("whoami", "whoami", 30*time.Second)
-	c.Assert(err, checker.IsNil)
+	s.createResources(c, "resources/whoami", 1*time.Second)
+	c.Assert(s.try.WaitReadyDeployment("whoami", "whoami", 30*time.Second), checker.IsNil)
 }
 
 func (s *BaseSuite) createRequiredNamespaces(c *check.C) {
@@ -361,22 +368,6 @@ func (s *BaseSuite) testConfiguration(c *check.C, path string) {
 	if err != nil {
 		c.Error(err)
 	}
-}
-
-func (s *BaseSuite) createResources(c *check.C, dirPath string, waitTime time.Duration) {
-	// Create the required objects from the configured directory
-	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, dirPath), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")))
-	time.Sleep(waitTime)
-}
-
-func (s *BaseSuite) deleteResources(c *check.C, dirPath string, force bool) {
-	// Delete the required objects from the configured directory
-	args := []string{"delete", "-f", path.Join(s.dir, dirPath), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG"))}
-	if force {
-		args = append(args, "--force", "--grace-period=0")
-	}
-
-	s.kubectlCommand(c, args...)
 }
 
 func (s *BaseSuite) digHost(c *check.C, source, sourceNamespace, destination string) {
