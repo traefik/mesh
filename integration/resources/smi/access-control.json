@@ -1,29 +1,108 @@
 {
     "http": {
         "routers": {
+            "b-test-80-a-b-test-e0425d13b2a322ad": {
+                "entryPoints": [
+                    "http-5000"
+                ],
+                "middlewares": [
+                    "a-b-test-b-test-80-a-b-test-e0425d13b2a322ad-whitelist"
+                ],
+                "service": "b-test-80-a-b-test-e0425d13b2a322ad",
+                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`10.43.233.50`)))"
+            },
+            "b-test-80-c-b-test-643c7128c8514ba9": {
+                "entryPoints": [
+                    "http-5000"
+                ],
+                "middlewares": [
+                    "c-b-test-b-test-80-c-b-test-643c7128c8514ba9-whitelist"
+                ],
+                "service": "b-test-80-c-b-test-643c7128c8514ba9",
+                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`10.43.233.50`)))"
+            },
+            "d-test-80-c-d-test-2c7d96b07eb597fd": {
+                "entryPoints": [
+                    "http-5000"
+                ],
+                "middlewares": [
+                    "c-d-test-d-test-80-c-d-test-2c7d96b07eb597fd-whitelist"
+                ],
+                "service": "d-test-80-c-d-test-2c7d96b07eb597fd",
+                "rule": "(PathPrefix(`/bar`) \u0026\u0026 (Host(`d.test.maesh`) || Host(`10.43.86.23`)))"
+            },
             "readiness": {
                 "entryPoints": [
                     "readiness"
                 ],
                 "service": "readiness",
                 "rule": "Path(`/ping`)"
+            }
+        },
+        "middlewares": {
+            "a-b-test-b-test-80-a-b-test-e0425d13b2a322ad-whitelist": {
+                "ipWhiteList": {
+                    "sourceRange": [
+                        "10.42.0.7",
+                        "10.42.0.3"
+                    ]
+                }
             },
-            "whoami-whoami-80-9fb41f1b6a35ef9f": {
-                "entryPoints": [
-                    "http-5000"
-                ],
-                "service": "whoami-whoami-80-9fb41f1b6a35ef9f",
-                "rule": "Host(`whoami.whoami.maesh`) || Host(`10.43.234.98`)"
+            "c-b-test-b-test-80-c-b-test-643c7128c8514ba9-whitelist": {
+                "ipWhiteList": {
+                    "sourceRange": [
+                        "10.42.1.6",
+                        "10.42.1.7"
+                    ]
+                }
             },
-            "whoami-whoami-tes-80-511ec4266aecd25c": {
-                "entryPoints": [
-                    "http-5000"
-                ],
-                "service": "whoami-whoami-tes-80-511ec4266aecd25c",
-                "rule": "Host(`whoami.whoami-test.maesh`) || Host(`10.43.114.51`)"
+            "c-d-test-d-test-80-c-d-test-2c7d96b07eb597fd-whitelist": {
+                "ipWhiteList": {
+                    "sourceRange": [
+                        "10.42.1.7",
+                        "10.42.1.6"
+                    ]
+                }
+            },
+            "smi-block-all-middleware": {
+                "ipWhiteList": {
+                    "sourceRange": [
+                        "255.255.255.255"
+                    ]
+                }
             }
         },
         "services": {
+            "b-test-80-a-b-test-e0425d13b2a322ad": {
+                "loadBalancer": {
+                    "servers": [
+                        {
+                            "url": "http://10.42.0.2:80"
+                        }
+                    ],
+                    "passHostHeader": true
+                }
+            },
+            "b-test-80-c-b-test-643c7128c8514ba9": {
+                "loadBalancer": {
+                    "servers": [
+                        {
+                            "url": "http://10.42.0.2:80"
+                        }
+                    ],
+                    "passHostHeader": true
+                }
+            },
+            "d-test-80-c-d-test-2c7d96b07eb597fd": {
+                "loadBalancer": {
+                    "servers": [
+                        {
+                            "url": "http://10.42.1.4:80"
+                        }
+                    ],
+                    "passHostHeader": true
+                }
+            },
             "readiness": {
                 "loadBalancer": {
                     "servers": [
@@ -33,73 +112,25 @@
                     ],
                     "passHostHeader": true
                 }
-            },
-            "whoami-whoami-80-9fb41f1b6a35ef9f": {
-                "loadBalancer": {
-                    "servers": [
-                        {
-                            "url": "http://10.42.0.2:80"
-                        },
-                        {
-                            "url": "http://10.42.1.4:80"
-                        }
-                    ],
-                    "passHostHeader": true
-                }
-            },
-            "whoami-whoami-tes-80-511ec4266aecd25c": {
-                "loadBalancer": {
-                    "servers": [
-                        {
-                            "url": "http://10.42.0.3:80"
-                        },
-                        {
-                            "url": "http://10.42.1.5:80"
-                        }
-                    ],
-                    "passHostHeader": true
-                }
             }
         }
     },
     "tcp": {
         "routers": {
-            "whoami-tcp-whoami-80-6bbfad33422c7b8f": {
-                "entryPoints": [
-                    "tcp-10001"
-                ],
-                "service": "whoami-tcp-whoami-80-6bbfad33422c7b8f",
-                "rule": "HostSNI(`*`)"
-            },
-            "whoami-tcp-whoami-tes-80-025c887a00f4424b": {
+            "tcp-test-80-tcp-access-test-26c714a52cf2888c": {
                 "entryPoints": [
                     "tcp-10000"
                 ],
-                "service": "whoami-tcp-whoami-tes-80-025c887a00f4424b",
+                "service": "tcp-test-80-tcp-access-test-26c714a52cf2888c",
                 "rule": "HostSNI(`*`)"
             }
         },
         "services": {
-            "whoami-tcp-whoami-80-6bbfad33422c7b8f": {
+            "tcp-test-80-tcp-access-test-26c714a52cf2888c": {
                 "loadBalancer": {
                     "servers": [
                         {
-                            "address": "10.42.0.2:80"
-                        },
-                        {
-                            "address": "10.42.1.4:80"
-                        }
-                    ]
-                }
-            },
-            "whoami-tcp-whoami-tes-80-025c887a00f4424b": {
-                "loadBalancer": {
-                    "servers": [
-                        {
-                            "address": "10.42.0.3:80"
-                        },
-                        {
-                            "address": "10.42.1.5:80"
+                            "address": "10.42.0.4:80"
                         }
                     ]
                 }

@@ -433,7 +433,7 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 		sanitizedExpected = rxServerStatus.ReplaceAll(sanitizedExpected, []byte(`"http://XXXX": $1`))
 		sanitizedGot = rxServerStatus.ReplaceAll(sanitizedGot, []byte(`"http://XXXX": $1`))
 
-		// The tcp entrypoints are dynamic, so we cannot predict them,
+		// The tcp entrypoint assignments are dynamic, so we cannot predict them,
 		// which is why we have to ignore them in the comparison.
 		rxTCPEntrypoints := regexp.MustCompile(`"tcp-1000(\d)"`)
 		sanitizedExpected = rxTCPEntrypoints.ReplaceAll(sanitizedExpected, []byte(`"tcp-1000X"`))
@@ -458,4 +458,34 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 
 		return errors.New(text)
 	}
+}
+
+func (s *BaseSuite) getActiveConfiguration(c *check.C) *dynamic.Configuration {
+	var result *dynamic.Configuration
+
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort))
+	c.Assert(err, checker.IsNil)
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	c.Assert(err, checker.IsNil)
+
+	err = json.Unmarshal(body, &result)
+	c.Assert(err, checker.IsNil)
+
+	return result
+}
+
+func contains(s []string, x string) bool {
+	for _, v := range s {
+		if x == v {
+			return true
+		}
+	}
+
+	return false
 }
