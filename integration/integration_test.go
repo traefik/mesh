@@ -439,6 +439,12 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 		sanitizedExpected = rxTCPEntrypoints.ReplaceAll(sanitizedExpected, []byte(`"tcp-1000X"`))
 		sanitizedGot = rxTCPEntrypoints.ReplaceAll(sanitizedGot, []byte(`"tcp-1000X"`))
 
+		// The IPWhiteList source ranges are dynamic, so we cannot predict them,
+		// which is why we have to ignore them in the comparison.
+		rxIPWhiteList := regexp.MustCompile(`"ipWhiteList":\s*{\s*"sourceRange":\s*\[(\s*"((\d+)\.(\d+)\.(\d+)\.(\d+))",?)*\s*\]\s*}`)
+		sanitizedExpected = rxIPWhiteList.ReplaceAll(sanitizedExpected, []byte(`"ipWhiteList":{"sourceRange":["XXXX"]}`))
+		sanitizedGot = rxIPWhiteList.ReplaceAll(sanitizedGot, []byte(`"ipWhiteList":{"sourceRange":["XXXX"]}`))
+
 		if bytes.Equal(sanitizedExpected, sanitizedGot) {
 			return nil
 		}
