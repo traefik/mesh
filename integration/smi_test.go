@@ -43,46 +43,6 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 		expected        map[string]float64
 	}{
 		{
-			desc:            "Pod A -> Service B /test returns 200",
-			source:          "a-tools",
-			iteration:       1,
-			destinationHost: "b-v1.test.svc.cluster.local",
-			destinationPath: "/test",
-			expected: map[string]float64{
-				"Hostname: b-v1": 100,
-			},
-		},
-		{
-			desc:            "Pod A -> Service B /foo returns 200",
-			source:          "a-tools",
-			iteration:       1,
-			destinationHost: "b-v2.test.maesh",
-			destinationPath: "/foo",
-			expected: map[string]float64{
-				"Hostname: b-v2": 100,
-			},
-		},
-		{
-			desc:            "Pod A -> Service B v1/foo returns 200",
-			source:          "a-tools",
-			iteration:       1,
-			destinationHost: "b-v1.test.maesh",
-			destinationPath: "/foo",
-			expected: map[string]float64{
-				"Hostname: b-v1": 100,
-			},
-		},
-		{
-			desc:            "Pod A -> Service B v2/foo returns 200",
-			source:          "a-tools",
-			iteration:       1,
-			destinationHost: "b-v2.test.maesh",
-			destinationPath: "/foo",
-			expected: map[string]float64{
-				"Hostname: b-v2": 100,
-			},
-		},
-		{
 			desc:      "Pod A -> Service B v2/foo returns 200 50-50",
 			source:    "a-tools",
 			iteration: 10,

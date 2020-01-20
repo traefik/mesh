@@ -37,6 +37,19 @@ func (s *SMINewSuite) TestSMIAccessControl(c *check.C) {
 	s.checkTCPServiceServerURLs(c)
 }
 
+func (s *SMINewSuite) TestSMITrafficSplit(c *check.C) {
+	s.createResources(c, "resources/smi/traffic-split/")
+	defer s.deleteResources(c, "resources/smi/traffic-split/", true)
+
+	cmd := s.startMaeshBinaryCmd(c, true)
+	err := cmd.Start()
+
+	c.Assert(err, checker.IsNil)
+	defer s.stopMaeshBinary(c, cmd.Process)
+
+	s.testConfiguration(c, "resources/smi/traffic-split.json")
+}
+
 func (s *SMINewSuite) checkWhitelistSourceRanges(c *check.C) {
 	config := s.getActiveConfiguration(c)
 	for name, middleware := range config.HTTP.Middlewares {
