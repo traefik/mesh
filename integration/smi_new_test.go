@@ -43,6 +43,7 @@ func (s *SMINewSuite) checkWhitelistSourceranges(c *check.C) {
 		if name == "smi-block-all-middleware" {
 			c.Assert(middleware.IPWhiteList.SourceRange[0], checker.Equals, "255.255.255.255")
 			c.Log("Middleware " + name + " has the correct source range.")
+
 			continue
 		}
 
@@ -67,8 +68,8 @@ func (s *SMINewSuite) checkWhitelistSourceranges(c *check.C) {
 		for _, expectedValue := range expected {
 			c.Assert(contains(actual, expectedValue), checker.True)
 		}
-		c.Log("Middleware " + name + " has the correct expected values.")
 
+		c.Log("Middleware " + name + " has the correct expected values.")
 	}
 }
 

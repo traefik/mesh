@@ -475,6 +475,7 @@ func (s *BaseSuite) getActiveConfiguration(c *check.C) *dynamic.Configuration {
 
 	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort))
 	c.Assert(err, checker.IsNil)
+
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
