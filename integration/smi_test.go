@@ -19,7 +19,7 @@ type SMISuite struct{ BaseSuite }
 func (s *SMISuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
 	s.startAndWaitForCoreDNS(c)
-	s.createResources(c, "resources/smi/crds/", 10*time.Second)
+	s.createResources(c, "resources/smi/crds/")
 }
 
 func (s *SMISuite) TearDownSuite(c *check.C) {
@@ -27,7 +27,7 @@ func (s *SMISuite) TearDownSuite(c *check.C) {
 }
 
 func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
-	s.createResources(c, "resources/smi/traffic-split", 10*time.Second)
+	s.createResources(c, "resources/smi/traffic-split")
 
 	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
@@ -182,7 +182,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 
 			err = s.client.KubeClient.CoreV1().Services(testNamespace).Delete("b", &metav1.DeleteOptions{})
 			c.Assert(err, checker.IsNil)
-			s.createResources(c, "resources/smi/traffic-split", 10*time.Second)
+			s.createResources(c, "resources/smi/traffic-split")
 		}
 
 		argSlice := []string{

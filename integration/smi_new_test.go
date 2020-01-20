@@ -2,7 +2,6 @@ package integration
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
@@ -15,7 +14,7 @@ type SMINewSuite struct{ BaseSuite }
 func (s *SMINewSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
 	s.startAndWaitForCoreDNS(c)
-	s.createResources(c, "resources/smi/crds/", 10*time.Second)
+	s.createResources(c, "resources/smi/crds/")
 }
 
 func (s *SMINewSuite) TearDownSuite(c *check.C) {
@@ -23,7 +22,7 @@ func (s *SMINewSuite) TearDownSuite(c *check.C) {
 }
 
 func (s *SMINewSuite) TestSMIAccessControl(c *check.C) {
-	s.createResources(c, "resources/smi/access-control/", 10*time.Second)
+	s.createResources(c, "resources/smi/access-control/")
 	defer s.deleteResources(c, "resources/smi/access-control/", true)
 
 	cmd := s.startMaeshBinaryCmd(c, true)

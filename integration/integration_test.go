@@ -32,16 +32,17 @@ import (
 )
 
 var (
-	integration    = flag.Bool("integration", false, "run integration tests")
-	masterURL      = "https://localhost:8443"
-	images         []image
-	k3dClusterName = "maesh-integration"
-	k3sImage       = "rancher/k3s"
-	k3sVersion     = "v0.10.1"
-	maeshNamespace = "maesh"
-	maeshBinary    = "../dist/maesh"
-	maeshAPIPort   = 9000
-	testNamespace  = "test"
+	integration           = flag.Bool("integration", false, "run integration tests")
+	masterURL             = "https://localhost:8443"
+	images                []image
+	k3dClusterName        = "maesh-integration"
+	k3sImage              = "rancher/k3s"
+	k3sVersion            = "v0.10.1"
+	maeshNamespace        = "maesh"
+	maeshBinary           = "../dist/maesh"
+	maeshAPIPort          = 9000
+	testNamespace         = "test"
+	kubectlCreateWaitTime = 1 * time.Second
 )
 
 func Test(t *testing.T) {
@@ -238,10 +239,10 @@ func (s *BaseSuite) kubectlCommand(c *check.C, args ...string) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) createResources(c *check.C, dirPath string, waitTime time.Duration) {
+func (s *BaseSuite) createResources(c *check.C, dirPath string) {
 	// Create the required objects from the configured directory
 	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, dirPath))
-	time.Sleep(waitTime)
+	time.Sleep(kubectlCreateWaitTime)
 }
 
 func (s *BaseSuite) deleteResources(c *check.C, dirPath string, force bool) {
@@ -255,12 +256,12 @@ func (s *BaseSuite) deleteResources(c *check.C, dirPath string, force bool) {
 }
 
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
-	s.createResources(c, "resources/coredns", 1*time.Second)
+	s.createResources(c, "resources/coredns")
 	c.Assert(s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 }
 
 func (s *BaseSuite) startAndWaitForKubeDNS(c *check.C) {
-	s.createResources(c, "resources/kubedns", 1*time.Second)
+	s.createResources(c, "resources/kubedns")
 	c.Assert(s.try.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 }
 
@@ -285,7 +286,7 @@ func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) 
 }
 
 func (s *BaseSuite) startWhoami(c *check.C) {
-	s.createResources(c, "resources/whoami", 1*time.Second)
+	s.createResources(c, "resources/whoami")
 	c.Assert(s.try.WaitReadyDeployment("whoami", "whoami", 30*time.Second), checker.IsNil)
 }
 
