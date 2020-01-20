@@ -24,6 +24,7 @@ func (s *SMINewSuite) TearDownSuite(c *check.C) {
 
 func (s *SMINewSuite) TestSMIAccessControl(c *check.C) {
 	s.createResources(c, "resources/smi/access-control/", 10*time.Second)
+	defer s.deleteResources(c, "resources/smi/access-control/", true)
 
 	cmd := s.startMaeshBinaryCmd(c, true)
 	err := cmd.Start()
@@ -35,7 +36,6 @@ func (s *SMINewSuite) TestSMIAccessControl(c *check.C) {
 	s.checkWhitelistSourceRanges(c)
 	s.checkHTTPServiceServerURLs(c)
 	s.checkTCPServiceServerURLs(c)
-	s.deleteResources(c, "resources/smi/access-control/", true)
 }
 
 func (s *SMINewSuite) checkWhitelistSourceRanges(c *check.C) {

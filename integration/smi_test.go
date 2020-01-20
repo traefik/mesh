@@ -19,6 +19,7 @@ type SMISuite struct{ BaseSuite }
 func (s *SMISuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
 	s.startAndWaitForCoreDNS(c)
+	s.createResources(c, "resources/smi/crds/", 10*time.Second)
 }
 
 func (s *SMISuite) TearDownSuite(c *check.C) {
