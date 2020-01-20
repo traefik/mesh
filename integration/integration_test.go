@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -368,19 +367,6 @@ func (s *BaseSuite) testConfiguration(c *check.C, path string) {
 	if err != nil {
 		c.Error(err)
 	}
-}
-
-func (s *BaseSuite) digHost(c *check.C, source, sourceNamespace, destination string) {
-	// Dig the host, with a short response for the A record
-	argSlice := []string{
-		"exec", "-i", source, "-n", sourceNamespace, "--", "dig", destination, "+short",
-	}
-
-	output, err := s.waitKubectlExecCommandReturn(c, argSlice)
-	c.Assert(err, checker.IsNil)
-	c.Log(fmt.Sprintf("Dig %s: %s", destination, strings.TrimSpace(output)))
-	IP := net.ParseIP(strings.TrimSpace(output))
-	c.Assert(IP, checker.NotNil)
 }
 
 func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
