@@ -2,39 +2,39 @@
 kind: TrafficSplit
 apiVersion: split.smi-spec.io/v1alpha2
 metadata:
-    name: b
-    namespace: test
+  name: b
+  namespace: test
 spec:
-    service: b
-    backends:
-    - service: b-v1
+  service: b
+  backends:
+  - service: b-v1
     weight: 50
-    - service: b-v2
+  - service: b-v2
     weight: 50
 ---
 kind: TrafficSplit
 apiVersion: split.smi-spec.io/v1alpha2
 metadata:
-    name: b1
-    namespace: test
+  name: b1
+  namespace: test
 spec:
-    service: b1
-    backends:
-    - service: b-v1
+  service: b1
+  backends:
+  - service: b-v1
     weight: 0
-    - service: b-v2
+  - service: b-v2
     weight: 100
 ---
 kind: TrafficSplit
 apiVersion: split.smi-spec.io/v1alpha2
 metadata:
-    name: b2
-    namespace: test
+  name: b2
+  namespace: test
 spec:
-    service: b2
-    backends:
-    - service: b-v1
+  service: b2
+  backends:
+  - service: b-v1
     weight: 100
-    - service: b-v2
+  - service: b-v2
     weight: 0
-                
+                  
