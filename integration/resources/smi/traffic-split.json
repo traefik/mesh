@@ -9,27 +9,47 @@
                     "a-b-test-b-test-80-a-b-test-e0425d13b2a322ad-whitelist"
                 ],
                 "service": "b-test-80-a-b-test-e0425d13b2a322ad",
-                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`10.43.233.50`)))"
+                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`XXXX`)))"
             },
-            "b-test-80-c-b-test-643c7128c8514ba9": {
+            "b-v1-test-80-a-b-test-03b338bc8ba21fbc": {
                 "entryPoints": [
                     "http-5000"
                 ],
                 "middlewares": [
-                    "c-b-test-b-test-80-c-b-test-643c7128c8514ba9-whitelist"
+                    "a-b-test-b-v1-test-80-a-b-test-03b338bc8ba21fbc-whitelist"
                 ],
-                "service": "b-test-80-c-b-test-643c7128c8514ba9",
-                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`10.43.233.50`)))"
+                "service": "b-v1-test-80-a-b-test-03b338bc8ba21fbc",
+                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b-v1.test.maesh`) || Host(`XXXX`)))"
             },
-            "d-test-80-c-d-test-2c7d96b07eb597fd": {
+            "b-v2-test-80-a-b-test-c2918aa87de2f415": {
                 "entryPoints": [
                     "http-5000"
                 ],
                 "middlewares": [
-                    "c-d-test-d-test-80-c-d-test-2c7d96b07eb597fd-whitelist"
+                    "a-b-test-b-v2-test-80-a-b-test-c2918aa87de2f415-whitelist"
                 ],
-                "service": "d-test-80-c-d-test-2c7d96b07eb597fd",
-                "rule": "(PathPrefix(`/bar`) \u0026\u0026 (Host(`d.test.maesh`) || Host(`10.43.86.23`)))"
+                "service": "b-v2-test-80-a-b-test-c2918aa87de2f415",
+                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b-v2.test.maesh`) || Host(`XXXX`)))"
+            },
+            "b1-test-80-a-b-test-ce97b257f9b2710f": {
+                "entryPoints": [
+                    "http-5000"
+                ],
+                "middlewares": [
+                    "a-b-test-b1-test-80-a-b-test-ce97b257f9b2710f-whitelist"
+                ],
+                "service": "b1-test-80-a-b-test-ce97b257f9b2710f",
+                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b1.test.maesh`) || Host(`XXXX`)))"
+            },
+            "b2-test-80-a-b-test-6485fb29d873a5c3": {
+                "entryPoints": [
+                    "http-5000"
+                ],
+                "middlewares": [
+                    "a-b-test-b2-test-80-a-b-test-6485fb29d873a5c3-whitelist"
+                ],
+                "service": "b2-test-80-a-b-test-6485fb29d873a5c3",
+                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b2.test.maesh`) || Host(`XXXX`)))"
             },
             "readiness": {
                 "entryPoints": [
@@ -41,73 +61,92 @@
         },
         "middlewares": {
             "a-b-test-b-test-80-a-b-test-e0425d13b2a322ad-whitelist": {
-                "ipWhiteList": {
-                    "sourceRange": [
-                        "10.42.0.7",
-                        "10.42.0.3"
-                    ]
-                }
+                "ipWhiteList":{"sourceRange":["XXXX"]}
             },
-            "c-b-test-b-test-80-c-b-test-643c7128c8514ba9-whitelist": {
-                "ipWhiteList": {
-                    "sourceRange": [
-                        "10.42.1.6",
-                        "10.42.1.7"
-                    ]
-                }
+            "a-b-test-b-v1-test-80-a-b-test-03b338bc8ba21fbc-whitelist": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
             },
-            "c-d-test-d-test-80-c-d-test-2c7d96b07eb597fd-whitelist": {
-                "ipWhiteList": {
-                    "sourceRange": [
-                        "10.42.1.7",
-                        "10.42.1.6"
-                    ]
-                }
+            "a-b-test-b-v2-test-80-a-b-test-c2918aa87de2f415-whitelist": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
+            },
+            "a-b-test-b1-test-80-a-b-test-ce97b257f9b2710f-whitelist": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
+            },
+            "a-b-test-b2-test-80-a-b-test-6485fb29d873a5c3-whitelist": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
             },
             "smi-block-all-middleware": {
-                "ipWhiteList": {
-                    "sourceRange": [
-                        "255.255.255.255"
-                    ]
-                }
+                "ipWhiteList":{"sourceRange":["XXXX"]}
             }
         },
         "services": {
             "b-test-80-a-b-test-e0425d13b2a322ad": {
+                "weighted": {
+                    "services": [
+                        {
+                            "name": "b-v1-test-80-a-b-test-03b338bc8ba21fbc",
+                            "weight": 50
+                        },
+                        {
+                            "name": "b-v2-test-80-a-b-test-c2918aa87de2f415",
+                            "weight": 50
+                        }
+                    ]
+                }
+            },
+            "b-v1-test-80-a-b-test-03b338bc8ba21fbc": {
                 "loadBalancer": {
                     "servers": [
                         {
-                            "url": "http://10.42.0.2:80"
+                            "url": "XXXX"
                         }
                     ],
                     "passHostHeader": true
                 }
             },
-            "b-test-80-c-b-test-643c7128c8514ba9": {
+            "b-v2-test-80-a-b-test-c2918aa87de2f415": {
                 "loadBalancer": {
                     "servers": [
                         {
-                            "url": "http://10.42.0.2:80"
+                            "url": "XXXX"
                         }
                     ],
                     "passHostHeader": true
                 }
             },
-            "d-test-80-c-d-test-2c7d96b07eb597fd": {
-                "loadBalancer": {
-                    "servers": [
+            "b1-test-80-a-b-test-ce97b257f9b2710f": {
+                "weighted": {
+                    "services": [
                         {
-                            "url": "http://10.42.1.4:80"
+                            "name": "b-v1-test-80-a-b-test-03b338bc8ba21fbc",
+                            "weight": 0
+                        },
+                        {
+                            "name": "b-v2-test-80-a-b-test-c2918aa87de2f415",
+                            "weight": 100
                         }
-                    ],
-                    "passHostHeader": true
+                    ]
+                }
+            },
+            "b2-test-80-a-b-test-6485fb29d873a5c3": {
+                "weighted": {
+                    "services": [
+                        {
+                            "name": "b-v1-test-80-a-b-test-03b338bc8ba21fbc",
+                            "weight": 100
+                        },
+                        {
+                            "name": "b-v2-test-80-a-b-test-c2918aa87de2f415",
+                            "weight": 0
+                        }
+                    ]
                 }
             },
             "readiness": {
                 "loadBalancer": {
                     "servers": [
                         {
-                            "url": "http://127.0.0.1:8080"
+                            "url": "XXXX"
                         }
                     ],
                     "passHostHeader": true
@@ -115,26 +154,5 @@
             }
         }
     },
-    "tcp": {
-        "routers": {
-            "tcp-test-80-tcp-access-test-26c714a52cf2888c": {
-                "entryPoints": [
-                    "tcp-10000"
-                ],
-                "service": "tcp-test-80-tcp-access-test-26c714a52cf2888c",
-                "rule": "HostSNI(`*`)"
-            }
-        },
-        "services": {
-            "tcp-test-80-tcp-access-test-26c714a52cf2888c": {
-                "loadBalancer": {
-                    "servers": [
-                        {
-                            "address": "10.42.0.4:80"
-                        }
-                    ]
-                }
-            }
-        }
-    }
+    "tcp": {}
 }
