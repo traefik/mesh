@@ -229,6 +229,14 @@ func GetRequest(url string, timeout time.Duration, conditions ...ResponseConditi
 	return err
 }
 
+// GetRequestWithResponse is like Do, but runs a request against the given URL and applies
+// the condition on the response.
+// ResponseCondition may be nil, in which case only the request against the URL must
+// succeed.
+func GetRequestWithResponse(url string, timeout time.Duration, conditions ...ResponseCondition) (*http.Response, error) {
+	return doTryGet(url, timeout, nil, conditions...)
+}
+
 func doTryGet(url string, timeout time.Duration, transport http.RoundTripper, conditions ...ResponseCondition) (*http.Response, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

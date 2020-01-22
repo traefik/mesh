@@ -328,18 +328,25 @@ func (s *BaseSuite) unInstallHelmMaesh(c *check.C) {
 }
 
 func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
-	// Get current coreDNS deployment.
-	deployment, exists, err := s.client.GetDeployment(metav1.NamespaceSystem, "coredns")
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = 60 * time.Second
+
+	err := backoff.Retry(safe.OperationWithRecover(func() error {
+		// Get current coreDNS deployment.
+		deployment, exists, err := s.client.GetDeployment(metav1.NamespaceSystem, "coredns")
+		c.Assert(err, checker.IsNil)
+		c.Assert(exists, checker.True)
+
+		newDeployment := deployment.DeepCopy()
+		c.Assert(len(newDeployment.Spec.Template.Spec.Containers), checker.Equals, 1)
+
+		newDeployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("coredns/coredns:%s", version)
+
+		return s.try.WaitUpdateDeployment(newDeployment, 10*time.Second)
+	}), ebo)
+
 	c.Assert(err, checker.IsNil)
-	c.Assert(exists, checker.True)
 
-	newDeployment := deployment.DeepCopy()
-	c.Assert(len(newDeployment.Spec.Template.Spec.Containers), checker.Equals, 1)
-
-	newDeployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("coredns/coredns:%s", version)
-
-	err = s.try.WaitUpdateDeployment(newDeployment, 60*time.Second)
-	c.Assert(err, checker.IsNil)
 	s.WaitForCoreDNS(c)
 }
 
@@ -373,6 +380,32 @@ func (s *BaseSuite) testConfiguration(c *check.C, path string) {
 	if err != nil {
 		c.Error(err)
 	}
+}
+
+func (s *BaseSuite) testConfigurationWithReturn(c *check.C, path string) *dynamic.Configuration {
+	err := try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 20*time.Second, try.BodyContains(`"service":"readiness"`))
+	c.Assert(err, checker.IsNil)
+
+	expectedJSON := filepath.FromSlash(path)
+
+	var buf bytes.Buffer
+
+	resp, err := try.GetRequestWithResponse(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 5*time.Second, try.StatusCodeIs(http.StatusOK), matchesConfig(expectedJSON, &buf))
+	if err != nil {
+		c.Error(err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	c.Assert(err, checker.IsNil)
+
+	var result *dynamic.Configuration
+
+	err = json.Unmarshal(body, &result)
+	c.Assert(err, checker.IsNil)
+
+	return result
 }
 
 func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
@@ -456,27 +489,6 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 
 		return errors.New(text)
 	}
-}
-
-func (s *BaseSuite) getActiveConfiguration(c *check.C) *dynamic.Configuration {
-	var result *dynamic.Configuration
-
-	client := &http.Client{
-		Timeout: time.Second * 10,
-	}
-
-	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort))
-	c.Assert(err, checker.IsNil)
-
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	c.Assert(err, checker.IsNil)
-
-	err = json.Unmarshal(body, &result)
-	c.Assert(err, checker.IsNil)
-
-	return result
 }
 
 func (s *BaseSuite) digHost(c *check.C, source, namespace, destination string) {

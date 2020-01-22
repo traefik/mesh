@@ -3,6 +3,7 @@ package integration
 import (
 	"fmt"
 
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,10 +38,11 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 	c.Assert(err, checker.IsNil)
 	defer s.stopMaeshBinary(c, cmd.Process)
 
-	s.testConfiguration(c, "resources/smi/access-control.json")
-	s.checkWhitelistSourceRanges(c)
-	s.checkHTTPServiceServerURLs(c)
-	s.checkTCPServiceServerURLs(c)
+	config := s.testConfigurationWithReturn(c, "resources/smi/access-control.json")
+
+	s.checkWhitelistSourceRanges(c, config)
+	s.checkHTTPServiceServerURLs(c, config)
+	s.checkTCPServiceServerURLs(c, config)
 }
 
 func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
@@ -56,8 +58,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 	s.testConfiguration(c, "resources/smi/traffic-split.json")
 }
 
-func (s *SMISuite) checkWhitelistSourceRanges(c *check.C) {
-	config := s.getActiveConfiguration(c)
+func (s *SMISuite) checkWhitelistSourceRanges(c *check.C, config *dynamic.Configuration) {
 	for name, middleware := range config.HTTP.Middlewares {
 		// Test for block-all-middleware.
 		if name == "smi-block-all-middleware" {
@@ -81,7 +82,7 @@ func (s *SMISuite) checkWhitelistSourceRanges(c *check.C) {
 
 		actual := middleware.IPWhiteList.SourceRange
 		// Assert that the sourceRange is the correct length.
-		c.Assert(len(actual), checker.Equals, len(expected))
+		c.Assert(len(actual), checker.Equals, len(expected), check.Commentf("Expected length %d, got %d for middleware %s in config: %v", len(expected), len(actual), name, config))
 		c.Log("Middleware " + name + " has the correct length.")
 
 		// Assert that the sourceRange contains the expected values.
@@ -93,8 +94,7 @@ func (s *SMISuite) checkWhitelistSourceRanges(c *check.C) {
 	}
 }
 
-func (s *SMISuite) checkHTTPServiceServerURLs(c *check.C) {
-	config := s.getActiveConfiguration(c)
+func (s *SMISuite) checkHTTPServiceServerURLs(c *check.C, config *dynamic.Configuration) {
 	for name, service := range config.HTTP.Services {
 		// Test for readiness.
 		if name == "readiness" {
@@ -133,8 +133,7 @@ func (s *SMISuite) checkHTTPServiceServerURLs(c *check.C) {
 	}
 }
 
-func (s *SMISuite) checkTCPServiceServerURLs(c *check.C) {
-	config := s.getActiveConfiguration(c)
+func (s *SMISuite) checkTCPServiceServerURLs(c *check.C, config *dynamic.Configuration) {
 	for name, service := range config.TCP.Services {
 		serviceName := "tcp"
 
