@@ -27,9 +27,3 @@ func (s *KubernetesSuite) TestProviderConfig(c *check.C) {
 
 	s.testConfiguration(c, "resources/kubernetes/config.json")
 }
-
-func (s *KubernetesSuite) TestHelmInstall(c *check.C) {
-	err := s.installHelmMaesh(c, false, false)
-	c.Assert(err, checker.IsNil)
-	s.waitForMaeshControllerStarted(c)
-}

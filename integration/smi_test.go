@@ -50,12 +50,6 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 	s.testConfiguration(c, "resources/smi/traffic-split.json")
 }
 
-func (s *SMISuite) TestHelmInstall(c *check.C) {
-	err := s.installHelmMaesh(c, true, false)
-	c.Assert(err, checker.IsNil)
-	s.waitForMaeshControllerStarted(c)
-}
-
 func (s *SMISuite) checkWhitelistSourceRanges(c *check.C) {
 	config := s.getActiveConfiguration(c)
 	for name, middleware := range config.HTTP.Middlewares {

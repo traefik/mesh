@@ -55,6 +55,7 @@ func Test(t *testing.T) {
 	check.Suite(&KubernetesSuite{})
 	check.Suite(&CoreDNSSuite{})
 	check.Suite(&KubeDNSSuite{})
+	check.Suite(&HelmSuite{})
 
 	images = append(images, image{"containous/maesh:latest", false})
 	images = append(images, image{"containous/whoami:v1.0.1", true})
