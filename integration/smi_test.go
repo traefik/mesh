@@ -1,13 +1,8 @@
 package integration
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
-	"regexp"
-	"time"
 
-	split "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha2"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,178 +21,146 @@ func (s *SMISuite) TearDownSuite(c *check.C) {
 	s.stopK3s()
 }
 
-func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
-	s.createResources(c, "resources/smi/traffic-split")
+func (s *SMISuite) TestSMIAccessControl(c *check.C) {
+	s.createResources(c, "resources/smi/access-control/")
+	defer s.deleteResources(c, "resources/smi/access-control/", true)
 
+	cmd := s.startMaeshBinaryCmd(c, true)
+	err := cmd.Start()
+
+	c.Assert(err, checker.IsNil)
+	defer s.stopMaeshBinary(c, cmd.Process)
+
+	s.testConfiguration(c, "resources/smi/access-control.json")
+	s.checkWhitelistSourceRanges(c)
+	s.checkHTTPServiceServerURLs(c)
+	s.checkTCPServiceServerURLs(c)
+}
+
+func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
+	s.createResources(c, "resources/smi/traffic-split/")
+	defer s.deleteResources(c, "resources/smi/traffic-split/", true)
+
+	cmd := s.startMaeshBinaryCmd(c, true)
+	err := cmd.Start()
+
+	c.Assert(err, checker.IsNil)
+	defer s.stopMaeshBinary(c, cmd.Process)
+
+	s.testConfiguration(c, "resources/smi/traffic-split.json")
+}
+
+func (s *SMISuite) TestHelmInstall(c *check.C) {
 	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
-
-	testCases := []struct {
-		desc            string
-		source          string
-		iteration       int
-		trafficSplit    *split.TrafficSplit
-		destinationHost string
-		destinationPath string
-		expected        map[string]float64
-	}{
-		{
-			desc:      "Pod A -> Service B v2/foo returns 200 50-50",
-			source:    "a-tools",
-			iteration: 10,
-			trafficSplit: &split.TrafficSplit{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "canary",
-					Namespace: testNamespace,
-				},
-				Spec: split.TrafficSplitSpec{
-					Service: "b",
-					Backends: []split.TrafficSplitBackend{
-						{
-							Service: "b-v1",
-							Weight:  500,
-						},
-						{
-							Service: "b-v2",
-							Weight:  500,
-						},
-					},
-				},
-			},
-			destinationHost: "b.test.maesh",
-			destinationPath: "/foo",
-			expected: map[string]float64{
-				"Hostname: b-v1": 50,
-				"Hostname: b-v2": 50,
-			},
-		},
-		{
-			desc:      "Pod A -> Service B v2/foo returns 200 0-100",
-			source:    "a-tools",
-			iteration: 10,
-			trafficSplit: &split.TrafficSplit{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "canary",
-					Namespace: testNamespace,
-				},
-				Spec: split.TrafficSplitSpec{
-					Service: "b",
-					Backends: []split.TrafficSplitBackend{
-						{
-							Service: "b-v1",
-							Weight:  0,
-						},
-						{
-							Service: "b-v2",
-							Weight:  1000,
-						},
-					},
-				},
-			},
-			destinationHost: "b.test.maesh",
-			destinationPath: "/foo",
-			expected: map[string]float64{
-				"Hostname: b-v1": 0,
-				"Hostname: b-v2": 100,
-			},
-		},
-		{
-			desc:      "Pod A -> Service B v2/foo returns 200 100-0",
-			source:    "a-tools",
-			iteration: 10,
-			trafficSplit: &split.TrafficSplit{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "canary",
-					Namespace: testNamespace,
-				},
-				Spec: split.TrafficSplitSpec{
-					Service: "b",
-					Backends: []split.TrafficSplitBackend{
-						{
-							Service: "b-v1",
-							Weight:  1000,
-						},
-						{
-							Service: "b-v2",
-							Weight:  0,
-						},
-					},
-				},
-			},
-			destinationHost: "b.test.maesh",
-			destinationPath: "/foo",
-			expected: map[string]float64{
-				"Hostname: b-v1": 100,
-				"Hostname: b-v2": 0,
-			},
-		},
-	}
-
-	for _, test := range testCases {
-		var trafficSplit *split.TrafficSplit
-		if test.trafficSplit != nil {
-			trafficSplit, err = s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits(testNamespace).Create(test.trafficSplit)
-			c.Assert(err, checker.IsNil)
-
-			err = s.client.KubeClient.CoreV1().Services(testNamespace).Delete("b", &metav1.DeleteOptions{})
-			c.Assert(err, checker.IsNil)
-			s.createResources(c, "resources/smi/traffic-split")
-		}
-
-		argSlice := []string{
-			"exec", "-i", test.source, "-n", testNamespace, "--", "curl", "-v", test.destinationHost + test.destinationPath, "--max-time", "5",
-		}
-
-		c.Log(test.desc)
-
-		err := s.try.WaitFunction(func() error {
-			percentageResult := make(map[string]float64)
-			for i := 0; i < test.iteration; i++ {
-				data, err := s.waitKubectlExecCommandReturn(c, argSlice)
-				if err != nil {
-					return err
-				}
-				result := s.getLineContent(data)
-				if result == "" {
-					c.Log(data)
-				}
-				percentageResult[result]++
-			}
-
-			fmt.Println(percentageResult)
-			for key, value := range percentageResult {
-				i := (value / float64(test.iteration)) * 100
-				if i != test.expected[key] {
-					return fmt.Errorf("%f and %f are not equals", i, test.expected[key])
-				}
-			}
-
-			return nil
-		}, 30*time.Second)
-
-		c.Assert(err, check.IsNil)
-
-		if trafficSplit != nil {
-			err := s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits(testNamespace).Delete(trafficSplit.Name, &metav1.DeleteOptions{})
-			c.Assert(err, checker.IsNil)
-		}
-	}
-
-	s.unInstallHelmMaesh(c)
-
-	s.deleteResources(c, "resources/smi/traffic-split", true)
 }
 
-func (s *SMISuite) getLineContent(data string) string {
-	scanner := bufio.NewScanner(bytes.NewReader([]byte(data)))
+func (s *SMISuite) checkWhitelistSourceRanges(c *check.C) {
+	config := s.getActiveConfiguration(c)
+	for name, middleware := range config.HTTP.Middlewares {
+		// Test for block-all-middleware.
+		if name == "smi-block-all-middleware" {
+			c.Assert(middleware.IPWhiteList.SourceRange[0], checker.Equals, "255.255.255.255")
+			c.Log("Middleware " + name + " has the correct source range.")
 
-	for scanner.Scan() {
-		rgx := regexp.MustCompile("^(?:.+)?(Hostname: (?:a|b)(?:-v[0-9])?)$")
-		if m := rgx.FindStringSubmatch(scanner.Text()); m != nil {
-			return m[1]
+			continue
 		}
-	}
 
-	return ""
+		source := string(name[0])
+		expected := []string{}
+
+		podList, err := s.client.ListPodWithOptions(testNamespace, metav1.ListOptions{})
+		c.Assert(err, checker.IsNil)
+
+		for _, pod := range podList.Items {
+			if pod.Spec.ServiceAccountName == source {
+				expected = append(expected, pod.Status.PodIP)
+			}
+		}
+
+		actual := middleware.IPWhiteList.SourceRange
+		// Assert that the sourceRange is the correct length.
+		c.Assert(len(actual), checker.Equals, len(expected))
+		c.Log("Middleware " + name + " has the correct length.")
+
+		// Assert that the sourceRange contains the expected values.
+		for _, expectedValue := range expected {
+			c.Assert(contains(actual, expectedValue), checker.True)
+		}
+
+		c.Log("Middleware " + name + " has the correct expected values.")
+	}
+}
+
+func (s *SMISuite) checkHTTPServiceServerURLs(c *check.C) {
+	config := s.getActiveConfiguration(c)
+	for name, service := range config.HTTP.Services {
+		// Test for readiness.
+		if name == "readiness" {
+			c.Assert(service.LoadBalancer.Servers[0].URL, checker.Equals, "http://127.0.0.1:8080")
+			c.Log("service " + name + " has the correct url.")
+
+			continue
+		}
+
+		serviceName := string(name[0])
+
+		endpoints, err := s.client.KubeClient.CoreV1().Endpoints(testNamespace).Get(serviceName, metav1.GetOptions{})
+		c.Assert(err, checker.IsNil)
+
+		for _, subset := range endpoints.Subsets {
+			for _, address := range subset.Addresses {
+				for _, port := range subset.Ports {
+					actual := fmt.Sprintf("http://%s:%d", address.IP, port.Port)
+
+					// Check if the actual URL is found in the service.
+					found := false
+
+					for _, server := range service.LoadBalancer.Servers {
+						if actual == server.URL {
+							found = true
+						}
+					}
+
+					// We should have found a match.
+					c.Assert(found, checker.True)
+				}
+			}
+		}
+
+		c.Log("Service " + name + " has the correct expected values.")
+	}
+}
+
+func (s *SMISuite) checkTCPServiceServerURLs(c *check.C) {
+	config := s.getActiveConfiguration(c)
+	for name, service := range config.TCP.Services {
+		serviceName := "tcp"
+
+		endpoints, err := s.client.KubeClient.CoreV1().Endpoints(testNamespace).Get(serviceName, metav1.GetOptions{})
+		c.Assert(err, checker.IsNil)
+
+		for _, subset := range endpoints.Subsets {
+			for _, address := range subset.Addresses {
+				for _, port := range subset.Ports {
+					actual := fmt.Sprintf("%s:%d", address.IP, port.Port)
+
+					// Check if the actual URL is found in the service.
+					found := false
+
+					for _, server := range service.LoadBalancer.Servers {
+						if actual == server.Address {
+							found = true
+						}
+					}
+
+					// We should have found a match.
+					c.Assert(found, checker.True)
+				}
+			}
+		}
+
+		c.Log("Service " + name + " has the correct expected values.")
+	}
 }

@@ -51,7 +51,6 @@ func Test(t *testing.T) {
 		return
 	}
 
-	check.Suite(&SMINewSuite{})
 	check.Suite(&SMISuite{})
 	check.Suite(&KubernetesSuite{})
 	check.Suite(&CoreDNSSuite{})
@@ -281,10 +280,6 @@ func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data s
 	c.Assert(s.try.WaitCommandExecute("kubectl", argSlice, data, 10*time.Second), checker.IsNil)
 }
 
-func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) (string, error) {
-	return s.try.WaitCommandExecuteReturn("kubectl", argSlice, 10*time.Second)
-}
-
 func (s *BaseSuite) startWhoami(c *check.C) {
 	s.createResources(c, "resources/whoami")
 	c.Assert(s.try.WaitReadyDeployment("whoami", "whoami", 30*time.Second), checker.IsNil)
@@ -305,7 +300,8 @@ func (s *BaseSuite) installHelmMaesh(c *check.C, smi bool, kubeDNS bool) error {
 	argSlice := []string{"install", "powpow", "../helm/chart/maesh", "--values", "resources/values.yaml", "--namespace", maeshNamespace}
 
 	if smi {
-		argSlice = append(argSlice, "--set", "smi.enable=true")
+		// Skip CRD installation as they are installed as part of the SMI test suite setup.
+		argSlice = append(argSlice, "--set", "smi.enable=true", "--skip-crds")
 	}
 
 	if kubeDNS {
