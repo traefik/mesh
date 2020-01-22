@@ -9,7 +9,12 @@ import (
 type HelmSuite struct{ BaseSuite }
 
 func (s *HelmSuite) SetUpSuite(c *check.C) {
-	s.startk3s(c)
+	requiredImages := []string{
+		"containous/maesh:latest",
+		"coredns/coredns:1.3.1",
+		"traefik:v2.1.1",
+	}
+	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
 	s.startWhoami(c)
 }

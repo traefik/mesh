@@ -12,7 +12,13 @@ import (
 type SMISuite struct{ BaseSuite }
 
 func (s *SMISuite) SetUpSuite(c *check.C) {
-	s.startk3s(c)
+	requiredImages := []string{
+		"containous/maesh:latest",
+		"containous/whoami:v1.0.1",
+		"coredns/coredns:1.3.1",
+		"traefik:v2.1.1",
+	}
+	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
 	s.createResources(c, "resources/smi/crds/")
 }

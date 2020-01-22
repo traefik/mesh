@@ -134,7 +134,7 @@ func (s *BaseSuite) stopMaeshBinary(c *check.C, process *os.Process) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) startk3s(c *check.C) {
+func (s *BaseSuite) startk3s(c *check.C, requiredImages []string) {
 	c.Log("Starting k3s...")
 	// Set the base directory for the test suite
 	var err error
@@ -159,7 +159,7 @@ func (s *BaseSuite) startk3s(c *check.C) {
 	// Load images into k3s
 	c.Log("Importing docker images in to k3s...")
 
-	err = s.loadK3sImages()
+	err = s.loadK3sImages(requiredImages)
 	c.Assert(err, checker.IsNil)
 
 	s.createK8sClient(c)
@@ -188,9 +188,9 @@ func (s *BaseSuite) createK8sClient(c *check.C) {
 	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 }
 
-func (s *BaseSuite) loadK3sImages() error {
-	for _, image := range images {
-		err := loadK3sImage(k3dClusterName, image.name, 1*time.Minute)
+func (s *BaseSuite) loadK3sImages(requiredImages []string) error {
+	for _, image := range requiredImages {
+		err := loadK3sImage(k3dClusterName, image, 1*time.Minute)
 		if err != nil {
 			return err
 		}

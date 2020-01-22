@@ -9,7 +9,18 @@ import (
 type CoreDNSSuite struct{ BaseSuite }
 
 func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
-	s.startk3s(c)
+	requiredImages := []string{
+		"containous/maesh:latest",
+		"containous/whoami:v1.0.1",
+		"coredns/coredns:1.2.6",
+		"coredns/coredns:1.3.1",
+		"coredns/coredns:1.4.0",
+		"coredns/coredns:1.5.2",
+		"coredns/coredns:1.6.3",
+		"giantswarm/tiny-tools:3.9",
+		"traefik:v2.1.1",
+	}
+	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
