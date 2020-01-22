@@ -376,7 +376,7 @@ func (s *BaseSuite) testConfiguration(c *check.C, path string) {
 
 	var buf bytes.Buffer
 
-	err = try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 5*time.Second, try.StatusCodeIs(http.StatusOK), matchesConfig(expectedJSON, &buf))
+	err = try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 10*time.Second, try.StatusCodeIs(http.StatusOK), matchesConfig(expectedJSON, &buf))
 	if err != nil {
 		c.Error(err)
 	}
@@ -390,19 +390,13 @@ func (s *BaseSuite) testConfigurationWithReturn(c *check.C, path string) *dynami
 
 	var buf bytes.Buffer
 
-	resp, err := try.GetRequestWithResponse(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 5*time.Second, try.StatusCodeIs(http.StatusOK), matchesConfig(expectedJSON, &buf))
+	err = try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 10*time.Second, try.StatusCodeIs(http.StatusOK), matchesConfig(expectedJSON, &buf))
 	if err != nil {
 		c.Error(err)
 	}
-
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	c.Assert(err, checker.IsNil)
-
 	var result *dynamic.Configuration
 
-	err = json.Unmarshal(body, &result)
+	err = json.Unmarshal(buf.Bytes(), &result)
 	c.Assert(err, checker.IsNil)
 
 	return result

@@ -43,24 +43,21 @@
             "a-b-test-b-test-80-a-b-test-e0425d13b2a322ad-whitelist": {
                 "ipWhiteList": {
                     "sourceRange": [
-                        "10.42.0.7",
-                        "10.42.0.3"
+                        "10.42.0.7"
                     ]
                 }
             },
             "c-b-test-b-test-80-c-b-test-643c7128c8514ba9-whitelist": {
                 "ipWhiteList": {
                     "sourceRange": [
-                        "10.42.1.6",
-                        "10.42.1.7"
+                        "10.42.1.6"
                     ]
                 }
             },
             "c-d-test-d-test-80-c-d-test-2c7d96b07eb597fd-whitelist": {
                 "ipWhiteList": {
                     "sourceRange": [
-                        "10.42.1.7",
-                        "10.42.1.6"
+                        "10.42.1.7"
                     ]
                 }
             },
