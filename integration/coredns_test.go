@@ -75,7 +75,6 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		} else {
 			c.Assert(err, checker.IsNil)
 		}
-
 	}
 }
 

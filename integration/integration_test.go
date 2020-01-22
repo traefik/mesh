@@ -276,10 +276,6 @@ func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
 }
 
-func (s *BaseSuite) waitForMaeshControllerStartedWithReturn() error {
-	return s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second)
-}
-
 func (s *BaseSuite) waitForTools(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("tiny-tools", testNamespace, 30*time.Second), checker.IsNil)
 }
