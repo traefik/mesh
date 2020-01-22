@@ -397,6 +397,7 @@ func (s *BaseSuite) testConfigurationWithReturn(c *check.C, path string) *dynami
 	if err != nil {
 		c.Error(err)
 	}
+
 	var result *dynamic.Configuration
 
 	err = json.Unmarshal(buf.Bytes(), &result)
