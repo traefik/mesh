@@ -38,5 +38,3 @@ kind: ServiceAccount
 metadata:
   name: tcp
   namespace: test
-
-
