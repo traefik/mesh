@@ -159,7 +159,7 @@ func (s *BaseSuite) startk3s(c *check.C, requiredImages []string) {
 	// Load images into k3s
 	c.Log("Importing docker images in to k3s...")
 
-	err = s.loadK3sImages(requiredImages)
+	err = s.loadK3sImages(c, requiredImages)
 	c.Assert(err, checker.IsNil)
 
 	s.createK8sClient(c)
@@ -188,8 +188,10 @@ func (s *BaseSuite) createK8sClient(c *check.C) {
 	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 }
 
-func (s *BaseSuite) loadK3sImages(requiredImages []string) error {
+func (s *BaseSuite) loadK3sImages(c *check.C, requiredImages []string) error {
 	for _, image := range requiredImages {
+		c.Log("Importing image: " + image)
+
 		err := loadK3sImage(k3dClusterName, image, 1*time.Minute)
 		if err != nil {
 			return err
