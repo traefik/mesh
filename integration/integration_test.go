@@ -127,6 +127,9 @@ func (s *BaseSuite) startMaeshBinaryCmd(c *check.C, smi bool) *exec.Cmd {
 		args = []string{"--smi"}
 	}
 
+	// Ignore the kube-system namespace since we don't care about system events.
+	args = append(args, "--ignoreNamespaces=kube-system")
+
 	return s.maeshStartControllerWithArgsCmd(args...)
 }
 
