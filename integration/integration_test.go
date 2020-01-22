@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -51,9 +52,9 @@ func Test(t *testing.T) {
 		return
 	}
 
+	check.Suite(&CoreDNSSuite{})
 	check.Suite(&SMISuite{})
 	check.Suite(&KubernetesSuite{})
-	check.Suite(&CoreDNSSuite{})
 	check.Suite(&KubeDNSSuite{})
 	check.Suite(&HelmSuite{})
 
@@ -259,6 +260,10 @@ func (s *BaseSuite) deleteResources(c *check.C, dirPath string, force bool) {
 
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
 	s.createResources(c, "resources/coredns")
+	s.WaitForCoreDNS(c)
+}
+
+func (s *BaseSuite) WaitForCoreDNS(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 }
 
@@ -281,6 +286,10 @@ func (s *BaseSuite) waitForTools(c *check.C) {
 
 func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data string) {
 	c.Assert(s.try.WaitCommandExecute("kubectl", argSlice, data, 10*time.Second), checker.IsNil)
+}
+
+func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) (string, error) {
+	return s.try.WaitCommandExecuteReturn("kubectl", argSlice, 10*time.Second)
 }
 
 func (s *BaseSuite) startWhoami(c *check.C) {
@@ -335,6 +344,7 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 
 	err = s.try.WaitUpdateDeployment(newDeployment, 60*time.Second)
 	c.Assert(err, checker.IsNil)
+	s.WaitForCoreDNS(c)
 }
 
 func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
@@ -471,6 +481,19 @@ func (s *BaseSuite) getActiveConfiguration(c *check.C) *dynamic.Configuration {
 	c.Assert(err, checker.IsNil)
 
 	return result
+}
+
+func (s *BaseSuite) digHost(c *check.C, source, namespace, destination string) {
+	// Dig the host, with a short response for the A record
+	argSlice := []string{
+		"exec", "-i", source, "-n", namespace, "--", "dig", destination, "+short",
+	}
+
+	output, err := s.waitKubectlExecCommandReturn(c, argSlice)
+	c.Assert(err, checker.IsNil)
+	c.Log(fmt.Sprintf("Dig %s: %s", destination, strings.TrimSpace(output)))
+	IP := net.ParseIP(strings.TrimSpace(output))
+	c.Assert(IP, checker.NotNil)
 }
 
 func contains(s []string, x string) bool {
