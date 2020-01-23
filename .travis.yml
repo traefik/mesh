@@ -47,7 +47,7 @@ before_deploy:
       structor -o containous -r maesh --dockerfile-url="https://raw.githubusercontent.com/containous/maesh/master/docs/docs.Dockerfile" --menu.js-url="https://raw.githubusercontent.com/containous/structor/master/traefik-menu.js.gotmpl" --rqts-url="https://raw.githubusercontent.com/containous/structor/master/requirements-override.txt" --force-edit-url --exp-branch=master --debug;
     fi
   # Copy helm packages
-  - cp -r pages/charts site/charts
+  - cp -r pages/charts/. site/charts
   # Copy CNAME file
   - cp pages/CNAME site/CNAME
   # Install linters
