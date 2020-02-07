@@ -1,0 +1,15 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: traffictargets.access.smi-spec.io
+spec:
+  group: access.smi-spec.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    kind: TrafficTarget
+    shortNames:
+      - tt
+    plural: traffictargets
+    singular: traffictarget

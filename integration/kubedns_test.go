@@ -9,7 +9,16 @@ import (
 type KubeDNSSuite struct{ BaseSuite }
 
 func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
-	s.startk3s(c)
+	requiredImages := []string{
+		"containous/maesh:latest",
+		"containous/whoami:v1.0.1",
+		"coredns/coredns:1.3.1",
+		"traefik:v2.1.1",
+		"gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7",
+		"gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7",
+		"gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7",
+	}
+	s.startk3s(c, requiredImages)
 	s.startAndWaitForKubeDNS(c)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)

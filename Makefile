@@ -1,5 +1,5 @@
 DOCKER_IMAGE_NAME := containous/maesh
-
+UNAME := $(shell uname)
 SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')
 
 BINARY_NAME = maesh
@@ -28,7 +28,7 @@ clean:
 local-check: $(DIST_DIR) helm-lint
 	golangci-lint run --config .golangci.toml
 
-# Build
+# Local commands
 local-build: $(DIST_DIR)
 	CGO_ENABLED=0 go build -o ${DIST_DIR_MAESH} -ldflags="-s -w \
 	-X github.com/containous/$(BINARY_NAME)/cmd/version.version=$(VERSION) \
@@ -39,8 +39,14 @@ local-build: $(DIST_DIR)
 local-test: clean
 	go test -v -cover ./...
 
-# Integration test
+ifeq ($(UNAME), Linux)
 test-integration: $(DIST_DIR) kubectl helm build k3d
+else
+test-integration: $(DIST_DIR) kubectl helm build local-build k3d
+endif
+	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS)
+
+test-integration-nobuild: $(DIST_DIR) kubectl helm k3d
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS)
 
 kubectl:

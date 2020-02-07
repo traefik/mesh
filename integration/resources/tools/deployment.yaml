@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tiny-tools
-  namespace: default
+  namespace: test
   labels:
     app: tiny-tools
 spec:
@@ -13,7 +13,7 @@ spec:
   template:
     metadata:
       name: tiny-tools
-      namespace: default
+      namespace: test
       labels:
         app: tiny-tools
     spec:

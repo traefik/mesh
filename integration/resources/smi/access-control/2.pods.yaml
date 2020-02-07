@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: a
+  namespace: test
 spec:
   serviceAccountName: a
   containers:
@@ -13,21 +14,8 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: a-tools
-spec:
-  serviceAccountName: a
-  containers:
-    - name: a-tools
-      image: giantswarm/tiny-tools:3.9
-      command:
-      - "sleep"
-      - "3600"
-
----
-apiVersion: v1
-kind: Pod
-metadata:
   name: b
+  namespace: test
   labels:
     app: b
 spec:
@@ -40,21 +28,8 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: b-tools
-spec:
-  serviceAccountName: b
-  containers:
-    - name: b-tools
-      image: giantswarm/tiny-tools:3.9
-      command:
-      - "sleep"
-      - "3600"
-
----
-apiVersion: v1
-kind: Pod
-metadata:
   name: c
+  namespace: test
 spec:
   serviceAccountName: c
   containers:
@@ -65,21 +40,8 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: c-tools
-spec:
-  serviceAccountName: c
-  containers:
-    - name: c-tools
-      image: giantswarm/tiny-tools:3.9
-      command:
-      - "sleep"
-      - "3600"
-
----
-apiVersion: v1
-kind: Pod
-metadata:
   name: d
+  namespace: test
   labels:
     app: d
 spec:
@@ -92,21 +54,8 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: d-tools
-spec:
-  serviceAccountName: d
-  containers:
-    - name: d-tools
-      image: giantswarm/tiny-tools:3.9
-      command:
-      - "sleep"
-      - "3600"
-
----
-apiVersion: v1
-kind: Pod
-metadata:
   name: e
+  namespace: test
   labels:
     app: e
 spec:
@@ -114,11 +63,13 @@ spec:
   containers:
     - name: e
       image: containous/whoami:v1.0.1
+
 ---
 apiVersion: v1
 kind: Pod
 metadata:
   name: tcp
+  namespace: test
   labels:
     app: tcp
 spec:

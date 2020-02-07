@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: b
+  namespace: test
 spec:
   type: ClusterIP
   ports:
@@ -15,7 +16,36 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: b1
+  namespace: test
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      name: web
+  selector:
+    app: b
+    
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: b2
+  namespace: test
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      name: web
+  selector:
+    app: b
+    
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: b-v1
+  namespace: test
 spec:
   type: ClusterIP
   ports:
@@ -30,6 +60,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: b-v2
+  namespace: test
 spec:
   type: ClusterIP
   ports:
