@@ -180,7 +180,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 
 	for _, test := range testCases {
 		argSlice := []string{
-			"exec", "-it", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
+			"exec", "-i", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
 		}
 
 		c.Log(test.desc)
