@@ -45,7 +45,7 @@ func patchCommand(pConfig *cmd.PrepareConfig) error {
 	}
 
 	if err = clients.CheckInformersStart(pConfig.SMI); err != nil {
-		return fmt.Errorf("error during informer check: %v", err)
+		return fmt.Errorf("error during informer check: %v, this can be caused by pre-existing objects in your cluster that do not conform to the spec", err)
 	}
 
 	if err = clients.InitCluster(pConfig.Namespace, pConfig.ClusterDomain); err != nil {
