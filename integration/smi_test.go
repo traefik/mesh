@@ -48,7 +48,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 
 func (s *SMISuite) TestSMIAccessControlPrepareFail(c *check.C) {
 	s.createResources(c, "resources/smi/access-control-broken/")
-	defer s.deleteResources(c, "resources/smi/access-control-broken/", true)
+	defer s.deleteResources(c, "resources/smi/access-control-broken/", false)
 
 	args := []string{"--smi"}
 	cmd := s.maeshPrepareWithArgs(args...)
