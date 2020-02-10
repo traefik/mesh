@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,16 +13,21 @@ import (
 	"github.com/containous/traefik/v2/pkg/safe"
 
 	smiAccessClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	accessInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	smiSpecsClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
+	specsInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	smiSplitClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
+	splitInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -155,6 +161,65 @@ func (w *ClientWrapper) KubeDNSMatch() (bool, error) {
 	log.Info("KubeDNS match")
 
 	return true, nil
+}
+
+// CheckInformersStart checks if the required informers can start and sync in a reasonable time.
+func (w *ClientWrapper) CheckInformersStart(smi bool) error {
+	log.Debug("Creating and Starting Informers")
+
+	stopCh := make(chan struct{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Create a new SharedInformerFactory, and register the event handler to informers.
+	kubeFactory := informers.NewSharedInformerFactoryWithOptions(w.KubeClient, ResyncPeriod)
+	kubeFactory.Core().V1().Services().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	kubeFactory.Core().V1().Endpoints().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	kubeFactory.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	kubeFactory.Start(stopCh)
+
+	for t, ok := range kubeFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+		}
+	}
+
+	if smi {
+		// Create new SharedInformerFactories, and register the event handler to informers.
+		accessFactory := accessInformer.NewSharedInformerFactoryWithOptions(w.SmiAccessClient, ResyncPeriod)
+		accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+		accessFactory.Start(stopCh)
+
+		for t, ok := range accessFactory.WaitForCacheSync(ctx.Done()) {
+			if !ok {
+				return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			}
+		}
+
+		specsFactory := specsInformer.NewSharedInformerFactoryWithOptions(w.SmiSpecsClient, ResyncPeriod)
+		specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+		specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+		specsFactory.Start(stopCh)
+
+		for t, ok := range specsFactory.WaitForCacheSync(ctx.Done()) {
+			if !ok {
+				return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			}
+		}
+
+		splitFactory := splitInformer.NewSharedInformerFactoryWithOptions(w.SmiSplitClient, ResyncPeriod)
+		splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+		splitFactory.Start(stopCh)
+
+		for t, ok := range splitFactory.WaitForCacheSync(ctx.Done()) {
+			if !ok {
+				return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			}
+		}
+	}
+
+	return nil
 }
 
 // isCoreDNSVersionSupported returns true if the provided string contains a supported CoreDNS version.

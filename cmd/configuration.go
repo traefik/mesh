@@ -36,6 +36,7 @@ type PrepareConfig struct {
 	Debug         bool   `description:"Debug mode" export:"true"`
 	Namespace     string `description:"The namespace that maesh is installed in." export:"true"`
 	ClusterDomain string `description:"Your internal K8s cluster domain." export:"true"`
+	SMI           bool   `description:"Enable SMI operation" export:"true"`
 }
 
 // NewPrepareConfig creates PrepareConfig.
@@ -45,5 +46,6 @@ func NewPrepareConfig() *PrepareConfig {
 		Debug:         false,
 		Namespace:     "maesh",
 		ClusterDomain: "cluster.local",
+		SMI:           false,
 	}
 }
