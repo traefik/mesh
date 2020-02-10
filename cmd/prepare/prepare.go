@@ -10,20 +10,20 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// NewCmd builds a new Patch command.
+// NewCmd builds a new Prepare command.
 func NewCmd(pConfig *cmd.PrepareConfig, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name:          "prepare",
 		Description:   `Prepare command.`,
 		Configuration: pConfig,
 		Run: func(_ []string) error {
-			return patchCommand(pConfig)
+			return prepareCommand(pConfig)
 		},
 		Resources: loaders,
 	}
 }
 
-func patchCommand(pConfig *cmd.PrepareConfig) error {
+func prepareCommand(pConfig *cmd.PrepareConfig) error {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
 
