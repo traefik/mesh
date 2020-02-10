@@ -350,7 +350,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 		}
 
 		argSlice := []string{
-			"exec", "-it", test.source, "--", "curl", "-v", test.destinationHost + test.destinationPath, "--max-time", "5",
+			"exec", "-i", test.source, "--", "curl", "-v", test.destinationHost + test.destinationPath, "--max-time", "5",
 		}
 
 		c.Log(test.desc)
