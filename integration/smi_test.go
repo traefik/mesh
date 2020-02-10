@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/go-check/check"
@@ -43,6 +44,19 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 	s.checkWhitelistSourceRanges(c, config)
 	s.checkHTTPServiceServerURLs(c, config)
 	s.checkTCPServiceServerURLs(c, config)
+}
+
+func (s *SMISuite) TestSMIAccessControlPrepareFail(c *check.C) {
+	s.createResources(c, "resources/smi/access-control-broken/")
+	defer s.deleteResources(c, "resources/smi/access-control-broken/", true)
+
+	args := []string{"--smi"}
+	cmd := s.maeshPrepareWithArgs(args...)
+	cmd.Env = os.Environ()
+	output, err := cmd.CombinedOutput()
+
+	c.Log(string(output))
+	c.Assert(err, checker.NotNil)
 }
 
 func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
