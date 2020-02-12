@@ -19,9 +19,9 @@ blocks:
         - name: SMI Integration Suite
           commands:
             -  "make test-integration TESTFLAGS=\"-check.f SMISuite\""
-        # - name: Kubernetes Suite
-        #   commands:
-        #     -  make test-integration TESTFLAGS="-check.f KubernetesSuite"
+        - name: Kubernetes Suite
+          commands:
+            -  "make test-integration TESTFLAGS=\"-check.f KubernetesSuite\""
         # - name: CoreDNS Suite
         #   commands:
         #     -  make test-integration TESTFLAGS="-check.f CoreDNSSuite"
