@@ -376,11 +376,14 @@ func (p *Provider) buildTCPRouterFromTrafficTarget(trafficTarget *access.Traffic
 
 func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip string, match specs.HTTPMatch) string {
 	var result []string
+
 	if len(match.PathRegex) > 0 {
 		preparedPath := match.PathRegex
+
 		if strings.HasPrefix(match.PathRegex, "/") {
 			preparedPath = strings.TrimPrefix(preparedPath, "/")
 		}
+
 		result = append(result, fmt.Sprintf("PathPrefix(`/{path:%s}`)", preparedPath))
 	}
 
