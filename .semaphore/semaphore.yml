@@ -5,28 +5,19 @@ agent:
     type: e1-standard-2
     os_image: ubuntu1804
 blocks:
-  - name: Unit Tests
+  - name: Tests
     task:
       prologue:
         commands:
           - sem-version go 1.13
           - go version
           - checkout
-          - ./.semaphore/setup.sh
+          - sudo ./.semaphore/setup.sh
       jobs:
         - name: Make
           commands:
             - make
-  - name: Integration Tests
-    task:
-      prologue:
-        commands:
-          - sem-version go 1.13
-          - go version
-          - checkout
-          - ./.semaphore/setup.sh
-      jobs:
-        - name: SMI Suite
+        - name: SMI Integration Suite
           commands:
             -  "make test-integration TESTFLAGS=\"-check.f SMISuite\""
         # - name: Kubernetes Suite
