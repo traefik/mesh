@@ -12,7 +12,6 @@ blocks:
           - sem-version go 1.13
           - go version
           - checkout
-          - sudo ./.semaphore/setup.sh
       jobs:
         - name: Make
           commands:
