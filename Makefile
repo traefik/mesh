@@ -47,7 +47,7 @@ endif
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS)
 
 test-integration-nobuild: $(DIST_DIR) kubectl helm k3d
-	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS)
+	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) $(TESTFLAGS)
 
 kubectl:
 	@command -v kubectl >/dev/null 2>&1 || (curl -LO https://storage.googleapis.com/kubernetes-release/release/$(shell curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl)
