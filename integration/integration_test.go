@@ -116,16 +116,15 @@ func (s *BaseSuite) maeshPrepareWithArgs(args ...string) *exec.Cmd {
 
 func (s *BaseSuite) startMaeshBinaryCmd(c *check.C, smi bool) *exec.Cmd {
 	args := []string{}
+	if smi {
+		args = append(args, "--smi")
+	}
 
 	cmd := s.maeshPrepareWithArgs(args...)
 	cmd.Env = os.Environ()
 	output, err := cmd.CombinedOutput()
 	c.Log(string(output))
 	c.Assert(err, checker.IsNil)
-
-	if smi {
-		args = []string{"--smi"}
-	}
 
 	// Ignore the kube-system namespace since we don't care about system events.
 	args = append(args, "--ignoreNamespaces=kube-system")

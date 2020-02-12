@@ -111,6 +111,9 @@ spec:
             {{- if .Values.controller.logging.debug }}
             - "--debug"
             {{- end }}
+            {{- if .Values.smi.enable }}
+            - "--smi"
+            {{- end }}
             - "--clusterdomain"
             - {{ default "cluster.local" .Values.clusterDomain | quote }}
             - "--namespace=$(POD_NAMESPACE)"
