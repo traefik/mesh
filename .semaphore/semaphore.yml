@@ -22,12 +22,12 @@ blocks:
         - name: Kubernetes Suite
           commands:
             -  "make test-integration TESTFLAGS=\"-check.f KubernetesSuite\""
-        # - name: CoreDNS Suite
-        #   commands:
-        #     -  make test-integration TESTFLAGS="-check.f CoreDNSSuite"
-        # - name: KubeDNS Suite
-        #   commands:
-        #     -  make test-integration TESTFLAGS="-check.f KubeDNSSuite"
-        # - name: Helm Suite
-        #   commands:
-        #     -  make test-integration TESTFLAGS="-check.f HelmSuite"
+        - name: CoreDNS Suite
+          commands:
+            -  "make test-integration TESTFLAGS=\"-check.f CoreDNSSuite\""
+        - name: KubeDNS Suite
+          commands:
+            -  "make test-integration TESTFLAGS=\"-check.f KubeDNSSuite\""
+        - name: Helm Suite
+          commands:
+            -  "make test-integration TESTFLAGS=\"-check.f HelmSuite\""
