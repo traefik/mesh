@@ -18,16 +18,16 @@ blocks:
             - make
         - name: SMI Integration Suite
           commands:
-            -  "retry make test-integration TESTFLAGS=\"-check.f SMISuite\""
+            -  "make test-integration TESTFLAGS=\"-check.f SMISuite\""
         - name: Kubernetes Suite
           commands:
-            -  "retry make test-integration TESTFLAGS=\"-check.f KubernetesSuite\""
+            -  "make test-integration TESTFLAGS=\"-check.f KubernetesSuite\""
         - name: CoreDNS Suite
           commands:
-            -  "retry make test-integration TESTFLAGS=\"-check.f CoreDNSSuite\""
+            -  "make test-integration TESTFLAGS=\"-check.f CoreDNSSuite\""
         - name: KubeDNS Suite
           commands:
-            -  "retry make test-integration TESTFLAGS=\"-check.f KubeDNSSuite\""
+            -  "make test-integration TESTFLAGS=\"-check.f KubeDNSSuite\""
         - name: Helm Suite
           commands:
-            -  "retry make test-integration TESTFLAGS=\"-check.f HelmSuite\""
+            -  "make test-integration TESTFLAGS=\"-check.f HelmSuite\""
