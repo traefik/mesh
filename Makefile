@@ -44,7 +44,7 @@ test-integration: $(DIST_DIR) kubectl helm build k3d
 else
 test-integration: $(DIST_DIR) kubectl helm build local-build k3d
 endif
-	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS)
+	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) $(TESTFLAGS)
 
 test-integration-nobuild: $(DIST_DIR) kubectl helm k3d
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) $(TESTFLAGS)
