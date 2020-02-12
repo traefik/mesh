@@ -20,6 +20,7 @@ TESTFLAGS="-check.f MyTestSuite.My" make test-integration
 # Run every tests ending with "Test", in the MyTest suite
 TESTFLAGS="-check.f MyTestSuite.*Test" make test-integration
 ```
+
 This will allow specific suites to be run.
 
 More: https://labix.org/gocheck
