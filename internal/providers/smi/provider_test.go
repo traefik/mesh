@@ -38,7 +38,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 	}{
 		{
 			desc:     "method and regex in match",
-			expected: "PathPrefix(`/foo`) && Method(`GET`,`POST`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
+			expected: "PathPrefix(`/{path:foo}`) && Method(`GET`,`POST`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:      "test",
 				Methods:   []string{"GET", "POST"},
@@ -55,10 +55,18 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 		},
 		{
 			desc:     "prefix only in match",
-			expected: "PathPrefix(`/foo`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
+			expected: "PathPrefix(`/{path:foo}`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:      "test",
 				PathRegex: "/foo",
+			},
+		},
+		{
+			desc:     "prefix only with regex in match",
+			expected: "PathPrefix(`/{path:.*}`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
+			match: specsv1alpha1.HTTPMatch{
+				Name:      "test",
+				PathRegex: ".*",
 			},
 		},
 	}
@@ -219,7 +227,7 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 			expected: &dynamic.Router{
 				EntryPoints: []string{"http-81"},
 				Service:     "example",
-				Rule:        "(PathPrefix(`/metrics`) && Method(`GET`) && (Host(`test.default.maesh`) || Host(`10.0.0.1`)))",
+				Rule:        "(PathPrefix(`/{path:metrics}`) && Method(`GET`) && (Host(`test.default.maesh`) || Host(`10.0.0.1`)))",
 				Middlewares: []string{"block-all"},
 			},
 		},
@@ -1282,7 +1290,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Routers: map[string]*dynamic.Router{
 						"demo-servi-default-80-api-servic-default-5bb66e727779b5ba": {
 							EntryPoints: []string{"http-5000"},
-							Rule:        "(PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-service.default.maesh`) || Host(`10.1.0.1`)))",
+							Rule:        "(PathPrefix(`/{path:metrics}`) && Method(`GET`) && (Host(`demo-service.default.maesh`) || Host(`10.1.0.1`)))",
 							Service:     "demo-servi-default-80-api-servic-default-5bb66e727779b5ba",
 							Middlewares: []string{"api-service-metrics-default-demo-servi-default-80-api-servic-default-5bb66e727779b5ba-whitelist"},
 						},

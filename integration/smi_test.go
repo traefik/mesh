@@ -180,7 +180,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 
 	for _, test := range testCases {
 		argSlice := []string{
-			"exec", "-it", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
+			"exec", "-i", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
 		}
 
 		c.Log(test.desc)
@@ -350,7 +350,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 		}
 
 		argSlice := []string{
-			"exec", "-it", test.source, "--", "curl", "-v", test.destinationHost + test.destinationPath, "--max-time", "5",
+			"exec", "-i", test.source, "--", "curl", "-v", test.destinationHost + test.destinationPath, "--max-time", "5",
 		}
 
 		c.Log(test.desc)
