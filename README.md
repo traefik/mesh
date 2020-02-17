@@ -3,7 +3,7 @@
 </p>
 
 
-[![Build Status](https://semaphoreci.com/api/v1/projects/d10436a4-dcfb-454a-b19e-a9c96370b92d/2743246/badge.svg)](https://semaphoreci.com/containous/maesh)
+[![Build Status](https://containous.semaphoreci.com/badges/maesh/branches/master.svg?style=shields)](https://containous.semaphoreci.com/projects/maesh)
 [![Docs](https://img.shields.io/badge/docs-current-brightgreen.svg)](https://docs.mae.sh)
 [![GitHub](https://img.shields.io/github/license/containous/maesh)](https://github.com/containous/maesh/blob/master/LICENSE)
 [![release](https://img.shields.io/github/tag-date/containous/maesh.svg)](https://github.com/containous/maesh/releases)
