@@ -3,7 +3,7 @@ package base
 import (
 	"github.com/containous/maesh/internal/k8s"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	splitv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
+	splitv1alpha2 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -50,7 +50,7 @@ func CreateBaseConfigWithReadiness() *dynamic.Configuration {
 }
 
 // GetTrafficSplitFromList returns a trafficsplit from a list.
-func GetTrafficSplitFromList(serviceName string, trafficSplits []*splitv1alpha1.TrafficSplit) *splitv1alpha1.TrafficSplit {
+func GetTrafficSplitFromList(serviceName string, trafficSplits []*splitv1alpha2.TrafficSplit) *splitv1alpha2.TrafficSplit {
 	for _, t := range trafficSplits {
 		if t.Spec.Service == serviceName {
 			return t
@@ -87,7 +87,7 @@ func AddBaseSMIMiddlewares(config *dynamic.Configuration) {
 func GetScheme(annotations map[string]string) string {
 	scheme := annotations[k8s.AnnotationScheme]
 
-	if scheme != k8s.SchemeHTTP && scheme != k8s.SchemeH2c {
+	if scheme != k8s.SchemeHTTP && scheme != k8s.SchemeH2c && scheme != k8s.SchemeHTTPS {
 		return k8s.SchemeHTTP
 	}
 

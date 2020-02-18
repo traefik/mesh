@@ -28,7 +28,7 @@ This feature is critical, and therefore is defined clearly in the `values.yaml` 
 
 This feature is non-critical, and therefore is commented out by default in the `values.yaml` file.
 
-To allow this, template blocks that use this need to recursively test for existance of values before using them:
+To allow this, template blocks that use this need to recursively test for existence of values before using them:
 
 ```yaml
 {{- if .Values.storage}}
@@ -52,10 +52,10 @@ The non-critical feature defaults should be populated so that they can be enable
 ```
 
 The `volume` option is clearly optional, and non-critical.
-It is commented out (apart from the storage section comment block), and is also preceeded by a comment of `# (Optional)` in the preceeding line.
+It is commented out (apart from the storage section comment block), and is also preceded by a comment of `# (Optional)` in the preceding line.
 This facilitates configuration, when the storage section is uncommented, the optional features are still disabled by default.
 
-Similar to non-critical feaures, these options need to be tested for existance before use in the template.
+Similar to non-critical features, these options need to be tested for existence before use in the template.
 
 #### Note
 
@@ -90,7 +90,7 @@ Conditionals should chomp whitespace:
 {{- end }}
 ```
 
-There should be an empty commented line between each primary key in the `values.yaml` file to separate features from eachother.
+There should be an empty commented line between each primary key in the `values.yaml` file to separate features from each other.
 
 ## Values YAML Design
 

@@ -4,16 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path"
 	"regexp"
+	"strings"
 	"time"
 
-	splitv1alpha "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha1"
+	split "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha2"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -22,9 +23,7 @@ type SMISuite struct{ BaseSuite }
 
 func (s *SMISuite) SetUpSuite(c *check.C) {
 	s.startk3s(c)
-	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
 	s.startAndWaitForCoreDNS(c)
-	s.installTiller(c)
 }
 
 func (s *SMISuite) TearDownSuite(c *check.C) {
@@ -32,35 +31,10 @@ func (s *SMISuite) TearDownSuite(c *check.C) {
 }
 
 func (s *SMISuite) TestSMIAccessControl(c *check.C) {
-	// Get the tools pod service in whoami namespace
-	// This test needs to test the following requests result in the following responses:
-	// Pod C -> Service B /test returns 200
-	// Pod C -> Service B.maesh /test returns 404
-	// Pod C -> Service B.maesh /foo returns 200
-	// Pod A -> Service B /test returns 200
-	// Pod A -> Service B.maesh /test returns 401
-	// Pod A -> Service B.maesh /foo returns 200
-	// Pod A -> Service D /test returns 200
-	// Pod A -> Service D.maesh /bar returns 403
-	// Pod C -> Service D /test returns 200
-	// Pod C -> Service D.maesh /test returns 403
-	// Pod C -> Service D.maesh /bar returns 200
-	// Pod A -> Service E /test returns 200
-	// Pod B -> Service E /test returns 200
-	// Pod C -> Service E /test returns 200
-	// Pod D -> Service E /test returns 200
-	// Pod A -> Service E.maesh /test returns 404
-	// Pod B -> Service E.maesh /test returns 404
-	// Pod C -> Service E.maesh /test returns 404
-	// Pod D -> Service E.maesh /test returns 404
-	s.createResources(c, "resources/smi")
-	s.createResources(c, "resources/smi/access-control/")
-
-	time.Sleep(10 * time.Second)
-
 	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
+	s.createResources(c, "resources/smi/access-control/", 10*time.Second)
 
 	testCases := []struct {
 		desc        string
@@ -72,7 +46,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod C -> Service B /test returns 200",
 			source:      "c-tools",
-			destination: "b.default",
+			destination: "b.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
@@ -93,7 +67,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod A -> Service B /test returns 200",
 			source:      "a-tools",
-			destination: "b.default",
+			destination: "b.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
@@ -121,7 +95,7 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod C -> Service D /test returns 200",
 			source:      "c-tools",
-			destination: "d.default",
+			destination: "d.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
@@ -142,28 +116,28 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 		{
 			desc:        "Pod A -> Service E /test returns 200",
 			source:      "a-tools",
-			destination: "e.default",
+			destination: "e.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod B -> Service E /test returns 200",
 			source:      "b-tools",
-			destination: "e.default",
+			destination: "e.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod C -> Service E /test returns 200",
 			source:      "c-tools",
-			destination: "e.default",
+			destination: "e.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
 		{
 			desc:        "Pod D -> Service E /test returns 200",
 			source:      "d-tools",
-			destination: "e.default",
+			destination: "e.default.svc.cluster.local",
 			path:        "/test",
 			expected:    200,
 		},
@@ -206,10 +180,11 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 
 	for _, test := range testCases {
 		argSlice := []string{
-			"exec", "-it", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
+			"exec", "-i", test.source, "--", "curl", "-v", test.destination + test.path, "--max-time", "5",
 		}
 
 		c.Log(test.desc)
+		s.digHost(c, test.source, test.destination)
 		s.waitKubectlExecCommand(c, argSlice, fmt.Sprintf("HTTP/1.1 %d", test.expected))
 	}
 
@@ -219,55 +194,57 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 }
 
 func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
-	s.createResources(c, "resources/smi")
-	s.createResources(c, "resources/smi/traffic-split")
-
-	time.Sleep(10 * time.Second)
+	s.createResources(c, "resources/smi/traffic-split", 10*time.Second)
 
 	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
 
 	testCases := []struct {
-		desc         string
-		source       string
-		iteration    int
-		trafficSplit *splitv1alpha.TrafficSplit
-		destination  string
-		expected     map[string]float64
+		desc            string
+		source          string
+		iteration       int
+		trafficSplit    *split.TrafficSplit
+		destinationHost string
+		destinationPath string
+		expected        map[string]float64
 	}{
 		{
-			desc:        "Pod A -> Service B /test returns 200",
-			source:      "a-tools",
-			iteration:   1,
-			destination: "b-v1.default/test",
+			desc:            "Pod A -> Service B /test returns 200",
+			source:          "a-tools",
+			iteration:       1,
+			destinationHost: "b-v1.default.svc.cluster.local",
+			destinationPath: "/test",
 			expected: map[string]float64{
 				"Hostname: b-v1": 100,
 			},
 		},
 		{
-			desc:        "Pod A -> Service B /foo returns 200",
-			source:      "a-tools",
-			iteration:   1,
-			destination: "b-v2.default.maesh/foo",
+			desc:            "Pod A -> Service B /foo returns 200",
+			source:          "a-tools",
+			iteration:       1,
+			destinationHost: "b-v2.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v2": 100,
 			},
 		},
 		{
-			desc:        "Pod A -> Service B v1/foo returns 200",
-			source:      "a-tools",
-			iteration:   1,
-			destination: "b-v1.default.maesh/foo",
+			desc:            "Pod A -> Service B v1/foo returns 200",
+			source:          "a-tools",
+			iteration:       1,
+			destinationHost: "b-v1.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 100,
 			},
 		},
 		{
-			desc:        "Pod A -> Service B v2/foo returns 200",
-			source:      "a-tools",
-			iteration:   1,
-			destination: "b-v2.default.maesh/foo",
+			desc:            "Pod A -> Service B v2/foo returns 200",
+			source:          "a-tools",
+			iteration:       1,
+			destinationHost: "b-v2.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v2": 100,
 			},
@@ -276,25 +253,26 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:      "Pod A -> Service B v2/foo returns 200 50-50",
 			source:    "a-tools",
 			iteration: 10,
-			trafficSplit: &splitv1alpha.TrafficSplit{
+			trafficSplit: &split.TrafficSplit{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "canary",
 				},
-				Spec: splitv1alpha.TrafficSplitSpec{
+				Spec: split.TrafficSplitSpec{
 					Service: "b",
-					Backends: []splitv1alpha.TrafficSplitBackend{
+					Backends: []split.TrafficSplitBackend{
 						{
 							Service: "b-v1",
-							Weight:  *resource.NewQuantity(int64(500), resource.DecimalSI),
+							Weight:  500,
 						},
 						{
 							Service: "b-v2",
-							Weight:  *resource.NewQuantity(int64(500), resource.DecimalSI),
+							Weight:  500,
 						},
 					},
 				},
 			},
-			destination: "b.default.maesh/foo",
+			destinationHost: "b.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 50,
 				"Hostname: b-v2": 50,
@@ -304,25 +282,26 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:      "Pod A -> Service B v2/foo returns 200 0-100",
 			source:    "a-tools",
 			iteration: 10,
-			trafficSplit: &splitv1alpha.TrafficSplit{
+			trafficSplit: &split.TrafficSplit{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "canary",
 				},
-				Spec: splitv1alpha.TrafficSplitSpec{
+				Spec: split.TrafficSplitSpec{
 					Service: "b",
-					Backends: []splitv1alpha.TrafficSplitBackend{
+					Backends: []split.TrafficSplitBackend{
 						{
 							Service: "b-v1",
-							Weight:  *resource.NewQuantity(int64(0), resource.DecimalSI),
+							Weight:  0,
 						},
 						{
 							Service: "b-v2",
-							Weight:  *resource.NewQuantity(int64(1000), resource.DecimalSI),
+							Weight:  1000,
 						},
 					},
 				},
 			},
-			destination: "b.default.maesh/foo",
+			destinationHost: "b.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 0,
 				"Hostname: b-v2": 100,
@@ -332,25 +311,26 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 			desc:      "Pod A -> Service B v2/foo returns 200 100-0",
 			source:    "a-tools",
 			iteration: 10,
-			trafficSplit: &splitv1alpha.TrafficSplit{
+			trafficSplit: &split.TrafficSplit{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "canary",
 				},
-				Spec: splitv1alpha.TrafficSplitSpec{
+				Spec: split.TrafficSplitSpec{
 					Service: "b",
-					Backends: []splitv1alpha.TrafficSplitBackend{
+					Backends: []split.TrafficSplitBackend{
 						{
 							Service: "b-v1",
-							Weight:  *resource.NewQuantity(int64(1000), resource.DecimalSI),
+							Weight:  1000,
 						},
 						{
 							Service: "b-v2",
-							Weight:  *resource.NewQuantity(int64(0), resource.DecimalSI),
+							Weight:  0,
 						},
 					},
 				},
 			},
-			destination: "b.default.maesh/foo",
+			destinationHost: "b.default.maesh",
+			destinationPath: "/foo",
 			expected: map[string]float64{
 				"Hostname: b-v1": 100,
 				"Hostname: b-v2": 0,
@@ -359,20 +339,18 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 	}
 
 	for _, test := range testCases {
-		var trafficSplit *splitv1alpha.TrafficSplit
+		var trafficSplit *split.TrafficSplit
 		if test.trafficSplit != nil {
-			trafficSplit, err = s.client.SmiSplitClient.SplitV1alpha1().TrafficSplits("default").Create(test.trafficSplit)
+			trafficSplit, err = s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits("default").Create(test.trafficSplit)
 			c.Assert(err, checker.IsNil)
 
 			err = s.client.KubeClient.CoreV1().Services("default").Delete("b", &metav1.DeleteOptions{})
 			c.Assert(err, checker.IsNil)
-			s.createResources(c, "resources/smi/traffic-split")
-
-			time.Sleep(10 * time.Second)
+			s.createResources(c, "resources/smi/traffic-split", 10*time.Second)
 		}
 
 		argSlice := []string{
-			"exec", "-it", test.source, "--", "curl", "-v", test.destination, "--max-time", "5",
+			"exec", "-i", test.source, "--", "curl", "-v", test.destinationHost + test.destinationPath, "--max-time", "5",
 		}
 
 		c.Log(test.desc)
@@ -384,7 +362,11 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 				if err != nil {
 					return err
 				}
-				percentageResult[s.getLineContent(data)]++
+				result := s.getLineContent(data)
+				if result == "" {
+					c.Log(data)
+				}
+				percentageResult[result]++
 			}
 
 			fmt.Println(percentageResult)
@@ -401,7 +383,7 @@ func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 		c.Assert(err, check.IsNil)
 
 		if trafficSplit != nil {
-			err := s.client.SmiSplitClient.SplitV1alpha1().TrafficSplits("default").Delete(trafficSplit.Name, &metav1.DeleteOptions{})
+			err := s.client.SmiSplitClient.SplitV1alpha2().TrafficSplits("default").Delete(trafficSplit.Name, &metav1.DeleteOptions{})
 			c.Assert(err, checker.IsNil)
 		}
 	}
@@ -424,13 +406,14 @@ func (s *SMISuite) getLineContent(data string) string {
 	return ""
 }
 
-func (s *SMISuite) createResources(c *check.C, dirPath string) {
+func (s *SMISuite) createResources(c *check.C, dirPath string, waitTime time.Duration) {
 	// Create the required objects from the smi directory
 	cmd := exec.Command("kubectl", "apply",
 		"-f", path.Join(s.dir, dirPath))
 	cmd.Env = os.Environ()
 	_, err := cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
+	time.Sleep(waitTime)
 }
 
 func (s *SMISuite) deleteResources(c *check.C, dirPath string, force bool) {
@@ -444,4 +427,17 @@ func (s *SMISuite) deleteResources(c *check.C, dirPath string, force bool) {
 	cmd.Env = os.Environ()
 	_, err := cmd.CombinedOutput()
 	c.Assert(err, checker.IsNil)
+}
+
+func (s *SMISuite) digHost(c *check.C, source, destination string) {
+	// Dig the host, with a short response for the A record
+	argSlice := []string{
+		"exec", "-i", source, "--", "dig", destination, "+short",
+	}
+
+	output, err := s.waitKubectlExecCommandReturn(c, argSlice)
+	c.Assert(err, checker.IsNil)
+	c.Log(fmt.Sprintf("Dig %s: %s", destination, strings.TrimSpace(output)))
+	IP := net.ParseIP(strings.TrimSpace(output))
+	c.Assert(IP, checker.NotNil)
 }

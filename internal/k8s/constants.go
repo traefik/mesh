@@ -9,6 +9,15 @@ const (
 	ResyncPeriod          = 5 * time.Minute
 	baseAnnotation string = "maesh.containo.us/"
 
+	// CoreObjectKinds is a filter for objects to process by the core client.
+	CoreObjectKinds = "Deployment|Endpoints|Service|Ingress|Secret|Namespace|Pod"
+	// AccessObjectKinds is a filter for objects to process by the access client.
+	AccessObjectKinds = "TrafficTarget"
+	// SpecsObjectKinds is a filter for objects to process by the specs client.
+	SpecsObjectKinds = "HTTPRouteGroup|TCPRoute"
+	// SplitObjectKinds is a filter for objects to process by the split client.
+	SplitObjectKinds = "TrafficSplit"
+
 	// AnnotationServiceType service type annotation.
 	AnnotationServiceType = baseAnnotation + "traffic-type"
 	// AnnotationScheme scheme.
@@ -31,6 +40,8 @@ const (
 	SchemeHTTP string = "http"
 	// SchemeH2c h2c scheme.
 	SchemeH2c string = "h2c"
+	// SchemeHTTPS HTTPS scheme.
+	SchemeHTTPS string = "https"
 
 	// BlockAllMiddlewareKey block all middleware name.
 	BlockAllMiddlewareKey string = "smi-block-all-middleware"

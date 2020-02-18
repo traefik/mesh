@@ -18,7 +18,7 @@ Define the templated image with tag
 Define the templated mesh image with tag
 */}}
 {{- define "maesh.meshImage" -}}
-    {{- printf "%s:%s" .Values.mesh.image.name ( .Values.mesh.image.tag | default "v2.0" ) -}}
+    {{- printf "%s:%s" .Values.mesh.image.name ( .Values.mesh.image.tag | default "v2.1" ) -}}
 {{- end -}}
 
 {{/*

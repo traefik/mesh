@@ -17,8 +17,14 @@ RUN NOKOGIRI_USE_SYSTEM_LIBRARIES=true gem install --no-document html-proofer -v
 RUN apk --no-cache --no-progress add \
     git \
     nodejs \
-    npm \
-  && npm install markdownlint@0.16.0 markdownlint-cli@0.18.0 --global
+    npm
+
+# To handle 'not get uid/gid'
+RUN npm config set unsafe-perm true
+
+RUN npm install --global \
+    markdownlint@0.16.0 \
+    markdownlint-cli@0.18.0 
 
 # Finally the shell tools we need for later
 # tini helps to terminate properly all the parallelized tasks when sending CTRL-C

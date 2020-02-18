@@ -28,6 +28,7 @@ var (
 	k3dClusterName = "maesh-integration"
 	k3sImage       = "rancher/k3s"
 	k3sVersion     = "v0.10.1"
+	maeshNamespace = "maesh"
 )
 
 func Test(t *testing.T) {
@@ -48,12 +49,11 @@ func Test(t *testing.T) {
 	images = append(images, image{"coredns/coredns:1.4.0", true})
 	images = append(images, image{"coredns/coredns:1.5.2", true})
 	images = append(images, image{"coredns/coredns:1.6.3", true})
-	images = append(images, image{"gcr.io/kubernetes-helm/tiller:v2.15.1", true})
 	images = append(images, image{"giantswarm/tiny-tools:3.9", true})
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7", true})
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7", true})
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7", true})
-	images = append(images, image{"traefik:v2.0.2", true})
+	images = append(images, image{"traefik:v2.1.1", true})
 
 	for _, image := range images {
 		if image.pull {
@@ -121,11 +121,18 @@ func (s *BaseSuite) startk3s(c *check.C) {
 
 	s.kubeConfigPath = strings.TrimSuffix(string(output), "\n")
 
+	c.Log("Creating kube client...")
+
 	s.client, err = s.try.WaitClientCreated(masterURL, s.kubeConfigPath, 30*time.Second)
 	c.Assert(err, checker.IsNil)
 
 	s.try = try.NewTry(s.client)
 
+	c.Log("Setting new kubeconfig path...")
+	c.Assert(os.Setenv("KUBECONFIG", s.kubeConfigPath), checker.IsNil)
+
+	c.Log("Creating maesh namespace...")
+	s.createMaeshNamespace(c)
 	c.Log("k3s start successfully.")
 }
 
@@ -196,17 +203,12 @@ func (s *BaseSuite) startAndWaitForKubeDNS(c *check.C) {
 }
 
 func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
-	err := s.try.WaitReadyDeployment("maesh-controller", "maesh", 30*time.Second)
+	err := s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
 func (s *BaseSuite) waitForMaeshControllerStartedWithReturn() error {
-	return s.try.WaitReadyDeployment("maesh-controller", "maesh", 30*time.Second)
-}
-
-func (s *BaseSuite) waitForTiller(c *check.C) {
-	err := s.try.WaitReadyDeployment("tiller-deploy", metav1.NamespaceSystem, 30*time.Second)
-	c.Assert(err, checker.IsNil)
+	return s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second)
 }
 
 func (s *BaseSuite) waitForTools(c *check.C) {
@@ -238,35 +240,22 @@ func (s *BaseSuite) startWhoami(c *check.C) {
 	c.Assert(err, checker.IsNil)
 }
 
-func (s *BaseSuite) installTiller(c *check.C) {
-	// create tiller service account.
-	cmd := exec.Command("kubectl", "apply",
-		"-f", path.Join(s.dir, "resources/helm/serviceaccount.yaml"))
+func (s *BaseSuite) createMaeshNamespace(c *check.C) {
+	// Create maesh namespace, required by helm v3.
+	cmd := exec.Command("kubectl", "create", "namespace", maeshNamespace)
 	cmd.Env = os.Environ()
-	_, err := cmd.CombinedOutput()
-	c.Assert(err, checker.IsNil)
 
-	// create tiller cluster role binding account.
-	cmd = exec.Command("kubectl", "apply",
-		"-f", path.Join(s.dir, "resources/helm/clusterrolebinding.yaml"))
-	cmd.Env = os.Environ()
-	_, err = cmd.CombinedOutput()
-	c.Assert(err, checker.IsNil)
+	output, err := cmd.CombinedOutput()
 
-	// Init helm with the service account created before.
-	cmd = exec.Command("helm", "init",
-		"--service-account", "tiller", "--upgrade")
-	cmd.Env = os.Environ()
-	_, err = cmd.CombinedOutput()
+	fmt.Println(string(output))
 	c.Assert(err, checker.IsNil)
-
-	// Wait for tiller initialized.
-	s.waitForTiller(c)
+	c.Log("maesh namespace created successfully.")
 }
 
-func (s *BaseSuite) installHelmMaesh(_ *check.C, smi bool, kubeDNS bool) error {
+func (s *BaseSuite) installHelmMaesh(c *check.C, smi bool, kubeDNS bool) error {
+	c.Log("Installing Maesh via helm...")
 	// Install the helm chart.
-	argSlice := []string{"install", "../helm/chart/maesh", "--values", "resources/values.yaml", "--name", "powpow", "--namespace", "maesh"}
+	argSlice := []string{"install", "powpow", "../helm/chart/maesh", "--values", "resources/values.yaml", "--namespace", maeshNamespace}
 
 	if smi {
 		argSlice = append(argSlice, "--set", "smi.enable=true")
@@ -280,9 +269,10 @@ func (s *BaseSuite) installHelmMaesh(_ *check.C, smi bool, kubeDNS bool) error {
 }
 
 func (s *BaseSuite) unInstallHelmMaesh(c *check.C) {
+	c.Log("Uninstalling Maesh via helm...")
 	// Install the helm chart.
-	argSlice := []string{"delete", "--purge", "powpow"}
-	err := s.try.WaitCommandExecute("helm", argSlice, "deleted", 10*time.Second)
+	argSlice := []string{"uninstall", "powpow", "--namespace", maeshNamespace}
+	err := s.try.WaitCommandExecute("helm", argSlice, "uninstalled", 10*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 

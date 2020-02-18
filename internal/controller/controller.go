@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -17,45 +18,59 @@ import (
 	"github.com/containous/maesh/internal/providers/smi"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/containous/traefik/v2/pkg/safe"
-	smiAccessExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
-	smiSpecsExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
-	smiSplitExternalversions "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
+	accessInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
+	accessLister "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
+	specsInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
+	specsLister "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
+	splitInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
+	splitLister "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
+	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/util/retry"
 )
 
 // Controller hold controller configuration.
 type Controller struct {
-	clients           *k8s.ClientWrapper
-	kubernetesFactory informers.SharedInformerFactory
-	smiAccessFactory  smiAccessExternalversions.SharedInformerFactory
-	smiSpecsFactory   smiSpecsExternalversions.SharedInformerFactory
-	smiSplitFactory   smiSplitExternalversions.SharedInformerFactory
-	handler           *Handler
-	configRefreshChan chan string
-	provider          base.Provider
-	ignored           k8s.IgnoreWrapper
-	smiEnabled        bool
-	defaultMode       string
-	meshNamespace     string
-	tcpStateTable     *k8s.State
-	lastConfiguration safe.Safe
-	api               *API
-	apiPort           int
-	deployLog         *DeployLog
+	clients              *k8s.ClientWrapper
+	kubernetesFactory    informers.SharedInformerFactory
+	smiAccessFactory     accessInformer.SharedInformerFactory
+	smiSpecsFactory      specsInformer.SharedInformerFactory
+	smiSplitFactory      splitInformer.SharedInformerFactory
+	handler              *Handler
+	configRefreshChan    chan string
+	provider             base.Provider
+	ignored              k8s.IgnoreWrapper
+	smiEnabled           bool
+	defaultMode          string
+	meshNamespace        string
+	tcpStateTable        *k8s.State
+	lastConfiguration    safe.Safe
+	api                  *API
+	apiPort              int
+	deployLog            *DeployLog
+	PodLister            listers.PodLister
+	ConfigMapLister      listers.ConfigMapLister
+	ServiceLister        listers.ServiceLister
+	EndpointsLister      listers.EndpointsLister
+	TrafficTargetLister  accessLister.TrafficTargetLister
+	HTTPRouteGroupLister specsLister.HTTPRouteGroupLister
+	TCPRouteLister       specsLister.TCPRouteLister
+	TrafficSplitLister   splitLister.TrafficSplitLister
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
 func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int) *Controller {
 	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
 
 	for _, ns := range ignoreNamespaces {
 		ignored.AddIgnoredNamespace(ns)
@@ -63,6 +78,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 
 	ignored.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
 	ignored.AddIgnoredNamespace(metav1.NamespaceSystem)
+	ignored.AddIgnoredApps("maesh", "jaeger")
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	configRefreshChan := make(chan string)
@@ -99,26 +115,40 @@ func (c *Controller) Init() error {
 
 	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
 
+	// Create the base listers
+	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
+	c.ConfigMapLister = c.kubernetesFactory.Core().V1().ConfigMaps().Lister()
+	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
+	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
+
 	c.deployLog = NewDeployLog(1000)
-	c.api = NewAPI(c.apiPort, &c.lastConfiguration, c.deployLog, c.clients, c.meshNamespace)
+	c.api = NewAPI(c.apiPort, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
 
 	if c.smiEnabled {
-		c.provider = smi.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
 		// Create new SharedInformerFactories, and register the event handler to informers.
-		c.smiAccessFactory = smiAccessExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
+		c.smiAccessFactory = accessInformer.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
 		c.smiAccessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
 
-		c.smiSpecsFactory = smiSpecsExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiSpecsClient, k8s.ResyncPeriod)
+		c.smiSpecsFactory = specsInformer.NewSharedInformerFactoryWithOptions(c.clients.SmiSpecsClient, k8s.ResyncPeriod)
 		c.smiSpecsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
+		c.smiSpecsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
 
-		c.smiSplitFactory = smiSplitExternalversions.NewSharedInformerFactoryWithOptions(c.clients.SmiSplitClient, k8s.ResyncPeriod)
-		c.smiSplitFactory.Split().V1alpha1().TrafficSplits().Informer().AddEventHandler(c.handler)
+		c.smiSplitFactory = splitInformer.NewSharedInformerFactoryWithOptions(c.clients.SmiSplitClient, k8s.ResyncPeriod)
+		c.smiSplitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(c.handler)
+
+		// Create the SMI listers
+		c.TrafficTargetLister = c.smiAccessFactory.Access().V1alpha1().TrafficTargets().Lister()
+		c.HTTPRouteGroupLister = c.smiSpecsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
+		c.TCPRouteLister = c.smiSpecsFactory.Specs().V1alpha1().TCPRoutes().Lister()
+		c.TrafficSplitLister = c.smiSplitFactory.Split().V1alpha2().TrafficSplits().Lister()
+
+		c.provider = smi.New(c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister, c.PodLister, c.TrafficTargetLister, c.HTTPRouteGroupLister, c.TCPRouteLister, c.TrafficSplitLister)
 
 		return nil
 	}
 
 	// If SMI is not configured, use the kubernetes provider.
-	c.provider = kubernetes.New(c.clients, c.defaultMode, c.meshNamespace, c.tcpStateTable, c.ignored)
+	c.provider = kubernetes.New(c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister)
 
 	return nil
 }
@@ -132,7 +162,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	log.Debug("Initializing Mesh controller")
 
 	// Start the informers.
-	c.startInformers(stopCh)
+	c.startInformers(stopCh, 10*time.Second)
 
 	// Load the state from the TCP State Configmap before running.
 	c.tcpStateTable, err = c.loadTCPStateTable()
@@ -187,11 +217,15 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 }
 
 // startInformers starts the controller informers.
-func (c *Controller) startInformers(stopCh <-chan struct{}) {
-	// Start the informers
+func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Duration) {
+	// Start the informers with a timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	defer cancel()
+
+	log.Debug("Starting Informers")
 	c.kubernetesFactory.Start(stopCh)
 
-	for t, ok := range c.kubernetesFactory.WaitForCacheSync(stopCh) {
+	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
 			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
@@ -200,7 +234,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 	if c.smiEnabled {
 		c.smiAccessFactory.Start(stopCh)
 
-		for t, ok := range c.smiAccessFactory.WaitForCacheSync(stopCh) {
+		for t, ok := range c.smiAccessFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
@@ -208,7 +242,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 
 		c.smiSpecsFactory.Start(stopCh)
 
-		for t, ok := range c.smiSpecsFactory.WaitForCacheSync(stopCh) {
+		for t, ok := range c.smiSpecsFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
@@ -216,7 +250,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 
 		c.smiSplitFactory.Start(stopCh)
 
-		for t, ok := range c.smiSplitFactory.WaitForCacheSync(stopCh) {
+		for t, ok := range c.smiSplitFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
@@ -225,30 +259,40 @@ func (c *Controller) startInformers(stopCh <-chan struct{}) {
 }
 
 func (c *Controller) createMeshServices() error {
-	services, err := c.clients.GetServices(metav1.NamespaceAll)
+	sel, err := c.ignored.LabelSelector()
 	if err != nil {
-		return fmt.Errorf("unable to get services: %v", err)
+		return fmt.Errorf("unable to build label selectors: %w", err)
 	}
 
-	for _, service := range services {
-		if c.ignored.IsIgnoredService(service.Name, service.Namespace) {
+	// Because createMeshServices is called after startInformers,
+	// then we already have the cache built, so we can use it.
+	svcs, err := c.ServiceLister.List(sel)
+	if err != nil {
+		return fmt.Errorf("unable to get services: %w", err)
+	}
+
+	for _, service := range svcs {
+		if c.ignored.IsIgnored(service.ObjectMeta) {
 			continue
 		}
 
 		log.Debugf("Creating mesh for service: %v", service.Name)
+
 		meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
 
-		for _, subservice := range services {
-			// If there is already a mesh service created, don't bother recreating
-			if subservice.Name == meshServiceName && subservice.Namespace == c.meshNamespace {
-				continue
-			}
+		_, err := c.ServiceLister.Services(c.meshNamespace).Get(meshServiceName)
+		if err == nil {
+			continue
+		}
+		// We're expecting an IsNotFound error here, to only create the maesh service if it does not exist.
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("unable to check if maesh service exists: %w", err)
 		}
 
 		log.Infof("Creating associated mesh service: %s", meshServiceName)
 
 		if err := c.createMeshService(service); err != nil {
-			return fmt.Errorf("unable to get create mesh service: %v", err)
+			return fmt.Errorf("unable to create mesh service: %w", err)
 		}
 	}
 
@@ -259,12 +303,9 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 	meshServiceName := c.userServiceToMeshServiceName(service.Name, service.Namespace)
 	log.Debugf("Creating mesh service: %s", meshServiceName)
 
-	_, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
+	_, err := c.ServiceLister.Services(c.meshNamespace).Get(meshServiceName)
+	// We're expecting an IsNotFound error here, to only create the maesh service if it does not exist.
+	if err != nil && errors.IsNotFound(err) {
 		// Mesh service does not exist.
 		var ports []corev1.ServicePort
 
@@ -302,6 +343,9 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      meshServiceName,
 				Namespace: c.meshNamespace,
+				Labels: map[string]string{
+					"app": "maesh",
+				},
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: ports,
@@ -320,19 +364,17 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 func (c *Controller) deleteMeshService(serviceName, serviceNamespace string) error {
 	meshServiceName := c.userServiceToMeshServiceName(serviceName, serviceNamespace)
 
-	_, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
+	_, err := c.ServiceLister.Services(c.meshNamespace).Get(meshServiceName)
 	if err != nil {
 		return err
 	}
 
-	if exists {
-		// Service exists, delete
-		if err := c.clients.DeleteService(c.meshNamespace, meshServiceName); err != nil {
-			return err
-		}
-
-		log.Debugf("Deleted service: %s/%s", c.meshNamespace, meshServiceName)
+	// Service exists, delete
+	if err := c.clients.DeleteService(c.meshNamespace, meshServiceName); err != nil {
+		return err
 	}
+
+	log.Debugf("Deleted service: %s/%s", c.meshNamespace, meshServiceName)
 
 	return nil
 }
@@ -345,46 +387,45 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 	var updatedSvc *corev1.Service
 
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		service, exists, err := c.clients.GetService(c.meshNamespace, meshServiceName)
+		service, err := c.ServiceLister.Services(c.meshNamespace).Get(meshServiceName)
 		if err != nil {
 			return err
 		}
 
-		if exists {
-			var ports []corev1.ServicePort
+		var ports []corev1.ServicePort
 
-			serviceMode := newUserService.Annotations[k8s.AnnotationServiceType]
-			if serviceMode == "" {
-				serviceMode = c.defaultMode
-			}
-
-			for id, sp := range newUserService.Spec.Ports {
-				if sp.Protocol != corev1.ProtocolTCP {
-					log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, newUserService.Namespace, newUserService.Name)
-					continue
-				}
-
-				targetPort := intstr.FromInt(5000 + id)
-				if serviceMode == k8s.ServiceTypeTCP {
-					targetPort = intstr.FromInt(c.getTCPPortFromState(newUserService.Name, newUserService.Namespace, sp.Port))
-				}
-				meshPort := corev1.ServicePort{
-					Name:       sp.Name,
-					Port:       sp.Port,
-					TargetPort: targetPort,
-				}
-
-				ports = append(ports, meshPort)
-			}
-
-			newService := service.DeepCopy()
-			newService.Spec.Ports = ports
-
-			updatedSvc, err = c.clients.UpdateService(newService)
-			if err != nil {
-				return err
-			}
+		serviceMode := newUserService.Annotations[k8s.AnnotationServiceType]
+		if serviceMode == "" {
+			serviceMode = c.defaultMode
 		}
+
+		for id, sp := range newUserService.Spec.Ports {
+			if sp.Protocol != corev1.ProtocolTCP {
+				log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, newUserService.Namespace, newUserService.Name)
+				continue
+			}
+
+			targetPort := intstr.FromInt(5000 + id)
+			if serviceMode == k8s.ServiceTypeTCP {
+				targetPort = intstr.FromInt(c.getTCPPortFromState(newUserService.Name, newUserService.Namespace, sp.Port))
+			}
+			meshPort := corev1.ServicePort{
+				Name:       sp.Name,
+				Port:       sp.Port,
+				TargetPort: targetPort,
+			}
+
+			ports = append(ports, meshPort)
+		}
+
+		newService := service.DeepCopy()
+		newService.Spec.Ports = ports
+
+		updatedSvc, err = c.clients.UpdateService(newService)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
 
@@ -399,7 +440,7 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 
 // userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.
 func (c *Controller) userServiceToMeshServiceName(serviceName string, namespace string) string {
-	return fmt.Sprintf("%s-%s-%s", c.meshNamespace, serviceName, namespace)
+	return fmt.Sprintf("%s-%s-6d61657368-%s", c.meshNamespace, serviceName, namespace)
 }
 
 func (c *Controller) loadTCPStateTable() (*k8s.State, error) {
@@ -408,13 +449,9 @@ func (c *Controller) loadTCPStateTable() (*k8s.State, error) {
 		result = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
 	}
 
-	configMap, exists, err := c.clients.GetConfigMap(c.meshNamespace, k8s.TCPStateConfigMapName)
+	configMap, err := c.ConfigMapLister.ConfigMaps(c.meshNamespace).Get(k8s.TCPStateConfigMapName)
 	if err != nil {
 		return result, err
-	}
-
-	if !exists {
-		return result, fmt.Errorf("TCP State Table configmap does not exist")
 	}
 
 	if len(configMap.Data) > 0 {
@@ -473,13 +510,9 @@ func (c *Controller) getTCPPortFromState(serviceName, serviceNamespace string, s
 }
 
 func (c *Controller) saveTCPStateTable() error {
-	configMap, exists, err := c.clients.GetConfigMap(c.meshNamespace, k8s.TCPStateConfigMapName)
+	configMap, err := c.ConfigMapLister.ConfigMaps(c.meshNamespace).Get(k8s.TCPStateConfigMapName)
 	if err != nil {
 		return err
-	}
-
-	if !exists {
-		return fmt.Errorf("TCP State Table configmap does not exist")
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -500,18 +533,25 @@ func (c *Controller) saveTCPStateTable() error {
 
 // deployConfiguration deploys the configuration to the mesh pods.
 func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
-	podList, err := c.clients.ListPodWithOptions(c.meshNamespace, metav1.ListOptions{
-		LabelSelector: "component==maesh-mesh",
-	})
+	sel := labels.Everything()
+
+	r, err := labels.NewRequirement("component", selection.Equals, []string{"maesh-mesh"})
 	if err != nil {
-		return fmt.Errorf("unable to retrieve pod list: %v", err)
+		return err
 	}
 
-	if len(podList.Items) == 0 {
+	sel = sel.Add(*r)
+
+	podList, err := c.PodLister.Pods(c.meshNamespace).List(sel)
+	if err != nil {
+		return fmt.Errorf("unable to get pods: %w", err)
+	}
+
+	if len(podList) == 0 {
 		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
 	}
 
-	if err := c.deployToPods(podList.Items, config); err != nil {
+	if err := c.deployToPods(podList, config); err != nil {
 		return fmt.Errorf("error deploying configuration: %v", err)
 	}
 
@@ -520,20 +560,27 @@ func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
 
 // deployConfigurationToUnreadyNodes deploys the configuration to the mesh pods.
 func (c *Controller) deployConfigurationToUnreadyNodes(config *dynamic.Configuration) error {
-	podList, err := c.clients.ListPodWithOptions(c.meshNamespace, metav1.ListOptions{
-		LabelSelector: "component==maesh-mesh",
-	})
+	sel := labels.Everything()
+
+	r, err := labels.NewRequirement("component", selection.Equals, []string{"maesh-mesh"})
 	if err != nil {
-		return fmt.Errorf("unable to retrieve pod list: %v", err)
+		return err
 	}
 
-	if len(podList.Items) == 0 {
+	sel = sel.Add(*r)
+
+	podList, err := c.PodLister.Pods(c.meshNamespace).List(sel)
+	if err != nil {
+		return fmt.Errorf("unable to get pods: %w", err)
+	}
+
+	if len(podList) == 0 {
 		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
 	}
 
-	var unreadyPods []corev1.Pod
+	var unreadyPods []*corev1.Pod
 
-	for _, pod := range podList.Items {
+	for _, pod := range podList {
 		for _, status := range pod.Status.ContainerStatuses {
 			if !status.Ready {
 				unreadyPods = append(unreadyPods, pod)
@@ -549,7 +596,7 @@ func (c *Controller) deployConfigurationToUnreadyNodes(config *dynamic.Configura
 	return nil
 }
 
-func (c *Controller) deployToPods(pods []corev1.Pod, config *dynamic.Configuration) error {
+func (c *Controller) deployToPods(pods []*corev1.Pod, config *dynamic.Configuration) error {
 	var errg errgroup.Group
 
 	for _, p := range pods {

@@ -1,6 +1,7 @@
 package smi
 
 import (
+	"context"
 	"testing"
 
 	"github.com/containous/maesh/internal/providers/base"
@@ -12,15 +13,23 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
-const meshNamespace string = "maesh"
-
 func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
-	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
+	ignored := k8s.NewIgnored()
+	provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+		clientMock.ServiceLister,
+		clientMock.EndpointsLister,
+		clientMock.PodLister,
+		clientMock.TrafficTargetLister,
+		clientMock.HTTPRouteGroupLister,
+		clientMock.TCPRouteLister,
+		clientMock.TrafficSplitLister)
 
 	testCases := []struct {
 		desc     string
@@ -29,7 +38,7 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 	}{
 		{
 			desc:     "method and regex in match",
-			expected: "PathPrefix(`/foo`) && Method(`GET`,`POST`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
+			expected: "PathPrefix(`/{path:foo}`) && Method(`GET`,`POST`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:      "test",
 				Methods:   []string{"GET", "POST"},
@@ -46,10 +55,18 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 		},
 		{
 			desc:     "prefix only in match",
-			expected: "PathPrefix(`/foo`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
+			expected: "PathPrefix(`/{path:foo}`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
 			match: specsv1alpha1.HTTPMatch{
 				Name:      "test",
 				PathRegex: "/foo",
+			},
+		},
+		{
+			desc:     "prefix only with regex in match",
+			expected: "PathPrefix(`/{path:.*}`) && (Host(`test.foo.maesh`) || Host(`10.0.0.1`))",
+			match: specsv1alpha1.HTTPMatch{
+				Name:      "test",
+				PathRegex: ".*",
 			},
 		},
 	}
@@ -68,11 +85,19 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 }
 
 func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
-	clientMock := k8s.NewClientMock("mock.yaml")
-	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
+	ignored := k8s.NewIgnored()
+	provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+		clientMock.ServiceLister,
+		clientMock.EndpointsLister,
+		clientMock.PodLister,
+		clientMock.TrafficTargetLister,
+		clientMock.HTTPRouteGroupLister,
+		clientMock.TCPRouteLister,
+		clientMock.TrafficSplitLister)
 
 	expected := []*accessv1alpha1.TrafficTarget{
 		{
@@ -140,11 +165,15 @@ func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 			},
 		},
 	}
-	allTrafficTargets, err := clientMock.GetTrafficTargets()
+	allTrafficTargets, err := clientMock.TrafficTargetLister.TrafficTargets(metav1.NamespaceAll).List(labels.Everything())
 	assert.NoError(t, err)
 
 	actual := provider.getTrafficTargetsWithDestinationInNamespace("foo", allTrafficTargets)
-	assert.Equal(t, expected, actual)
+	assert.Equal(t, len(actual), len(expected))
+
+	for _, expectedValue := range expected {
+		assert.Contains(t, actual, expectedValue)
+	}
 }
 
 func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
@@ -198,7 +227,7 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 			expected: &dynamic.Router{
 				EntryPoints: []string{"http-81"},
 				Service:     "example",
-				Rule:        "(PathPrefix(`/metrics`) && Method(`GET`) && (Host(`test.default.maesh`) || Host(`10.0.0.1`)))",
+				Rule:        "(PathPrefix(`/{path:metrics}`) && Method(`GET`) && (Host(`test.default.maesh`) || Host(`10.0.0.1`)))",
 				Middlewares: []string{"block-all"},
 			},
 		},
@@ -286,63 +315,25 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 				Middlewares: []string{"block-all"},
 			},
 		},
-		{
-			desc:             "simple router with HTTPRouteGroup error",
-			serviceName:      "test",
-			serviceNamespace: metav1.NamespaceDefault,
-			serviceIP:        "10.0.0.1",
-			port:             81,
-			key:              "example",
-			trafficTarget: &accessv1alpha1.TrafficTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "api-service-metrics-2",
-					Namespace: metav1.NamespaceDefault,
-				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "TrafficTarget",
-					APIVersion: "access.smi-spec.io/v1alpha1",
-				},
-				Destination: accessv1alpha1.IdentityBindingSubject{
-					Kind:      "ServiceAccount",
-					Name:      "api-service",
-					Namespace: "foo",
-				},
-				Sources: []accessv1alpha1.IdentityBindingSubject{
-					{
-						Kind:      "ServiceAccount",
-						Name:      "prometheus",
-						Namespace: metav1.NamespaceDefault,
-					},
-				},
-				Specs: []accessv1alpha1.TrafficTargetSpec{
-					{
-						Kind:    "HTTPRouteGroup",
-						Name:    "api-service-routes",
-						Matches: []string{"metrics"},
-					},
-				},
-			},
-			expected: &dynamic.Router{
-				EntryPoints: []string{"http-81"},
-				Service:     "example",
-				Middlewares: []string{"block-all"},
-			},
-			httpError: true,
-		},
 	}
 
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			clientMock := k8s.NewClientMock("mock.yaml")
-			if test.httpError {
-				clientMock.EnableHTTPRouteGroupError()
-			}
-			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
+			ignored := k8s.NewIgnored()
+			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+				clientMock.ServiceLister,
+				clientMock.EndpointsLister,
+				clientMock.PodLister,
+				clientMock.TrafficTargetLister,
+				clientMock.HTTPRouteGroupLister,
+				clientMock.TCPRouteLister,
+				clientMock.TrafficSplitLister)
 			middleware := "block-all"
 			actual := provider.buildHTTPRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
 			assert.Equal(t, test.expected, actual)
@@ -479,14 +470,19 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			clientMock := k8s.NewClientMock("mock_tcp.yaml")
-			if test.tcpError {
-				clientMock.EnableTCPRouteError()
-			}
-			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			clientMock := k8s.NewClientMock(ctx.Done(), "mock_tcp.yaml", true)
+			ignored := k8s.NewIgnored()
+			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+				clientMock.ServiceLister,
+				clientMock.EndpointsLister,
+				clientMock.PodLister,
+				clientMock.TrafficTargetLister,
+				clientMock.HTTPRouteGroupLister,
+				clientMock.TCPRouteLister,
+				clientMock.TrafficSplitLister)
 			actual := provider.buildTCPRouterFromTrafficTarget(test.trafficTarget, test.port, test.key)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -494,10 +490,19 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 }
 
 func TestGetServiceMode(t *testing.T) {
-	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
+	ignored := k8s.NewIgnored()
+	provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+		clientMock.ServiceLister,
+		clientMock.EndpointsLister,
+		clientMock.PodLister,
+		clientMock.TrafficTargetLister,
+		clientMock.HTTPRouteGroupLister,
+		clientMock.TCPRouteLister,
+		clientMock.TrafficSplitLister)
 
 	testCases := []struct {
 		desc     string
@@ -537,7 +542,6 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 		endpoints      *corev1.Endpoints
 		trafficTargets []*accessv1alpha1.TrafficTarget
 		expected       []*accessv1alpha1.TrafficTarget
-		podError       bool
 	}{
 		{
 			desc: "traffictarget destination in different namespace",
@@ -748,66 +752,6 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 			expected: nil,
 		},
 		{
-			desc: "pod error",
-			endpoints: &corev1.Endpoints{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "demo-service",
-					Namespace: metav1.NamespaceDefault,
-				},
-				Subsets: []corev1.EndpointSubset{
-					{
-						Addresses: []corev1.EndpointAddress{
-							{
-								IP: "10.1.1.50",
-								TargetRef: &corev1.ObjectReference{
-									Name:      "example",
-									Namespace: metav1.NamespaceDefault,
-								},
-							},
-						},
-						Ports: []corev1.EndpointPort{
-							{
-								Port: 50,
-							},
-						},
-					},
-				},
-			},
-			trafficTargets: []*accessv1alpha1.TrafficTarget{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "api-foo",
-						Namespace: metav1.NamespaceDefault,
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "TrafficTarget",
-						APIVersion: "access.smi-spec.io/v1alpha1",
-					},
-					Destination: accessv1alpha1.IdentityBindingSubject{
-						Kind:      "ServiceAccount",
-						Name:      "api-service",
-						Namespace: metav1.NamespaceDefault,
-					},
-					Sources: []accessv1alpha1.IdentityBindingSubject{
-						{
-							Kind:      "ServiceAccount",
-							Name:      "prometheus",
-							Namespace: metav1.NamespaceDefault,
-						},
-					},
-					Specs: []accessv1alpha1.TrafficTargetSpec{
-						{
-							Kind:    "HTTPRouteGroup",
-							Name:    "api-service-routes",
-							Matches: []string{"metrics"},
-						},
-					},
-				},
-			},
-			expected: nil,
-			podError: true,
-		},
-		{
 			desc: "pod doesnt exist error",
 			endpoints: &corev1.Endpoints{
 				ObjectMeta: metav1.ObjectMeta{
@@ -872,16 +816,19 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			clientMock := k8s.NewClientMock("mock.yaml")
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-			if test.podError {
-				clientMock.EnablePodError()
-			}
-
+			clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
 			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
-
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+				clientMock.ServiceLister,
+				clientMock.EndpointsLister,
+				clientMock.PodLister,
+				clientMock.TrafficTargetLister,
+				clientMock.HTTPRouteGroupLister,
+				clientMock.TCPRouteLister,
+				clientMock.TrafficSplitLister)
 
 			actual := provider.getApplicableTrafficTargets(test.endpoints, test.trafficTargets)
 			assert.Equal(t, test.expected, actual)
@@ -1084,69 +1031,6 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "pod error",
-			endpoints: &corev1.Endpoints{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: metav1.NamespaceDefault,
-				},
-				Subsets: []corev1.EndpointSubset{
-					{
-						Addresses: []corev1.EndpointAddress{
-							{
-								IP: "10.1.1.10",
-								TargetRef: &corev1.ObjectReference{
-									Name:      "example",
-									Namespace: metav1.NamespaceDefault,
-								},
-							},
-						},
-						Ports: []corev1.EndpointPort{
-							{
-								Port: 5080,
-							},
-						},
-					},
-				},
-			},
-			trafficTarget: &accessv1alpha1.TrafficTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "api-foo",
-					Namespace: metav1.NamespaceDefault,
-				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "TrafficTarget",
-					APIVersion: "access.smi-spec.io/v1alpha1",
-				},
-				Destination: accessv1alpha1.IdentityBindingSubject{
-					Kind:      "ServiceAccount",
-					Name:      "api-service",
-					Namespace: metav1.NamespaceDefault,
-				},
-				Sources: []accessv1alpha1.IdentityBindingSubject{
-					{
-						Kind:      "ServiceAccount",
-						Name:      "prometheus",
-						Namespace: metav1.NamespaceDefault,
-					},
-				},
-				Specs: []accessv1alpha1.TrafficTargetSpec{
-					{
-						Kind:    "HTTPRouteGroup",
-						Name:    "api-service-routes",
-						Matches: []string{"metrics"},
-					},
-				},
-			},
-			expected: &dynamic.Service{
-				LoadBalancer: &dynamic.ServersLoadBalancer{
-					PassHostHeader: base.Bool(true),
-					Servers:        nil,
-				},
-			},
-			podError: true,
-		},
-		{
 			desc: "pod does not exist",
 			endpoints: &corev1.Endpoints{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1214,16 +1098,19 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			clientMock := k8s.NewClientMock("mock.yaml")
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-			if test.podError {
-				clientMock.EnablePodError()
-			}
-
+			clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
 			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
-
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+				clientMock.ServiceLister,
+				clientMock.EndpointsLister,
+				clientMock.PodLister,
+				clientMock.TrafficTargetLister,
+				clientMock.HTTPRouteGroupLister,
+				clientMock.TCPRouteLister,
+				clientMock.TrafficSplitLister)
 
 			actual := provider.buildHTTPServiceFromTrafficTarget(test.endpoints, test.trafficTarget, k8s.SchemeHTTP)
 			assert.Equal(t, test.expected, actual)
@@ -1232,10 +1119,19 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 }
 
 func TestGroupTrafficTargetsByDestination(t *testing.T) {
-	ignored := k8s.NewIgnored()
-	ignored.SetMeshNamespace(meshNamespace)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	provider := New(nil, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
+	ignored := k8s.NewIgnored()
+	provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+		clientMock.ServiceLister,
+		clientMock.EndpointsLister,
+		clientMock.PodLister,
+		clientMock.TrafficTargetLister,
+		clientMock.HTTPRouteGroupLister,
+		clientMock.TCPRouteLister,
+		clientMock.TrafficSplitLister)
 
 	trafficTargets := []*accessv1alpha1.TrafficTarget{
 		{
@@ -1394,7 +1290,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Routers: map[string]*dynamic.Router{
 						"demo-servi-default-80-api-servic-default-5bb66e727779b5ba": {
 							EntryPoints: []string{"http-5000"},
-							Rule:        "(PathPrefix(`/metrics`) && Method(`GET`) && (Host(`demo-service.default.maesh`) || Host(`10.1.0.1`)))",
+							Rule:        "(PathPrefix(`/{path:metrics}`) && Method(`GET`) && (Host(`demo-service.default.maesh`) || Host(`10.1.0.1`)))",
 							Service:     "demo-servi-default-80-api-servic-default-5bb66e727779b5ba",
 							Middlewares: []string{"api-service-metrics-default-demo-servi-default-80-api-servic-default-5bb66e727779b5ba-whitelist"},
 						},
@@ -1431,7 +1327,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Middlewares: map[string]*dynamic.Middleware{
 						"api-service-metrics-default-demo-servi-default-80-api-servic-default-5bb66e727779b5ba-whitelist": {
 							IPWhiteList: &dynamic.IPWhiteList{
-								SourceRange: []string{"10.4.3.2"},
+								SourceRange: []string{"10.4.3.100"},
 							},
 						},
 						"smi-block-all-middleware": {
@@ -1447,36 +1343,25 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 			},
 		},
-		{
-			desc:           "simple configuration build with endpoint error",
-			mockFile:       "build_configuration_http_service.yaml",
-			expected:       nil,
-			endpointsError: true,
-		},
-		{
-			desc:         "simple configuration build with service error",
-			mockFile:     "build_configuration_http_service.yaml",
-			expected:     nil,
-			serviceError: true,
-		},
 	}
 
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			clientMock := k8s.NewClientMock(test.mockFile)
-			if test.endpointsError {
-				clientMock.EnableEndpointsError()
-			}
-			if test.serviceError {
-				clientMock.EnableServiceError()
-			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
+			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, true)
 			ignored := k8s.NewIgnored()
-			ignored.SetMeshNamespace(meshNamespace)
-
-			provider := New(clientMock, k8s.ServiceTypeHTTP, meshNamespace, nil, ignored)
+			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+				clientMock.ServiceLister,
+				clientMock.EndpointsLister,
+				clientMock.PodLister,
+				clientMock.TrafficTargetLister,
+				clientMock.HTTPRouteGroupLister,
+				clientMock.TCPRouteLister,
+				clientMock.TrafficSplitLister)
 			config, err := provider.BuildConfig()
 			assert.Equal(t, test.expected, config)
 			if test.endpointsError || test.serviceError {

@@ -1,8 +1,8 @@
 ---
-apiVersion: v1
+apiVersion: v2
 name: maesh
-version: 1.0.0
-appVersion: v1.0.0
+version: 1.1.0-rc1
+appVersion: v1.1.0-rc1
 description: Maesh - Simpler Service Mesh
 keywords:
 - traefik
@@ -17,3 +17,10 @@ maintainers:
   email: michael@containo.us
 engine: gotpl
 icon: https://avatars0.githubusercontent.com/u/16349663?s=200&v=4
+dependencies:
+  - name: tracing
+    version: 0.0.3
+    condition: tracing.deploy
+  - name: metrics
+    version: 0.0.6
+    condition: metrics.deploy

@@ -5,7 +5,11 @@ type Namespaces []string
 
 // Contains returns true if x is in the slice, false otherwise.
 func (n Namespaces) Contains(x string) bool {
-	for _, v := range n {
+	return contains(n, x)
+}
+
+func contains(s []string, x string) bool {
+	for _, v := range s {
 		if x == v {
 			return true
 		}

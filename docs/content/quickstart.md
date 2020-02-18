@@ -7,7 +7,7 @@ It will safely install itself via the helm chart, and will be ready for use imme
 
 - Kubernetes 1.11+
 - CoreDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.3+ supported)
-- Helm v2 with a [working tiller service account](https://helm.sh/docs/using_helm/#installing-tiller)
+- Helm v3
 
 ### RBAC
 
@@ -27,15 +27,12 @@ helm installation to perform all steps it needs is to edit the
   namespace: kube-system
 ```
 
-Assuming `tiller` is deployed in your `kube-system` namespace, this will
-give it very open permissions.
-
 ## Installing Maesh
 
 ```bash tab="Command"
 helm repo add maesh https://containous.github.io/maesh/charts
 helm repo update
-helm install --name=maesh --namespace=maesh maesh/maesh
+helm install maesh maesh/maesh
 ```
 
 ```bash tab="Expected output"
