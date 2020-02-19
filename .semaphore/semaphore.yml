@@ -43,4 +43,4 @@ blocks:
             - "make test-integration TESTFLAGS=\"-check.f HelmSuite\""
       env_vars:
         - name: CI_TIMEOUT_MULTIPLIER
-          value: 3
+          value: "3"
