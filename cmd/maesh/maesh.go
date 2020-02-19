@@ -8,9 +8,9 @@ import (
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/cmd/prepare"
 	"github.com/containous/maesh/cmd/version"
-	"github.com/containous/maesh/internal/controller"
-	"github.com/containous/maesh/internal/k8s"
-	"github.com/containous/maesh/internal/signals"
+	"github.com/containous/maesh/pkg/controller"
+	"github.com/containous/maesh/pkg/k8s"
+	"github.com/containous/maesh/pkg/signals"
 	"github.com/containous/traefik/v2/pkg/cli"
 	log "github.com/sirupsen/logrus"
 )
