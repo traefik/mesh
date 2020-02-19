@@ -242,3 +242,66 @@ User-Agent: curl/7.64.0
 Accept: */*
 X-Forwarded-For: 3.4.5.6
 ```
+
+## SMI Example
+
+In order to expose the HTTP Services from above with SMI enabled, please create the following resources:
+
+```yaml
+---
+apiVersion: specs.smi-spec.io/v1alpha1
+kind: HTTPRouteGroup
+metadata:
+  name: http-everything
+  namespace: whoami
+matches:
+- name: everything
+  pathRegex: ".*"
+  methods: ["*"]
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: whatever
+  namespace: whoami
+destination:
+  kind: ServiceAccount
+  name: whoami-server
+  namespace: whoami
+  port: "80"
+specs:
+- kind: HTTPRouteGroup
+  name: http-everything
+  matches:
+  - everything
+sources:
+- kind: ServiceAccount
+  name: whoami-client
+  namespace: whoami
+```
+
+For TCP mode, you only need a TCPRoute and a TrafficTarget:
+
+```yaml
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha1
+metadata:
+  name: api-service-target
+  namespace: default
+destination:
+  kind: ServiceAccount
+  name: api-service
+  namespace: default
+specs:
+- kind: TCPRoute
+  name: my-tcp-route
+sources:
+- kind: ServiceAccount
+  name: my-other-service
+  namespace: default
+---
+apiVersion: specs.smi-spec.io/v1alpha1
+kind: TCPRoute
+metadata:
+  name: my-tcp-route
+```
