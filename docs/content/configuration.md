@@ -125,6 +125,9 @@ Other types of route groups and detailed information are available [in the speci
 
 By default, all traffic is denied so we need to grant access to clients to our application. This is done by defining a `TrafficTarget`.
 
+??? Note "TrafficTarget Source & Destination"
+    Please note, that TrafficTarget is a namespaced ressource. Therefore, the source and the destination namespace needs to be explicitly defined.
+
 ```yaml
 ---
 apiVersion: access.smi-spec.io/v1alpha1
