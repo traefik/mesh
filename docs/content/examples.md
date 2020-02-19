@@ -245,7 +245,7 @@ X-Forwarded-For: 3.4.5.6
 
 ## SMI Example
 
-In order to expose the HTTP Services from above over SMI, please apply that file.
+In order to expose the HTTP Services from above with SMI enabled, please create the following resources:
 
 ```yaml
 ---
@@ -280,7 +280,7 @@ sources:
   namespace: whoami
 ```
 
-For TCP, you only need a TCPRoute and a TrafficTarget.
+For TCP mode, you only need a TCPRoute and a TrafficTarget:
 
 ```yaml
 kind: TrafficTarget
