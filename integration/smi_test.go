@@ -185,7 +185,9 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 
 		c.Log(test.desc)
 		s.digHost(c, test.source, test.destination)
-		s.waitKubectlExecCommand(c, argSlice, fmt.Sprintf("HTTP/1.1 %d", test.expected))
+
+		err := s.try.WaitCommandExecute("kubectl", argSlice, fmt.Sprintf("HTTP/1.1 %d", test.expected), 30*time.Second)
+		c.Assert(err, checker.IsNil)
 	}
 
 	s.unInstallHelmMaesh(c)
