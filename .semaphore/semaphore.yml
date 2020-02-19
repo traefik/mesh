@@ -44,4 +44,3 @@ blocks:
       env_vars:
         - name: CI_TIMEOUT_MULTIPLIER
           value: 3
-              
