@@ -324,7 +324,7 @@ func (p *Provider) buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespac
 
 		rawHTTPRouteGroup, err := p.httpRouteGroupLister.HTTPRouteGroups(trafficTarget.Namespace).Get(spec.Name)
 		if err != nil {
-			log.Errorf("Error getting HTTPRouteGroup: %v", err)
+			log.Errorf("Error getting the HTTPRouteGroups %s in the same namespace %s as the TrafficTarget: %v", spec.Name, trafficTarget.Namespace, err)
 			continue
 		}
 
@@ -360,7 +360,7 @@ func (p *Provider) buildTCPRouterFromTrafficTarget(trafficTarget *access.Traffic
 
 		_, err := p.tcpRouteLister.TCPRoutes(trafficTarget.Namespace).Get(spec.Name)
 		if err != nil {
-			log.Errorf("Error getting TCPRoute: %v", err)
+			log.Errorf("Error getting the TCPRoute %s in the same namespace %s as the TrafficTarget: %v", spec.Name, trafficTarget.Namespace, err)
 			continue
 		}
 
