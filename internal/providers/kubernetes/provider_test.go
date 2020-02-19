@@ -78,6 +78,11 @@ func TestBuildConfiguration(t *testing.T) {
 				Namespace: "foo",
 				Port:      80,
 			},
+			10001: {
+				Name:      "test",
+				Namespace: "foo",
+				Port:      443,
+			},
 		},
 	}
 
@@ -141,6 +146,158 @@ func TestBuildConfiguration(t *testing.T) {
 				TCP: &dynamic.TCPConfiguration{
 					Routers:  map[string]*dynamic.TCPRouter{},
 					Services: map[string]*dynamic.TCPService{},
+				},
+			},
+		},
+		{
+			desc:     "simple configuration build with multiple port service",
+			mockFile: "build_configuration_multiple_ports.yaml",
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
+						"readiness": {
+							EntryPoints: []string{"readiness"},
+							Service:     "readiness",
+							Rule:        "Path(`/ping`)",
+						},
+						"test-foo-80-6653beb49ee354ea": {
+							EntryPoints: []string{"http-5000"},
+							Service:     "test-foo-80-6653beb49ee354ea",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
+						},
+						"test-foo-443-92bb68bb9ffcb54d": {
+							EntryPoints: []string{"http-5001"},
+							Service:     "test-foo-443-92bb68bb9ffcb54d",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
+						},
+					},
+					Middlewares: map[string]*dynamic.Middleware{},
+					Services: map[string]*dynamic.Service{
+						"readiness": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://127.0.0.1:8080",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+						"test-foo-80-6653beb49ee354ea": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://10.0.0.1:80",
+										Scheme: "",
+										Port:   "",
+									},
+									{
+										URL:    "http://10.0.0.2:80",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+						"test-foo-443-92bb68bb9ffcb54d": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://10.0.0.3:443",
+										Scheme: "",
+										Port:   "",
+									},
+									{
+										URL:    "http://10.0.0.4:443",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+					},
+				},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
+				},
+			},
+		},
+		{
+			desc:     "simple configuration build with multiple port TCP service",
+			mockFile: "build_configuration_multiple_ports_tcp.yaml",
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
+						"readiness": {
+							EntryPoints: []string{"readiness"},
+							Service:     "readiness",
+							Rule:        "Path(`/ping`)",
+						},
+					},
+					Middlewares: map[string]*dynamic.Middleware{},
+					Services: map[string]*dynamic.Service{
+						"readiness": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://127.0.0.1:8080",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+					},
+				},
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
+						"test-foo-80-6653beb49ee354ea": {
+							EntryPoints: []string{"tcp-10000"},
+							Service:     "test-foo-80-6653beb49ee354ea",
+							Rule:        "HostSNI(`*`)",
+						},
+						"test-foo-443-92bb68bb9ffcb54d": {
+							EntryPoints: []string{"tcp-10001"},
+							Service:     "test-foo-443-92bb68bb9ffcb54d",
+							Rule:        "HostSNI(`*`)",
+						},
+					},
+					Services: map[string]*dynamic.TCPService{
+						"test-foo-80-6653beb49ee354ea": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.0.0.1:80",
+										Port:    "",
+									},
+									{
+										Address: "10.0.0.2:80",
+										Port:    "",
+									},
+								},
+							},
+						},
+						"test-foo-443-92bb68bb9ffcb54d": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.0.0.3:443",
+										Port:    "",
+									},
+									{
+										Address: "10.0.0.4:443",
+										Port:    "",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -374,6 +531,62 @@ func TestBuildService(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc:     "Multiple Ports",
+			mockFile: "build_service_simple.yaml",
+			endpoints: &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "foo",
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.0.0.1",
+							},
+							{
+								IP: "10.0.0.2",
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 80,
+							},
+						},
+					},
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.0.0.3",
+							},
+							{
+								IP: "10.0.0.4",
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 443,
+							},
+						},
+					},
+				},
+			},
+			scheme: "http",
+			expected: &dynamic.Service{
+				LoadBalancer: &dynamic.ServersLoadBalancer{
+					PassHostHeader: base.Bool(true),
+					Servers: []dynamic.Server{
+						{
+							URL: "http://10.0.0.1:80",
+						},
+						{
+							URL: "http://10.0.0.2:80",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range testCases {
@@ -387,7 +600,7 @@ func TestBuildService(t *testing.T) {
 			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
 			ignored := k8s.NewIgnored()
 			provider := New(k8s.ServiceTypeHTTP, nil, ignored, clientMock.ServiceLister, clientMock.EndpointsLister)
-			actual := provider.buildService(test.endpoints, test.scheme)
+			actual := provider.buildService(test.endpoints, test.scheme, 80)
 
 			assert.Equal(t, test.expected, actual)
 		})
@@ -450,6 +663,60 @@ func TestBuildTCPService(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc:     "Multiple ports",
+			mockFile: "build_service_simple.yaml",
+			endpoints: &corev1.Endpoints{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "foo",
+				},
+				Subsets: []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.0.0.1",
+							},
+							{
+								IP: "10.0.0.2",
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 80,
+							},
+						},
+					},
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: "10.0.0.3",
+							},
+							{
+								IP: "10.0.0.4",
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port: 443,
+							},
+						},
+					},
+				},
+			},
+			expected: &dynamic.TCPService{
+				LoadBalancer: &dynamic.TCPServersLoadBalancer{
+					Servers: []dynamic.TCPServer{
+						{
+							Address: "10.0.0.1:80",
+						},
+						{
+							Address: "10.0.0.2:80",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range testCases {
@@ -463,7 +730,7 @@ func TestBuildTCPService(t *testing.T) {
 			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
 			ignored := k8s.NewIgnored()
 			provider := New(k8s.ServiceTypeHTTP, stateTable, ignored, clientMock.ServiceLister, clientMock.EndpointsLister)
-			actual := provider.buildTCPService(test.endpoints)
+			actual := provider.buildTCPService(test.endpoints, 80)
 			assert.Equal(t, test.expected, actual)
 		})
 	}
