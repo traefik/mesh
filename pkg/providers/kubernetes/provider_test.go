@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/containous/maesh/internal/providers/base"
+	"github.com/containous/maesh/pkg/providers/base"
 
-	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"

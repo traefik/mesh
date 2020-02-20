@@ -7,8 +7,8 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/containous/maesh/internal/k8s"
-	"github.com/containous/maesh/internal/providers/base"
+	"github.com/containous/maesh/pkg/k8s"
+	"github.com/containous/maesh/pkg/providers/base"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
