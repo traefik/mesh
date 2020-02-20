@@ -151,6 +151,7 @@ func (s *BaseSuite) startk3s(c *check.C, requiredImages []string) {
 		"--server-arg", "--no-deploy=traefik",
 		"--server-arg", "--no-deploy=coredns",
 		"--image", fmt.Sprintf("%s:%s", k3sImage, k3sVersion),
+		"--wait", "30",
 	)
 	cmd.Env = os.Environ()
 
