@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/containous/maesh/cmd"
-	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/traefik/v2/pkg/cli"
 	log "github.com/sirupsen/logrus"
 )
