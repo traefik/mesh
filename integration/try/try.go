@@ -16,6 +16,7 @@ import (
 	"github.com/containous/traefik/v2/pkg/safe"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
 
@@ -96,6 +97,35 @@ func (t *Try) WaitDeleteDeployment(name string, namespace string, timeout time.D
 		return nil
 	}), ebo); err != nil {
 		return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
+	}
+
+	return nil
+}
+
+// WaitPodIPAssigned wait until the pod is assigned an IP.
+func (t *Try) WaitPodIPAssigned(name string, namespace string, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		podList, err := t.client.ListPodWithOptions(namespace, metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("unable get the pod list in namespace %q: %v", namespace, err)
+		}
+
+		for _, pod := range podList.Items {
+			// If the pod name doesn't match or the IP is empty, go to next.
+			if pod.Name != name || pod.Status.PodIP == "" {
+				continue
+			}
+
+			// IP is assigned
+			return nil
+		}
+
+		return errors.New("pod IP not assigned")
+	}), ebo); err != nil {
+		return fmt.Errorf("unable get the pod list in namespace %q: %v", namespace, err)
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package integration
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/go-check/check"
@@ -34,6 +35,10 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 	s.createResources(c, "resources/smi/access-control/")
 	defer s.deleteResources(c, "resources/smi/access-control/", true)
 
+	podsCreated := []string{"a", "b", "c", "d", "e", "tcp"}
+
+	s.waitForPodIPs(c, podsCreated)
+
 	cmd := s.startMaeshBinaryCmd(c, true)
 	err := cmd.Start()
 
@@ -50,6 +55,10 @@ func (s *SMISuite) TestSMIAccessControl(c *check.C) {
 func (s *SMISuite) TestSMIAccessControlPrepareFail(c *check.C) {
 	s.createResources(c, "resources/smi/access-control-broken/")
 	defer s.deleteResources(c, "resources/smi/access-control-broken/", false)
+
+	podsCreated := []string{"a-tools", "b-v1", "b-v2"}
+
+	s.waitForPodIPs(c, podsCreated)
 
 	args := []string{"--smi"}
 	cmd := s.maeshPrepareWithArgs(args...)
@@ -176,5 +185,11 @@ func (s *SMISuite) checkTCPServiceServerURLs(c *check.C, config *dynamic.Configu
 		}
 
 		c.Log("Service " + name + " has the correct expected values.")
+	}
+}
+
+func (s *SMISuite) waitForPodIPs(c *check.C, pods []string) {
+	for _, pod := range pods {
+		c.Assert(s.try.WaitPodIPAssigned(pod, testNamespace, 30*time.Second), checker.IsNil)
 	}
 }
