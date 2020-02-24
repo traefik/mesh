@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/containous/maesh/internal/providers/base"
+	"github.com/containous/maesh/pkg/providers/base"
 
-	"github.com/containous/maesh/internal/k8s"
+	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
