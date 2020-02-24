@@ -56,6 +56,7 @@ type Controller struct {
 	lastConfiguration    safe.Safe
 	api                  *API
 	apiPort              int
+	apiIP                string
 	deployLog            *DeployLog
 	PodLister            listers.PodLister
 	ConfigMapLister      listers.ConfigMapLister
@@ -69,7 +70,7 @@ type Controller struct {
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int) *Controller {
+func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int, apiIP string) *Controller {
 	ignored := k8s.NewIgnored()
 
 	for _, ns := range ignoreNamespaces {
@@ -93,6 +94,7 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 		defaultMode:       defaultMode,
 		meshNamespace:     meshNamespace,
 		apiPort:           apiPort,
+		apiIP:             apiIP,
 	}
 
 	if err := c.Init(); err != nil {
@@ -122,7 +124,7 @@ func (c *Controller) Init() error {
 	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
 
 	c.deployLog = NewDeployLog(1000)
-	c.api = NewAPI(c.apiPort, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
+	c.api = NewAPI(c.apiPort, c.apiIP, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
 
 	if c.smiEnabled {
 		// Create new SharedInformerFactories, and register the event handler to informers.

@@ -101,7 +101,13 @@ type BaseSuite struct {
 }
 
 func (s *BaseSuite) maeshStartControllerWithArgsCmd(args ...string) *exec.Cmd {
-	controllerArgSlice := []string{fmt.Sprintf("--masterurl=%s", masterURL), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")), "--debug", fmt.Sprintf("--namespace=%s", maeshNamespace)}
+	controllerArgSlice := []string{
+		fmt.Sprintf("--masterurl=%s", masterURL),
+		fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")),
+		"--debug",
+		fmt.Sprintf("--namespace=%s", maeshNamespace),
+		"--apiIP=127.0.0.1",
+	}
 	args = append(controllerArgSlice, args...)
 
 	return exec.Command(maeshBinary, args...)
