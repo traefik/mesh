@@ -9,7 +9,7 @@
                     "a-b-test-b-test-80-a-b-test-e0425d13b2a322ad-whitelist"
                 ],
                 "service": "b-test-80-a-b-test-e0425d13b2a322ad",
-                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`XXXX`)))"
+                "rule": "(PathPrefix(`/{path:foo}`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`XXXX`)))"
             },
             "b-v1-test-80-a-b-test-03b338bc8ba21fbc": {
                 "entryPoints": [
@@ -19,7 +19,7 @@
                     "a-b-test-b-v1-test-80-a-b-test-03b338bc8ba21fbc-whitelist"
                 ],
                 "service": "b-v1-test-80-a-b-test-03b338bc8ba21fbc",
-                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b-v1.test.maesh`) || Host(`XXXX`)))"
+                "rule": "(PathPrefix(`/{path:foo}`) \u0026\u0026 (Host(`b-v1.test.maesh`) || Host(`XXXX`)))"
             },
             "b-v2-test-80-a-b-test-c2918aa87de2f415": {
                 "entryPoints": [
@@ -29,7 +29,7 @@
                     "a-b-test-b-v2-test-80-a-b-test-c2918aa87de2f415-whitelist"
                 ],
                 "service": "b-v2-test-80-a-b-test-c2918aa87de2f415",
-                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b-v2.test.maesh`) || Host(`XXXX`)))"
+                "rule": "(PathPrefix(`/{path:foo}`) \u0026\u0026 (Host(`b-v2.test.maesh`) || Host(`XXXX`)))"
             },
             "b1-test-80-a-b-test-ce97b257f9b2710f": {
                 "entryPoints": [
@@ -39,7 +39,7 @@
                     "a-b-test-b1-test-80-a-b-test-ce97b257f9b2710f-whitelist"
                 ],
                 "service": "b1-test-80-a-b-test-ce97b257f9b2710f",
-                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b1.test.maesh`) || Host(`XXXX`)))"
+                "rule": "(PathPrefix(`/{path:foo}`) \u0026\u0026 (Host(`b1.test.maesh`) || Host(`XXXX`)))"
             },
             "b2-test-80-a-b-test-6485fb29d873a5c3": {
                 "entryPoints": [
@@ -49,7 +49,7 @@
                     "a-b-test-b2-test-80-a-b-test-6485fb29d873a5c3-whitelist"
                 ],
                 "service": "b2-test-80-a-b-test-6485fb29d873a5c3",
-                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b2.test.maesh`) || Host(`XXXX`)))"
+                "rule": "(PathPrefix(`/{path:foo}`) \u0026\u0026 (Host(`b2.test.maesh`) || Host(`XXXX`)))"
             },
             "readiness": {
                 "entryPoints": [
