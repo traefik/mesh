@@ -24,6 +24,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	s.startAndWaitForCoreDNS(c)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
+	s.createResources(c, "resources/tcp-state-table/")
 }
 
 func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
@@ -63,8 +64,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		c.Log("Testing compatibility with " + test.desc)
 		s.setCoreDNSVersion(c, test.version)
 
-		args := []string{}
-		cmd := s.maeshPrepareWithArgs(args...)
+		cmd := s.maeshPrepareWithArgs()
 		cmd.Env = os.Environ()
 		output, err := cmd.CombinedOutput()
 
