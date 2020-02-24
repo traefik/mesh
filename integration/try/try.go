@@ -120,12 +120,13 @@ func (t *Try) WaitPodIPAssigned(name string, namespace string, timeout time.Dura
 			}
 
 			// IP is assigned
+			fmt.Println("Pod \"" + name + "\" has IP: " + pod.Status.PodIP)
 			return nil
 		}
 
-		return errors.New("pod IP not assigned")
+		return errors.New("pod does not have an IP assigned")
 	}), ebo); err != nil {
-		return fmt.Errorf("unable get the pod list in namespace %q: %v", namespace, err)
+		return fmt.Errorf("unable get the pod IP for pod %s: %v", name, err)
 	}
 
 	return nil

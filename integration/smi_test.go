@@ -55,10 +55,6 @@ func (s *SMISuite) TestSMIAccessControlPrepareFail(c *check.C) {
 	s.createResources(c, "resources/smi/access-control-broken/")
 	defer s.deleteResources(c, "resources/smi/access-control-broken/", false)
 
-	podsCreated := []string{"a-tools", "b-v1", "b-v2"}
-
-	s.waitForPodIPs(c, podsCreated)
-
 	args := []string{"--smi"}
 	cmd := s.maeshPrepareWithArgs(args...)
 	cmd.Env = os.Environ()
@@ -71,6 +67,10 @@ func (s *SMISuite) TestSMIAccessControlPrepareFail(c *check.C) {
 func (s *SMISuite) TestSMITrafficSplit(c *check.C) {
 	s.createResources(c, "resources/smi/traffic-split/")
 	defer s.deleteResources(c, "resources/smi/traffic-split/", true)
+
+	podsCreated := []string{"a-tools", "b-v1", "b-v2"}
+
+	s.waitForPodIPs(c, podsCreated)
 
 	cmd := s.startMaeshBinaryCmd(c, true)
 	err := cmd.Start()
@@ -189,6 +189,7 @@ func (s *SMISuite) checkTCPServiceServerURLs(c *check.C, config *dynamic.Configu
 
 func (s *SMISuite) waitForPodIPs(c *check.C, pods []string) {
 	for _, pod := range pods {
+		c.Log("Waiting for pod: \"" + pod + "\" to have IP assigned.")
 		c.Assert(s.try.WaitPodIPAssigned(pod, testNamespace, 30*time.Second), checker.IsNil)
 	}
 }
