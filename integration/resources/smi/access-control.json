@@ -9,7 +9,7 @@
                     "a-b-test-b-test-80-a-b-test-e0425d13b2a322ad-whitelist"
                 ],
                 "service": "b-test-80-a-b-test-e0425d13b2a322ad",
-                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`10.43.233.50`)))"
+                "rule": "((PathPrefix(`/{path:foo}`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`10.43.233.50`)))"
             },
             "b-test-80-c-b-test-643c7128c8514ba9": {
                 "entryPoints": [
@@ -19,7 +19,7 @@
                     "c-b-test-b-test-80-c-b-test-643c7128c8514ba9-whitelist"
                 ],
                 "service": "b-test-80-c-b-test-643c7128c8514ba9",
-                "rule": "(PathPrefix(`/foo`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`10.43.233.50`)))"
+                "rule": "(PathPrefix(`/{path:foo}`) \u0026\u0026 (Host(`b.test.maesh`) || Host(`10.43.233.50`)))"
             },
             "d-test-80-c-d-test-2c7d96b07eb597fd": {
                 "entryPoints": [
@@ -29,7 +29,7 @@
                     "c-d-test-d-test-80-c-d-test-2c7d96b07eb597fd-whitelist"
                 ],
                 "service": "d-test-80-c-d-test-2c7d96b07eb597fd",
-                "rule": "(PathPrefix(`/bar`) \u0026\u0026 (Host(`d.test.maesh`) || Host(`10.43.86.23`)))"
+                "rule": "(PathPrefix(`/{path:bar}`) \u0026\u0026 (Host(`d.test.maesh`) || Host(`10.43.86.23`)))"
             },
             "readiness": {
                 "entryPoints": [
