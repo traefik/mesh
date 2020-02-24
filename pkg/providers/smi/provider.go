@@ -324,7 +324,7 @@ func (p *Provider) buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespac
 
 		rawHTTPRouteGroup, err := p.httpRouteGroupLister.HTTPRouteGroups(trafficTarget.Namespace).Get(spec.Name)
 		if err != nil {
-			log.Errorf("Error getting HTTPRouteGroup: %v", err)
+			log.Errorf("Error getting the HTTPRouteGroups %s in the same namespace %s as the TrafficTarget: %v", spec.Name, trafficTarget.Namespace, err)
 			continue
 		}
 
@@ -360,7 +360,7 @@ func (p *Provider) buildTCPRouterFromTrafficTarget(trafficTarget *access.Traffic
 
 		_, err := p.tcpRouteLister.TCPRoutes(trafficTarget.Namespace).Get(spec.Name)
 		if err != nil {
-			log.Errorf("Error getting TCPRoute: %v", err)
+			log.Errorf("Error getting the TCPRoute %s in the same namespace %s as the TrafficTarget: %v", spec.Name, trafficTarget.Namespace, err)
 			continue
 		}
 
@@ -376,8 +376,15 @@ func (p *Provider) buildTCPRouterFromTrafficTarget(trafficTarget *access.Traffic
 
 func (p *Provider) buildRuleSnippetFromServiceAndMatch(name, namespace, ip string, match specs.HTTPMatch) string {
 	var result []string
+
 	if len(match.PathRegex) > 0 {
-		result = append(result, fmt.Sprintf("PathPrefix(`%s`)", match.PathRegex))
+		preparedPath := match.PathRegex
+
+		if strings.HasPrefix(match.PathRegex, "/") {
+			preparedPath = strings.TrimPrefix(preparedPath, "/")
+		}
+
+		result = append(result, fmt.Sprintf("PathPrefix(`/{path:%s}`)", preparedPath))
 	}
 
 	if len(match.Methods) > 0 && match.Methods[0] != "*" {
