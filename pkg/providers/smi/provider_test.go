@@ -29,7 +29,8 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 		clientMock.TrafficTargetLister,
 		clientMock.HTTPRouteGroupLister,
 		clientMock.TCPRouteLister,
-		clientMock.TrafficSplitLister)
+		clientMock.TrafficSplitLister,
+		5000, 5100)
 
 	testCases := []struct {
 		desc     string
@@ -89,7 +90,8 @@ func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 		clientMock.TrafficTargetLister,
 		clientMock.HTTPRouteGroupLister,
 		clientMock.TCPRouteLister,
-		clientMock.TrafficSplitLister)
+		clientMock.TrafficSplitLister,
+		5000, 5100)
 
 	expected := []*accessv1alpha1.TrafficTarget{
 		{
@@ -174,7 +176,7 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 		serviceName      string
 		serviceNamespace string
 		serviceIP        string
-		port             int
+		port             int32
 		key              string
 		trafficTarget    *accessv1alpha1.TrafficTarget
 		expected         *dynamic.Router
@@ -325,7 +327,8 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 				clientMock.TrafficTargetLister,
 				clientMock.HTTPRouteGroupLister,
 				clientMock.TCPRouteLister,
-				clientMock.TrafficSplitLister)
+				clientMock.TrafficSplitLister,
+				5000, 5100)
 			middleware := "block-all"
 			actual := provider.buildHTTPRouterFromTrafficTarget(test.serviceName, test.serviceNamespace, test.serviceIP, test.trafficTarget, test.port, test.key, middleware)
 			assert.Equal(t, test.expected, actual)
@@ -336,7 +339,7 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 	testCases := []struct {
 		desc          string
-		port          int
+		port          int32
 		key           string
 		trafficTarget *accessv1alpha1.TrafficTarget
 		expected      *dynamic.TCPRouter
@@ -474,7 +477,8 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 				clientMock.TrafficTargetLister,
 				clientMock.HTTPRouteGroupLister,
 				clientMock.TCPRouteLister,
-				clientMock.TrafficSplitLister)
+				clientMock.TrafficSplitLister,
+				5000, 5100)
 			actual := provider.buildTCPRouterFromTrafficTarget(test.trafficTarget, test.port, test.key)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -494,7 +498,8 @@ func TestGetServiceMode(t *testing.T) {
 		clientMock.TrafficTargetLister,
 		clientMock.HTTPRouteGroupLister,
 		clientMock.TCPRouteLister,
-		clientMock.TrafficSplitLister)
+		clientMock.TrafficSplitLister,
+		5000, 5100)
 
 	testCases := []struct {
 		desc     string
@@ -820,7 +825,8 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 				clientMock.TrafficTargetLister,
 				clientMock.HTTPRouteGroupLister,
 				clientMock.TCPRouteLister,
-				clientMock.TrafficSplitLister)
+				clientMock.TrafficSplitLister,
+				5000, 5100)
 
 			actual := provider.getApplicableTrafficTargets(test.endpoints, test.trafficTargets)
 			assert.Equal(t, test.expected, actual)
@@ -1102,7 +1108,8 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 				clientMock.TrafficTargetLister,
 				clientMock.HTTPRouteGroupLister,
 				clientMock.TCPRouteLister,
-				clientMock.TrafficSplitLister)
+				clientMock.TrafficSplitLister,
+				5000, 5100)
 
 			actual := provider.buildHTTPServiceFromTrafficTarget(test.endpoints, test.trafficTarget, k8s.SchemeHTTP)
 			assert.Equal(t, test.expected, actual)
@@ -1123,7 +1130,8 @@ func TestGroupTrafficTargetsByDestination(t *testing.T) {
 		clientMock.TrafficTargetLister,
 		clientMock.HTTPRouteGroupLister,
 		clientMock.TCPRouteLister,
-		clientMock.TrafficSplitLister)
+		clientMock.TrafficSplitLister,
+		5000, 5100)
 
 	trafficTargets := []*accessv1alpha1.TrafficTarget{
 		{
@@ -1353,7 +1361,8 @@ func TestBuildConfiguration(t *testing.T) {
 				clientMock.TrafficTargetLister,
 				clientMock.HTTPRouteGroupLister,
 				clientMock.TCPRouteLister,
-				clientMock.TrafficSplitLister)
+				clientMock.TrafficSplitLister,
+				5000, 5100)
 			config, err := provider.BuildConfig()
 			assert.Equal(t, test.expected, config)
 			if test.endpointsError || test.serviceError {

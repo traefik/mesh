@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -637,31 +636,4 @@ func translateNotFoundError(err error) (bool, error) {
 	}
 
 	return err == nil, err
-}
-
-// ParseServiceNamePort parses a name, namespace, and a port from a string, using the default namespace if none is defined.
-func ParseServiceNamePort(value string) (name, namespace string, port int32, err error) {
-	service := strings.Split(value, ":")
-	if len(service) < 2 {
-		return "", "", 0, fmt.Errorf("could not parse service into name and port")
-	}
-
-	port64, err := strconv.ParseInt(service[1], 10, 32)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	port = int32(port64)
-	substring := strings.Split(service[0], "/")
-
-	if len(substring) == 1 {
-		return service[0], metav1.NamespaceDefault, port, nil
-	}
-
-	return substring[1], substring[0], port, nil
-}
-
-// ServiceNamePortToString formats a parsable string from the values.
-func ServiceNamePortToString(name, namespace string, port int32) (value string) {
-	return fmt.Sprintf("%s/%s:%d", namespace, name, port)
 }
