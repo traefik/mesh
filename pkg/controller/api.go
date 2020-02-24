@@ -21,6 +21,7 @@ type API struct {
 	readiness         bool
 	lastConfiguration *safe.Safe
 	apiPort           int
+	apiIP             string
 	deployLog         *DeployLog
 	meshNamespace     string
 	podLister         listers.PodLister
@@ -33,11 +34,12 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(apiPort int, lastConfiguration *safe.Safe, deployLog *DeployLog, podLister listers.PodLister, meshNamespace string) *API {
+func NewAPI(apiPort int, apiIP string, lastConfiguration *safe.Safe, deployLog *DeployLog, podLister listers.PodLister, meshNamespace string) *API {
 	a := &API{
 		readiness:         false,
 		lastConfiguration: lastConfiguration,
 		apiPort:           apiPort,
+		apiIP:             apiIP,
 		deployLog:         deployLog,
 		podLister:         podLister,
 		meshNamespace:     meshNamespace,
@@ -74,7 +76,7 @@ func (a *API) Start() {
 
 // Run wraps the listenAndServe method.
 func (a *API) Run() {
-	log.Error(http.ListenAndServe(fmt.Sprintf(":%d", a.apiPort), a.router))
+	log.Error(http.ListenAndServe(fmt.Sprintf("%s:%d", a.apiIP, a.apiPort), a.router))
 }
 
 // EnableReadiness enables the readiness flag in the API.
