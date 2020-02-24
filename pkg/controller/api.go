@@ -20,7 +20,7 @@ type API struct {
 	router            *mux.Router
 	readiness         bool
 	lastConfiguration *safe.Safe
-	apiPort           int
+	apiPort           int32
 	deployLog         *DeployLog
 	meshNamespace     string
 	podLister         listers.PodLister
@@ -33,7 +33,7 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(apiPort int, lastConfiguration *safe.Safe, deployLog *DeployLog, podLister listers.PodLister, meshNamespace string) *API {
+func NewAPI(apiPort int32, lastConfiguration *safe.Safe, deployLog *DeployLog, podLister listers.PodLister, meshNamespace string) *API {
 	a := &API{
 		readiness:         false,
 		lastConfiguration: lastConfiguration,
