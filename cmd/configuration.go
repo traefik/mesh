@@ -13,19 +13,23 @@ type MaeshConfiguration struct {
 	DefaultMode      string   `description:"Default mode for mesh services" export:"true"`
 	Namespace        string   `description:"The namespace that maesh is installed in." export:"true"`
 	IgnoreNamespaces []string `description:"The namespace that maesh should be ignoring." export:"true"`
-	APIPort          int      `description:"API port for the controller" export:"true"`
+	APIPort          int32    `description:"API port for the controller" export:"true"`
+	LimitTCPPort     int32    `description:"Number of TCP ports allocated" export:"true"`
+	LimitHTTPPort    int32    `description:"Number of HTTP ports allocated" export:"true"`
 }
 
 // NewMaeshConfiguration creates a MaeshConfiguration with default values.
 func NewMaeshConfiguration() *MaeshConfiguration {
 	return &MaeshConfiguration{
-		ConfigFile:  "",
-		KubeConfig:  os.Getenv("KUBECONFIG"),
-		Debug:       false,
-		SMI:         false,
-		DefaultMode: "http",
-		Namespace:   "maesh",
-		APIPort:     9000,
+		ConfigFile:    "",
+		KubeConfig:    os.Getenv("KUBECONFIG"),
+		Debug:         false,
+		SMI:           false,
+		DefaultMode:   "http",
+		Namespace:     "maesh",
+		APIPort:       9000,
+		LimitTCPPort:  25,
+		LimitHTTPPort: 10,
 	}
 }
 

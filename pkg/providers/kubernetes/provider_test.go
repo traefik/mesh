@@ -4,9 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/containous/maesh/pkg/providers/base"
-
 	"github.com/containous/maesh/pkg/k8s"
+	"github.com/containous/maesh/pkg/providers/base"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -14,6 +13,12 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+type tcpMappingPortMock func(svc k8s.ServiceWithPort) (int32, bool)
+
+func (t tcpMappingPortMock) Find(svc k8s.ServiceWithPort) (int32, bool) {
+	return t(svc)
+}
 
 func TestBuildRouter(t *testing.T) {
 	expectedWithMiddlewares := &dynamic.Router{
@@ -34,12 +39,12 @@ func TestBuildRouter(t *testing.T) {
 	kubernetesFactory := informers.NewSharedInformerFactoryWithOptions(fakeClient, k8s.ResyncPeriod)
 	serviceLister := kubernetesFactory.Core().V1().Services().Lister()
 	endpointsLister := kubernetesFactory.Core().V1().Endpoints().Lister()
-	provider := New(k8s.ServiceTypeHTTP, nil, ignored, serviceLister, endpointsLister)
+	provider := New(k8s.ServiceTypeHTTP, nil, ignored, serviceLister, endpointsLister, 5000, 50100)
 
 	name := "test"
 	namespace := "foo"
 	ip := "10.0.0.1"
-	port := 80
+	port := int32(80)
 	associatedService := "bar"
 
 	actual := provider.buildRouter(name, namespace, ip, port, associatedService, true)
@@ -61,9 +66,9 @@ func TestBuildTCPRouter(t *testing.T) {
 	kubernetesFactory := informers.NewSharedInformerFactoryWithOptions(fakeClient, k8s.ResyncPeriod)
 	serviceLister := kubernetesFactory.Core().V1().Services().Lister()
 	endpointsLister := kubernetesFactory.Core().V1().Endpoints().Lister()
-	provider := New(k8s.ServiceTypeHTTP, nil, ignored, serviceLister, endpointsLister)
+	provider := New(k8s.ServiceTypeHTTP, nil, ignored, serviceLister, endpointsLister, 5000, 50100)
 
-	port := 10000
+	port := int32(10000)
 	associatedService := "bar"
 
 	actual := provider.buildTCPRouter(port, associatedService)
@@ -71,16 +76,6 @@ func TestBuildTCPRouter(t *testing.T) {
 }
 
 func TestBuildConfiguration(t *testing.T) {
-	stateTable := &k8s.State{
-		Table: map[int]*k8s.ServiceWithPort{
-			10000: {
-				Name:      "test",
-				Namespace: "foo",
-				Port:      80,
-			},
-		},
-	}
-
 	testCases := []struct {
 		desc           string
 		mockFile       string
@@ -272,7 +267,22 @@ func TestBuildConfiguration(t *testing.T) {
 
 			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
 			ignored := k8s.NewIgnored()
-			provider := New(k8s.ServiceTypeHTTP, stateTable, ignored, clientMock.ServiceLister, clientMock.EndpointsLister)
+
+			findTCPPort := func(svc k8s.ServiceWithPort) (int32, bool) {
+				service := k8s.ServiceWithPort{
+					Namespace: "foo",
+					Name:      "test",
+					Port:      80,
+				}
+
+				if service == svc {
+					return 10000, true
+				}
+
+				return 0, false
+			}
+
+			provider := New(k8s.ServiceTypeHTTP, tcpMappingPortMock(findTCPPort), ignored, clientMock.ServiceLister, clientMock.EndpointsLister, 5000, 50100)
 			config, err := provider.BuildConfig()
 			assert.NoError(t, err)
 
@@ -386,7 +396,7 @@ func TestBuildService(t *testing.T) {
 
 			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
 			ignored := k8s.NewIgnored()
-			provider := New(k8s.ServiceTypeHTTP, nil, ignored, clientMock.ServiceLister, clientMock.EndpointsLister)
+			provider := New(k8s.ServiceTypeHTTP, nil, ignored, clientMock.ServiceLister, clientMock.EndpointsLister, 5000, 50100)
 			actual := provider.buildService(test.endpoints, test.scheme)
 
 			assert.Equal(t, test.expected, actual)
@@ -395,16 +405,6 @@ func TestBuildService(t *testing.T) {
 }
 
 func TestBuildTCPService(t *testing.T) {
-	stateTable := &k8s.State{
-		Table: map[int]*k8s.ServiceWithPort{
-			10000: {
-				Name:      "test",
-				Namespace: "foo",
-				Port:      80,
-			},
-		},
-	}
-
 	testCases := []struct {
 		desc      string
 		mockFile  string
@@ -462,60 +462,23 @@ func TestBuildTCPService(t *testing.T) {
 
 			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
 			ignored := k8s.NewIgnored()
-			provider := New(k8s.ServiceTypeHTTP, stateTable, ignored, clientMock.ServiceLister, clientMock.EndpointsLister)
+
+			findTCPPort := func(svc k8s.ServiceWithPort) (int32, bool) {
+				service := k8s.ServiceWithPort{
+					Namespace: "foo",
+					Name:      "test",
+					Port:      80,
+				}
+
+				if service == svc {
+					return 10000, true
+				}
+
+				return 0, false
+			}
+
+			provider := New(k8s.ServiceTypeHTTP, tcpMappingPortMock(findTCPPort), ignored, clientMock.ServiceLister, clientMock.EndpointsLister, 5000, 50100)
 			actual := provider.buildTCPService(test.endpoints)
-			assert.Equal(t, test.expected, actual)
-		})
-	}
-}
-
-func TestGetMeshPort(t *testing.T) {
-	stateTable := &k8s.State{
-		Table: map[int]*k8s.ServiceWithPort{
-			10000: {
-				Name:      "foo",
-				Namespace: "bar",
-				Port:      80,
-			},
-		},
-	}
-
-	testCases := []struct {
-		desc      string
-		name      string
-		namespace string
-		port      int32
-		expected  int
-	}{
-		{
-			desc:      "match in state table",
-			name:      "foo",
-			namespace: "bar",
-			port:      80,
-			expected:  10000,
-		},
-		{
-			desc:      "no match in state table",
-			name:      "floo",
-			namespace: "floo",
-			port:      80,
-			expected:  0,
-		},
-	}
-
-	for _, test := range testCases {
-		test := test
-		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
-
-			ignored := k8s.NewIgnored()
-
-			fakeClient := fake.NewSimpleClientset()
-			kubernetesFactory := informers.NewSharedInformerFactoryWithOptions(fakeClient, k8s.ResyncPeriod)
-			serviceLister := kubernetesFactory.Core().V1().Services().Lister()
-			endpointsLister := kubernetesFactory.Core().V1().Endpoints().Lister()
-			provider := New(k8s.ServiceTypeHTTP, stateTable, ignored, serviceLister, endpointsLister)
-			actual := provider.getMeshPort(test.name, test.namespace, test.port)
 			assert.Equal(t, test.expected, actual)
 		})
 	}
@@ -608,7 +571,7 @@ func TestBuildHTTPMiddlewares(t *testing.T) {
 			kubernetesFactory := informers.NewSharedInformerFactoryWithOptions(fakeClient, k8s.ResyncPeriod)
 			serviceLister := kubernetesFactory.Core().V1().Services().Lister()
 			endpointsLister := kubernetesFactory.Core().V1().Endpoints().Lister()
-			provider := New(k8s.ServiceTypeHTTP, nil, k8s.NewIgnored(), serviceLister, endpointsLister)
+			provider := New(k8s.ServiceTypeHTTP, nil, k8s.NewIgnored(), serviceLister, endpointsLister, 5000, 50100)
 			actual := provider.buildHTTPMiddlewares(test.annotations)
 			assert.Equal(t, test.expected, actual)
 		})

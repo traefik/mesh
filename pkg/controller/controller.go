@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"reflect"
-	"strconv"
 	"time"
 
 	"github.com/cenkalti/backoff/v3"
@@ -27,7 +27,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -37,6 +37,13 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/util/retry"
 )
+
+// TCPPortMapper is capable of storing and retrieving a TCP port mapping for a given service.
+type TCPPortMapper interface {
+	Find(svc k8s.ServiceWithPort) (int32, bool)
+	Get(srcPort int32) *k8s.ServiceWithPort
+	Add(svc *k8s.ServiceWithPort) (int32, error)
+}
 
 // Controller hold controller configuration.
 type Controller struct {
@@ -52,33 +59,52 @@ type Controller struct {
 	smiEnabled           bool
 	defaultMode          string
 	meshNamespace        string
-	tcpStateTable        *k8s.State
+	tcpStateTable        TCPPortMapper
 	lastConfiguration    safe.Safe
 	api                  *API
-	apiPort              int
+	apiPort              int32
 	deployLog            *DeployLog
 	PodLister            listers.PodLister
-	ConfigMapLister      listers.ConfigMapLister
 	ServiceLister        listers.ServiceLister
 	EndpointsLister      listers.EndpointsLister
 	TrafficTargetLister  accessLister.TrafficTargetLister
 	HTTPRouteGroupLister specsLister.HTTPRouteGroupLister
 	TCPRouteLister       specsLister.TCPRouteLister
 	TrafficSplitLister   splitLister.TrafficSplitLister
+	minHTTPPort          int32
+	maxHTTPPort          int32
+}
+
+// MeshControllerConfig holds the configuration of the mesh controller.
+type MeshControllerConfig struct {
+	SMIEnabled       bool
+	DefaultMode      string
+	Namespace        string
+	IgnoreNamespaces []string
+	APIPort          int32
+	MinTCPPort       int32
+	MaxTCPPort       int32
+	MinHTTPPort      int32
+	MaxHTTPPort      int32
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode string, meshNamespace string, ignoreNamespaces []string, apiPort int) *Controller {
+func NewMeshController(clients *k8s.ClientWrapper, cfg MeshControllerConfig) (*Controller, error) {
 	ignored := k8s.NewIgnored()
 
-	for _, ns := range ignoreNamespaces {
+	for _, ns := range cfg.IgnoreNamespaces {
 		ignored.AddIgnoredNamespace(ns)
 	}
 
 	ignored.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
 	ignored.AddIgnoredNamespace(metav1.NamespaceSystem)
 	ignored.AddIgnoredApps("maesh", "jaeger")
+
+	tcpStateTable, err := k8s.NewTCPPortMapping(clients.KubeClient, cfg.Namespace, k8s.TCPStateConfigMapName, cfg.MinTCPPort, cfg.MaxTCPPort)
+	if err != nil {
+		return nil, err
+	}
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	configRefreshChan := make(chan string)
@@ -89,21 +115,21 @@ func NewMeshController(clients *k8s.ClientWrapper, smiEnabled bool, defaultMode 
 		handler:           handler,
 		configRefreshChan: configRefreshChan,
 		ignored:           ignored,
-		smiEnabled:        smiEnabled,
-		defaultMode:       defaultMode,
-		meshNamespace:     meshNamespace,
-		apiPort:           apiPort,
+		smiEnabled:        cfg.SMIEnabled,
+		defaultMode:       cfg.DefaultMode,
+		meshNamespace:     cfg.Namespace,
+		apiPort:           cfg.APIPort,
+		tcpStateTable:     tcpStateTable,
+		minHTTPPort:       cfg.MinHTTPPort,
+		maxHTTPPort:       cfg.MaxHTTPPort,
 	}
 
-	if err := c.Init(); err != nil {
-		log.Errorln("Could not initialize MeshController")
-	}
+	c.init()
 
-	return c
+	return c, nil
 }
 
-// Init the Controller.
-func (c *Controller) Init() error {
+func (c *Controller) init() {
 	// Register handler funcs to controller funcs.
 	c.handler.RegisterMeshHandlers(c.createMeshService, c.updateMeshService, c.deleteMeshService)
 
@@ -113,11 +139,8 @@ func (c *Controller) Init() error {
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
 
-	c.tcpStateTable = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
-
 	// Create the base listers
 	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
-	c.ConfigMapLister = c.kubernetesFactory.Core().V1().ConfigMaps().Lister()
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
 	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
 
@@ -142,15 +165,13 @@ func (c *Controller) Init() error {
 		c.TCPRouteLister = c.smiSpecsFactory.Specs().V1alpha1().TCPRoutes().Lister()
 		c.TrafficSplitLister = c.smiSplitFactory.Split().V1alpha2().TrafficSplits().Lister()
 
-		c.provider = smi.New(c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister, c.PodLister, c.TrafficTargetLister, c.HTTPRouteGroupLister, c.TCPRouteLister, c.TrafficSplitLister)
+		c.provider = smi.New(c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister, c.PodLister, c.TrafficTargetLister, c.HTTPRouteGroupLister, c.TCPRouteLister, c.TrafficSplitLister, c.minHTTPPort, c.maxHTTPPort)
 
-		return nil
+		return
 	}
 
 	// If SMI is not configured, use the kubernetes provider.
-	c.provider = kubernetes.New(c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister)
-
-	return nil
+	c.provider = kubernetes.New(c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister, c.minHTTPPort, c.maxHTTPPort)
 }
 
 // Run is the main entrypoint for the controller.
@@ -164,19 +185,12 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Start the informers.
 	c.startInformers(stopCh, 10*time.Second)
 
-	// Load the state from the TCP State Configmap before running.
-	c.tcpStateTable, err = c.loadTCPStateTable()
-	if err != nil {
-		log.Errorf("encountered error loading TCP state table: %v", err)
-	}
-
 	// Create the mesh services here to ensure that they exist
 	log.Info("Creating initial mesh services")
 
 	if err = c.createMeshServices(); err != nil {
 		log.Errorf("could not create mesh services: %v", err)
 	}
-
 	// Start the api, and enable the readiness endpoint
 	c.api.Start()
 
@@ -204,9 +218,20 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 				c.api.EnableReadiness()
 			}
 		case <-timer.C:
+			rawCfg := c.lastConfiguration.Get()
+			if rawCfg == nil {
+				break
+			}
+
+			dynCfg, ok := rawCfg.(*dynamic.Configuration)
+			if !ok {
+				log.Error("Received unexpected dynamic configuration, skipping")
+				break
+			}
+
 			log.Debug("Deploying configuration to unready nodes")
 
-			if deployErr := c.deployConfigurationToUnreadyNodes(c.lastConfiguration.Get().(*dynamic.Configuration)); deployErr != nil {
+			if deployErr := c.deployConfigurationToUnreadyNodes(dynCfg); deployErr != nil {
 				break
 			}
 
@@ -285,7 +310,7 @@ func (c *Controller) createMeshServices() error {
 			continue
 		}
 		// We're expecting an IsNotFound error here, to only create the maesh service if it does not exist.
-		if err != nil && !errors.IsNotFound(err) {
+		if !kerrors.IsNotFound(err) {
 			return fmt.Errorf("unable to check if maesh service exists: %w", err)
 		}
 
@@ -305,7 +330,7 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 
 	_, err := c.ServiceLister.Services(c.meshNamespace).Get(meshServiceName)
 	// We're expecting an IsNotFound error here, to only create the maesh service if it does not exist.
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && kerrors.IsNotFound(err) {
 		// Mesh service does not exist.
 		var ports []corev1.ServicePort
 
@@ -320,13 +345,25 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 				continue
 			}
 
-			targetPort := intstr.FromInt(5000 + id)
-			if serviceMode == k8s.ServiceTypeTCP {
-				targetPort = intstr.FromInt(c.getTCPPortFromState(service.Name, service.Namespace, sp.Port))
-			}
+			var targetPort intstr.IntOrString
 
-			if targetPort.IntVal == 0 {
-				log.Errorf("Could not get TCP Port for service: %s with service port: %v", service.Name, sp)
+			switch serviceMode {
+			case k8s.ServiceTypeHTTP:
+				targetPort, err = c.getHTTPPort(id)
+				if err != nil {
+					log.Errorf("Unable to find available HTTP port, skipping port %s on service %s/%s", sp.Name, service.Namespace, service.Name)
+					continue
+				}
+
+			case k8s.ServiceTypeTCP:
+				targetPort, err = c.getTCPPort(service.Name, service.Namespace, sp.Port)
+				if err != nil {
+					log.Errorf("Unable to find available TCP port, skipping port %s on service %s/%s", sp.Name, service.Namespace, service.Name)
+					continue
+				}
+
+			default:
+				log.Errorf("Unknown service mode %s, skipping port %s on service %s/%s", serviceMode, sp.Name, service.Namespace, service.Name)
 				continue
 			}
 
@@ -405,10 +442,28 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 				continue
 			}
 
-			targetPort := intstr.FromInt(5000 + id)
-			if serviceMode == k8s.ServiceTypeTCP {
-				targetPort = intstr.FromInt(c.getTCPPortFromState(newUserService.Name, newUserService.Namespace, sp.Port))
+			var targetPort intstr.IntOrString
+
+			switch serviceMode {
+			case k8s.ServiceTypeHTTP:
+				targetPort, err = c.getHTTPPort(id)
+				if err != nil {
+					log.Errorf("Unable to find available HTTP port, skipping port %s on service %s/%s", sp.Name, newUserService.Namespace, newUserService.Name)
+					continue
+				}
+
+			case k8s.ServiceTypeTCP:
+				targetPort, err = c.getTCPPort(newUserService.Name, newUserService.Namespace, sp.Port)
+				if err != nil {
+					log.Errorf("Unable to find available TCP port, skipping port %s on service %s/%s", sp.Name, newUserService.Namespace, newUserService.Name)
+					continue
+				}
+
+			default:
+				log.Errorf("Unknown service mode %s, skipping port %s on service %s/%s", serviceMode, sp.Name, newUserService.Namespace, newUserService.Name)
+				continue
 			}
+
 			meshPort := corev1.ServicePort{
 				Name:       sp.Name,
 				Port:       sp.Port,
@@ -443,92 +498,34 @@ func (c *Controller) userServiceToMeshServiceName(serviceName string, namespace 
 	return fmt.Sprintf("%s-%s-6d61657368-%s", c.meshNamespace, serviceName, namespace)
 }
 
-func (c *Controller) loadTCPStateTable() (*k8s.State, error) {
-	result := c.tcpStateTable
-	if result == nil {
-		result = &k8s.State{Table: make(map[int]*k8s.ServiceWithPort)}
+func (c *Controller) getHTTPPort(portID int) (intstr.IntOrString, error) {
+	if c.minHTTPPort+int32(portID) >= c.maxHTTPPort {
+		return intstr.IntOrString{}, errors.New("unable to find an available HTTP port")
 	}
 
-	configMap, err := c.ConfigMapLister.ConfigMaps(c.meshNamespace).Get(k8s.TCPStateConfigMapName)
-	if err != nil {
-		return result, err
-	}
-
-	if len(configMap.Data) > 0 {
-		for k, v := range configMap.Data {
-			port, err := strconv.Atoi(k)
-			if err != nil {
-				continue
-			}
-
-			name, namespace, servicePort, err := k8s.ParseServiceNamePort(v)
-			if err != nil {
-				continue
-			}
-
-			result.Table[port] = &k8s.ServiceWithPort{
-				Name:      name,
-				Namespace: namespace,
-				Port:      servicePort,
-			}
-		}
-	}
-
-	return result, nil
+	return intstr.FromInt(int(c.minHTTPPort) + portID), nil
 }
 
-func (c *Controller) getTCPPortFromState(serviceName, serviceNamespace string, servicePort int32) int {
-	for port, v := range c.tcpStateTable.Table {
-		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
-			return port
-		}
+func (c *Controller) getTCPPort(serviceName, serviceNamespace string, servicePort int32) (intstr.IntOrString, error) {
+	svc := k8s.ServiceWithPort{
+		Namespace: serviceNamespace,
+		Name:      serviceName,
+		Port:      servicePort,
+	}
+	if port, ok := c.tcpStateTable.Find(svc); ok {
+		return intstr.FromInt(int(port)), nil
 	}
 
 	log.Debugf("No match found for %s/%s %d - Add a new port", serviceName, serviceNamespace, servicePort)
-	// No Match, add new port
-	for i := 10000; true; i++ {
-		if _, exists := c.tcpStateTable.Table[i]; exists {
-			// Port used
-			continue
-		}
 
-		c.tcpStateTable.Table[i] = &k8s.ServiceWithPort{
-			Name:      serviceName,
-			Namespace: serviceNamespace,
-			Port:      servicePort,
-		}
-
-		if err := c.saveTCPStateTable(); err != nil {
-			log.Errorf("unable to save TCP state table config map: %v", err)
-			return 0
-		}
-
-		return i
-	}
-
-	return 0
-}
-
-func (c *Controller) saveTCPStateTable() error {
-	configMap, err := c.ConfigMapLister.ConfigMaps(c.meshNamespace).Get(k8s.TCPStateConfigMapName)
+	port, err := c.tcpStateTable.Add(&svc)
 	if err != nil {
-		return err
+		return intstr.IntOrString{}, fmt.Errorf("unable to add service to the TCP state table: %w", err)
 	}
 
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		newConfigMap := configMap.DeepCopy()
+	log.Debugf("Service %s/%s %d as been assigned port %d", serviceName, serviceNamespace, servicePort, port)
 
-		if newConfigMap.Data == nil {
-			newConfigMap.Data = make(map[string]string)
-		}
-		for k, v := range c.tcpStateTable.Table {
-			key := strconv.Itoa(k)
-			value := k8s.ServiceNamePortToString(v.Name, v.Namespace, v.Port)
-			newConfigMap.Data[key] = value
-		}
-		_, err := c.clients.UpdateConfigMap(newConfigMap)
-		return err
-	})
+	return intstr.FromInt(int(port)), nil
 }
 
 // deployConfiguration deploys the configuration to the mesh pods.
