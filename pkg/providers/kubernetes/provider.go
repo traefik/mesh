@@ -18,15 +18,15 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
-// TCPPortMapper is capable of retrieving a TCP port mapping for a given service.
-type TCPPortMapper interface {
+// TCPPortFinder is capable of retrieving a TCP port mapping for a given service.
+type TCPPortFinder interface {
 	Find(svc k8s.ServiceWithPort) (int32, bool)
 }
 
 // Provider holds a client to access the provider.
 type Provider struct {
 	defaultMode     string
-	tcpStateTable   TCPPortMapper
+	tcpStateTable   TCPPortFinder
 	ignored         k8s.IgnoreWrapper
 	serviceLister   listers.ServiceLister
 	endpointsLister listers.EndpointsLister
@@ -40,7 +40,7 @@ func (p *Provider) Init() {
 }
 
 // New creates a new provider.
-func New(defaultMode string, tcpStateTable TCPPortMapper, ignored k8s.IgnoreWrapper, serviceLister listers.ServiceLister, endpointsLister listers.EndpointsLister, minHTTPPort, maxHTTPPort int32) *Provider {
+func New(defaultMode string, tcpStateTable TCPPortFinder, ignored k8s.IgnoreWrapper, serviceLister listers.ServiceLister, endpointsLister listers.EndpointsLister, minHTTPPort, maxHTTPPort int32) *Provider {
 	p := &Provider{
 		defaultMode:     defaultMode,
 		tcpStateTable:   tcpStateTable,

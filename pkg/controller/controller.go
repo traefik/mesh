@@ -347,23 +347,9 @@ func (c *Controller) createMeshService(service *corev1.Service) error {
 
 			var targetPort intstr.IntOrString
 
-			switch serviceMode {
-			case k8s.ServiceTypeHTTP:
-				targetPort, err = c.getHTTPPort(id)
-				if err != nil {
-					log.Errorf("Unable to find available HTTP port, skipping port %s on service %s/%s", sp.Name, service.Namespace, service.Name)
-					continue
-				}
-
-			case k8s.ServiceTypeTCP:
-				targetPort, err = c.getTCPPort(service.Name, service.Namespace, sp.Port)
-				if err != nil {
-					log.Errorf("Unable to find available TCP port, skipping port %s on service %s/%s", sp.Name, service.Namespace, service.Name)
-					continue
-				}
-
-			default:
-				log.Errorf("Unknown service mode %s, skipping port %s on service %s/%s", serviceMode, sp.Name, service.Namespace, service.Name)
+			targetPort, err = c.getTargetPort(serviceMode, id, service.Name, service.Namespace, sp.Port)
+			if err != nil {
+				log.Errorf("Unable to find available %s port: %v, skipping port %s on service %s/%s", sp.Name, err, sp.Name, service.Namespace, service.Name)
 				continue
 			}
 
@@ -444,23 +430,9 @@ func (c *Controller) updateMeshService(oldUserService *corev1.Service, newUserSe
 
 			var targetPort intstr.IntOrString
 
-			switch serviceMode {
-			case k8s.ServiceTypeHTTP:
-				targetPort, err = c.getHTTPPort(id)
-				if err != nil {
-					log.Errorf("Unable to find available HTTP port, skipping port %s on service %s/%s", sp.Name, newUserService.Namespace, newUserService.Name)
-					continue
-				}
-
-			case k8s.ServiceTypeTCP:
-				targetPort, err = c.getTCPPort(newUserService.Name, newUserService.Namespace, sp.Port)
-				if err != nil {
-					log.Errorf("Unable to find available TCP port, skipping port %s on service %s/%s", sp.Name, newUserService.Namespace, newUserService.Name)
-					continue
-				}
-
-			default:
-				log.Errorf("Unknown service mode %s, skipping port %s on service %s/%s", serviceMode, sp.Name, newUserService.Namespace, newUserService.Name)
+			targetPort, err = c.getTargetPort(serviceMode, id, newUserService.Name, newUserService.Namespace, sp.Port)
+			if err != nil {
+				log.Errorf("Unable to find available %s port: %v, skipping port %s on service %s/%s", sp.Name, err, sp.Name, newUserService.Namespace, newUserService.Name)
 				continue
 			}
 
@@ -660,6 +632,17 @@ func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration)
 	log.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
 
 	return nil
+}
+
+func (c *Controller) getTargetPort(serviceMode string, portID int, name, namespace string, port int32) (intstr.IntOrString, error) {
+	switch serviceMode {
+	case k8s.ServiceTypeHTTP:
+		return c.getHTTPPort(portID)
+	case k8s.ServiceTypeTCP:
+		return c.getTCPPort(name, namespace, port)
+	default:
+		return intstr.IntOrString{}, errors.New("unknown service mode")
+	}
 }
 
 // isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
