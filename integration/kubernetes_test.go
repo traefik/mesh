@@ -18,6 +18,7 @@ func (s *KubernetesSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
 	s.startWhoami(c)
+	s.createResources(c, "resources/tcp-state-table/")
 }
 
 func (s *KubernetesSuite) TearDownSuite(c *check.C) {
