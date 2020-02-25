@@ -108,19 +108,15 @@ func (t *Try) WaitPodIPAssigned(name string, namespace string, timeout time.Dura
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		podList, err := t.client.ListPodWithOptions(namespace, metav1.ListOptions{})
+		pod, err := t.client.KubeClient.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("unable get the pod list in namespace %q: %v", namespace, err)
+			return fmt.Errorf("unable get the pod %q in namespace %q: %v", name, namespace, err)
 		}
 
-		for _, pod := range podList.Items {
-			// If the pod name doesn't match or the IP is empty, go to next.
-			if pod.Name != name || pod.Status.PodIP == "" {
-				continue
-			}
-
+		// If the pod IP is not empty, log and return.
+		if pod.Status.PodIP != "" {
 			// IP is assigned
-			fmt.Println("Pod \"" + name + "\" has IP: " + pod.Status.PodIP)
+			fmt.Printf("Pod %q has IP: %s\n", name, pod.Status.PodIP)
 			return nil
 		}
 
