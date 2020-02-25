@@ -45,6 +45,10 @@ func (h *Handler) RegisterMeshHandlers(createFunc func(service *corev1.Service) 
 
 // OnAdd executed when an object is added.
 func (h *Handler) OnAdd(obj interface{}) {
+	if h.createMeshServiceFunc == nil {
+		return
+	}
+
 	// assert the type to an object to pull out relevant data
 	switch obj := obj.(type) {
 	case *corev1.Service:
@@ -69,6 +73,10 @@ func (h *Handler) OnAdd(obj interface{}) {
 
 // OnUpdate executed when an object is updated.
 func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
+	if h.updateMeshServiceFunc == nil {
+		return
+	}
+
 	// Assert the type to an object to pull out relevant data.
 	switch obj := newObj.(type) {
 	case *corev1.Service:
@@ -108,6 +116,10 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 
 // OnDelete executed when an object is deleted.
 func (h *Handler) OnDelete(obj interface{}) {
+	if h.deleteMeshServiceFunc == nil {
+		return
+	}
+
 	// Assert the type to an object to pull out relevant data.
 	switch obj := obj.(type) {
 	case *corev1.Service:

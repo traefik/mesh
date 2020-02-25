@@ -77,6 +77,12 @@ spec:
             {{- if .Values.controller.ignoreNamespaces }}
             - {{ include "maesh.controllerIgnoreNamespaces" . | quote }}
             {{- end }}
+            {{- if .Values.limits.tcp }}
+            - "--limitTCPPort={{ .Values.limits.tcp }}"
+            {{- end }}
+            {{- if .Values.limits.http }}
+            - "--limitHTTPPort={{ .Values.limits.http }}"
+            {{- end }}
           env:
             - name: POD_IP
               valueFrom:

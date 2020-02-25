@@ -39,6 +39,7 @@
     "scopelint",
     "funlen",
     "bodyclose", # Too many false positives
+    "godox",
   ]
 
 [issues]

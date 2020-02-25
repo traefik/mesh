@@ -3,6 +3,7 @@ package smi
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -24,10 +25,15 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
+// TCPPortFinder is capable of retrieving a TCP port mapping for a given service.
+type TCPPortFinder interface {
+	Find(svc k8s.ServiceWithPort) (int32, bool)
+}
+
 // Provider holds a client to access the provider.
 type Provider struct {
 	defaultMode          string
-	tcpStateTable        *k8s.State
+	tcpStateTable        TCPPortFinder
 	ignored              k8s.IgnoreWrapper
 	serviceLister        listers.ServiceLister
 	endpointsLister      listers.EndpointsLister
@@ -36,6 +42,8 @@ type Provider struct {
 	httpRouteGroupLister specsLister.HTTPRouteGroupLister
 	tcpRouteLister       specsLister.TCPRouteLister
 	trafficSplitLister   splitLister.TrafficSplitLister
+	minHTTPPort          int32
+	maxHTTPPort          int32
 }
 
 // destinationKey is used to key a grouped map of trafficTargets.
@@ -49,14 +57,15 @@ type destinationKey struct {
 func (p *Provider) Init() {}
 
 // New creates a new provider.
-func New(defaultMode string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper,
+func New(defaultMode string, tcpStateTable TCPPortFinder, ignored k8s.IgnoreWrapper,
 	serviceLister listers.ServiceLister,
 	endpointsLister listers.EndpointsLister,
 	podLister listers.PodLister,
 	trafficTargetLister accessLister.TrafficTargetLister,
 	httpRouteGroupLister specsLister.HTTPRouteGroupLister,
 	tcpRouteLister specsLister.TCPRouteLister,
-	trafficSplitLister splitLister.TrafficSplitLister) *Provider {
+	trafficSplitLister splitLister.TrafficSplitLister,
+	minHTTPPort, maxHTTPPort int32) *Provider {
 	p := &Provider{
 		defaultMode:          defaultMode,
 		tcpStateTable:        tcpStateTable,
@@ -68,6 +77,8 @@ func New(defaultMode string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper
 		httpRouteGroupLister: httpRouteGroupLister,
 		tcpRouteLister:       tcpRouteLister,
 		trafficSplitLister:   trafficSplitLister,
+		minHTTPPort:          minHTTPPort,
+		maxHTTPPort:          maxHTTPPort,
 	}
 
 	p.Init()
@@ -77,6 +88,8 @@ func New(defaultMode string, tcpStateTable *k8s.State, ignored k8s.IgnoreWrapper
 
 // BuildConfig builds the configuration for routing
 // from a native kubernetes environment.
+// FIXME: Reduce cognitive complexity.
+// nolint:gocognit,gocyclo
 func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	config := base.CreateBaseConfigWithReadiness()
 	base.AddBaseSMIMiddlewares(config)
@@ -133,6 +146,12 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 
 					switch serviceMode {
 					case k8s.ServiceTypeHTTP:
+						port, err := p.getHTTPPort(id)
+						if err != nil {
+							log.Debugf("Mesh HTTP port not found for service %s/%s %d", service.Namespace, service.Name, sp.Port)
+							continue
+						}
+
 						if len(sourceIPs) > 0 {
 							config.HTTP.Middlewares[whitelistKey] = createWhitelistMiddleware(sourceIPs)
 							whitelistMiddleware = whitelistKey
@@ -142,17 +161,27 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 
 						trafficSplit := base.GetTrafficSplitFromList(service.Name, trafficSplitsInNamespace)
 						if trafficSplit == nil {
-							config.HTTP.Routers[key] = p.buildHTTPRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, 5000+id, key, whitelistMiddleware)
+							config.HTTP.Routers[key] = p.buildHTTPRouterFromTrafficTarget(service.Name, service.Namespace, service.Spec.ClusterIP, groupedTrafficTarget, port, key, whitelistMiddleware)
 							config.HTTP.Services[key] = p.buildHTTPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget, scheme)
 
 							continue
 						}
 
-						p.buildTrafficSplit(config, trafficSplit, sp, id, groupedTrafficTarget, whitelistMiddleware, scheme)
+						p.buildTrafficSplit(config, trafficSplit, sp, port, groupedTrafficTarget, whitelistMiddleware, scheme)
+
 					case k8s.ServiceTypeTCP:
-						meshPort := p.getMeshPort(service.Name, service.Namespace, sp.Port)
-						config.TCP.Routers[key] = p.buildTCPRouterFromTrafficTarget(groupedTrafficTarget, meshPort, key)
+						port, err := p.getTCPPort(service.Namespace, service.Name, sp.Port)
+						if err != nil {
+							log.Debugf("Mesh TCP port not found for service %s/%s %d", service.Namespace, service.Name, sp.Port)
+							continue
+						}
+
+						config.TCP.Routers[key] = p.buildTCPRouterFromTrafficTarget(groupedTrafficTarget, port, key)
 						config.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), groupedTrafficTarget)
+
+					default:
+						log.Errorf("Unknown service mode %s, skipping port %s on service %s/%s", serviceMode, sp.Name, service.Namespace, service.Name)
+						continue
 					}
 				}
 			}
@@ -160,6 +189,27 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	}
 
 	return config, nil
+}
+
+func (p *Provider) getTCPPort(namespace, name string, port int32) (int32, error) {
+	meshPort, ok := p.tcpStateTable.Find(k8s.ServiceWithPort{
+		Namespace: namespace,
+		Name:      name,
+		Port:      port,
+	})
+	if !ok {
+		return 0, errors.New("unable to find an available TCP port")
+	}
+
+	return meshPort, nil
+}
+
+func (p *Provider) getHTTPPort(portID int) (int32, error) {
+	if p.minHTTPPort+int32(portID) >= p.maxHTTPPort {
+		return 0, errors.New("unable to find an available HTTP port")
+	}
+
+	return p.minHTTPPort + int32(portID), nil
 }
 
 func (p *Provider) getSourceIPFromSourceSlice(sources []access.IdentityBindingSubject) []string {
@@ -312,7 +362,7 @@ func (p *Provider) groupTrafficTargetsByDestination(trafficTargets []*access.Tra
 	return result
 }
 
-func (p *Provider) buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *access.TrafficTarget, port int, key, middleware string) *dynamic.Router {
+func (p *Provider) buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespace, serviceIP string, trafficTarget *access.TrafficTarget, port int32, key, middleware string) *dynamic.Router {
 	var rule []string
 
 	for _, spec := range trafficTarget.Specs {
@@ -350,7 +400,7 @@ func (p *Provider) buildHTTPRouterFromTrafficTarget(serviceName, serviceNamespac
 	}
 }
 
-func (p *Provider) buildTCPRouterFromTrafficTarget(trafficTarget *access.TrafficTarget, port int, key string) *dynamic.TCPRouter {
+func (p *Provider) buildTCPRouterFromTrafficTarget(trafficTarget *access.TrafficTarget, port int32, key string) *dynamic.TCPRouter {
 	var rule string
 
 	for _, spec := range trafficTarget.Specs {
@@ -505,7 +555,7 @@ func (p *Provider) getServiceMode(mode string) string {
 }
 
 func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit *split.TrafficSplit,
-	sp corev1.ServicePort, id int, trafficTarget *access.TrafficTarget, whitelistMiddleware string, scheme string) {
+	sp corev1.ServicePort, port int32, trafficTarget *access.TrafficTarget, whitelistMiddleware string, scheme string) {
 	var WRRServices []dynamic.WRRService
 
 	for _, backend := range trafficSplit.Spec.Backends {
@@ -537,22 +587,8 @@ func (p *Provider) buildTrafficSplit(config *dynamic.Configuration, trafficSplit
 	}
 
 	weightedKey := buildKey(svc.Name, svc.Namespace, sp.Port, trafficTarget.Name, trafficTarget.Namespace)
-	config.HTTP.Routers[weightedKey] = p.buildHTTPRouterFromTrafficTarget(trafficSplit.Spec.Service, trafficSplit.Namespace, svc.Spec.ClusterIP, trafficTarget, 5000+id, weightedKey, whitelistMiddleware)
+	config.HTTP.Routers[weightedKey] = p.buildHTTPRouterFromTrafficTarget(trafficSplit.Spec.Service, trafficSplit.Namespace, svc.Spec.ClusterIP, trafficTarget, port, weightedKey, whitelistMiddleware)
 	config.HTTP.Services[weightedKey] = svcWeighted
-}
-
-func (p *Provider) getMeshPort(serviceName, serviceNamespace string, servicePort int32) int {
-	if p.tcpStateTable == nil {
-		return 0
-	}
-
-	for port, v := range p.tcpStateTable.Table {
-		if v.Name == serviceName && v.Namespace == serviceNamespace && v.Port == servicePort {
-			return port
-		}
-	}
-
-	return 0
 }
 
 func buildKey(serviceName, namespace string, port int32, ttName, ttNamespace string) string {

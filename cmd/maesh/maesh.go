@@ -69,10 +69,26 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
+	minHTTPPort := int32(5000)
+	minTCPPort := int32(10000)
+
 	// Create a new stop Channel
 	stopCh := signals.SetupSignalHandler()
 	// Create a new ctr.
-	ctr := controller.NewMeshController(clients, iConfig.SMI, iConfig.DefaultMode, iConfig.Namespace, iConfig.IgnoreNamespaces, iConfig.APIPort)
+	ctr, err := controller.NewMeshController(clients, controller.MeshControllerConfig{
+		SMIEnabled:       iConfig.SMI,
+		DefaultMode:      iConfig.DefaultMode,
+		Namespace:        iConfig.Namespace,
+		IgnoreNamespaces: iConfig.IgnoreNamespaces,
+		APIPort:          iConfig.APIPort,
+		MinTCPPort:       minTCPPort,
+		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
+		MinHTTPPort:      minHTTPPort,
+		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to create controller: %w", err)
+	}
 
 	// run the ctr loop to process items
 	if err = ctr.Run(stopCh); err != nil {
