@@ -87,7 +87,7 @@ func (s *SMISuite) checkWhitelistSourceRanges(c *check.C, config *dynamic.Config
 		// Test for block-all-middleware.
 		if name == "smi-block-all-middleware" {
 			c.Assert(middleware.IPWhiteList.SourceRange[0], checker.Equals, "255.255.255.255")
-			c.Log("Middleware " + name + " has the correct source range.")
+			c.Logf("Middleware %q has the correct source range.", name)
 
 			continue
 		}
@@ -107,14 +107,14 @@ func (s *SMISuite) checkWhitelistSourceRanges(c *check.C, config *dynamic.Config
 		actual := middleware.IPWhiteList.SourceRange
 		// Assert that the sourceRange is the correct length.
 		c.Assert(len(actual), checker.Equals, len(expected), check.Commentf("Expected length %d, got %d for middleware %s in config: %v", len(expected), len(actual), name, config))
-		c.Log("Middleware " + name + " has the correct length.")
+		c.Logf("Middleware %q has the correct length.", name)
 
 		// Assert that the sourceRange contains the expected values.
 		for _, expectedValue := range expected {
 			c.Assert(contains(actual, expectedValue), checker.True)
 		}
 
-		c.Log("Middleware " + name + " has the correct expected values.")
+		c.Logf("Middleware %q has the correct expected values.", name)
 	}
 }
 
@@ -123,7 +123,7 @@ func (s *SMISuite) checkHTTPServiceServerURLs(c *check.C, config *dynamic.Config
 		// Test for readiness.
 		if name == "readiness" {
 			c.Assert(service.LoadBalancer.Servers[0].URL, checker.Equals, "http://127.0.0.1:8080")
-			c.Log("service " + name + " has the correct url.")
+			c.Logf("service %q has the correct url.", name)
 
 			continue
 		}
@@ -153,7 +153,7 @@ func (s *SMISuite) checkHTTPServiceServerURLs(c *check.C, config *dynamic.Config
 			}
 		}
 
-		c.Log("Service " + name + " has the correct expected values.")
+		c.Logf("Service %q has the correct expected values.", name)
 	}
 }
 
@@ -184,13 +184,13 @@ func (s *SMISuite) checkTCPServiceServerURLs(c *check.C, config *dynamic.Configu
 			}
 		}
 
-		c.Log("Service " + name + " has the correct expected values.")
+		c.Logf("Service %q has the correct expected values.", name)
 	}
 }
 
 func (s *SMISuite) waitForPodIPs(c *check.C, pods []string) {
 	for _, pod := range pods {
-		c.Log("Waiting for pod: \"" + pod + "\" to have IP assigned.")
+		c.Logf("Waiting for pod: %q to have IP assigned.", pod)
 		c.Assert(s.try.WaitPodIPAssigned(pod, testNamespace, 30*time.Second), checker.IsNil)
 	}
 }
