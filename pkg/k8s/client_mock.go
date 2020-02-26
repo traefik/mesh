@@ -208,7 +208,7 @@ func (c *ClientMock) UpdateService(service *corev1.Service) (*corev1.Service, er
 
 // MustParseYaml parses a YAML to objects.
 func MustParseYaml(content []byte) []runtime.Object {
-	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|Middleware|Secret|TLSOption|Namespace|TrafficTarget|HTTPRouteGroup|TCPRoute|TrafficSplit|Pod|ConfigMap)`)
+	acceptedK8sTypes := regexp.MustCompile(`(` + strings.Join([]string{CoreObjectKinds, AccessObjectKinds, SpecsObjectKinds, SplitObjectKinds}, "|") + `)`)
 
 	files := strings.Split(string(content), "---")
 	retVal := make([]runtime.Object, 0, len(files))

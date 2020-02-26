@@ -10,7 +10,7 @@ const (
 	baseAnnotation string = "maesh.containo.us/"
 
 	// CoreObjectKinds is a filter for objects to process by the core client.
-	CoreObjectKinds = "Deployment|Endpoints|Service|Ingress|Secret|Namespace|Pod"
+	CoreObjectKinds = "Deployment|Endpoints|Service|Ingress|Secret|Namespace|Pod|ConfigMap"
 	// AccessObjectKinds is a filter for objects to process by the access client.
 	AccessObjectKinds = "TrafficTarget"
 	// SpecsObjectKinds is a filter for objects to process by the specs client.
