@@ -81,6 +81,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		Namespace:        iConfig.Namespace,
 		IgnoreNamespaces: iConfig.IgnoreNamespaces,
 		APIPort:          iConfig.APIPort,
+		APIHost:          iConfig.APIHost,
 		MinTCPPort:       minTCPPort,
 		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinHTTPPort:      minHTTPPort,
