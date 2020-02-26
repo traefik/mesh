@@ -11,22 +11,31 @@ import (
 	access "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specs "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	split "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha2"
-	fakeSMIAccess "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
+	accessClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	fakeAccessClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
 	accessInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	accessLister "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
-	fakeSMISpecs "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned/fake"
+	specsClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
+	fakeSpecsClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned/fake"
 	specsInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	specsLister "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
-	fakeSMISplit "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned/fake"
+	splitClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
+	fakeSplitClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned/fake"
 	splitInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	splitLister "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes/fake"
+	kubeClient "k8s.io/client-go/kubernetes"
+	fakeKubeClient "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
+
+// Ensure the client mock fits the Client interface
+var _ Client = (*ClientMock)(nil)
 
 func init() {
 	// required by k8s.MustParseYaml
@@ -53,10 +62,10 @@ func init() {
 
 // ClientMock holds mock client.
 type ClientMock struct {
-	client       *fake.Clientset
-	accessClient *fakeSMIAccess.Clientset
-	specsClient  *fakeSMISpecs.Clientset
-	splitClient  *fakeSMISplit.Clientset
+	kubeClient   *fakeKubeClient.Clientset
+	accessClient *fakeAccessClient.Clientset
+	specsClient  *fakeSpecsClient.Clientset
+	splitClient  *fakeSplitClient.Clientset
 
 	informerFactory       informers.SharedInformerFactory
 	accessInformerFactory accessInformer.SharedInformerFactory
@@ -83,9 +92,9 @@ func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 	k8sObjects := MustParseYaml(yamlContent)
 	c := &ClientMock{}
 
-	c.client = fake.NewSimpleClientset(filterObjectsByKind(k8sObjects, CoreObjectKinds)...)
+	c.kubeClient = fakeKubeClient.NewSimpleClientset(filterObjectsByKind(k8sObjects, CoreObjectKinds)...)
 
-	c.informerFactory = informers.NewSharedInformerFactory(c.client, 0)
+	c.informerFactory = informers.NewSharedInformerFactory(c.kubeClient, 0)
 
 	podInformer := c.informerFactory.Core().V1().Pods().Informer()
 	serviceInformer := c.informerFactory.Core().V1().Services().Informer()
@@ -112,9 +121,9 @@ func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 	}
 
 	if smi {
-		c.accessClient = fakeSMIAccess.NewSimpleClientset(filterObjectsByKind(k8sObjects, AccessObjectKinds)...)
-		c.specsClient = fakeSMISpecs.NewSimpleClientset(filterObjectsByKind(k8sObjects, SpecsObjectKinds)...)
-		c.splitClient = fakeSMISplit.NewSimpleClientset(filterObjectsByKind(k8sObjects, SplitObjectKinds)...)
+		c.accessClient = fakeAccessClient.NewSimpleClientset(filterObjectsByKind(k8sObjects, AccessObjectKinds)...)
+		c.specsClient = fakeSpecsClient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SpecsObjectKinds)...)
+		c.splitClient = fakeSplitClient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SplitObjectKinds)...)
 
 		c.accessInformerFactory = accessInformer.NewSharedInformerFactory(c.accessClient, 0)
 		c.specsInformerFactory = specsInformer.NewSharedInformerFactory(c.specsClient, 0)
@@ -162,9 +171,44 @@ func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 	return c
 }
 
+// GetKubernetesClient is used to get the kubernetes clientset.
+func (c *ClientMock) GetKubernetesClient() kubeClient.Interface {
+	return c.kubeClient
+}
+
+// GetAccessClient is used to get the SMI Access clientset.
+func (c *ClientMock) GetAccessClient() accessClient.Interface {
+	return c.accessClient
+}
+
+// GetSpecsClient is used to get the SMI Specs clientset.
+func (c *ClientMock) GetSpecsClient() specsClient.Interface {
+	return c.specsClient
+}
+
+// GetSplitClient is used to get the SMI Split clientset.
+func (c *ClientMock) GetSplitClient() splitClient.Interface {
+	return c.splitClient
+}
+
+// DeleteService deletes the service from the specified namespace.
+func (c *ClientMock) DeleteService(namespace, name string) error {
+	return c.kubeClient.CoreV1().Services(namespace).Delete(name, &metav1.DeleteOptions{})
+}
+
+// CreateService create the specified service.
+func (c *ClientMock) CreateService(service *corev1.Service) (*corev1.Service, error) {
+	return c.kubeClient.CoreV1().Services(service.Namespace).Create(service)
+}
+
+// UpdateService updates the specified service.
+func (c *ClientMock) UpdateService(service *corev1.Service) (*corev1.Service, error) {
+	return c.kubeClient.CoreV1().Services(service.Namespace).Update(service)
+}
+
 // MustParseYaml parses a YAML to objects.
 func MustParseYaml(content []byte) []runtime.Object {
-	acceptedK8sTypes := regexp.MustCompile(`(Deployment|Endpoints|Service|Ingress|Middleware|Secret|TLSOption|Namespace|TrafficTarget|HTTPRouteGroup|TCPRoute|TrafficSplit|Pod)`)
+	acceptedK8sTypes := regexp.MustCompile(`(` + strings.Join([]string{CoreObjectKinds, AccessObjectKinds, SpecsObjectKinds, SplitObjectKinds}, "|") + `)`)
 
 	files := strings.Split(string(content), "---")
 	retVal := make([]runtime.Object, 0, len(files))

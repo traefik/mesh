@@ -11,11 +11,11 @@ import (
 	"github.com/cenkalti/backoff/v3"
 	"github.com/containous/traefik/v2/pkg/safe"
 
-	smiAccessClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	accessClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
 	accessInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
-	smiSpecsClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
+	specsClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
 	specsInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
-	smiSplitClientset "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
+	splitClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	splitInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -24,7 +24,7 @@ import (
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
+	kubeClient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
@@ -39,12 +39,27 @@ var (
 	}
 )
 
+// Client is an interface for the various resource controllers.
+type Client interface {
+	GetKubernetesClient() kubeClient.Interface
+	GetAccessClient() accessClient.Interface
+	GetSpecsClient() specsClient.Interface
+	GetSplitClient() splitClient.Interface
+
+	CreateService(service *corev1.Service) (*corev1.Service, error)
+	DeleteService(namespace, name string) error
+	UpdateService(service *corev1.Service) (*corev1.Service, error)
+}
+
+// Ensure the client wrapper fits the Client interface
+var _ Client = (*ClientWrapper)(nil)
+
 // ClientWrapper holds the clients for the various resource controllers.
 type ClientWrapper struct {
-	KubeClient      *kubernetes.Clientset
-	SmiAccessClient *smiAccessClientset.Clientset
-	SmiSpecsClient  *smiSpecsClientset.Clientset
-	SmiSplitClient  *smiSplitClientset.Clientset
+	kubeClient   *kubeClient.Clientset
+	accessClient *accessClient.Clientset
+	specsClient  *specsClient.Clientset
+	splitClient  *splitClient.Clientset
 }
 
 // NewClientWrapper creates and returns both a kubernetes client, and a CRD client.
@@ -59,26 +74,26 @@ func NewClientWrapper(url string, kubeConfig string) (*ClientWrapper, error) {
 		return nil, err
 	}
 
-	smiAccessClient, err := buildSmiAccessClient(config)
+	accessClient, err := buildSmiAccessClient(config)
 	if err != nil {
 		return nil, err
 	}
 
-	smiSpecsClient, err := buildSmiSpecsClient(config)
+	specsClient, err := buildSmiSpecsClient(config)
 	if err != nil {
 		return nil, err
 	}
 
-	smiSplitClient, err := buildSmiSplitClient(config)
+	splitClient, err := buildSmiSplitClient(config)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ClientWrapper{
-		KubeClient:      kubeClient,
-		SmiAccessClient: smiAccessClient,
-		SmiSpecsClient:  smiSpecsClient,
-		SmiSplitClient:  smiSplitClient,
+		kubeClient:   kubeClient,
+		accessClient: accessClient,
+		specsClient:  specsClient,
+		splitClient:  splitClient,
 	}, nil
 }
 
@@ -103,6 +118,26 @@ func (w *ClientWrapper) CheckCluster() error {
 	}
 
 	return nil
+}
+
+// GetKubernetesClient is used to get the kubernetes clientset.
+func (w *ClientWrapper) GetKubernetesClient() kubeClient.Interface {
+	return w.kubeClient
+}
+
+// GetAccessClient is used to get the SMI Access clientset.
+func (w *ClientWrapper) GetAccessClient() accessClient.Interface {
+	return w.accessClient
+}
+
+// GetSpecsClient is used to get the SMI Specs clientset.
+func (w *ClientWrapper) GetSpecsClient() specsClient.Interface {
+	return w.specsClient
+}
+
+// GetSplitClient is used to get the SMI Split clientset.
+func (w *ClientWrapper) GetSplitClient() splitClient.Interface {
+	return w.splitClient
 }
 
 // CoreDNSMatch checks if CoreDNS service can match.
@@ -172,7 +207,7 @@ func (w *ClientWrapper) CheckInformersStart(smi bool) error {
 	defer cancel()
 
 	// Create a new SharedInformerFactory, and register the event handler to informers.
-	kubeFactory := informers.NewSharedInformerFactoryWithOptions(w.KubeClient, ResyncPeriod)
+	kubeFactory := informers.NewSharedInformerFactoryWithOptions(w.kubeClient, ResyncPeriod)
 	kubeFactory.Core().V1().Services().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	kubeFactory.Core().V1().Endpoints().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	kubeFactory.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
@@ -186,7 +221,7 @@ func (w *ClientWrapper) CheckInformersStart(smi bool) error {
 
 	if smi {
 		// Create new SharedInformerFactories, and register the event handler to informers.
-		accessFactory := accessInformer.NewSharedInformerFactoryWithOptions(w.SmiAccessClient, ResyncPeriod)
+		accessFactory := accessInformer.NewSharedInformerFactoryWithOptions(w.accessClient, ResyncPeriod)
 		accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 		accessFactory.Start(stopCh)
 
@@ -196,7 +231,7 @@ func (w *ClientWrapper) CheckInformersStart(smi bool) error {
 			}
 		}
 
-		specsFactory := specsInformer.NewSharedInformerFactoryWithOptions(w.SmiSpecsClient, ResyncPeriod)
+		specsFactory := specsInformer.NewSharedInformerFactoryWithOptions(w.specsClient, ResyncPeriod)
 		specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 		specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 		specsFactory.Start(stopCh)
@@ -207,7 +242,7 @@ func (w *ClientWrapper) CheckInformersStart(smi bool) error {
 			}
 		}
 
-		splitFactory := splitInformer.NewSharedInformerFactoryWithOptions(w.SmiSplitClient, ResyncPeriod)
+		splitFactory := splitInformer.NewSharedInformerFactoryWithOptions(w.splitClient, ResyncPeriod)
 		splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 		splitFactory.Start(stopCh)
 
@@ -339,7 +374,7 @@ func (w *ClientWrapper) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment,
 
 	coreConfigMapName = getCoreDNSConfigMapName(coreDeployment)
 
-	coreConfigMap, err := w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
+	coreConfigMap, err := w.kubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -386,7 +421,7 @@ maesh:53 {
 
 	coreConfigMap.ObjectMeta.Labels["maesh-patched"] = "true"
 
-	if _, err = w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Update(coreConfigMap); err != nil {
+	if _, err = w.kubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Update(coreConfigMap); err != nil {
 		return false, err
 	}
 
@@ -402,7 +437,7 @@ func (w *ClientWrapper) patchKubeDNSConfigMap(deployment *appsv1.Deployment, cor
 
 	configMapName = deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
 
-	configMap, err := w.KubeClient.CoreV1().ConfigMaps(deployment.Namespace).Get(configMapName, metav1.GetOptions{})
+	configMap, err := w.kubeClient.CoreV1().ConfigMaps(deployment.Namespace).Get(configMapName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -446,7 +481,7 @@ func (w *ClientWrapper) patchKubeDNSConfigMap(deployment *appsv1.Deployment, cor
 
 	configMap.ObjectMeta.Labels["maesh-patched"] = "true"
 
-	if _, err = w.KubeClient.CoreV1().ConfigMaps(deployment.Namespace).Update(configMap); err != nil {
+	if _, err = w.kubeClient.CoreV1().ConfigMaps(deployment.Namespace).Update(configMap); err != nil {
 		return false, err
 	}
 
@@ -466,7 +501,7 @@ func (w *ClientWrapper) restartPods(deployment *appsv1.Deployment) error {
 
 	annotations["maesh-hash"] = uuid.New().String()
 	newDeployment.Spec.Template.Annotations = annotations
-	_, err := w.KubeClient.AppsV1().Deployments(newDeployment.Namespace).Update(newDeployment)
+	_, err := w.kubeClient.AppsV1().Deployments(newDeployment.Namespace).Update(newDeployment)
 
 	return err
 }
@@ -485,7 +520,7 @@ func (w *ClientWrapper) VerifyCluster() error {
 }
 
 func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string) error {
-	coreDeployment, err := w.KubeClient.AppsV1().Deployments(namespace).Get(deploymentName, metav1.GetOptions{})
+	coreDeployment, err := w.kubeClient.AppsV1().Deployments(namespace).Get(deploymentName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -496,7 +531,7 @@ func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string
 
 	coreConfigMapName := getCoreDNSConfigMapName(coreDeployment)
 
-	coreConfigMap, err := w.KubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
+	coreConfigMap, err := w.kubeClient.CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -511,10 +546,10 @@ func (w *ClientWrapper) isCoreDNSPatched(deploymentName string, namespace string
 }
 
 // buildClient returns a useable kubernetes client.
-func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
+func buildKubernetesClient(config *rest.Config) (*kubeClient.Clientset, error) {
 	log.Debugln("Building Kubernetes Client...")
 
-	client, err := kubernetes.NewForConfig(config)
+	client, err := kubeClient.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create kubernetes client: %v", err)
 	}
@@ -523,10 +558,10 @@ func buildKubernetesClient(config *rest.Config) (*kubernetes.Clientset, error) {
 }
 
 // buildSmiAccessClient returns a client to manage SMI Access objects.
-func buildSmiAccessClient(config *rest.Config) (*smiAccessClientset.Clientset, error) {
+func buildSmiAccessClient(config *rest.Config) (*accessClient.Clientset, error) {
 	log.Debugln("Building SMI Access Client...")
 
-	client, err := smiAccessClientset.NewForConfig(config)
+	client, err := accessClient.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Access Client: %v", err)
 	}
@@ -535,10 +570,10 @@ func buildSmiAccessClient(config *rest.Config) (*smiAccessClientset.Clientset, e
 }
 
 // buildSmiSpecsClient returns a client to manage SMI Specs objects.
-func buildSmiSpecsClient(config *rest.Config) (*smiSpecsClientset.Clientset, error) {
+func buildSmiSpecsClient(config *rest.Config) (*specsClient.Clientset, error) {
 	log.Debugln("Building SMI Specs Client...")
 
-	client, err := smiSpecsClientset.NewForConfig(config)
+	client, err := specsClient.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Specs Client: %v", err)
 	}
@@ -547,10 +582,10 @@ func buildSmiSpecsClient(config *rest.Config) (*smiSpecsClientset.Clientset, err
 }
 
 // buildSmiSplitClient returns a client to manage SMI Split objects.
-func buildSmiSplitClient(config *rest.Config) (*smiSplitClientset.Clientset, error) {
+func buildSmiSplitClient(config *rest.Config) (*splitClient.Clientset, error) {
 	log.Debugln("Building SMI Split Client...")
 
-	client, err := smiSplitClientset.NewForConfig(config)
+	client, err := splitClient.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Split Client: %v", err)
 	}
@@ -571,7 +606,7 @@ func getCoreDNSConfigMapName(coreDeployment *appsv1.Deployment) string {
 
 // GetService retrieves the service from the specified namespace.
 func (w *ClientWrapper) GetService(namespace, name string) (*corev1.Service, bool, error) {
-	service, err := w.KubeClient.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
+	service, err := w.kubeClient.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
 
 	return service, exists, err
@@ -579,27 +614,27 @@ func (w *ClientWrapper) GetService(namespace, name string) (*corev1.Service, boo
 
 // DeleteService deletes the service from the specified namespace.
 func (w *ClientWrapper) DeleteService(namespace, name string) error {
-	return w.KubeClient.CoreV1().Services(namespace).Delete(name, &metav1.DeleteOptions{})
+	return w.kubeClient.CoreV1().Services(namespace).Delete(name, &metav1.DeleteOptions{})
 }
 
 // CreateService create the specified service.
 func (w *ClientWrapper) CreateService(service *corev1.Service) (*corev1.Service, error) {
-	return w.KubeClient.CoreV1().Services(service.Namespace).Create(service)
+	return w.kubeClient.CoreV1().Services(service.Namespace).Create(service)
 }
 
 // UpdateService updates the specified service.
 func (w *ClientWrapper) UpdateService(service *corev1.Service) (*corev1.Service, error) {
-	return w.KubeClient.CoreV1().Services(service.Namespace).Update(service)
+	return w.kubeClient.CoreV1().Services(service.Namespace).Update(service)
 }
 
 // ListPodWithOptions retrieves pods from the specified namespace.
 func (w *ClientWrapper) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
-	return w.KubeClient.CoreV1().Pods(namespace).List(options)
+	return w.kubeClient.CoreV1().Pods(namespace).List(options)
 }
 
 // GetNamespace returns a namespace.
 func (w *ClientWrapper) GetNamespace(name string) (*corev1.Namespace, bool, error) {
-	pod, err := w.KubeClient.CoreV1().Namespaces().Get(name, metav1.GetOptions{})
+	pod, err := w.kubeClient.CoreV1().Namespaces().Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
 
 	return pod, exists, err
@@ -607,7 +642,7 @@ func (w *ClientWrapper) GetNamespace(name string) (*corev1.Namespace, bool, erro
 
 // GetDeployment retrieves the deployment from the specified namespace.
 func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deployment, bool, error) {
-	deployment, err := w.KubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	deployment, err := w.kubeClient.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 	exists, err := translateNotFoundError(err)
 
 	return deployment, exists, err
@@ -615,17 +650,17 @@ func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deploymen
 
 // UpdateDeployment updates the specified deployment.
 func (w *ClientWrapper) UpdateDeployment(deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
-	return w.KubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
+	return w.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
 }
 
 // UpdateConfigMap updates the specified configMap.
 func (w *ClientWrapper) UpdateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
-	return w.KubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(configMap)
+	return w.kubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(configMap)
 }
 
 // CreateConfigMap creates the specified configMap.
 func (w *ClientWrapper) CreateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
-	return w.KubeClient.CoreV1().ConfigMaps(configMap.Namespace).Create(configMap)
+	return w.kubeClient.CoreV1().ConfigMaps(configMap.Namespace).Create(configMap)
 }
 
 // translateNotFoundError will translate a "not found" error to a boolean return
