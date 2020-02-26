@@ -130,7 +130,7 @@ func (s *SMISuite) checkHTTPServiceServerURLs(c *check.C, config *dynamic.Config
 
 		serviceName := string(name[0])
 
-		endpoints, err := s.client.KubeClient.CoreV1().Endpoints(testNamespace).Get(serviceName, metav1.GetOptions{})
+		endpoints, err := s.client.GetKubernetesClient().CoreV1().Endpoints(testNamespace).Get(serviceName, metav1.GetOptions{})
 		c.Assert(err, checker.IsNil)
 
 		for _, subset := range endpoints.Subsets {
@@ -161,7 +161,7 @@ func (s *SMISuite) checkTCPServiceServerURLs(c *check.C, config *dynamic.Configu
 	for name, service := range config.TCP.Services {
 		serviceName := "tcp"
 
-		endpoints, err := s.client.KubeClient.CoreV1().Endpoints(testNamespace).Get(serviceName, metav1.GetOptions{})
+		endpoints, err := s.client.GetKubernetesClient().CoreV1().Endpoints(testNamespace).Get(serviceName, metav1.GetOptions{})
 		c.Assert(err, checker.IsNil)
 
 		for _, subset := range endpoints.Subsets {
