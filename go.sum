@@ -233,6 +233,9 @@ github.com/gophercloud/gophercloud v0.3.0/go.mod h1:vxM41WHh5uqHVBMZHzuwNOHh8XEo
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/gorilla/context v1.1.1 h1:AWwleXJkX/nhcU9bZSnZoi3h/qGYqQAGhq6zZe/aQW8=
 github.com/gorilla/context v1.1.1/go.mod h1:kBGZzfjB9CEq2AlWe17Uuf7NDRt0dE0s8S51q0aT7Yg=
+github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
+github.com/gorilla/mux v1.7.3 h1:gnP5JzjVOuiZD07fKKToCAOjS0yOpj/qPETTXCCS6hw=
+github.com/gorilla/mux v1.7.3/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gravitational/trace v0.0.0-20190726142706-a535a178675f h1:68WxnfBzJRYktZ30fmIjGQ74RsXYLoeH2/NITPktTMY=
 github.com/gravitational/trace v0.0.0-20190726142706-a535a178675f/go.mod h1:RvdOUHE4SHqR3oXlFFKnGzms8a5dugHygGw1bqDstYI=
@@ -641,6 +644,7 @@ k8s.io/client-go v0.0.0-20181213151034-8d9ed539ba31/go.mod h1:7vJpHMYJwNQCWgzmNV
 k8s.io/client-go v0.0.0-20190718183610-8e956561bbf5/go.mod h1:ozblAqkW495yoAX60QZyxQBq5W0YixE9Ffn4F91RO0g=
 k8s.io/client-go v0.0.0-20190819141724-e14f31a72a77 h1:w1BoabVnPpPqQCY3sHK4qVwa12Lk8ip1pKMR1C+qbdo=
 k8s.io/client-go v0.0.0-20190819141724-e14f31a72a77/go.mod h1:DmkJD5UDP87MVqUQ5VJ6Tj9Oen8WzXPhk3la4qpyG4g=
+k8s.io/client-go v11.0.0+incompatible h1:LBbX2+lOwY9flffWlJM7f1Ct8V2SRNiMRDFeiwnJo9o=
 k8s.io/code-generator v0.0.0-20181114232248-ae218e241252/go.mod h1:IPqxl/YHk05nodzupwjke6ctMjyNRdV2zZ5/j3/F204=
 k8s.io/code-generator v0.0.0-20190612205613-18da4a14b22b/go.mod h1:G8bQwmHm2eafm5bgtX67XDZQ8CWKSGu9DekI+yN4Y5I=
 k8s.io/gengo v0.0.0-20181106084056-51747d6e00da/go.mod h1:ezvh/TsK7cY6rbqRK0oQQ8IAqLxYwwyPxAX1Pzy0ii0=
