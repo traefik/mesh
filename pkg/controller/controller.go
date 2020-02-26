@@ -62,7 +62,7 @@ type Controller struct {
 	tcpStateTable        TCPPortMapper
 	lastConfiguration    safe.Safe
 	api                  *API
-	apiPort              int
+	apiPort              int32
 	apiHost              string
 	deployLog            *DeployLog
 	PodLister            listers.PodLister
