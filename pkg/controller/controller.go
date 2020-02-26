@@ -62,7 +62,8 @@ type Controller struct {
 	tcpStateTable        TCPPortMapper
 	lastConfiguration    safe.Safe
 	api                  *API
-	apiPort              int32
+	apiPort              int
+	apiHost              string
 	deployLog            *DeployLog
 	PodLister            listers.PodLister
 	ServiceLister        listers.ServiceLister
@@ -82,6 +83,7 @@ type MeshControllerConfig struct {
 	Namespace        string
 	IgnoreNamespaces []string
 	APIPort          int32
+	APIHost          string
 	MinTCPPort       int32
 	MaxTCPPort       int32
 	MinHTTPPort      int32
@@ -119,6 +121,7 @@ func NewMeshController(clients *k8s.ClientWrapper, cfg MeshControllerConfig) (*C
 		defaultMode:       cfg.DefaultMode,
 		meshNamespace:     cfg.Namespace,
 		apiPort:           cfg.APIPort,
+		apiHost:           cfg.APIHost,
 		tcpStateTable:     tcpStateTable,
 		minHTTPPort:       cfg.MinHTTPPort,
 		maxHTTPPort:       cfg.MaxHTTPPort,
@@ -145,7 +148,7 @@ func (c *Controller) init() {
 	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
 
 	c.deployLog = NewDeployLog(1000)
-	c.api = NewAPI(c.apiPort, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
+	c.api = NewAPI(c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
 
 	if c.smiEnabled {
 		// Create new SharedInformerFactories, and register the event handler to informers.
