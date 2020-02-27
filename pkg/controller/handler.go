@@ -8,18 +8,17 @@ import (
 
 // Handler is an implementation of a ResourceEventHandler.
 type Handler struct {
-	ignored               k8s.IgnoreWrapper
-	configRefreshChan     chan string
-	createMeshServiceFunc func(service *corev1.Service) error
-	updateMeshServiceFunc func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error)
-	deleteMeshServiceFunc func(serviceName, serviceNamespace string) error
+	ignored           k8s.IgnoreWrapper
+	configRefreshChan chan string
+	serviceManager    ServiceManager
 }
 
 // NewHandler creates a handler.
-func NewHandler(ignored k8s.IgnoreWrapper, configRefreshChan chan string) *Handler {
+func NewHandler(ignored k8s.IgnoreWrapper, serviceManager ServiceManager, configRefreshChan chan string) *Handler {
 	h := &Handler{
 		ignored:           ignored,
 		configRefreshChan: configRefreshChan,
+		serviceManager:    serviceManager,
 	}
 
 	if err := h.Init(); err != nil {
@@ -36,19 +35,8 @@ func (h *Handler) Init() error {
 	return nil
 }
 
-// RegisterMeshHandlers registers function handlers.
-func (h *Handler) RegisterMeshHandlers(createFunc func(service *corev1.Service) error, updateFunc func(oldUserService *corev1.Service, newUserService *corev1.Service) (*corev1.Service, error), deleteFunc func(serviceName, serviceNamespace string) error) {
-	h.createMeshServiceFunc = createFunc
-	h.updateMeshServiceFunc = updateFunc
-	h.deleteMeshServiceFunc = deleteFunc
-}
-
 // OnAdd executed when an object is added.
 func (h *Handler) OnAdd(obj interface{}) {
-	if h.createMeshServiceFunc == nil {
-		return
-	}
-
 	// assert the type to an object to pull out relevant data
 	switch obj := obj.(type) {
 	case *corev1.Service:
@@ -56,7 +44,7 @@ func (h *Handler) OnAdd(obj interface{}) {
 			return
 		}
 
-		if err := h.createMeshServiceFunc(obj); err != nil {
+		if err := h.serviceManager.Create(obj); err != nil {
 			log.Errorf("Could not create mesh service: %v", err)
 		}
 	case *corev1.Endpoints:
@@ -72,11 +60,7 @@ func (h *Handler) OnAdd(obj interface{}) {
 }
 
 // OnUpdate executed when an object is updated.
-func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
-	if h.updateMeshServiceFunc == nil {
-		return
-	}
-
+func (h *Handler) OnUpdate(_, newObj interface{}) {
 	// Assert the type to an object to pull out relevant data.
 	switch obj := newObj.(type) {
 	case *corev1.Service:
@@ -84,8 +68,7 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 			return
 		}
 
-		oldService := oldObj.(*corev1.Service)
-		if _, err := h.updateMeshServiceFunc(oldService, obj); err != nil {
+		if _, err := h.serviceManager.Update(obj); err != nil {
 			log.Errorf("Could not update mesh service: %v", err)
 		}
 
@@ -116,10 +99,6 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 
 // OnDelete executed when an object is deleted.
 func (h *Handler) OnDelete(obj interface{}) {
-	if h.deleteMeshServiceFunc == nil {
-		return
-	}
-
 	// Assert the type to an object to pull out relevant data.
 	switch obj := obj.(type) {
 	case *corev1.Service:
@@ -129,7 +108,7 @@ func (h *Handler) OnDelete(obj interface{}) {
 
 		log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
-		if err := h.deleteMeshServiceFunc(obj.Name, obj.Namespace); err != nil {
+		if err := h.serviceManager.Delete(obj.Name, obj.Namespace); err != nil {
 			log.Errorf("Could not delete mesh service: %v", err)
 		}
 	case *corev1.Endpoints:
