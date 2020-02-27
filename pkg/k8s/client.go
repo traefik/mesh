@@ -577,21 +577,6 @@ func (w *ClientWrapper) GetService(namespace, name string) (*corev1.Service, boo
 	return service, exists, err
 }
 
-// DeleteService deletes the service from the specified namespace.
-func (w *ClientWrapper) DeleteService(namespace, name string) error {
-	return w.KubeClient.CoreV1().Services(namespace).Delete(name, &metav1.DeleteOptions{})
-}
-
-// CreateService create the specified service.
-func (w *ClientWrapper) CreateService(service *corev1.Service) (*corev1.Service, error) {
-	return w.KubeClient.CoreV1().Services(service.Namespace).Create(service)
-}
-
-// UpdateService updates the specified service.
-func (w *ClientWrapper) UpdateService(service *corev1.Service) (*corev1.Service, error) {
-	return w.KubeClient.CoreV1().Services(service.Namespace).Update(service)
-}
-
 // ListPodWithOptions retrieves pods from the specified namespace.
 func (w *ClientWrapper) ListPodWithOptions(namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
 	return w.KubeClient.CoreV1().Pods(namespace).List(options)
@@ -616,16 +601,6 @@ func (w *ClientWrapper) GetDeployment(namespace, name string) (*appsv1.Deploymen
 // UpdateDeployment updates the specified deployment.
 func (w *ClientWrapper) UpdateDeployment(deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
 	return w.KubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
-}
-
-// UpdateConfigMap updates the specified configMap.
-func (w *ClientWrapper) UpdateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
-	return w.KubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(configMap)
-}
-
-// CreateConfigMap creates the specified configMap.
-func (w *ClientWrapper) CreateConfigMap(configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
-	return w.KubeClient.CoreV1().ConfigMaps(configMap.Namespace).Create(configMap)
 }
 
 // translateNotFoundError will translate a "not found" error to a boolean return
