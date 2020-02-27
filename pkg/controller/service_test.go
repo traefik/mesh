@@ -39,22 +39,22 @@ func (t tcpPortMapperMock) Add(svc *k8s.ServiceWithPort) (int32, error) {
 
 func Test_ServiceCreate(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    corev1.Service
-		want     corev1.Service
-		findPort int32
-		addPort  int32
-		wantErr  bool
+		name        string
+		provided    corev1.Service
+		expected    corev1.Service
+		findPort    int32
+		addPort     int32
+		expectedErr bool
 	}{
 		{
 			name: "does not create when shadow service already exists",
-			input: corev1.Service{
+			provided: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "alreadyexist",
 					Namespace: "namespace",
 				},
 			},
-			want: corev1.Service{
+			expected: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "maesh-alreadyexist-6d61657368-namespace",
 					Namespace: "maesh",
@@ -67,18 +67,22 @@ func Test_ServiceCreate(t *testing.T) {
 		},
 		{
 			name: "create HTTP service by default",
-			input: corev1.Service{
+			provided: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "http-default",
 					Namespace: "namespace",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80},
+						{
+							Name:     "portName",
+							Protocol: corev1.ProtocolTCP,
+							Port:     80,
+						},
 					},
 				},
 			},
-			want: corev1.Service{
+			expected: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "maesh-http-default-6d61657368-namespace",
 					Namespace: "maesh",
@@ -88,18 +92,23 @@ func Test_ServiceCreate(t *testing.T) {
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80, TargetPort: intstr.FromInt(5000)},
+						{
+							Name:       "portName",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       80,
+							TargetPort: intstr.FromInt(5000),
+						},
 					},
 					Selector: map[string]string{
 						"component": "maesh-mesh",
 					},
 				},
 			},
-			wantErr: false,
+			expectedErr: false,
 		},
 		{
 			name: "create HTTP service",
-			input: corev1.Service{
+			provided: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "http",
 					Namespace: "namespace",
@@ -108,11 +117,15 @@ func Test_ServiceCreate(t *testing.T) {
 					}},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80},
+						{
+							Name:     "portName",
+							Protocol: corev1.ProtocolTCP,
+							Port:     80,
+						},
 					},
 				},
 			},
-			want: corev1.Service{
+			expected: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "maesh-http-6d61657368-namespace",
 					Namespace: "maesh",
@@ -122,18 +135,23 @@ func Test_ServiceCreate(t *testing.T) {
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80, TargetPort: intstr.FromInt(5000)},
+						{
+							Name:       "portName",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       80,
+							TargetPort: intstr.FromInt(5000),
+						},
 					},
 					Selector: map[string]string{
 						"component": "maesh-mesh",
 					},
 				},
 			},
-			wantErr: false,
+			expectedErr: false,
 		},
 		{
 			name: "create TCP service, reuse TCP port",
-			input: corev1.Service{
+			provided: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "tcp-reuse",
 					Namespace: "namespace",
@@ -142,11 +160,15 @@ func Test_ServiceCreate(t *testing.T) {
 					}},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80},
+						{
+							Name:     "portName",
+							Protocol: corev1.ProtocolTCP,
+							Port:     80,
+						},
 					},
 				},
 			},
-			want: corev1.Service{
+			expected: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "maesh-tcp-reuse-6d61657368-namespace",
 					Namespace: "maesh",
@@ -156,19 +178,24 @@ func Test_ServiceCreate(t *testing.T) {
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80, TargetPort: intstr.FromInt(10000)},
+						{
+							Name:       "portName",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       80,
+							TargetPort: intstr.FromInt(10000),
+						},
 					},
 					Selector: map[string]string{
 						"component": "maesh-mesh",
 					},
 				},
 			},
-			findPort: 10000,
-			wantErr:  false,
+			findPort:    10000,
+			expectedErr: false,
 		},
 		{
 			name: "create TCP service",
-			input: corev1.Service{
+			provided: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "tcp",
 					Namespace: "namespace",
@@ -177,11 +204,15 @@ func Test_ServiceCreate(t *testing.T) {
 					}},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80},
+						{
+							Name:     "portName",
+							Protocol: corev1.ProtocolTCP,
+							Port:     80,
+						},
 					},
 				},
 			},
-			want: corev1.Service{
+			expected: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "maesh-tcp-6d61657368-namespace",
 					Namespace: "maesh",
@@ -191,15 +222,20 @@ func Test_ServiceCreate(t *testing.T) {
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80, TargetPort: intstr.FromInt(10001)},
+						{
+							Name:       "portName",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       80,
+							TargetPort: intstr.FromInt(10001),
+						},
 					},
 					Selector: map[string]string{
 						"component": "maesh-mesh",
 					},
 				},
 			},
-			addPort: 10001,
-			wantErr: false,
+			addPort:     10001,
+			expectedErr: false,
 		},
 	}
 
@@ -232,44 +268,48 @@ func Test_ServiceCreate(t *testing.T) {
 			}
 
 			service := controller.NewShadowServiceManager(lister, "maesh", tcpPortMapper, "http", 5000, 5002, client)
-			err := service.Create(&test.input)
-			if test.wantErr {
+			err := service.Create(&test.provided)
+			if test.expectedErr {
 				assert.Error(t, err)
 				return
 			}
 			assert.NoError(t, err)
 
-			svcGot, err := client.CoreV1().Services("maesh").Get(test.want.Name, v1.GetOptions{})
+			svcGot, err := client.CoreV1().Services("maesh").Get(test.expected.Name, v1.GetOptions{})
 			assert.NoError(t, err)
 
-			assert.Equal(t, &test.want, svcGot)
+			assert.Equal(t, &test.expected, svcGot)
 		})
 	}
 }
 
 func Test_ServiceUpdate(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    corev1.Service
-		want     corev1.Service
-		findPort int32
-		addPort  int32
-		wantErr  bool
+		name        string
+		provided    corev1.Service
+		expected    corev1.Service
+		findPort    int32
+		addPort     int32
+		expectedErr bool
 	}{
 		{
 			name: "create HTTP service by default",
-			input: corev1.Service{
+			provided: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "alreadyexist",
 					Namespace: "namespace",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80},
+						{
+							Name:     "portName",
+							Protocol: corev1.ProtocolTCP,
+							Port:     80,
+						},
 					},
 				},
 			},
-			want: corev1.Service{
+			expected: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "maesh-alreadyexist-6d61657368-namespace",
 					Namespace: "maesh",
@@ -279,14 +319,19 @@ func Test_ServiceUpdate(t *testing.T) {
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 80, TargetPort: intstr.FromInt(5000)},
+						{
+							Name:       "portName",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       80,
+							TargetPort: intstr.FromInt(5000),
+						},
 					},
 					Selector: map[string]string{
 						"component": "maesh-mesh",
 					},
 				},
 			},
-			wantErr: false,
+			expectedErr: false,
 		},
 	}
 
@@ -300,7 +345,12 @@ func Test_ServiceUpdate(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
-				{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 8080, TargetPort: intstr.FromInt(5000)},
+				{
+					Name:       "portName",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       8080,
+					TargetPort: intstr.FromInt(5000),
+				},
 			},
 			Selector: map[string]string{
 				"component": "maesh-mesh",
@@ -327,14 +377,14 @@ func Test_ServiceUpdate(t *testing.T) {
 
 			service := controller.NewShadowServiceManager(lister, "maesh", tcpPortMapper, "http", 5000, 5002, client)
 
-			svcGot, err := service.Update(&test.input)
-			if test.wantErr {
+			svcGot, err := service.Update(&test.provided)
+			if test.expectedErr {
 				assert.Error(t, err)
 				return
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, &test.want, svcGot)
+			assert.Equal(t, &test.expected, svcGot)
 		})
 	}
 }
@@ -350,7 +400,12 @@ func Test_ServiceDelete(t *testing.T) {
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
-				{Name: "portName", Protocol: corev1.ProtocolTCP, Port: 8080, TargetPort: intstr.FromInt(5000)},
+				{
+					Name:       "portName",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       8080,
+					TargetPort: intstr.FromInt(5000),
+				},
 			},
 			Selector: map[string]string{
 				"component": "maesh-mesh",

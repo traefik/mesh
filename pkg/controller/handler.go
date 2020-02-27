@@ -10,17 +10,16 @@ import (
 type Handler struct {
 	ignored           k8s.IgnoreWrapper
 	configRefreshChan chan string
-	shadowSvc         ServiceManager
+	serviceManager    ServiceManager
 }
 
 // NewHandler creates a handler.
-func NewHandler(ignored k8s.IgnoreWrapper, shadowSvc ServiceManager, configRefreshChan chan string) *Handler {
+func NewHandler(ignored k8s.IgnoreWrapper, serviceManager ServiceManager, configRefreshChan chan string) *Handler {
 	h := &Handler{
 		ignored:           ignored,
 		configRefreshChan: configRefreshChan,
+		serviceManager:    serviceManager,
 	}
-
-	h.shadowSvc = shadowSvc
 
 	if err := h.Init(); err != nil {
 		log.Errorln("Could not initialize MeshControllerHandler")
@@ -45,7 +44,7 @@ func (h *Handler) OnAdd(obj interface{}) {
 			return
 		}
 
-		if err := h.shadowSvc.Create(obj); err != nil {
+		if err := h.serviceManager.Create(obj); err != nil {
 			log.Errorf("Could not create mesh service: %v", err)
 		}
 	case *corev1.Endpoints:
@@ -69,7 +68,7 @@ func (h *Handler) OnUpdate(_, newObj interface{}) {
 			return
 		}
 
-		if _, err := h.shadowSvc.Update(obj); err != nil {
+		if _, err := h.serviceManager.Update(obj); err != nil {
 			log.Errorf("Could not update mesh service: %v", err)
 		}
 
@@ -109,7 +108,7 @@ func (h *Handler) OnDelete(obj interface{}) {
 
 		log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
-		if err := h.shadowSvc.Delete(obj.Name, obj.Namespace); err != nil {
+		if err := h.serviceManager.Delete(obj.Name, obj.Namespace); err != nil {
 			log.Errorf("Could not delete mesh service: %v", err)
 		}
 	case *corev1.Endpoints:
