@@ -14,6 +14,7 @@ type MaeshConfiguration struct {
 	Namespace        string   `description:"The namespace that maesh is installed in." export:"true"`
 	IgnoreNamespaces []string `description:"The namespace that maesh should be ignoring." export:"true"`
 	APIPort          int32    `description:"API port for the controller" export:"true"`
+	APIHost          string   `description:"API host for the controller to bind to" export:"true"`
 	LimitTCPPort     int32    `description:"Number of TCP ports allocated" export:"true"`
 	LimitHTTPPort    int32    `description:"Number of HTTP ports allocated" export:"true"`
 }
@@ -28,6 +29,7 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 		DefaultMode:   "http",
 		Namespace:     "maesh",
 		APIPort:       9000,
+		APIHost:       "",
 		LimitTCPPort:  25,
 		LimitHTTPPort: 10,
 	}
