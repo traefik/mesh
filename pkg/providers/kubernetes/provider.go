@@ -34,11 +34,6 @@ type Provider struct {
 	maxHTTPPort     int32
 }
 
-// Init the provider.
-func (p *Provider) Init() {
-
-}
-
 // New creates a new provider.
 func New(defaultMode string, tcpStateTable TCPPortFinder, ignored k8s.IgnoreWrapper, serviceLister listers.ServiceLister, endpointsLister listers.EndpointsLister, minHTTPPort, maxHTTPPort int32) *Provider {
 	p := &Provider{
@@ -50,8 +45,6 @@ func New(defaultMode string, tcpStateTable TCPPortFinder, ignored k8s.IgnoreWrap
 		minHTTPPort:     minHTTPPort,
 		maxHTTPPort:     maxHTTPPort,
 	}
-
-	p.Init()
 
 	return p
 }
