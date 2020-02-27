@@ -12,9 +12,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	localhost = "127.0.0.1"
+)
+
 func TestEnableReadiness(t *testing.T) {
 	config := safe.Safe{}
-	api := NewAPI(9000, &config, nil, nil, "foo")
+	api := NewAPI(9000, localhost, &config, nil, nil, "foo")
 
 	assert.Equal(t, false, api.readiness)
 
@@ -46,7 +50,7 @@ func TestGetReadiness(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			config := safe.Safe{}
-			api := NewAPI(9000, &config, nil, nil, "foo")
+			api := NewAPI(9000, localhost, &config, nil, nil, "foo")
 			api.readiness = test.readiness
 
 			res := httptest.NewRecorder()
@@ -61,7 +65,7 @@ func TestGetReadiness(t *testing.T) {
 
 func TestGetCurrentConfiguration(t *testing.T) {
 	config := safe.Safe{}
-	api := NewAPI(9000, &config, nil, nil, "foo")
+	api := NewAPI(9000, localhost, &config, nil, nil, "foo")
 
 	config.Set("foo")
 
@@ -76,7 +80,7 @@ func TestGetCurrentConfiguration(t *testing.T) {
 func TestGetDeployLog(t *testing.T) {
 	config := safe.Safe{}
 	log := NewDeployLog(1000)
-	api := NewAPI(9000, &config, log, nil, "foo")
+	api := NewAPI(9000, localhost, &config, log, nil, "foo")
 
 	currentTime := time.Now()
 	log.LogDeploy(currentTime, "foo", "bar", true, "blabla")
