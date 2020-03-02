@@ -1,4 +1,4 @@
-package controller
+package api
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/containous/maesh/pkg/deploylog"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -15,6 +16,12 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
+// Interface is an interface to interact with the REST API.
+type Interface interface {
+	Start()
+	EnableReadiness()
+}
+
 // API is an implementation of an api.
 type API struct {
 	router            *mux.Router
@@ -22,7 +29,7 @@ type API struct {
 	lastConfiguration *safe.Safe
 	apiPort           int32
 	apiHost           string
-	deployLog         *DeployLog
+	deployLog         *deploylog.DeployLog
 	meshNamespace     string
 	podLister         listers.PodLister
 }
@@ -34,7 +41,7 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(apiPort int32, apiHost string, lastConfiguration *safe.Safe, deployLog *DeployLog, podLister listers.PodLister, meshNamespace string) *API {
+func NewAPI(apiPort int32, apiHost string, lastConfiguration *safe.Safe, deployLog *deploylog.DeployLog, podLister listers.PodLister, meshNamespace string) *API {
 	a := &API{
 		readiness:         false,
 		lastConfiguration: lastConfiguration,
