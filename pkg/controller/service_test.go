@@ -20,21 +20,21 @@ import (
 )
 
 type tcpPortMapperMock struct {
-	findFunc func(svc k8s.ServiceWithPort) (int32, bool)
-	getFunc  func(srcPort int32) *k8s.ServiceWithPort
-	addFunc  func(svc *k8s.ServiceWithPort) (int32, error)
+	findFunc   func(svc k8s.ServiceWithPort) (int32, bool)
+	addFunc    func(svc *k8s.ServiceWithPort) (int32, error)
+	removeFunc func(svc k8s.ServiceWithPort) (int32, error)
 }
 
 func (t tcpPortMapperMock) Find(svc k8s.ServiceWithPort) (int32, bool) {
 	return t.findFunc(svc)
 }
 
-func (t tcpPortMapperMock) Get(srcPort int32) *k8s.ServiceWithPort {
-	return t.getFunc(srcPort)
-}
-
 func (t tcpPortMapperMock) Add(svc *k8s.ServiceWithPort) (int32, error) {
 	return t.addFunc(svc)
+}
+
+func (t tcpPortMapperMock) Remove(svc k8s.ServiceWithPort) (int32, error) {
+	return t.removeFunc(svc)
 }
 
 func Test_ServiceCreate(t *testing.T) {
@@ -284,60 +284,78 @@ func Test_ServiceCreate(t *testing.T) {
 }
 
 func Test_ServiceUpdate(t *testing.T) {
-	tests := []struct {
-		name        string
-		provided    corev1.Service
-		expected    corev1.Service
-		findPort    int32
-		addPort     int32
-		expectedErr bool
-	}{
-		{
-			name: "create HTTP service by default",
-			provided: corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "alreadyexist",
-					Namespace: "namespace",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:     "portName",
-							Protocol: corev1.ProtocolTCP,
-							Port:     80,
-						},
-					},
+	oldUserSvc := corev1.Service{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "my-svc",
+			Namespace: "my-ns",
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:     "portName",
+					Protocol: corev1.ProtocolTCP,
+					Port:     8090,
 				},
 			},
-			expected: corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-alreadyexist-6d61657368-namespace",
-					Namespace: "maesh",
-					Labels: map[string]string{
-						"app": "maesh",
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "portName",
-							Protocol:   corev1.ProtocolTCP,
-							Port:       80,
-							TargetPort: intstr.FromInt(5000),
-						},
-					},
-					Selector: map[string]string{
-						"component": "maesh-mesh",
-					},
+		},
+	}
+	newUserSvc := corev1.Service{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "my-svc",
+			Namespace: "my-ns",
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:     "portName",
+					Protocol: corev1.ProtocolTCP,
+					Port:     80,
 				},
 			},
-			expectedErr: false,
+		},
+	}
+	expected := corev1.Service{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "maesh-my-svc-6d61657368-my-ns",
+			Namespace: "maesh",
+			Labels: map[string]string{
+				"app": "maesh",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "portName",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       80,
+					TargetPort: intstr.FromInt(10001),
+				},
+			},
+			Selector: map[string]string{
+				"component": "maesh-mesh",
+			},
+		},
+	}
+	var addedPortMapping k8s.ServiceWithPort
+	var removedPortMapping k8s.ServiceWithPort
+
+	tcpPortMapper := tcpPortMapperMock{
+		findFunc: func(svc k8s.ServiceWithPort) (int32, bool) {
+			return 0, false
+		},
+		addFunc: func(svc *k8s.ServiceWithPort) (int32, error) {
+			addedPortMapping = *svc
+			return 10001, nil
+		},
+		removeFunc: func(svc k8s.ServiceWithPort) (int32, error) {
+			removedPortMapping = svc
+			return 10001, nil
 		},
 	}
 
 	client, lister := makeClient(&corev1.Service{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      "maesh-alreadyexist-6d61657368-namespace",
+			Name:      "maesh-my-svc-6d61657368-my-ns",
 			Namespace: "maesh",
 			Labels: map[string]string{
 				"app": "maesh",
@@ -349,7 +367,7 @@ func Test_ServiceUpdate(t *testing.T) {
 					Name:       "portName",
 					Protocol:   corev1.ProtocolTCP,
 					Port:       8080,
-					TargetPort: intstr.FromInt(5000),
+					TargetPort: intstr.FromInt(10001),
 				},
 			},
 			Selector: map[string]string{
@@ -358,41 +376,34 @@ func Test_ServiceUpdate(t *testing.T) {
 		},
 	})
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tcpPortMapper := tcpPortMapperMock{
-				findFunc: func(svc k8s.ServiceWithPort) (i int32, b bool) {
-					if test.findPort != 0 {
-						return test.findPort, true
-					}
-					return 0, false
-				},
-				addFunc: func(svc *k8s.ServiceWithPort) (i int32, err error) {
-					if test.addPort != 0 {
-						return test.addPort, nil
-					}
-					return 0, errors.New("nope")
-				},
-			}
+	service := controller.NewShadowServiceManager(lister, "maesh", tcpPortMapper, "tcp", 5000, 5002, client)
+	svcGot, err := service.Update(&oldUserSvc, &newUserSvc)
 
-			service := controller.NewShadowServiceManager(lister, "maesh", tcpPortMapper, "http", 5000, 5002, client)
+	require.NoError(t, err)
+	assert.Equal(t, &expected, svcGot)
 
-			svcGot, err := service.Update(&test.provided)
-			if test.expectedErr {
-				assert.Error(t, err)
-				return
-			}
+	assert.Equal(t, k8s.ServiceWithPort{
+		Namespace: "my-ns",
+		Name:      "my-svc",
+		Port:      8090,
+	}, removedPortMapping)
+	assert.Equal(t, k8s.ServiceWithPort{
+		Namespace: "my-ns",
+		Name:      "my-svc",
+		Port:      80,
+	}, addedPortMapping)
 
-			assert.NoError(t, err)
-			assert.Equal(t, &test.expected, svcGot)
-		})
-	}
+	svcGot, err = client.CoreV1().Services("maesh").Get(expected.Name, v1.GetOptions{})
+	assert.NoError(t, err)
+
+	assert.Equal(t, &expected, svcGot)
+
 }
 
 func Test_ServiceDelete(t *testing.T) {
 	client, lister := makeClient(&corev1.Service{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      "maesh-alreadyexist-6d61657368-namespace",
+			Name:      "maesh-my-svc-6d61657368-my-ns",
 			Namespace: "maesh",
 			Labels: map[string]string{
 				"app": "maesh",
@@ -403,8 +414,8 @@ func Test_ServiceDelete(t *testing.T) {
 				{
 					Name:       "portName",
 					Protocol:   corev1.ProtocolTCP,
-					Port:       8080,
-					TargetPort: intstr.FromInt(5000),
+					Port:       8088,
+					TargetPort: intstr.FromInt(10001),
 				},
 			},
 			Selector: map[string]string{
@@ -412,12 +423,42 @@ func Test_ServiceDelete(t *testing.T) {
 			},
 		},
 	})
+	userSvc := corev1.Service{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "my-svc",
+			Namespace: "my-ns",
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:     "portName",
+					Protocol: corev1.ProtocolTCP,
+					Port:     8088,
+				},
+			},
+		},
+	}
 
-	service := controller.NewShadowServiceManager(lister, "maesh", nil, "http", 5000, 5002, client)
-	err := service.Delete("alreadyexist", "namespace")
+	var removedPortMapping k8s.ServiceWithPort
+	tcpPortMapper := tcpPortMapperMock{
+		removeFunc: func(svc k8s.ServiceWithPort) (int32, error) {
+			removedPortMapping = svc
+
+			return 10001, nil
+		},
+	}
+
+	service := controller.NewShadowServiceManager(lister, "maesh", tcpPortMapper, "tcp", 5000, 5002, client)
+	err := service.Delete(&userSvc)
 	require.NoError(t, err)
 
-	_, err = client.CoreV1().Services("maesh").Get("maesh-alreadyexist-6d61657368-namespace", v1.GetOptions{})
+	assert.Equal(t, k8s.ServiceWithPort{
+		Namespace: "my-ns",
+		Name:      "my-svc",
+		Port:      8088,
+	}, removedPortMapping)
+
+	_, err = client.CoreV1().Services("maesh").Get("maesh-my-svc-6d61657368-my-ns", v1.GetOptions{})
 	assert.Error(t, err)
 }
 
