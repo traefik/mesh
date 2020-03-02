@@ -16,6 +16,9 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
+// Ensure the API fits the interface
+var _ Interface = (*API)(nil)
+
 // Interface is an interface to interact with the REST API.
 type Interface interface {
 	Start()
@@ -29,7 +32,7 @@ type API struct {
 	lastConfiguration *safe.Safe
 	apiPort           int32
 	apiHost           string
-	deployLog         *deploylog.DeployLog
+	deployLog         deploylog.Interface
 	meshNamespace     string
 	podLister         listers.PodLister
 }
@@ -41,7 +44,7 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(apiPort int32, apiHost string, lastConfiguration *safe.Safe, deployLog *deploylog.DeployLog, podLister listers.PodLister, meshNamespace string) *API {
+func NewAPI(apiPort int32, apiHost string, lastConfiguration *safe.Safe, deployLog deploylog.Interface, podLister listers.PodLister, meshNamespace string) *API {
 	a := &API{
 		readiness:         false,
 		lastConfiguration: lastConfiguration,

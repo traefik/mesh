@@ -69,7 +69,7 @@ type Controller struct {
 	api                  api.Interface
 	apiPort              int32
 	apiHost              string
-	deployLog            *deploylog.DeployLog
+	deployLog            deploylog.Interface
 	PodLister            listers.PodLister
 	ServiceLister        listers.ServiceLister
 	EndpointsLister      listers.EndpointsLister
