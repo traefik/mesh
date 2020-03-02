@@ -23,8 +23,6 @@ import (
 	fakeSplitClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned/fake"
 	splitInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	splitLister "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	kubeClient "k8s.io/client-go/kubernetes"
@@ -189,21 +187,6 @@ func (c *ClientMock) GetSpecsClient() specsClient.Interface {
 // GetSplitClient is used to get the SMI Split clientset.
 func (c *ClientMock) GetSplitClient() splitClient.Interface {
 	return c.splitClient
-}
-
-// DeleteService deletes the service from the specified namespace.
-func (c *ClientMock) DeleteService(namespace, name string) error {
-	return c.kubeClient.CoreV1().Services(namespace).Delete(name, &metav1.DeleteOptions{})
-}
-
-// CreateService create the specified service.
-func (c *ClientMock) CreateService(service *corev1.Service) (*corev1.Service, error) {
-	return c.kubeClient.CoreV1().Services(service.Namespace).Create(service)
-}
-
-// UpdateService updates the specified service.
-func (c *ClientMock) UpdateService(service *corev1.Service) (*corev1.Service, error) {
-	return c.kubeClient.CoreV1().Services(service.Namespace).Update(service)
 }
 
 // MustParseYaml parses a YAML to objects.
