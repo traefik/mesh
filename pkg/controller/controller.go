@@ -38,13 +38,14 @@ import (
 type TCPPortMapper interface {
 	Find(svc k8s.ServiceWithPort) (int32, bool)
 	Add(svc *k8s.ServiceWithPort) (int32, error)
+	Remove(svc k8s.ServiceWithPort) (int32, error)
 }
 
 // ServiceManager is capable of managing kubernetes services.
 type ServiceManager interface {
 	Create(userSvc *corev1.Service) error
-	Update(userSvc *corev1.Service) (*corev1.Service, error)
-	Delete(serviceName, serviceNamespace string) error
+	Update(oldUserSvc, newUserSvc *corev1.Service) (*corev1.Service, error)
+	Delete(userSvc *corev1.Service) error
 }
 
 // Controller hold controller configuration.
