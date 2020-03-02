@@ -16,6 +16,8 @@ fail_fast:
     
 blocks:
   - name: Tests
+    skip:
+      when: "branch == 'gh-pages'"
     task:
       prologue:
         commands:
