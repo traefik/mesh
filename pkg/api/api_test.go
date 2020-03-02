@@ -1,4 +1,4 @@
-package controller
+package api
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/containous/maesh/pkg/deploylog"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/containous/traefik/v2/pkg/testhelpers"
@@ -83,7 +84,7 @@ func TestGetCurrentConfiguration(t *testing.T) {
 
 func TestGetDeployLog(t *testing.T) {
 	config := safe.Safe{}
-	log := NewDeployLog(1000)
+	log := deploylog.NewDeployLog(1000)
 	api := NewAPI(9000, localhost, &config, log, nil, "foo")
 
 	currentTime := time.Now()
@@ -136,13 +137,13 @@ func TestGetMeshNodes(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			config := safe.Safe{}
-			log := NewDeployLog(1000)
+			log := deploylog.NewDeployLog(1000)
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
-			api := NewAPI(9000, &config, log, clientMock.PodLister, "foo")
+			api := NewAPI(9000, localhost, &config, log, clientMock.PodLister, "foo")
 
 			res := httptest.NewRecorder()
 			req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/nodes", nil)
@@ -182,13 +183,13 @@ func TestGetMeshNodeConfiguration(t *testing.T) {
 
 	for _, test := range testCases {
 		config := safe.Safe{}
-		log := NewDeployLog(1000)
+		log := deploylog.NewDeployLog(1000)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
-		api := NewAPI(9000, &config, log, clientMock.PodLister, "foo")
+		api := NewAPI(9000, localhost, &config, log, clientMock.PodLister, "foo")
 
 		res := httptest.NewRecorder()
 		req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/node/mesh-pod-1/configuration", nil)

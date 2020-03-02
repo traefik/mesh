@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v3"
+	"github.com/containous/maesh/pkg/api"
+	"github.com/containous/maesh/pkg/deploylog"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/providers/base"
 	"github.com/containous/maesh/pkg/providers/kubernetes"
@@ -64,10 +66,10 @@ type Controller struct {
 	meshNamespace        string
 	tcpStateTable        TCPPortMapper
 	lastConfiguration    safe.Safe
-	api                  *API
+	api                  api.Interface
 	apiPort              int32
 	apiHost              string
-	deployLog            *DeployLog
+	deployLog            *deploylog.DeployLog
 	PodLister            listers.PodLister
 	ServiceLister        listers.ServiceLister
 	EndpointsLister      listers.EndpointsLister
@@ -131,19 +133,15 @@ func NewMeshController(clients k8s.Client, cfg MeshControllerConfig) (*Controlle
 
 func (c *Controller) init() {
 	// Create a new SharedInformerFactory, and register the event handler to informers.
-<<<<<<< HEAD
-	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient, k8s.ResyncPeriod)
+	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.GetKubernetesClient(), k8s.ResyncPeriod)
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
 
-	c.serviceManager = NewShadowServiceManager(c.ServiceLister, c.meshNamespace, c.tcpStateTable, c.defaultMode, c.minHTTPPort, c.maxHTTPPort, c.clients.KubeClient)
+	c.serviceManager = NewShadowServiceManager(c.ServiceLister, c.meshNamespace, c.tcpStateTable, c.defaultMode, c.minHTTPPort, c.maxHTTPPort, c.clients.GetKubernetesClient())
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	c.configRefreshChan = make(chan string)
 	c.handler = NewHandler(c.ignored, c.serviceManager, c.configRefreshChan)
 
-=======
-	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.GetKubernetesClient(), k8s.ResyncPeriod)
->>>>>>> controller tests
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
@@ -152,8 +150,8 @@ func (c *Controller) init() {
 	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
 	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
 
-	c.deployLog = NewDeployLog(1000)
-	c.api = NewAPI(c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
+	c.deployLog = deploylog.NewDeployLog(1000)
+	c.api = api.NewAPI(c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
 
 	if c.smiEnabled {
 		// Create new SharedInformerFactories, and register the event handler to informers.

@@ -23,6 +23,9 @@ type TCPPortFinder interface {
 	Find(svc k8s.ServiceWithPort) (int32, bool)
 }
 
+// Ensure the provider fits the Provider interface
+var _ base.Provider = (*Provider)(nil)
+
 // Provider holds a client to access the provider.
 type Provider struct {
 	defaultMode     string
