@@ -6,6 +6,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Ensure the Deploylog fits the interface
+var _ Interface = (*DeployLog)(nil)
+
 // Entry holds the details of a deployment.
 type Entry struct {
 	TimeStamp        time.Time
@@ -21,21 +24,27 @@ type DeployLog struct {
 	maxEntries int
 }
 
+// Interface is an interface to interact with the REST API.
+type Interface interface {
+	LogDeploy(timeStamp time.Time, podName string, podIP string, deploySuccessful bool, reason string)
+	GetLog() []Entry
+}
+
 // NewDeployLog returns an initialized DeployLog.
 func NewDeployLog(maxEntries int) *DeployLog {
 	d := &DeployLog{
 		maxEntries: maxEntries,
 	}
 
-	if err := d.Init(); err != nil {
+	if err := d.init(); err != nil {
 		log.Error("Could not initialize DeployLog")
 	}
 
 	return d
 }
 
-// Init handles any DeployLog initialization.
-func (d *DeployLog) Init() error {
+// init handles any DeployLog initialization.
+func (d *DeployLog) init() error {
 	log.Debug("DeployLog.Init")
 
 	return nil
