@@ -108,7 +108,7 @@ func (t *Try) WaitPodIPAssigned(name string, namespace string, timeout time.Dura
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		pod, err := t.client.KubeClient.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+		pod, err := t.client.GetKubernetesClient().CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("unable get the pod %q in namespace %q: %v", name, namespace, err)
 		}
@@ -230,7 +230,7 @@ func (t *Try) WaitClientCreated(url string, kubeConfigPath string, timeout time.
 			return fmt.Errorf("unable to create clients: %v", err)
 		}
 
-		if _, err = clients.KubeClient.ServerVersion(); err != nil {
+		if _, err = clients.GetKubernetesClient().Discovery().ServerVersion(); err != nil {
 			return fmt.Errorf("unable to get server version: %v", err)
 		}
 
