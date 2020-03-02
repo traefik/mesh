@@ -1,4 +1,4 @@
-package controller
+package deploylog
 
 import (
 	"encoding/json"
