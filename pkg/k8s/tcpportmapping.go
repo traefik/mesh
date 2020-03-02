@@ -92,6 +92,24 @@ func (m *TCPPortMapping) Add(svc *ServiceWithPort) (int32, error) {
 	return 0, errors.New("unable to find an available port")
 }
 
+// Remove removes the mapping associated with the given ServiceWithPort.
+func (m *TCPPortMapping) Remove(svc ServiceWithPort) (int32, error) {
+	port, ok := m.Find(svc)
+	if !ok {
+		return 0, fmt.Errorf("unable to find port mapping for service %s/%s on port %d", svc.Namespace, svc.Name, svc.Port)
+	}
+
+	m.mu.Lock()
+	delete(m.table, port)
+	m.mu.Unlock()
+
+	if err := m.saveState(); err != nil {
+		return 0, fmt.Errorf("unable to save TCP port mapping: %w", err)
+	}
+
+	return port, nil
+}
+
 func (m *TCPPortMapping) loadState() error {
 	cfg, err := m.client.CoreV1().ConfigMaps(m.cfgMapNamespace).Get(m.cfgMapName, metav1.GetOptions{})
 	if err != nil {
