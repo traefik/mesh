@@ -67,11 +67,13 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 		if h.ignored.IsIgnored(obj.ObjectMeta) {
 			return
 		}
+
 		oldSvc, ok := oldObj.(*corev1.Service)
 		if !ok {
 			log.Errorf("Old object is not a kubernetes Service")
 			return
 		}
+
 		if _, err := h.serviceManager.Update(oldSvc, obj); err != nil {
 			log.Errorf("Could not update mesh service: %v", err)
 		}

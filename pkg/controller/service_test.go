@@ -336,7 +336,9 @@ func Test_ServiceUpdate(t *testing.T) {
 			},
 		},
 	}
+
 	var addedPortMapping k8s.ServiceWithPort
+
 	var removedPortMapping k8s.ServiceWithPort
 
 	tcpPortMapper := tcpPortMapperMock{
@@ -397,7 +399,6 @@ func Test_ServiceUpdate(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, &expected, svcGot)
-
 }
 
 func Test_ServiceDelete(t *testing.T) {
@@ -440,6 +441,7 @@ func Test_ServiceDelete(t *testing.T) {
 	}
 
 	var removedPortMapping k8s.ServiceWithPort
+
 	tcpPortMapper := tcpPortMapperMock{
 		removeFunc: func(svc k8s.ServiceWithPort) (int32, error) {
 			removedPortMapping = svc
