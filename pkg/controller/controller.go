@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v3"
+	"github.com/containous/maesh/pkg/api"
+	"github.com/containous/maesh/pkg/deploylog"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/providers/base"
 	"github.com/containous/maesh/pkg/providers/kubernetes"
@@ -49,11 +51,11 @@ type ServiceManager interface {
 
 // Controller hold controller configuration.
 type Controller struct {
-	clients              *k8s.ClientWrapper
+	clients              k8s.Client
 	kubernetesFactory    informers.SharedInformerFactory
-	smiAccessFactory     accessInformer.SharedInformerFactory
-	smiSpecsFactory      specsInformer.SharedInformerFactory
-	smiSplitFactory      splitInformer.SharedInformerFactory
+	accessFactory        accessInformer.SharedInformerFactory
+	specsFactory         specsInformer.SharedInformerFactory
+	splitFactory         splitInformer.SharedInformerFactory
 	handler              *Handler
 	serviceManager       ServiceManager
 	configRefreshChan    chan string
@@ -64,10 +66,10 @@ type Controller struct {
 	meshNamespace        string
 	tcpStateTable        TCPPortMapper
 	lastConfiguration    safe.Safe
-	api                  *API
+	api                  api.Interface
 	apiPort              int32
 	apiHost              string
-	deployLog            *DeployLog
+	deployLog            deploylog.Interface
 	PodLister            listers.PodLister
 	ServiceLister        listers.ServiceLister
 	EndpointsLister      listers.EndpointsLister
@@ -95,7 +97,7 @@ type MeshControllerConfig struct {
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients *k8s.ClientWrapper, cfg MeshControllerConfig) (*Controller, error) {
+func NewMeshController(clients k8s.Client, cfg MeshControllerConfig) (*Controller, error) {
 	ignored := k8s.NewIgnored()
 
 	for _, ns := range cfg.IgnoreNamespaces {
@@ -106,7 +108,7 @@ func NewMeshController(clients *k8s.ClientWrapper, cfg MeshControllerConfig) (*C
 	ignored.AddIgnoredNamespace(metav1.NamespaceSystem)
 	ignored.AddIgnoredApps("maesh", "jaeger")
 
-	tcpStateTable, err := k8s.NewTCPPortMapping(clients.KubeClient, cfg.Namespace, k8s.TCPStateConfigMapName, cfg.MinTCPPort, cfg.MaxTCPPort)
+	tcpStateTable, err := k8s.NewTCPPortMapping(clients.GetKubernetesClient(), cfg.Namespace, k8s.TCPStateConfigMapName, cfg.MinTCPPort, cfg.MaxTCPPort)
 	if err != nil {
 		return nil, err
 	}
@@ -131,10 +133,10 @@ func NewMeshController(clients *k8s.ClientWrapper, cfg MeshControllerConfig) (*C
 
 func (c *Controller) init() {
 	// Create a new SharedInformerFactory, and register the event handler to informers.
-	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubeClient, k8s.ResyncPeriod)
+	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.GetKubernetesClient(), k8s.ResyncPeriod)
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
 
-	c.serviceManager = NewShadowServiceManager(c.ServiceLister, c.meshNamespace, c.tcpStateTable, c.defaultMode, c.minHTTPPort, c.maxHTTPPort, c.clients.KubeClient)
+	c.serviceManager = NewShadowServiceManager(c.ServiceLister, c.meshNamespace, c.tcpStateTable, c.defaultMode, c.minHTTPPort, c.maxHTTPPort, c.clients.GetKubernetesClient())
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	c.configRefreshChan = make(chan string)
@@ -148,26 +150,26 @@ func (c *Controller) init() {
 	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
 	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
 
-	c.deployLog = NewDeployLog(1000)
-	c.api = NewAPI(c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
+	c.deployLog = deploylog.NewDeployLog(1000)
+	c.api = api.NewAPI(c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
 
 	if c.smiEnabled {
 		// Create new SharedInformerFactories, and register the event handler to informers.
-		c.smiAccessFactory = accessInformer.NewSharedInformerFactoryWithOptions(c.clients.SmiAccessClient, k8s.ResyncPeriod)
-		c.smiAccessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
+		c.accessFactory = accessInformer.NewSharedInformerFactoryWithOptions(c.clients.GetAccessClient(), k8s.ResyncPeriod)
+		c.accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
 
-		c.smiSpecsFactory = specsInformer.NewSharedInformerFactoryWithOptions(c.clients.SmiSpecsClient, k8s.ResyncPeriod)
-		c.smiSpecsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
-		c.smiSpecsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
+		c.specsFactory = specsInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSpecsClient(), k8s.ResyncPeriod)
+		c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
+		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
 
-		c.smiSplitFactory = splitInformer.NewSharedInformerFactoryWithOptions(c.clients.SmiSplitClient, k8s.ResyncPeriod)
-		c.smiSplitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(c.handler)
+		c.splitFactory = splitInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSplitClient(), k8s.ResyncPeriod)
+		c.splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(c.handler)
 
 		// Create the SMI listers
-		c.TrafficTargetLister = c.smiAccessFactory.Access().V1alpha1().TrafficTargets().Lister()
-		c.HTTPRouteGroupLister = c.smiSpecsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
-		c.TCPRouteLister = c.smiSpecsFactory.Specs().V1alpha1().TCPRoutes().Lister()
-		c.TrafficSplitLister = c.smiSplitFactory.Split().V1alpha2().TrafficSplits().Lister()
+		c.TrafficTargetLister = c.accessFactory.Access().V1alpha1().TrafficTargets().Lister()
+		c.HTTPRouteGroupLister = c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
+		c.TCPRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
+		c.TrafficSplitLister = c.splitFactory.Split().V1alpha2().TrafficSplits().Lister()
 
 		c.provider = smi.New(c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister, c.PodLister, c.TrafficTargetLister, c.HTTPRouteGroupLister, c.TCPRouteLister, c.TrafficSplitLister, c.minHTTPPort, c.maxHTTPPort)
 
@@ -261,25 +263,25 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 	}
 
 	if c.smiEnabled {
-		c.smiAccessFactory.Start(stopCh)
+		c.accessFactory.Start(stopCh)
 
-		for t, ok := range c.smiAccessFactory.WaitForCacheSync(ctx.Done()) {
+		for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
 
-		c.smiSpecsFactory.Start(stopCh)
+		c.specsFactory.Start(stopCh)
 
-		for t, ok := range c.smiSpecsFactory.WaitForCacheSync(ctx.Done()) {
+		for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
 
-		c.smiSplitFactory.Start(stopCh)
+		c.splitFactory.Start(stopCh)
 
-		for t, ok := range c.smiSplitFactory.WaitForCacheSync(ctx.Done()) {
+		for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
