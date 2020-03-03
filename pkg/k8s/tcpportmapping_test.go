@@ -260,7 +260,7 @@ func TestTCPPortMapping_Remove(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int32(10000), port)
 
-	port, err = m.Remove(svc)
+	_, err = m.Remove(svc)
 	assert.Error(t, err)
 
 	unknownSvc := ServiceWithPort{
@@ -268,6 +268,6 @@ func TestTCPPortMapping_Remove(t *testing.T) {
 		Name:      "my-unknown-app",
 		Port:      8088,
 	}
-	port, err = m.Remove(unknownSvc)
+	_, err = m.Remove(unknownSvc)
 	assert.Error(t, err)
 }

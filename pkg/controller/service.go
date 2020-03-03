@@ -50,6 +50,7 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 	if err == nil {
 		return nil
 	}
+
 	if !kerrors.IsNotFound(err) {
 		return fmt.Errorf("unable to get shadow service %q: %w", name, err)
 	}
