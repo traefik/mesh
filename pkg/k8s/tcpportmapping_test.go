@@ -235,3 +235,39 @@ func TestFormatServiceNamePort(t *testing.T) {
 	got := formatServiceNamePort("svc-name", "ns", 8080)
 	assert.Equal(t, "ns/svc-name:8080", got)
 }
+
+func TestTCPPortMapping_Remove(t *testing.T) {
+	cfgMap := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tcp-state-table",
+			Namespace: "maesh",
+		},
+		Data: map[string]string{
+			"10000": "my-ns/my-app:9090",
+		},
+	}
+	client := fake.NewSimpleClientset(cfgMap)
+
+	m, err := NewTCPPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
+	require.NoError(t, err)
+
+	svc := ServiceWithPort{
+		Namespace: "my-ns",
+		Name:      "my-app",
+		Port:      9090,
+	}
+	port, err := m.Remove(svc)
+	require.NoError(t, err)
+	assert.Equal(t, int32(10000), port)
+
+	_, err = m.Remove(svc)
+	assert.Error(t, err)
+
+	unknownSvc := ServiceWithPort{
+		Namespace: "my-unknown-ns",
+		Name:      "my-unknown-app",
+		Port:      8088,
+	}
+	_, err = m.Remove(unknownSvc)
+	assert.Error(t, err)
+}
