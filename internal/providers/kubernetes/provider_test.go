@@ -83,6 +83,16 @@ func TestBuildConfiguration(t *testing.T) {
 				Namespace: "foo",
 				Port:      443,
 			},
+			10002: {
+				Name:      "test",
+				Namespace: "foo",
+				Port:      8080,
+			},
+			10003: {
+				Name:      "test",
+				Namespace: "foo",
+				Port:      8443,
+			},
 		},
 	}
 
