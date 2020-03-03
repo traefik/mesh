@@ -83,6 +83,16 @@ func TestBuildConfiguration(t *testing.T) {
 				Namespace: "foo",
 				Port:      443,
 			},
+			10002: {
+				Name:      "test",
+				Namespace: "foo",
+				Port:      8080,
+			},
+			10003: {
+				Name:      "test",
+				Namespace: "foo",
+				Port:      8443,
+			},
 		},
 	}
 
@@ -230,6 +240,80 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			desc:     "simple configuration build with multiple port TCP service",
 			mockFile: "build_configuration_multiple_ports_tcp.yaml",
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
+						"readiness": {
+							EntryPoints: []string{"readiness"},
+							Service:     "readiness",
+							Rule:        "Path(`/ping`)",
+						},
+					},
+					Middlewares: map[string]*dynamic.Middleware{},
+					Services: map[string]*dynamic.Service{
+						"readiness": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://127.0.0.1:8080",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+					},
+				},
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
+						"test-foo-80-6653beb49ee354ea": {
+							EntryPoints: []string{"tcp-10000"},
+							Service:     "test-foo-80-6653beb49ee354ea",
+							Rule:        "HostSNI(`*`)",
+						},
+						"test-foo-443-92bb68bb9ffcb54d": {
+							EntryPoints: []string{"tcp-10001"},
+							Service:     "test-foo-443-92bb68bb9ffcb54d",
+							Rule:        "HostSNI(`*`)",
+						},
+					},
+					Services: map[string]*dynamic.TCPService{
+						"test-foo-80-6653beb49ee354ea": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.0.0.1:80",
+										Port:    "",
+									},
+									{
+										Address: "10.0.0.2:80",
+										Port:    "",
+									},
+								},
+							},
+						},
+						"test-foo-443-92bb68bb9ffcb54d": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.0.0.3:443",
+										Port:    "",
+									},
+									{
+										Address: "10.0.0.4:443",
+										Port:    "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc:     "simple configuration build with multiple targetports TCP service",
+			mockFile: "build_configuration_multiple_targetports_tcp.yaml",
 			expected: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
 					Routers: map[string]*dynamic.Router{
