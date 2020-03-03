@@ -60,15 +60,19 @@ func (h *Handler) OnAdd(obj interface{}) {
 }
 
 // OnUpdate executed when an object is updated.
-func (h *Handler) OnUpdate(_, newObj interface{}) {
+func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 	// Assert the type to an object to pull out relevant data.
 	switch obj := newObj.(type) {
 	case *corev1.Service:
 		if h.ignored.IsIgnored(obj.ObjectMeta) {
 			return
 		}
-
-		if _, err := h.serviceManager.Update(obj); err != nil {
+		oldSvc, ok := oldObj.(*corev1.Service)
+		if !ok {
+			log.Errorf("Old object is not a kubernetes Service")
+			return
+		}
+		if _, err := h.serviceManager.Update(oldSvc, obj); err != nil {
 			log.Errorf("Could not update mesh service: %v", err)
 		}
 
@@ -108,7 +112,7 @@ func (h *Handler) OnDelete(obj interface{}) {
 
 		log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
-		if err := h.serviceManager.Delete(obj.Name, obj.Namespace); err != nil {
+		if err := h.serviceManager.Delete(obj); err != nil {
 			log.Errorf("Could not delete mesh service: %v", err)
 		}
 	case *corev1.Endpoints:
