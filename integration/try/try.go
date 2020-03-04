@@ -30,11 +30,11 @@ type timedAction func(timeout time.Duration, operation DoCondition) error
 
 // Try holds try configuration.
 type Try struct {
-	client *k8s.ClientWrapper
+	client k8s.Client
 }
 
 // NewTry creates a new try.
-func NewTry(client *k8s.ClientWrapper) *Try {
+func NewTry(client k8s.Client) *Try {
 	return &Try{client: client}
 }
 
@@ -44,7 +44,9 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		d, exists, err := t.client.GetDeployment(namespace, name)
+		d, err := t.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+		exists, err := k8s.TranslateNotFoundError(err)
+
 		if err != nil {
 			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 		}
@@ -69,7 +71,7 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 // WaitUpdateDeployment waits until the deployment is successfully updated and ready.
 func (t *Try) WaitUpdateDeployment(deployment *appsv1.Deployment, timeout time.Duration) error {
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_, err := t.client.UpdateDeployment(deployment)
+		_, err := t.client.GetKubernetesClient().AppsV1().Deployments(deployment.Namespace).Update(deployment)
 		return err
 	})
 
@@ -86,7 +88,9 @@ func (t *Try) WaitDeleteDeployment(name string, namespace string, timeout time.D
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		_, exists, err := t.client.GetDeployment(namespace, name)
+		_, err := t.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+		exists, err := k8s.TranslateNotFoundError(err)
+
 		if err != nil {
 			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 		}
@@ -198,7 +202,9 @@ func (t *Try) WaitDeleteNamespace(name string, timeout time.Duration) error {
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		_, exists, err := t.client.GetNamespace(name)
+		_, err := t.client.GetKubernetesClient().CoreV1().Namespaces().Get(name, metav1.GetOptions{})
+		exists, err := k8s.TranslateNotFoundError(err)
+
 		if err != nil {
 			return fmt.Errorf("unable get the namesapce %q: %v", name, err)
 		}
@@ -215,17 +221,17 @@ func (t *Try) WaitDeleteNamespace(name string, timeout time.Duration) error {
 }
 
 // WaitClientCreated wait until the file is created.
-func (t *Try) WaitClientCreated(url string, kubeConfigPath string, timeout time.Duration) (*k8s.ClientWrapper, error) {
+func (t *Try) WaitClientCreated(url string, kubeConfigPath string, timeout time.Duration) (k8s.Client, error) {
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	var (
-		clients *k8s.ClientWrapper
+		clients k8s.Client
 		err     error
 	)
 
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
-		clients, err = k8s.NewClientWrapper(url, kubeConfigPath)
+		clients, err = k8s.NewClient(url, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("unable to create clients: %v", err)
 		}
