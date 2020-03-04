@@ -61,7 +61,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)
 
-	clients, err := k8s.NewClientWrapper(iConfig.MasterURL, iConfig.KubeConfig)
+	clients, err := k8s.NewClient(iConfig.MasterURL, iConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
 	}
