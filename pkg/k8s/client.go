@@ -32,8 +32,8 @@ type ClientWrapper struct {
 	splitClient  *splitClient.Clientset
 }
 
-// NewClientWrapper creates and returns both a kubernetes client, and a CRD client.
-func NewClientWrapper(url string, kubeConfig string) (Client, error) {
+// NewClient creates and returns a ClientWrapper that satisfies the Client interface.
+func NewClient(url string, kubeConfig string) (Client, error) {
 	config, err := clientcmd.BuildConfigFromFlags(url, kubeConfig)
 	if err != nil {
 		return nil, err
