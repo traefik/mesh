@@ -36,7 +36,7 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
-	clients, err := k8s.NewClientWrapper(pConfig.MasterURL, pConfig.KubeConfig)
+	clients, err := k8s.NewClient(pConfig.MasterURL, pConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
 	}
