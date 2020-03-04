@@ -51,6 +51,7 @@ before_deploy:
   # Copy CNAME file
   - cp pages/CNAME site/CNAME
   # Copy Semaphore yml file
+  - mkdir -p site/.semaphore
   - cp ./.semaphore/semaphore.yml site/.semaphore/semaphore.yml
   # Install linters
   - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
