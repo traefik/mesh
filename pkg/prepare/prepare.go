@@ -264,7 +264,7 @@ func (p *Prepare) patchDNS(coreNamespace, clusterDomain, maeshNamespace string) 
 
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
 		svc, errSvc := p.client.GetKubernetesClient().CoreV1().Services("maesh").Get("coredns", metav1.GetOptions{})
-		exists, errSvc := k8s.TranslateNotFoundError(err)
+		exists, errSvc := k8s.TranslateNotFoundError(errSvc)
 		if errSvc != nil {
 			return fmt.Errorf("unable get the service %q in namespace %q: %v", "coredns", "maesh", errSvc)
 		}
@@ -439,32 +439,6 @@ func (p *Prepare) restartPods(deployment *appsv1.Deployment) error {
 	_, err := p.client.GetKubernetesClient().AppsV1().Deployments(newDeployment.Namespace).Update(newDeployment)
 
 	return err
-}
-
-func (p *Prepare) isCoreDNSPatched(deploymentName string, namespace string) error {
-	coreDeployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(deploymentName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	if len(coreDeployment.Spec.Template.Spec.Volumes) == 0 {
-		return errors.New("coreDNS configmap not defined")
-	}
-
-	coreConfigMapName := getCoreDNSConfigMapName(coreDeployment)
-
-	coreConfigMap, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	if len(coreConfigMap.ObjectMeta.Labels) > 0 {
-		if _, ok := coreConfigMap.ObjectMeta.Labels["maesh-patched"]; ok {
-			return nil
-		}
-	}
-
-	return errors.New("coreDNS not patched. Run ./maesh patch to update DNS")
 }
 
 // getCoreDNSConfigMapName returns the dected coredns configmap name

@@ -95,7 +95,7 @@ func (s *SMISuite) checkWhitelistSourceRanges(c *check.C, config *dynamic.Config
 		source := string(name[0])
 		expected := []string{}
 
-		podList, err := s.client.ListPodWithOptions(testNamespace, metav1.ListOptions{})
+		podList, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).List(metav1.ListOptions{})
 		c.Assert(err, checker.IsNil)
 
 		for _, pod := range podList.Items {
