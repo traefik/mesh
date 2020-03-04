@@ -10,6 +10,7 @@ import (
 	"github.com/containous/maesh/cmd/version"
 	"github.com/containous/maesh/pkg/controller"
 	"github.com/containous/maesh/pkg/k8s"
+	preparepkg "github.com/containous/maesh/pkg/prepare"
 	"github.com/containous/maesh/pkg/signals"
 	"github.com/containous/traefik/v2/pkg/cli"
 	log "github.com/sirupsen/logrus"
@@ -65,7 +66,8 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		return fmt.Errorf("error building clients: %v", err)
 	}
 
-	if err = clients.CheckCluster(); err != nil {
+	prepare := preparepkg.NewPrepare(clients)
+	if err = prepare.CheckCluster(); err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
