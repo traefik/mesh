@@ -97,7 +97,7 @@ type BaseSuite struct {
 	dir            string
 	kubeConfigPath string
 	try            *try.Try
-	client         *k8s.ClientWrapper
+	client         k8s.Client
 }
 
 func (s *BaseSuite) maeshStartControllerWithArgsCmd(args ...string) *exec.Cmd {
@@ -342,7 +342,8 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 
 	err := backoff.Retry(safe.OperationWithRecover(func() error {
 		// Get current coreDNS deployment.
-		deployment, exists, err := s.client.GetDeployment(metav1.NamespaceSystem, "coredns")
+		deployment, err := s.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+		exists, err := k8s.TranslateNotFoundError(err)
 		c.Assert(err, checker.IsNil)
 		c.Assert(exists, checker.True)
 
@@ -368,7 +369,7 @@ func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
 }
 
 func (s *BaseSuite) getToolsPodMaesh(c *check.C) *corev1.Pod {
-	podList, err := s.client.ListPodWithOptions(testNamespace, metav1.ListOptions{
+	podList, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).List(metav1.ListOptions{
 		LabelSelector: "app=tiny-tools",
 	})
 	c.Assert(err, checker.IsNil)
