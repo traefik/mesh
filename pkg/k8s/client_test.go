@@ -41,7 +41,7 @@ func TestTranslateNotFoundError(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			exists, err := translateNotFoundError(test.err)
+			exists, err := TranslateNotFoundError(test.err)
 			assert.Equal(t, test.expectedExists, exists)
 			assert.Equal(t, test.expectedError, err)
 		})
