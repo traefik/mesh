@@ -4,9 +4,9 @@ go 1.13
 
 // Kubernetes version kubernetes-1.15.3
 require (
-	github.com/abronan/valkeyrie v0.0.0-20190802193736-ed4c4a229894
-	github.com/cenkalti/backoff/v3 v3.0.0
-	github.com/containous/traefik/v2 v2.0.2
+	github.com/abronan/valkeyrie v0.0.0-20190822142731-f2e1850dc905
+	github.com/cenkalti/backoff/v4 v4.0.0
+	github.com/containous/traefik/v2 v2.1.6
 	github.com/deislabs/smi-sdk-go v0.2.1-0.20191211172751-4e51d4dc331e
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	github.com/google/uuid v1.1.1
@@ -15,7 +15,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	github.com/vdemeester/shakers v0.1.0
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	k8s.io/api v0.0.0-20190819141258-3544db3b9e44
 	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
 	k8s.io/client-go v0.0.0-20190819141724-e14f31a72a77
