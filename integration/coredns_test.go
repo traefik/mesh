@@ -70,10 +70,8 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 	for _, test := range testCases {
 		if test.safe {
 			s.createResources(c, "resources/coredns/corednssafe.yaml")
-			defer s.deleteResources(c, "resources/coredns/corednssafe.yaml", true)
 		} else {
 			s.createResources(c, "resources/coredns/coredns.yaml")
-			defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
 		}
 
 		s.WaitForCoreDNS(c)
@@ -90,6 +88,12 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 			c.Assert(err, checker.NotNil)
 		} else {
 			c.Assert(err, checker.IsNil)
+		}
+
+		if test.safe {
+			s.deleteResources(c, "resources/coredns/corednssafe.yaml", true)
+		} else {
+			s.deleteResources(c, "resources/coredns/coredns.yaml", true)
 		}
 	}
 }
