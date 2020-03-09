@@ -21,7 +21,6 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 		"giantswarm/tiny-tools:3.9",
 	}
 	s.startk3s(c, requiredImages)
-	s.startAndWaitForCoreDNS(c)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
 	s.createResources(c, "resources/tcp-state-table/")
@@ -35,21 +34,30 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 	testCases := []struct {
 		desc          string
 		version       string
+		safe          bool
 		expectedError bool
 	}{
 		{
 			desc:          "CoreDNS 1.2.6",
 			version:       "1.2.6",
+			safe:          true,
 			expectedError: true,
 		},
 		{
 			desc:          "CoreDNS 1.3.1",
 			version:       "1.3.1",
-			expectedError: false,
+			safe:          true,
+			expectedError: true,
 		},
 		{
 			desc:          "CoreDNS 1.4.0",
 			version:       "1.4.0",
+			safe:          true,
+			expectedError: true,
+		},
+		{
+			desc:          "CoreDNS 1.5.2",
+			version:       "1.5.2",
 			expectedError: false,
 		},
 		{
@@ -60,6 +68,14 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 	}
 
 	for _, test := range testCases {
+		if test.safe {
+			s.createResources(c, "resources/coredns/corednssafe.yaml")
+			defer s.deleteResources(c, "resources/coredns/corednssafe.yaml", true)
+		} else {
+			s.createResources(c, "resources/coredns/coredns.yaml")
+			defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
+		}
+
 		s.WaitForCoreDNS(c)
 		c.Log("Testing compatibility with " + test.desc)
 		s.setCoreDNSVersion(c, test.version)
@@ -79,8 +95,9 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 }
 
 func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
+	s.createResources(c, "resources/coredns/coredns.yaml")
+	defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
 	s.WaitForCoreDNS(c)
-	s.setCoreDNSVersion(c, "1.3.1")
 
 	cmd := s.startMaeshBinaryCmd(c, false)
 	err := cmd.Start()

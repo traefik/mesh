@@ -6,7 +6,7 @@ It will safely install itself via the helm chart, and will be ready for use imme
 ## Prerequisites
 
 - Kubernetes 1.11+
-- CoreDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.3+ supported)
+- CoreDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.5+ supported)
 - Helm v3
 
 ### RBAC
