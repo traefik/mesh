@@ -12,8 +12,8 @@ func (s *KubernetesSuite) SetUpSuite(c *check.C) {
 	requiredImages := []string{
 		"containous/maesh:latest",
 		"containous/whoami:v1.0.1",
-		"coredns/coredns:1.3.1",
-		"traefik:v2.1.1",
+		"coredns/coredns:1.6.3",
+		"traefik:v2.1.6",
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
