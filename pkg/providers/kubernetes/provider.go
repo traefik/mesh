@@ -77,13 +77,13 @@ func (p *Provider) buildTCPRouter(port int32, serviceName string) *dynamic.TCPRo
 	}
 }
 
-func (p *Provider) buildService(endpoints *corev1.Endpoints, scheme string, servicePort int32) *dynamic.Service {
+func (p *Provider) buildService(endpoints *corev1.Endpoints, scheme string, targetPort int32) *dynamic.Service {
 	var servers []dynamic.Server
 
 	if endpoints != nil && endpoints.Subsets != nil {
 		for _, subset := range endpoints.Subsets {
 			for _, endpointPort := range subset.Ports {
-				if endpointPort.Port != servicePort {
+				if endpointPort.Port != targetPort {
 					continue
 				}
 
@@ -107,13 +107,13 @@ func (p *Provider) buildService(endpoints *corev1.Endpoints, scheme string, serv
 	}
 }
 
-func (p *Provider) buildTCPService(endpoints *corev1.Endpoints, servicePort int32) *dynamic.TCPService {
+func (p *Provider) buildTCPService(endpoints *corev1.Endpoints, targetPort int32) *dynamic.TCPService {
 	var servers []dynamic.TCPServer
 
 	if endpoints != nil && endpoints.Subsets != nil {
 		for _, subset := range endpoints.Subsets {
 			for _, endpointPort := range subset.Ports {
-				if endpointPort.Port != servicePort {
+				if endpointPort.Port != targetPort {
 					continue
 				}
 
@@ -170,7 +170,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 					continue
 				}
 
-				config.HTTP.Services[key] = p.buildService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), scheme, sp.Port)
+				config.HTTP.Services[key] = p.buildService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), scheme, sp.TargetPort.IntVal)
 				middlewares := p.buildHTTPMiddlewares(service.Annotations)
 
 				if middlewares != nil {
@@ -192,7 +192,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 				}
 
 				config.TCP.Routers[key] = p.buildTCPRouter(port, key)
-				config.TCP.Services[key] = p.buildTCPService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), sp.Port)
+				config.TCP.Services[key] = p.buildTCPService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), sp.TargetPort.IntVal)
 
 			default:
 				log.Errorf("Unknown service mode %s, skipping port %s on service %s/%s", serviceMode, sp.Name, service.Namespace, service.Name)
