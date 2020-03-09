@@ -80,7 +80,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 
 func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
 	s.WaitForCoreDNS(c)
-	s.setCoreDNSVersion(c, "1.3.1")
+	s.setCoreDNSVersion(c, "1.6.3")
 
 	cmd := s.startMaeshBinaryCmd(c, false)
 	err := cmd.Start()
