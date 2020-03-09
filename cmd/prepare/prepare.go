@@ -6,6 +6,7 @@ import (
 
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/pkg/k8s"
+	"github.com/containous/maesh/pkg/prepare"
 	"github.com/containous/traefik/v2/pkg/cli"
 	log "github.com/sirupsen/logrus"
 )
@@ -35,20 +36,22 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
-	clients, err := k8s.NewClientWrapper(pConfig.MasterURL, pConfig.KubeConfig)
+	clients, err := k8s.NewClient(pConfig.MasterURL, pConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
 	}
 
-	if err = clients.CheckCluster(); err != nil {
+	p := prepare.NewPrepare(clients)
+
+	if err = p.CheckCluster(); err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
-	if err = clients.CheckInformersStart(pConfig.SMI); err != nil {
+	if err = p.StartInformers(pConfig.SMI); err != nil {
 		return fmt.Errorf("error during informer check: %v, this can be caused by pre-existing objects in your cluster that do not conform to the spec", err)
 	}
 
-	if err = clients.InitCluster(pConfig.Namespace, pConfig.ClusterDomain); err != nil {
+	if err = p.PatchDNS(pConfig.Namespace, pConfig.ClusterDomain); err != nil {
 		return fmt.Errorf("error initializing cluster: %v", err)
 	}
 
