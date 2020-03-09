@@ -218,6 +218,162 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 		},
 		{
+			desc:     "simple configuration build with multiple targetports service",
+			mockFile: "build_configuration_multiple_targetports.yaml",
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
+						"readiness": {
+							EntryPoints: []string{"readiness"},
+							Service:     "readiness",
+							Rule:        "Path(`/ping`)",
+						},
+						"test-foo-8080-22ef18280b1d12ab": {
+							EntryPoints: []string{"http-5000"},
+							Service:     "test-foo-8080-22ef18280b1d12ab",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
+						},
+						"test-foo-8443-d3594722ef594129": {
+							EntryPoints: []string{"http-5001"},
+							Service:     "test-foo-8443-d3594722ef594129",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
+						},
+					},
+					Middlewares: map[string]*dynamic.Middleware{},
+					Services: map[string]*dynamic.Service{
+						"readiness": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://127.0.0.1:8080",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+						"test-foo-8080-22ef18280b1d12ab": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://10.0.0.1:80",
+										Scheme: "",
+										Port:   "",
+									},
+									{
+										URL:    "http://10.0.0.2:80",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+						"test-foo-8443-d3594722ef594129": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://10.0.0.3:443",
+										Scheme: "",
+										Port:   "",
+									},
+									{
+										URL:    "http://10.0.0.4:443",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+					},
+				},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
+				},
+			},
+		},
+		{
+			desc:     "simple configuration build with multiple targetports mixture",
+			mockFile: "build_configuration_multiple_targetports_mixture.yaml",
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
+						"readiness": {
+							EntryPoints: []string{"readiness"},
+							Service:     "readiness",
+							Rule:        "Path(`/ping`)",
+						},
+						"test-foo-8080-22ef18280b1d12ab": {
+							EntryPoints: []string{"http-5000"},
+							Service:     "test-foo-8080-22ef18280b1d12ab",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
+						},
+						"test-foo-8443-d3594722ef594129": {
+							EntryPoints: []string{"http-5001"},
+							Service:     "test-foo-8443-d3594722ef594129",
+							Rule:        "Host(`test.foo.maesh`) || Host(`10.1.0.1`)",
+						},
+					},
+					Middlewares: map[string]*dynamic.Middleware{},
+					Services: map[string]*dynamic.Service{
+						"readiness": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://127.0.0.1:8080",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+						"test-foo-8080-22ef18280b1d12ab": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://10.0.0.1:80",
+										Scheme: "",
+										Port:   "",
+									},
+									{
+										URL:    "http://10.0.0.2:80",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+						"test-foo-8443-d3594722ef594129": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://10.0.0.3:8443",
+										Scheme: "",
+										Port:   "",
+									},
+									{
+										URL:    "http://10.0.0.4:8443",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+					},
+				},
+				TCP: &dynamic.TCPConfiguration{
+					Routers:  map[string]*dynamic.TCPRouter{},
+					Services: map[string]*dynamic.TCPService{},
+				},
+			},
+		},
+		{
 			desc:     "simple configuration build with multiple port TCP service",
 			mockFile: "build_configuration_multiple_ports_tcp.yaml",
 			expected: &dynamic.Configuration{
@@ -282,6 +438,154 @@ func TestBuildConfiguration(t *testing.T) {
 									},
 									{
 										Address: "10.0.0.4:443",
+										Port:    "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc:     "simple configuration build with multiple targetports TCP service",
+			mockFile: "build_configuration_multiple_targetports_tcp.yaml",
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
+						"readiness": {
+							EntryPoints: []string{"readiness"},
+							Service:     "readiness",
+							Rule:        "Path(`/ping`)",
+						},
+					},
+					Middlewares: map[string]*dynamic.Middleware{},
+					Services: map[string]*dynamic.Service{
+						"readiness": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://127.0.0.1:8080",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+					},
+				},
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
+						"test-foo-8080-22ef18280b1d12ab": {
+							EntryPoints: []string{"tcp-10002"},
+							Service:     "test-foo-8080-22ef18280b1d12ab",
+							Rule:        "HostSNI(`*`)",
+						},
+						"test-foo-8443-d3594722ef594129": {
+							EntryPoints: []string{"tcp-10003"},
+							Service:     "test-foo-8443-d3594722ef594129",
+							Rule:        "HostSNI(`*`)",
+						},
+					},
+					Services: map[string]*dynamic.TCPService{
+						"test-foo-8080-22ef18280b1d12ab": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.0.0.1:80",
+										Port:    "",
+									},
+									{
+										Address: "10.0.0.2:80",
+										Port:    "",
+									},
+								},
+							},
+						},
+						"test-foo-8443-d3594722ef594129": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.0.0.3:443",
+										Port:    "",
+									},
+									{
+										Address: "10.0.0.4:443",
+										Port:    "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc:     "simple configuration build with multiple targetports TCP mixture",
+			mockFile: "build_configuration_multiple_targetports_mixture_tcp.yaml",
+			expected: &dynamic.Configuration{
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers: map[string]*dynamic.Router{
+						"readiness": {
+							EntryPoints: []string{"readiness"},
+							Service:     "readiness",
+							Rule:        "Path(`/ping`)",
+						},
+					},
+					Middlewares: map[string]*dynamic.Middleware{},
+					Services: map[string]*dynamic.Service{
+						"readiness": {
+							LoadBalancer: &dynamic.ServersLoadBalancer{
+								PassHostHeader: base.Bool(true),
+								Servers: []dynamic.Server{
+									{
+										URL:    "http://127.0.0.1:8080",
+										Scheme: "",
+										Port:   "",
+									},
+								},
+							},
+						},
+					},
+				},
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
+						"test-foo-8080-22ef18280b1d12ab": {
+							EntryPoints: []string{"tcp-10002"},
+							Service:     "test-foo-8080-22ef18280b1d12ab",
+							Rule:        "HostSNI(`*`)",
+						},
+						"test-foo-8443-d3594722ef594129": {
+							EntryPoints: []string{"tcp-10003"},
+							Service:     "test-foo-8443-d3594722ef594129",
+							Rule:        "HostSNI(`*`)",
+						},
+					},
+					Services: map[string]*dynamic.TCPService{
+						"test-foo-8080-22ef18280b1d12ab": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.0.0.1:80",
+										Port:    "",
+									},
+									{
+										Address: "10.0.0.2:80",
+										Port:    "",
+									},
+								},
+							},
+						},
+						"test-foo-8443-d3594722ef594129": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.0.0.3:8443",
+										Port:    "",
+									},
+									{
+										Address: "10.0.0.4:8443",
 										Port:    "",
 									},
 								},
@@ -421,24 +725,32 @@ func TestBuildConfiguration(t *testing.T) {
 			ignored := k8s.NewIgnored()
 
 			findTCPPort := func(svc k8s.ServiceWithPort) (int32, bool) {
-				svc80 := k8s.ServiceWithPort{
+				switch {
+				case svc == k8s.ServiceWithPort{
 					Namespace: "foo",
 					Name:      "test",
 					Port:      80,
-				}
-				svc443 := k8s.ServiceWithPort{
+				}:
+					return 10000, true
+				case svc == k8s.ServiceWithPort{
 					Namespace: "foo",
 					Name:      "test",
 					Port:      443,
-				}
-
-				if svc == svc80 {
-					return 10000, true
-				}
-				if svc == svc443 {
+				}:
 					return 10001, true
+				case svc == k8s.ServiceWithPort{
+					Namespace: "foo",
+					Name:      "test",
+					Port:      8080,
+				}:
+					return 10002, true
+				case svc == k8s.ServiceWithPort{
+					Namespace: "foo",
+					Name:      "test",
+					Port:      8443,
+				}:
+					return 10003, true
 				}
-
 				return 0, false
 			}
 
