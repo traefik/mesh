@@ -268,7 +268,7 @@ func (s *BaseSuite) deleteResources(c *check.C, dirPath string, force bool) {
 }
 
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
-	s.createResources(c, "resources/coredns")
+	s.createResources(c, "resources/coredns/coredns.yaml")
 	s.WaitForCoreDNS(c)
 }
 
