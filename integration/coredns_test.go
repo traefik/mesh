@@ -45,11 +45,16 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		{
 			desc:          "CoreDNS 1.3.1",
 			version:       "1.3.1",
-			expectedError: false,
+			expectedError: true,
 		},
 		{
 			desc:          "CoreDNS 1.4.0",
 			version:       "1.4.0",
+			expectedError: true,
+		},
+		{
+			desc:          "CoreDNS 1.5.2",
+			version:       "1.5.2",
 			expectedError: false,
 		},
 		{
@@ -80,7 +85,8 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 
 func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
 	s.WaitForCoreDNS(c)
-	s.setCoreDNSVersion(c, "1.3.1")
+	s.setCoreDNSVersion(c, "1.6.3")
+	s.WaitForCoreDNS(c)
 
 	cmd := s.startMaeshBinaryCmd(c, false)
 	err := cmd.Start()

@@ -33,5 +33,5 @@ Using the Maesh endpoints is all that is required.
 To run this app, you require the following:
 
 - Kubernetes 1.11+
-- CoreDNS/KubeDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.3+ supported)
+- CoreDNS/KubeDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.5+ supported)
 - Helm v3
