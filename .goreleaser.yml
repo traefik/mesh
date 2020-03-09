@@ -30,6 +30,10 @@ builds:
     ignore:
       - goos: darwin
         goarch: 386
+      - goos: freebsd
+        goarch: arm64
+      - goos: openbsd
+        goarch: arm64
 
 archives:
   - id: maesh
