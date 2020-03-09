@@ -5,6 +5,7 @@ go 1.13
 // Kubernetes version kubernetes-1.15.3
 require (
 	github.com/abronan/valkeyrie v0.0.0-20190822142731-f2e1850dc905
+	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/containous/traefik/v2 v2.1.6
 	github.com/deislabs/smi-sdk-go v0.2.1-0.20191211172751-4e51d4dc331e
