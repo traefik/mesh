@@ -41,17 +41,17 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 		return fmt.Errorf("error building clients: %v", err)
 	}
 
-	prepare := prepare.NewPrepare(clients)
+	p := prepare.NewPrepare(clients)
 
-	if err = prepare.CheckCluster(); err != nil {
+	if err = p.CheckCluster(); err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
-	if err = prepare.CheckInformersStart(pConfig.SMI); err != nil {
+	if err = p.StartInformers(pConfig.SMI); err != nil {
 		return fmt.Errorf("error during informer check: %v, this can be caused by pre-existing objects in your cluster that do not conform to the spec", err)
 	}
 
-	if err = prepare.InitCluster(pConfig.Namespace, pConfig.ClusterDomain); err != nil {
+	if err = p.PatchDNS(pConfig.Namespace, pConfig.ClusterDomain); err != nil {
 		return fmt.Errorf("error initializing cluster: %v", err)
 	}
 

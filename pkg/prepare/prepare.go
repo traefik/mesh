@@ -31,15 +31,15 @@ var (
 	}
 )
 
-// Interface is an interface for the prepare methods.
-type Interface interface {
+// Preparer is an interface for the prepare methods.
+type Preparer interface {
 	CheckCluster() error
-	CheckInformersStart(smi bool) error
-	InitCluster(namespace string, clusterDomain string) error
+	StartInformers(smi bool) error
+	PatchDNS(namespace string, clusterDomain string) error
 }
 
-// Ensure the client wrapper fits the Client interface
-var _ Interface = (*Prepare)(nil)
+// Ensure the Prepare fits the Preparer interface
+var _ Preparer = (*Prepare)(nil)
 
 // Prepare holds the clients for the various resource controllers.
 type Prepare struct {
@@ -47,7 +47,7 @@ type Prepare struct {
 }
 
 // NewPrepare returns an initialized prepare object.
-func NewPrepare(client k8s.Client) Interface {
+func NewPrepare(client k8s.Client) Preparer {
 	return &Prepare{
 		client: client,
 	}
@@ -137,8 +137,8 @@ func (p *Prepare) kubeDNSMatch() (bool, error) {
 	return true, nil
 }
 
-// CheckInformersStart checks if the required informers can start and sync in a reasonable time.
-func (p *Prepare) CheckInformersStart(smi bool) error {
+// StartInformers checks if the required informers can start and sync in a reasonable time.
+func (p *Prepare) StartInformers(smi bool) error {
 	log.Debug("Creating and Starting Informers")
 
 	stopCh := make(chan struct{})
@@ -196,8 +196,8 @@ func (p *Prepare) CheckInformersStart(smi bool) error {
 	return nil
 }
 
-// InitCluster is used to initialize a kubernetes cluster with a variety of configuration options.
-func (p *Prepare) InitCluster(namespace string, clusterDomain string) error {
+// PatchDNS is used to initialize a kubernetes cluster with a variety of configuration options.
+func (p *Prepare) PatchDNS(namespace string, clusterDomain string) error {
 	log.Infoln("Preparing Cluster...")
 	log.Debugln("Patching DNS...")
 
