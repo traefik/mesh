@@ -30,50 +30,33 @@ func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
 	s.stopK3s()
 }
 
-func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
+func (s *CoreDNSSuite) TestCoreDNSVersionSafe(c *check.C) {
 	testCases := []struct {
 		desc          string
 		version       string
-		safe          bool
 		expectedError bool
 	}{
 		{
 			desc:          "CoreDNS 1.2.6",
 			version:       "1.2.6",
-			safe:          true,
 			expectedError: true,
 		},
 		{
 			desc:          "CoreDNS 1.3.1",
 			version:       "1.3.1",
-			safe:          true,
 			expectedError: false,
 		},
 		{
 			desc:          "CoreDNS 1.4.0",
 			version:       "1.4.0",
-			safe:          true,
-			expectedError: false,
-		},
-		{
-			desc:          "CoreDNS 1.5.2",
-			version:       "1.5.2",
-			expectedError: false,
-		},
-		{
-			desc:          "CoreDNS 1.6.3",
-			version:       "1.6.3",
 			expectedError: false,
 		},
 	}
 
-	for _, test := range testCases {
-		if test.safe {
-			s.createResources(c, "resources/coredns/corednssafe.yaml")
-		} else {
-			s.createResources(c, "resources/coredns/coredns.yaml")
-		}
+	s.createResources(c, "resources/coredns/corednssafe.yaml")
+	defer s.deleteResources(c, "resources/coredns/corednssafe.yaml", true)
 
+	for _, test := range testCases {
 		s.WaitForCoreDNS(c)
 		c.Log("Testing compatibility with " + test.desc)
 		s.setCoreDNSVersion(c, test.version)
@@ -89,16 +72,43 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		} else {
 			c.Assert(err, checker.IsNil)
 		}
-
-		if test.safe {
-			s.deleteResources(c, "resources/coredns/corednssafe.yaml", true)
-		} else {
-			s.deleteResources(c, "resources/coredns/coredns.yaml", true)
-		}
 	}
 }
 
-func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
+func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
+	testCases := []struct {
+		desc    string
+		version string
+	}{
+		{
+			desc:    "CoreDNS 1.5.2",
+			version: "1.5.2",
+		},
+		{
+			desc:    "CoreDNS 1.6.3",
+			version: "1.6.3",
+		},
+	}
+
+	s.createResources(c, "resources/coredns/coredns.yaml")
+	defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
+
+	for _, test := range testCases {
+
+		s.WaitForCoreDNS(c)
+		c.Log("Testing compatibility with " + test.desc)
+		s.setCoreDNSVersion(c, test.version)
+
+		cmd := s.maeshPrepareWithArgs()
+		cmd.Env = os.Environ()
+		output, err := cmd.CombinedOutput()
+
+		c.Log(string(output))
+		c.Assert(err, checker.IsNil)
+	}
+}
+
+func (s *CoreDNSSuite) TestCoreDNSDig(c *check.C) {
 	s.createResources(c, "resources/coredns/coredns.yaml")
 	defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
 	s.WaitForCoreDNS(c)
