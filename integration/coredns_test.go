@@ -45,11 +45,16 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		{
 			desc:          "CoreDNS 1.3.1",
 			version:       "1.3.1",
-			expectedError: false,
+			expectedError: true,
 		},
 		{
 			desc:          "CoreDNS 1.4.0",
 			version:       "1.4.0",
+			expectedError: true,
+		},
+		{
+			desc:          "CoreDNS 1.5.2",
+			version:       "1.5.2",
 			expectedError: false,
 		},
 		{
