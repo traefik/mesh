@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-dns
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: titi
+          image: titi/toto:latest

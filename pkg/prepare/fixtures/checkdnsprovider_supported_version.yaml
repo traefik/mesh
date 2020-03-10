@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: coredns
+          image: image-registry.canonical.com:5000/cdk/coredns/coredns-amd64:1.6.9
+        - name: titi
+          image: titi/toto:latest
