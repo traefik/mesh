@@ -43,7 +43,8 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 
 	p := prepare.NewPrepare(clients)
 
-	if err = p.CheckCluster(); err != nil {
+	provider, err := p.CheckDNSProvider()
+	if err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
@@ -51,8 +52,15 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 		return fmt.Errorf("error during informer check: %v, this can be caused by pre-existing objects in your cluster that do not conform to the spec", err)
 	}
 
-	if err = p.PatchDNS(pConfig.Namespace, pConfig.ClusterDomain); err != nil {
-		return fmt.Errorf("error initializing cluster: %v", err)
+	switch provider {
+	case prepare.CoreDNS:
+		if err := p.ConfigureCoreDNS(pConfig.Namespace, pConfig.ClusterDomain); err != nil {
+			return fmt.Errorf("unable to configure CoreDNS: %v", err)
+		}
+	case prepare.KubeDNS:
+		if err := p.ConfigureKubeDNS(); err != nil {
+			return fmt.Errorf("unable to configure KubeDNS: %v", err)
+		}
 	}
 
 	return nil
