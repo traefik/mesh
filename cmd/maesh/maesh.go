@@ -66,9 +66,11 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		return fmt.Errorf("error building clients: %v", err)
 	}
 
-	prepare := preparepkg.NewPrepare(clients)
-	if err = prepare.CheckCluster(); err != nil {
-		return fmt.Errorf("error during cluster check: %v", err)
+	prep := preparepkg.NewPrepare(clients)
+
+	_, err = prep.CheckDNSProvider()
+	if err != nil {
+		return fmt.Errorf("no valid DNS provider found: %v", err)
 	}
 
 	minHTTPPort := int32(5000)
