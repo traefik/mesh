@@ -48,7 +48,7 @@ type Prepare struct {
 }
 
 // NewPrepare returns an initialized prepare object.
-func NewPrepare(client k8s.Client, log logrus.FieldLogger) Preparer {
+func NewPrepare(log logrus.FieldLogger, client k8s.Client) Preparer {
 	return &Prepare{
 		client: client,
 		log:    log,

@@ -63,12 +63,12 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)
 
-	clients, err := k8s.NewClient(iConfig.MasterURL, iConfig.KubeConfig, log)
+	clients, err := k8s.NewClient(log, iConfig.MasterURL, iConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
 	}
 
-	prepare := preparepkg.NewPrepare(clients, log)
+	prepare := preparepkg.NewPrepare(log, clients)
 	if err = prepare.CheckCluster(); err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
@@ -80,6 +80,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	stopCh := signals.SetupSignalHandler()
 	// Create a new ctr.
 	ctr, err := controller.NewMeshController(clients, controller.MeshControllerConfig{
+		Log:              log,
 		SMIEnabled:       iConfig.SMI,
 		DefaultMode:      iConfig.DefaultMode,
 		Namespace:        iConfig.Namespace,
@@ -90,7 +91,6 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
-		Log:              log,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)
