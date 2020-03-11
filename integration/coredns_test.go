@@ -21,7 +21,6 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 		"giantswarm/tiny-tools:3.9",
 	}
 	s.startk3s(c, requiredImages)
-	s.startAndWaitForCoreDNS(c)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
 	s.createResources(c, "resources/tcp-state-table/")
@@ -31,7 +30,7 @@ func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
 	s.stopK3s()
 }
 
-func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
+func (s *CoreDNSSuite) TestCoreDNSVersionSafe(c *check.C) {
 	testCases := []struct {
 		desc          string
 		version       string
@@ -52,12 +51,10 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 			version:       "1.4.0",
 			expectedError: false,
 		},
-		{
-			desc:          "CoreDNS 1.6.3",
-			version:       "1.6.3",
-			expectedError: false,
-		},
 	}
+
+	s.createResources(c, "resources/coredns/corednssafe.yaml")
+	defer s.deleteResources(c, "resources/coredns/corednssafe.yaml", true)
 
 	for _, test := range testCases {
 		s.WaitForCoreDNS(c)
@@ -78,9 +75,42 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 	}
 }
 
-func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
+func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
+	testCases := []struct {
+		desc    string
+		version string
+	}{
+		{
+			desc:    "CoreDNS 1.5.2",
+			version: "1.5.2",
+		},
+		{
+			desc:    "CoreDNS 1.6.3",
+			version: "1.6.3",
+		},
+	}
+
+	s.createResources(c, "resources/coredns/coredns.yaml")
+	defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
+
+	for _, test := range testCases {
+		s.WaitForCoreDNS(c)
+		c.Log("Testing compatibility with " + test.desc)
+		s.setCoreDNSVersion(c, test.version)
+
+		cmd := s.maeshPrepareWithArgs()
+		cmd.Env = os.Environ()
+		output, err := cmd.CombinedOutput()
+
+		c.Log(string(output))
+		c.Assert(err, checker.IsNil)
+	}
+}
+
+func (s *CoreDNSSuite) TestCoreDNSDig(c *check.C) {
+	s.createResources(c, "resources/coredns/coredns.yaml")
+	defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
 	s.WaitForCoreDNS(c)
-	s.setCoreDNSVersion(c, "1.3.1")
 
 	cmd := s.startMaeshBinaryCmd(c, false)
 	err := cmd.Start()
