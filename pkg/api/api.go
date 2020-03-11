@@ -9,7 +9,7 @@ import (
 	"github.com/containous/maesh/pkg/deploylog"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -27,6 +27,7 @@ type Interface interface {
 
 // API is an implementation of an api.
 type API struct {
+	log               logrus.FieldLogger
 	router            *mux.Router
 	readiness         bool
 	lastConfiguration *safe.Safe
@@ -44,8 +45,9 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(apiPort int32, apiHost string, lastConfiguration *safe.Safe, deployLog deploylog.Interface, podLister listers.PodLister, meshNamespace string) *API {
+func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, lastConfiguration *safe.Safe, deployLog deploylog.Interface, podLister listers.PodLister, meshNamespace string) *API {
 	a := &API{
+		log:               log,
 		readiness:         false,
 		lastConfiguration: lastConfiguration,
 		apiPort:           apiPort,
@@ -64,7 +66,7 @@ func NewAPI(apiPort int32, apiHost string, lastConfiguration *safe.Safe, deployL
 
 // Init handles any api initialization.
 func (a *API) Init() error {
-	log.Debugln("API.Init")
+	a.log.Debugln("API.Init")
 
 	a.router = mux.NewRouter()
 
@@ -79,20 +81,20 @@ func (a *API) Init() error {
 
 // Start runs the API.
 func (a *API) Start() {
-	log.Debugln("API.Start")
+	a.log.Debugln("API.Start")
 
 	go a.Run()
 }
 
 // Run wraps the listenAndServe method.
 func (a *API) Run() {
-	log.Error(http.ListenAndServe(fmt.Sprintf("%s:%d", a.apiHost, a.apiPort), a.router))
+	a.log.Error(http.ListenAndServe(fmt.Sprintf("%s:%d", a.apiHost, a.apiPort), a.router))
 }
 
 // EnableReadiness enables the readiness flag in the API.
 func (a *API) EnableReadiness() {
 	if !a.readiness {
-		log.Debug("Controller Readiness enabled")
+		a.log.Debug("Controller Readiness enabled")
 
 		a.readiness = true
 	}
@@ -103,7 +105,7 @@ func (a *API) getCurrentConfiguration(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(a.lastConfiguration.Get()); err != nil {
-		log.Error(err)
+		a.log.Error(err)
 	}
 }
 
@@ -116,7 +118,7 @@ func (a *API) getReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(a.readiness); err != nil {
-		log.Error(err)
+		a.log.Error(err)
 	}
 }
 
@@ -126,14 +128,14 @@ func (a *API) getDeployLog(w http.ResponseWriter, r *http.Request) {
 
 	data, err := json.Marshal(entries)
 	if err != nil {
-		writeErrorResponse(w, fmt.Sprintf("unable to marshal deploy log entries: %v", err), http.StatusInternalServerError)
+		a.writeErrorResponse(w, fmt.Sprintf("unable to marshal deploy log entries: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 
 	if _, err := w.Write(data); err != nil {
-		log.Error(err)
+		a.log.Error(err)
 	}
 }
 
@@ -145,14 +147,14 @@ func (a *API) getMeshNodes(w http.ResponseWriter, r *http.Request) {
 
 	requirement, err := labels.NewRequirement("component", selection.Equals, []string{"maesh-mesh"})
 	if err != nil {
-		log.Error(err)
+		a.log.Error(err)
 	}
 
 	sel = sel.Add(*requirement)
 
 	podList, err := a.podLister.Pods(a.meshNamespace).List(sel)
 	if err != nil {
-		writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod list: %v", err), http.StatusInternalServerError)
+		a.writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod list: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -178,7 +180,7 @@ func (a *API) getMeshNodes(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(podInfoList); err != nil {
-		log.Error(err)
+		a.log.Error(err)
 	}
 }
 
@@ -189,18 +191,18 @@ func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 	pod, err := a.podLister.Pods(a.meshNamespace).Get(vars["node"])
 	if err != nil {
 		if kubeerror.IsNotFound(err) {
-			writeErrorResponse(w, fmt.Sprintf("unable to find pod: %s", vars["node"]), http.StatusNotFound)
+			a.writeErrorResponse(w, fmt.Sprintf("unable to find pod: %s", vars["node"]), http.StatusNotFound)
 			return
 		}
 
-		writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod: %v", err), http.StatusInternalServerError)
+		a.writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod: %v", err), http.StatusInternalServerError)
 
 		return
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://%s:8080/api/rawdata", pod.Status.PodIP))
 	if err != nil {
-		writeErrorResponse(w, fmt.Sprintf("unable to get configuration from pod: %v", err), http.StatusBadGateway)
+		a.writeErrorResponse(w, fmt.Sprintf("unable to get configuration from pod: %v", err), http.StatusBadGateway)
 		return
 	}
 
@@ -208,24 +210,24 @@ func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		writeErrorResponse(w, fmt.Sprintf("unable to get configuration response body from pod: %v", err), http.StatusBadGateway)
+		a.writeErrorResponse(w, fmt.Sprintf("unable to get configuration response body from pod: %v", err), http.StatusBadGateway)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 
 	if _, err := w.Write(body); err != nil {
-		log.Error(err)
+		a.log.Error(err)
 	}
 }
 
-func writeErrorResponse(w http.ResponseWriter, errorMessage string, status int) {
+func (a *API) writeErrorResponse(w http.ResponseWriter, errorMessage string, status int) {
 	w.WriteHeader(status)
-	log.Error(errorMessage)
+	a.log.Error(errorMessage)
 
 	w.Header().Set("Content-Type", "text/plain; charset=us-ascii")
 
 	if _, err := w.Write([]byte(errorMessage)); err != nil {
-		log.Error(err)
+		a.log.Error(err)
 	}
 }

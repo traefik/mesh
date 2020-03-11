@@ -11,7 +11,7 @@ import (
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/providers/base"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -28,6 +28,7 @@ var _ base.Provider = (*Provider)(nil)
 
 // Provider holds a client to access the provider.
 type Provider struct {
+	log             logrus.FieldLogger
 	defaultMode     string
 	tcpStateTable   TCPPortFinder
 	ignored         k8s.IgnoreWrapper
@@ -38,8 +39,9 @@ type Provider struct {
 }
 
 // New creates a new provider.
-func New(defaultMode string, tcpStateTable TCPPortFinder, ignored k8s.IgnoreWrapper, serviceLister listers.ServiceLister, endpointsLister listers.EndpointsLister, minHTTPPort, maxHTTPPort int32) *Provider {
+func New(log logrus.FieldLogger, defaultMode string, tcpStateTable TCPPortFinder, ignored k8s.IgnoreWrapper, serviceLister listers.ServiceLister, endpointsLister listers.EndpointsLister, minHTTPPort, maxHTTPPort int32) *Provider {
 	p := &Provider{
+		log:             log,
 		defaultMode:     defaultMode,
 		tcpStateTable:   tcpStateTable,
 		ignored:         ignored,
@@ -166,7 +168,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 			case k8s.ServiceTypeHTTP:
 				port, err := p.getHTTPPort(id)
 				if err != nil {
-					log.Debugf("Mesh HTTP port not found for service %s/%s %d", service.Namespace, service.Name, sp.Port)
+					p.log.Debugf("Mesh HTTP port not found for service %s/%s %d", service.Namespace, service.Name, sp.Port)
 					continue
 				}
 
@@ -187,7 +189,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 			case k8s.ServiceTypeTCP:
 				port, err := p.getTCPPort(service.Namespace, service.Name, sp.Port)
 				if err != nil {
-					log.Debugf("Mesh TCP port not found for service %s/%s %d", service.Namespace, service.Name, sp.Port)
+					p.log.Debugf("Mesh TCP port not found for service %s/%s %d", service.Namespace, service.Name, sp.Port)
 					continue
 				}
 
@@ -195,7 +197,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 				config.TCP.Services[key] = p.buildTCPService(base.GetEndpointsFromList(service.Name, service.Namespace, endpoints), sp.TargetPort.IntVal)
 
 			default:
-				log.Errorf("Unknown service mode %s, skipping port %s on service %s/%s", serviceMode, sp.Name, service.Namespace, service.Name)
+				p.log.Errorf("Unknown service mode %s, skipping port %s on service %s/%s", serviceMode, sp.Name, service.Namespace, service.Name)
 				continue
 			}
 		}
@@ -227,8 +229,8 @@ func (p *Provider) getHTTPPort(portID int) (int32, error) {
 
 func (p *Provider) buildHTTPMiddlewares(annotations map[string]string) *dynamic.Middleware {
 	circuitBreaker := buildCircuitBreakerMiddleware(annotations)
-	retry := buildRetryMiddleware(annotations)
-	rateLimit := buildRateLimitMiddleware(annotations)
+	retry := p.buildRetryMiddleware(annotations)
+	rateLimit := p.buildRateLimitMiddleware(annotations)
 
 	if circuitBreaker == nil && retry == nil && rateLimit == nil {
 		return nil
@@ -254,11 +256,11 @@ func buildCircuitBreakerMiddleware(annotations map[string]string) *dynamic.Circu
 	return nil
 }
 
-func buildRetryMiddleware(annotations map[string]string) *dynamic.Retry {
+func (p *Provider) buildRetryMiddleware(annotations map[string]string) *dynamic.Retry {
 	if annotations[k8s.AnnotationRetryAttempts] != "" {
 		retryAttempts, err := strconv.Atoi(annotations[k8s.AnnotationRetryAttempts])
 		if err != nil {
-			log.Errorf("Could not parse retry annotation: %v", err)
+			p.log.Errorf("Could not parse retry annotation: %v", err)
 		}
 
 		if retryAttempts > 0 {
@@ -271,16 +273,16 @@ func buildRetryMiddleware(annotations map[string]string) *dynamic.Retry {
 	return nil
 }
 
-func buildRateLimitMiddleware(annotations map[string]string) *dynamic.RateLimit {
+func (p *Provider) buildRateLimitMiddleware(annotations map[string]string) *dynamic.RateLimit {
 	if annotations[k8s.AnnotationRateLimitAverage] != "" || annotations[k8s.AnnotationRateLimitBurst] != "" {
 		rlAverage, err := strconv.Atoi(annotations[k8s.AnnotationRateLimitAverage])
 		if err != nil {
-			log.Errorf("Could not parse rateLimit average annotation: %v", err)
+			p.log.Errorf("Could not parse rateLimit average annotation: %v", err)
 		}
 
 		rlBurst, err := strconv.Atoi(annotations[k8s.AnnotationRateLimitBurst])
 		if err != nil {
-			log.Errorf("Could not parse rateLimit burst annotation: %v", err)
+			p.log.Errorf("Could not parse rateLimit burst annotation: %v", err)
 		}
 
 		if rlAverage > 0 && rlBurst > 1 {

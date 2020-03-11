@@ -3,7 +3,7 @@ package deploylog
 import (
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Ensure the Deploylog fits the interface
@@ -20,6 +20,7 @@ type Entry struct {
 
 // DeployLog holds a slice of log entries.
 type DeployLog struct {
+	log        logrus.FieldLogger
 	entries    []Entry
 	maxEntries int
 }
@@ -31,8 +32,9 @@ type Interface interface {
 }
 
 // NewDeployLog returns an initialized DeployLog.
-func NewDeployLog(maxEntries int) *DeployLog {
+func NewDeployLog(log logrus.FieldLogger, maxEntries int) *DeployLog {
 	d := &DeployLog{
+		log:        log,
 		maxEntries: maxEntries,
 	}
 
@@ -45,7 +47,7 @@ func NewDeployLog(maxEntries int) *DeployLog {
 
 // init handles any DeployLog initialization.
 func (d *DeployLog) init() error {
-	log.Debug("DeployLog.Init")
+	d.log.Debug("DeployLog.Init")
 
 	return nil
 }
