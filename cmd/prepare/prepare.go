@@ -38,12 +38,12 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
-	clients, err := k8s.NewClient(pConfig.MasterURL, pConfig.KubeConfig, log)
+	clients, err := k8s.NewClient(log, pConfig.MasterURL, pConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
 	}
 
-	p := prepare.NewPrepare(clients, log)
+	p := prepare.NewPrepare(log, clients)
 
 	if err = p.CheckCluster(); err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)

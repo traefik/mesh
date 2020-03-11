@@ -52,6 +52,7 @@ type ServiceManager interface {
 
 // Controller hold controller configuration.
 type Controller struct {
+	log                  logrus.FieldLogger
 	clients              k8s.Client
 	kubernetesFactory    informers.SharedInformerFactory
 	accessFactory        accessInformer.SharedInformerFactory
@@ -80,11 +81,11 @@ type Controller struct {
 	TrafficSplitLister   splitLister.TrafficSplitLister
 	minHTTPPort          int32
 	maxHTTPPort          int32
-	log                  logrus.FieldLogger
 }
 
 // MeshControllerConfig holds the configuration of the mesh controller.
 type MeshControllerConfig struct {
+	Log              logrus.FieldLogger
 	SMIEnabled       bool
 	DefaultMode      string
 	Namespace        string
@@ -95,7 +96,6 @@ type MeshControllerConfig struct {
 	MaxTCPPort       int32
 	MinHTTPPort      int32
 	MaxHTTPPort      int32
-	Log              logrus.FieldLogger
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
@@ -117,6 +117,7 @@ func NewMeshController(clients k8s.Client, cfg MeshControllerConfig) (*Controlle
 	}
 
 	c := &Controller{
+		log:           cfg.Log,
 		clients:       clients,
 		ignored:       ignored,
 		smiEnabled:    cfg.SMIEnabled,
@@ -127,7 +128,6 @@ func NewMeshController(clients k8s.Client, cfg MeshControllerConfig) (*Controlle
 		tcpStateTable: tcpStateTable,
 		minHTTPPort:   cfg.MinHTTPPort,
 		maxHTTPPort:   cfg.MaxHTTPPort,
-		log:           cfg.Log,
 	}
 
 	c.init()

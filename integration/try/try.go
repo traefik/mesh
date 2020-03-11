@@ -242,7 +242,7 @@ func (t *Try) WaitClientCreated(url string, kubeConfigPath string, timeout time.
 	log.SetLevel(logrus.DebugLevel)
 
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
-		clients, err = k8s.NewClient(url, kubeConfigPath, log)
+		clients, err = k8s.NewClient(log, url, kubeConfigPath)
 		if err != nil {
 			return fmt.Errorf("unable to create clients: %v", err)
 		}
