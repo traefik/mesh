@@ -2,14 +2,15 @@ package smi
 
 import (
 	"context"
+	"os"
 	"testing"
 
-	"github.com/containous/maesh/pkg/providers/base"
-
 	"github.com/containous/maesh/pkg/k8s"
+	"github.com/containous/maesh/pkg/providers/base"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specsv1alpha1 "github.com/deislabs/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +23,12 @@ func TestBuildRuleSnippetFromServiceAndMatch(t *testing.T) {
 
 	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
 	ignored := k8s.NewIgnored()
-	provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	provider := New(log, k8s.ServiceTypeHTTP, nil, ignored,
 		clientMock.ServiceLister,
 		clientMock.EndpointsLister,
 		clientMock.PodLister,
@@ -91,7 +97,12 @@ func TestGetTrafficTargetsWithDestinationInNamespace(t *testing.T) {
 
 	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
 	ignored := k8s.NewIgnored()
-	provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	provider := New(log, k8s.ServiceTypeHTTP, nil, ignored,
 		clientMock.ServiceLister,
 		clientMock.EndpointsLister,
 		clientMock.PodLister,
@@ -328,7 +339,12 @@ func TestBuildHTTPRouterFromTrafficTarget(t *testing.T) {
 
 			clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
 			ignored := k8s.NewIgnored()
-			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			provider := New(log, k8s.ServiceTypeHTTP, nil, ignored,
 				clientMock.ServiceLister,
 				clientMock.EndpointsLister,
 				clientMock.PodLister,
@@ -478,7 +494,12 @@ func TestBuildTCPRouterFromTrafficTarget(t *testing.T) {
 
 			clientMock := k8s.NewClientMock(ctx.Done(), "mock_tcp.yaml", true)
 			ignored := k8s.NewIgnored()
-			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			provider := New(log, k8s.ServiceTypeHTTP, nil, ignored,
 				clientMock.ServiceLister,
 				clientMock.EndpointsLister,
 				clientMock.PodLister,
@@ -499,7 +520,12 @@ func TestGetServiceMode(t *testing.T) {
 
 	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
 	ignored := k8s.NewIgnored()
-	provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	provider := New(log, k8s.ServiceTypeHTTP, nil, ignored,
 		clientMock.ServiceLister,
 		clientMock.EndpointsLister,
 		clientMock.PodLister,
@@ -826,7 +852,12 @@ func TestGetApplicableTrafficTargets(t *testing.T) {
 
 			clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
 			ignored := k8s.NewIgnored()
-			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			provider := New(log, k8s.ServiceTypeHTTP, nil, ignored,
 				clientMock.ServiceLister,
 				clientMock.EndpointsLister,
 				clientMock.PodLister,
@@ -1109,7 +1140,12 @@ func TestBuildHTTPServiceFromTrafficTarget(t *testing.T) {
 
 			clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
 			ignored := k8s.NewIgnored()
-			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			provider := New(log, k8s.ServiceTypeHTTP, nil, ignored,
 				clientMock.ServiceLister,
 				clientMock.EndpointsLister,
 				clientMock.PodLister,
@@ -1131,7 +1167,12 @@ func TestGroupTrafficTargetsByDestination(t *testing.T) {
 
 	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
 	ignored := k8s.NewIgnored()
-	provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	provider := New(log, k8s.ServiceTypeHTTP, nil, ignored,
 		clientMock.ServiceLister,
 		clientMock.EndpointsLister,
 		clientMock.PodLister,
@@ -1362,7 +1403,12 @@ func TestBuildConfiguration(t *testing.T) {
 
 			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, true)
 			ignored := k8s.NewIgnored()
-			provider := New(k8s.ServiceTypeHTTP, nil, ignored,
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			provider := New(log, k8s.ServiceTypeHTTP, nil, ignored,
 				clientMock.ServiceLister,
 				clientMock.EndpointsLister,
 				clientMock.PodLister,

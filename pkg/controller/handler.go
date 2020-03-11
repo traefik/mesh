@@ -2,20 +2,22 @@ package controller
 
 import (
 	"github.com/containous/maesh/pkg/k8s"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // Handler is an implementation of a ResourceEventHandler.
 type Handler struct {
+	log               logrus.FieldLogger
 	ignored           k8s.IgnoreWrapper
 	configRefreshChan chan string
 	serviceManager    ServiceManager
 }
 
 // NewHandler creates a handler.
-func NewHandler(ignored k8s.IgnoreWrapper, serviceManager ServiceManager, configRefreshChan chan string) *Handler {
+func NewHandler(log logrus.FieldLogger, ignored k8s.IgnoreWrapper, serviceManager ServiceManager, configRefreshChan chan string) *Handler {
 	h := &Handler{
+		log:               log,
 		ignored:           ignored,
 		configRefreshChan: configRefreshChan,
 		serviceManager:    serviceManager,
@@ -30,7 +32,7 @@ func NewHandler(ignored k8s.IgnoreWrapper, serviceManager ServiceManager, config
 
 // Init handles any handler initialization.
 func (h *Handler) Init() error {
-	log.Debugln("MeshControllerHandler.Init")
+	h.log.Debugln("MeshControllerHandler.Init")
 
 	return nil
 }
@@ -45,7 +47,7 @@ func (h *Handler) OnAdd(obj interface{}) {
 		}
 
 		if err := h.serviceManager.Create(obj); err != nil {
-			log.Errorf("Could not create mesh service: %v", err)
+			h.log.Errorf("Could not create mesh service: %v", err)
 		}
 	case *corev1.Endpoints:
 		return
@@ -70,29 +72,29 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 
 		oldSvc, ok := oldObj.(*corev1.Service)
 		if !ok {
-			log.Errorf("Old object is not a kubernetes Service")
+			h.log.Errorf("Old object is not a kubernetes Service")
 			return
 		}
 
 		if _, err := h.serviceManager.Update(oldSvc, obj); err != nil {
-			log.Errorf("Could not update mesh service: %v", err)
+			h.log.Errorf("Could not update mesh service: %v", err)
 		}
 
-		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+		h.log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 	case *corev1.Endpoints:
 		// We can use the same ignore for services and endpoints.
 		if h.ignored.IsIgnored(obj.ObjectMeta) {
 			return
 		}
 
-		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
+		h.log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 	case *corev1.Pod:
 		if !isMeshPod(obj) {
 			// We don't track updates of user pods, updates are done through endpoints.
 			return
 		}
 
-		log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
+		h.log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
 		// Since this is a mesh pod update, trigger a force deploy.
 		h.configRefreshChan <- k8s.ConfigMessageChanForce
 
@@ -112,10 +114,10 @@ func (h *Handler) OnDelete(obj interface{}) {
 			return
 		}
 
-		log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+		h.log.Debugf("MeshControllerHandler ObjectDeleted with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
 
 		if err := h.serviceManager.Delete(obj); err != nil {
-			log.Errorf("Could not delete mesh service: %v", err)
+			h.log.Errorf("Could not delete mesh service: %v", err)
 		}
 	case *corev1.Endpoints:
 		// We can use the same ignore for services and endpoints.
@@ -123,7 +125,7 @@ func (h *Handler) OnDelete(obj interface{}) {
 			return
 		}
 
-		log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
+		h.log.Debugf("MeshController ObjectDeleted with type: *corev1.Endpoints: %s/%s", obj.Namespace, obj.Name)
 	case *corev1.Pod:
 		return
 	}

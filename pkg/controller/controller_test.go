@@ -2,9 +2,11 @@ package controller
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/containous/maesh/pkg/k8s"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,9 +23,14 @@ func TestNewController(t *testing.T) {
 	defer cancel()
 
 	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", false)
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with base HTTP mode.
 	controller, err := NewMeshController(clientMock, MeshControllerConfig{
+		Log:              log,
 		SMIEnabled:       false,
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,
@@ -43,9 +50,14 @@ func TestNewControllerWithSMI(t *testing.T) {
 	defer cancel()
 
 	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with base HTTP mode, in SMI mode.
 	controller, err := NewMeshController(clientMock, MeshControllerConfig{
+		Log:              log,
 		SMIEnabled:       true,
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,

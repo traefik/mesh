@@ -140,11 +140,11 @@ func (c *Controller) init() {
 	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.GetKubernetesClient(), k8s.ResyncPeriod)
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
 
-	c.serviceManager = NewShadowServiceManager(c.ServiceLister, c.meshNamespace, c.tcpStateTable, c.defaultMode, c.minHTTPPort, c.maxHTTPPort, c.clients.GetKubernetesClient())
+	c.serviceManager = NewShadowServiceManager(c.log, c.ServiceLister, c.meshNamespace, c.tcpStateTable, c.defaultMode, c.minHTTPPort, c.maxHTTPPort, c.clients.GetKubernetesClient())
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	c.configRefreshChan = make(chan string)
-	c.handler = NewHandler(c.ignored, c.serviceManager, c.configRefreshChan)
+	c.handler = NewHandler(c.log, c.ignored, c.serviceManager, c.configRefreshChan)
 
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
@@ -154,8 +154,8 @@ func (c *Controller) init() {
 	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
 	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
 
-	c.deployLog = deploylog.NewDeployLog(1000)
-	c.api = api.NewAPI(c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
+	c.deployLog = deploylog.NewDeployLog(c.log, 1000)
+	c.api = api.NewAPI(c.log, c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
 
 	if c.smiEnabled {
 		// Create new SharedInformerFactories, and register the event handler to informers.
@@ -175,13 +175,13 @@ func (c *Controller) init() {
 		c.TCPRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
 		c.TrafficSplitLister = c.splitFactory.Split().V1alpha2().TrafficSplits().Lister()
 
-		c.provider = smi.New(c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister, c.PodLister, c.TrafficTargetLister, c.HTTPRouteGroupLister, c.TCPRouteLister, c.TrafficSplitLister, c.minHTTPPort, c.maxHTTPPort)
+		c.provider = smi.New(c.log, c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister, c.PodLister, c.TrafficTargetLister, c.HTTPRouteGroupLister, c.TCPRouteLister, c.TrafficSplitLister, c.minHTTPPort, c.maxHTTPPort)
 
 		return
 	}
 
 	// If SMI is not configured, use the kubernetes provider.
-	c.provider = kubernetes.New(c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister, c.minHTTPPort, c.maxHTTPPort)
+	c.provider = kubernetes.New(c.log, c.defaultMode, c.tcpStateTable, c.ignored, c.ServiceLister, c.EndpointsLister, c.minHTTPPort, c.maxHTTPPort)
 }
 
 // Run is the main entrypoint for the controller.
