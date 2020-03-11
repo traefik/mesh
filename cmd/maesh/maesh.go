@@ -13,7 +13,7 @@ import (
 	preparepkg "github.com/containous/maesh/pkg/prepare"
 	"github.com/containous/maesh/pkg/signals"
 	"github.com/containous/traefik/v2/pkg/cli"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -50,23 +50,25 @@ func main() {
 }
 
 func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
+	log := logrus.New()
+
 	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
+	log.SetLevel(logrus.InfoLevel)
 
 	if iConfig.Debug {
-		log.SetLevel(log.DebugLevel)
+		log.SetLevel(logrus.DebugLevel)
 	}
 
 	log.Debugln("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)
 
-	clients, err := k8s.NewClient(iConfig.MasterURL, iConfig.KubeConfig)
+	clients, err := k8s.NewClient(iConfig.MasterURL, iConfig.KubeConfig, log)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
 	}
 
-	prepare := preparepkg.NewPrepare(clients)
+	prepare := preparepkg.NewPrepare(clients, log)
 	if err = prepare.CheckCluster(); err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
@@ -88,6 +90,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
+		Log:              log,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)
