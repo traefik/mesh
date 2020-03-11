@@ -25,7 +25,7 @@ import (
 	specsLister "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
 	splitInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	splitLister "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,6 +80,7 @@ type Controller struct {
 	TrafficSplitLister   splitLister.TrafficSplitLister
 	minHTTPPort          int32
 	maxHTTPPort          int32
+	log                  logrus.FieldLogger
 }
 
 // MeshControllerConfig holds the configuration of the mesh controller.
@@ -94,6 +95,7 @@ type MeshControllerConfig struct {
 	MaxTCPPort       int32
 	MinHTTPPort      int32
 	MaxHTTPPort      int32
+	Log              logrus.FieldLogger
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
@@ -125,6 +127,7 @@ func NewMeshController(clients k8s.Client, cfg MeshControllerConfig) (*Controlle
 		tcpStateTable: tcpStateTable,
 		minHTTPPort:   cfg.MinHTTPPort,
 		maxHTTPPort:   cfg.MaxHTTPPort,
+		log:           cfg.Log,
 	}
 
 	c.init()
@@ -187,16 +190,16 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
-	log.Debug("Initializing Mesh controller")
+	c.log.Debug("Initializing Mesh controller")
 
 	// Start the informers.
 	c.startInformers(stopCh, 10*time.Second)
 
 	// Create the mesh services here to ensure that they exist
-	log.Info("Creating initial mesh services")
+	c.log.Info("Creating initial mesh services")
 
 	if err = c.createMeshServices(); err != nil {
-		log.Errorf("could not create mesh services: %v", err)
+		c.log.Errorf("could not create mesh services: %v", err)
 	}
 	// Start the api, and enable the readiness endpoint
 	c.api.Start()
@@ -205,7 +208,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		timer := time.NewTimer(10 * time.Second)
 		select {
 		case <-stopCh:
-			log.Info("Shutting down workers")
+			c.log.Info("Shutting down workers")
 			return nil
 		case message := <-c.configRefreshChan:
 			// Reload the configuration
@@ -232,11 +235,11 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 			dynCfg, ok := rawCfg.(*dynamic.Configuration)
 			if !ok {
-				log.Error("Received unexpected dynamic configuration, skipping")
+				c.log.Error("Received unexpected dynamic configuration, skipping")
 				break
 			}
 
-			log.Debug("Deploying configuration to unready nodes")
+			c.log.Debug("Deploying configuration to unready nodes")
 
 			if deployErr := c.deployConfigurationToUnreadyNodes(dynCfg); deployErr != nil {
 				break
@@ -254,12 +257,12 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
 	defer cancel()
 
-	log.Debug("Starting Informers")
+	c.log.Debug("Starting Informers")
 	c.kubernetesFactory.Start(stopCh)
 
 	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
 	}
 
@@ -268,7 +271,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 		for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
-				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+				c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
 
@@ -276,7 +279,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 		for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
-				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+				c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
 
@@ -284,7 +287,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 		for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
-				log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+				c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
 	}
@@ -308,7 +311,7 @@ func (c *Controller) createMeshServices() error {
 			continue
 		}
 
-		log.Debugf("Creating mesh for service: %v", service.Name)
+		c.log.Debugf("Creating mesh for service: %v", service.Name)
 
 		if err := c.serviceManager.Create(service); err != nil {
 			return fmt.Errorf("unable to create mesh service: %w", err)
@@ -389,7 +392,7 @@ func (c *Controller) deployToPods(pods []*corev1.Pod, config *dynamic.Configurat
 	for _, p := range pods {
 		pod := p
 
-		log.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
+		c.log.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
 
 		errg.Go(func() error {
 			b := backoff.NewExponentialBackOff()
@@ -447,7 +450,7 @@ func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration)
 	}
 
 	c.deployLog.LogDeploy(time.Now(), name, ip, true, "")
-	log.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
+	c.log.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
 
 	return nil
 }

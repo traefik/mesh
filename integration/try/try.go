@@ -14,7 +14,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/traefik/v2/pkg/safe"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -31,11 +31,17 @@ type timedAction func(timeout time.Duration, operation DoCondition) error
 // Try holds try configuration.
 type Try struct {
 	client k8s.Client
+	log    logrus.FieldLogger
 }
 
 // NewTry creates a new try.
 func NewTry(client k8s.Client) *Try {
-	return &Try{client: client}
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	return &Try{client: client, log: log}
 }
 
 // WaitReadyDeployment wait until the deployment is ready.
@@ -230,8 +236,13 @@ func (t *Try) WaitClientCreated(url string, kubeConfigPath string, timeout time.
 		err     error
 	)
 
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
-		clients, err = k8s.NewClient(url, kubeConfigPath)
+		clients, err = k8s.NewClient(url, kubeConfigPath, log)
 		if err != nil {
 			return fmt.Errorf("unable to create clients: %v", err)
 		}
@@ -351,7 +362,7 @@ func applyCIMultiplier(timeout time.Duration) time.Duration {
 	}
 
 	ciTimeoutMultiplier := getCITimeoutMultiplier()
-	log.Debug("Apply CI multiplier:", ciTimeoutMultiplier)
+	logrus.Debug("Apply CI multiplier:", ciTimeoutMultiplier)
 
 	return time.Duration(float64(timeout) * ciTimeoutMultiplier)
 }
