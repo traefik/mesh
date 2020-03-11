@@ -15,7 +15,7 @@ import (
 	specsInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	splitInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
@@ -44,18 +44,20 @@ var _ Preparer = (*Prepare)(nil)
 // Prepare holds the clients for the various resource controllers.
 type Prepare struct {
 	client k8s.Client
+	log    logger.FieldLogger
 }
 
 // NewPrepare returns an initialized prepare object.
-func NewPrepare(client k8s.Client) Preparer {
+func NewPrepare(client k8s.Client, logger logger.FieldLogger) Preparer {
 	return &Prepare{
 		client: client,
+		log:    logger,
 	}
 }
 
 // CheckCluster is used to check the cluster.
 func (p *Prepare) CheckCluster() error {
-	log.Infoln("Checking Cluster...")
+	p.log.Infoln("Checking Cluster...")
 
 	match, err := p.coreDNSMatch()
 	if err != nil {
@@ -78,8 +80,8 @@ func (p *Prepare) CheckCluster() error {
 
 // coreDNSMatch checks if CoreDNS service can match.
 func (p *Prepare) coreDNSMatch() (bool, error) {
-	log.Infoln("Checking CoreDNS...")
-	log.Debugln("Get CoreDNS version...")
+	p.log.Infoln("Checking CoreDNS...")
+	p.log.Debugln("Get CoreDNS version...")
 
 	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
 	exists, err := k8s.TranslateNotFoundError(err)
@@ -89,7 +91,7 @@ func (p *Prepare) coreDNSMatch() (bool, error) {
 	}
 
 	if !exists {
-		log.Debugf("%s does not exist in namespace %s", "coredns", metav1.NamespaceSystem)
+		p.log.Debugf("%s does not exist in namespace %s", "coredns", metav1.NamespaceSystem)
 		return false, nil
 	}
 
@@ -110,15 +112,15 @@ func (p *Prepare) coreDNSMatch() (bool, error) {
 		return false, fmt.Errorf("unsupported CoreDNS version %q, (supported versions are: %s)", version, strings.Join(supportedCoreDNSVersions, ","))
 	}
 
-	log.Info("CoreDNS match")
+	p.log.Info("CoreDNS match")
 
 	return true, nil
 }
 
 // kubeDNSMatch checks if KubeDNS service can match.
 func (p *Prepare) kubeDNSMatch() (bool, error) {
-	log.Infoln("Checking KubeDNS...")
-	log.Debugln("Get KubeDNS version...")
+	p.log.Infoln("Checking KubeDNS...")
+	p.log.Debugln("Get KubeDNS version...")
 
 	_, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
 	exists, err := k8s.TranslateNotFoundError(err)
@@ -128,18 +130,18 @@ func (p *Prepare) kubeDNSMatch() (bool, error) {
 	}
 
 	if !exists {
-		log.Debugf("%s does not exist in namespace %s", "kube-dns", metav1.NamespaceSystem)
+		p.log.Debugf("%s does not exist in namespace %s", "kube-dns", metav1.NamespaceSystem)
 		return false, nil
 	}
 
-	log.Info("KubeDNS match")
+	p.log.Info("KubeDNS match")
 
 	return true, nil
 }
 
 // StartInformers checks if the required informers can start and sync in a reasonable time.
 func (p *Prepare) StartInformers(smi bool) error {
-	log.Debug("Creating and Starting Informers")
+	p.log.Debug("Creating and Starting Informers")
 
 	stopCh := make(chan struct{})
 
@@ -198,14 +200,14 @@ func (p *Prepare) StartInformers(smi bool) error {
 
 // PatchDNS is used to initialize a kubernetes cluster with a variety of configuration options.
 func (p *Prepare) PatchDNS(namespace string, clusterDomain string) error {
-	log.Infoln("Preparing Cluster...")
-	log.Debugln("Patching DNS...")
+	p.log.Infoln("Preparing Cluster...")
+	p.log.Debugln("Patching DNS...")
 
 	if err := p.patchDNS(metav1.NamespaceSystem, clusterDomain, namespace); err != nil {
 		return err
 	}
 
-	log.Infoln("Cluster Preparation Complete...")
+	p.log.Infoln("Cluster Preparation Complete...")
 
 	return nil
 }
@@ -221,7 +223,7 @@ func (p *Prepare) patchDNS(coreNamespace, clusterDomain, maeshNamespace string) 
 
 	// If CoreDNS exist we will patch it.
 	if exists {
-		log.Debugln("Patching CoreDNS configmap...")
+		p.log.Debugln("Patching CoreDNS configmap...")
 
 		var patched bool
 
@@ -231,7 +233,7 @@ func (p *Prepare) patchDNS(coreNamespace, clusterDomain, maeshNamespace string) 
 		}
 
 		if !patched {
-			log.Debugln("Restarting CoreDNS pods...")
+			p.log.Debugln("Restarting CoreDNS pods...")
 
 			if err = p.restartPods(deployment); err != nil {
 				return err
@@ -243,7 +245,7 @@ func (p *Prepare) patchDNS(coreNamespace, clusterDomain, maeshNamespace string) 
 		return nil
 	}
 
-	log.Debugln("coredns not available fallback to kube-dns")
+	p.log.Debugln("coredns not available fallback to kube-dns")
 	// If coreDNS does not exist we try to get the kube-dns
 	deployment, err = p.client.GetKubernetesClient().AppsV1().Deployments(coreNamespace).Get("kube-dns", metav1.GetOptions{})
 	exists, err = k8s.TranslateNotFoundError(err)
@@ -260,7 +262,7 @@ func (p *Prepare) patchDNS(coreNamespace, clusterDomain, maeshNamespace string) 
 
 	var serviceIP string
 
-	log.Debugln("Get CoreDNS service IP")
+	p.log.Debugln("Get CoreDNS service IP")
 
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
 		svc, errSvc := p.client.GetKubernetesClient().CoreV1().Services("maesh").Get("coredns", metav1.GetOptions{})
@@ -282,7 +284,7 @@ func (p *Prepare) patchDNS(coreNamespace, clusterDomain, maeshNamespace string) 
 	}
 
 	// Patch KubeDNS
-	log.Debugln("Patching KubeDNS configmap... with IP: ", serviceIP)
+	p.log.Debugln("Patching KubeDNS configmap... with IP: ", serviceIP)
 
 	patched, err := p.patchKubeDNSConfigMap(deployment, serviceIP)
 	if err != nil {
@@ -290,7 +292,7 @@ func (p *Prepare) patchDNS(coreNamespace, clusterDomain, maeshNamespace string) 
 	}
 
 	if !patched {
-		log.Debugln("Restarting KubeDNS pods...")
+		p.log.Debugln("Restarting KubeDNS pods...")
 
 		if err := p.restartPods(deployment); err != nil {
 			return err
@@ -316,7 +318,7 @@ func (p *Prepare) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment, clust
 
 	if len(coreConfigMap.ObjectMeta.Labels) > 0 {
 		if _, ok := coreConfigMap.ObjectMeta.Labels["maesh-patched"]; ok {
-			log.Debugln("Configmap already patched...")
+			p.log.Debugln("Configmap already patched...")
 			return true, nil
 		}
 	}
@@ -379,7 +381,7 @@ func (p *Prepare) patchKubeDNSConfigMap(deployment *appsv1.Deployment, coreDNSIp
 
 	if len(configMap.ObjectMeta.Labels) > 0 {
 		if _, ok := configMap.ObjectMeta.Labels["maesh-patched"]; ok {
-			log.Debugln("Configmap already patched...")
+			p.log.Debugln("Configmap already patched...")
 			return true, nil
 		}
 	}
@@ -424,7 +426,7 @@ func (p *Prepare) patchKubeDNSConfigMap(deployment *appsv1.Deployment, coreDNSIp
 }
 
 func (p *Prepare) restartPods(deployment *appsv1.Deployment) error {
-	log.Infof("Restarting %s pods...\n", deployment.Name)
+	p.log.Infof("Restarting %s pods...\n", deployment.Name)
 
 	// Never edit original object, always work with a clone for updates.
 	newDeployment := deployment.DeepCopy()

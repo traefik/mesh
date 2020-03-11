@@ -8,7 +8,7 @@ import (
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/prepare"
 	"github.com/containous/traefik/v2/pkg/cli"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // NewCmd builds a new Prepare command.
@@ -25,11 +25,13 @@ func NewCmd(pConfig *cmd.PrepareConfig, loaders []cli.ResourceLoader) *cli.Comma
 }
 
 func prepareCommand(pConfig *cmd.PrepareConfig) error {
+	var log = logrus.New()
+
 	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
+	log.SetLevel(logrus.InfoLevel)
 
 	if pConfig.Debug {
-		log.SetLevel(log.DebugLevel)
+		log.SetLevel(logrus.DebugLevel)
 	}
 
 	log.Debugln("Starting maesh prepare...")
@@ -41,7 +43,7 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 		return fmt.Errorf("error building clients: %v", err)
 	}
 
-	p := prepare.NewPrepare(clients)
+	p := prepare.NewPrepare(clients, log)
 
 	if err = p.CheckCluster(); err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)
