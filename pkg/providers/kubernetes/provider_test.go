@@ -2,11 +2,13 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/providers/base"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +41,12 @@ func TestBuildRouter(t *testing.T) {
 	kubernetesFactory := informers.NewSharedInformerFactoryWithOptions(fakeClient, k8s.ResyncPeriod)
 	serviceLister := kubernetesFactory.Core().V1().Services().Lister()
 	endpointsLister := kubernetesFactory.Core().V1().Endpoints().Lister()
-	provider := New(k8s.ServiceTypeHTTP, nil, ignored, serviceLister, endpointsLister, 5000, 50100)
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	provider := New(log, k8s.ServiceTypeHTTP, nil, ignored, serviceLister, endpointsLister, 5000, 50100)
 
 	name := "test"
 	namespace := "foo"
@@ -66,7 +73,12 @@ func TestBuildTCPRouter(t *testing.T) {
 	kubernetesFactory := informers.NewSharedInformerFactoryWithOptions(fakeClient, k8s.ResyncPeriod)
 	serviceLister := kubernetesFactory.Core().V1().Services().Lister()
 	endpointsLister := kubernetesFactory.Core().V1().Endpoints().Lister()
-	provider := New(k8s.ServiceTypeHTTP, nil, ignored, serviceLister, endpointsLister, 5000, 50100)
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	provider := New(log, k8s.ServiceTypeHTTP, nil, ignored, serviceLister, endpointsLister, 5000, 50100)
 
 	port := int32(10000)
 	associatedService := "bar"
@@ -754,7 +766,12 @@ func TestBuildConfiguration(t *testing.T) {
 				return 0, false
 			}
 
-			provider := New(k8s.ServiceTypeHTTP, tcpMappingPortMock(findTCPPort), ignored, clientMock.ServiceLister, clientMock.EndpointsLister, 5000, 50100)
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			provider := New(log, k8s.ServiceTypeHTTP, tcpMappingPortMock(findTCPPort), ignored, clientMock.ServiceLister, clientMock.EndpointsLister, 5000, 50100)
 			config, err := provider.BuildConfig()
 			assert.NoError(t, err)
 
@@ -925,7 +942,12 @@ func TestBuildService(t *testing.T) {
 			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
 			ignored := k8s.NewIgnored()
 
-			provider := New(k8s.ServiceTypeHTTP, nil, ignored, clientMock.ServiceLister, clientMock.EndpointsLister, 5000, 50100)
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			provider := New(log, k8s.ServiceTypeHTTP, nil, ignored, clientMock.ServiceLister, clientMock.EndpointsLister, 5000, 50100)
 			actual := provider.buildService(test.endpoints, test.scheme, 80)
 
 			assert.Equal(t, test.expected, actual)
@@ -1060,7 +1082,12 @@ func TestBuildTCPService(t *testing.T) {
 				return 0, false
 			}
 
-			provider := New(k8s.ServiceTypeHTTP, tcpMappingPortMock(findTCPPort), ignored, clientMock.ServiceLister, clientMock.EndpointsLister, 5000, 50100)
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			provider := New(log, k8s.ServiceTypeHTTP, tcpMappingPortMock(findTCPPort), ignored, clientMock.ServiceLister, clientMock.EndpointsLister, 5000, 50100)
 			actual := provider.buildTCPService(test.endpoints, 80)
 			assert.Equal(t, test.expected, actual)
 		})
@@ -1154,7 +1181,12 @@ func TestBuildHTTPMiddlewares(t *testing.T) {
 			kubernetesFactory := informers.NewSharedInformerFactoryWithOptions(fakeClient, k8s.ResyncPeriod)
 			serviceLister := kubernetesFactory.Core().V1().Services().Lister()
 			endpointsLister := kubernetesFactory.Core().V1().Endpoints().Lister()
-			provider := New(k8s.ServiceTypeHTTP, nil, k8s.NewIgnored(), serviceLister, endpointsLister, 5000, 50100)
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			provider := New(log, k8s.ServiceTypeHTTP, nil, k8s.NewIgnored(), serviceLister, endpointsLister, 5000, 50100)
 			actual := provider.buildHTTPMiddlewares(test.annotations)
 			assert.Equal(t, test.expected, actual)
 		})

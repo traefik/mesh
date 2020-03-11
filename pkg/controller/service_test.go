@@ -3,11 +3,13 @@ package controller_test
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/containous/maesh/pkg/controller"
 	"github.com/containous/maesh/pkg/k8s"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -267,7 +269,12 @@ func Test_ServiceCreate(t *testing.T) {
 				},
 			}
 
-			service := controller.NewShadowServiceManager(lister, "maesh", tcpPortMapper, "http", 5000, 5002, client)
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, "http", 5000, 5002, client)
 			err := service.Create(&test.provided)
 			if test.expectedErr {
 				assert.Error(t, err)
@@ -378,7 +385,12 @@ func Test_ServiceUpdate(t *testing.T) {
 		},
 	})
 
-	service := controller.NewShadowServiceManager(lister, "maesh", tcpPortMapper, "tcp", 5000, 5002, client)
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, "tcp", 5000, 5002, client)
 	svcGot, err := service.Update(&oldUserSvc, &newUserSvc)
 
 	require.NoError(t, err)
@@ -450,7 +462,12 @@ func Test_ServiceDelete(t *testing.T) {
 		},
 	}
 
-	service := controller.NewShadowServiceManager(lister, "maesh", tcpPortMapper, "tcp", 5000, 5002, client)
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, "tcp", 5000, 5002, client)
 	err := service.Delete(&userSvc)
 	require.NoError(t, err)
 
