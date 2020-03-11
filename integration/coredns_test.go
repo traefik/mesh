@@ -94,7 +94,6 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 	defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
 
 	for _, test := range testCases {
-
 		s.WaitForCoreDNS(c)
 		c.Log("Testing compatibility with " + test.desc)
 		s.setCoreDNSVersion(c, test.version)
