@@ -39,7 +39,7 @@ func NewTry(client k8s.Client) *Try {
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.InfoLevel)
+	log.SetLevel(logrus.DebugLevel)
 
 	return &Try{client: client, log: log}
 }
@@ -236,8 +236,13 @@ func (t *Try) WaitClientCreated(url string, kubeConfigPath string, timeout time.
 		err     error
 	)
 
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
-		clients, err = k8s.NewClient(url, kubeConfigPath, t.log)
+		clients, err = k8s.NewClient(url, kubeConfigPath, log)
 		if err != nil {
 			return fmt.Errorf("unable to create clients: %v", err)
 		}
