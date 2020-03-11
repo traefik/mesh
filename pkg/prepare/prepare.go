@@ -15,7 +15,7 @@ import (
 	specsInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	splitInformer "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	"github.com/google/uuid"
-	logger "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
@@ -44,14 +44,14 @@ var _ Preparer = (*Prepare)(nil)
 // Prepare holds the clients for the various resource controllers.
 type Prepare struct {
 	client k8s.Client
-	log    logger.FieldLogger
+	log    logrus.FieldLogger
 }
 
 // NewPrepare returns an initialized prepare object.
-func NewPrepare(client k8s.Client, logger logger.FieldLogger) Preparer {
+func NewPrepare(client k8s.Client, log logrus.FieldLogger) Preparer {
 	return &Prepare{
 		client: client,
-		log:    logger,
+		log:    log,
 	}
 }
 

@@ -50,7 +50,7 @@ func main() {
 }
 
 func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
-	var log = logrus.New()
+	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.InfoLevel)
@@ -63,7 +63,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)
 
-	clients, err := k8s.NewClient(iConfig.MasterURL, iConfig.KubeConfig)
+	clients, err := k8s.NewClient(iConfig.MasterURL, iConfig.KubeConfig, log)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
 	}
@@ -90,6 +90,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
+		Log:              log,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)
