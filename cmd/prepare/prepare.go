@@ -25,7 +25,7 @@ func NewCmd(pConfig *cmd.PrepareConfig, loaders []cli.ResourceLoader) *cli.Comma
 }
 
 func prepareCommand(pConfig *cmd.PrepareConfig) error {
-	var log = logrus.New()
+	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.InfoLevel)
@@ -38,7 +38,7 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
-	clients, err := k8s.NewClient(pConfig.MasterURL, pConfig.KubeConfig)
+	clients, err := k8s.NewClient(pConfig.MasterURL, pConfig.KubeConfig, log)
 	if err != nil {
 		return fmt.Errorf("error building clients: %v", err)
 	}
