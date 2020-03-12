@@ -17,25 +17,36 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
 
-var (
-	supportedCoreDNSVersions = []string{
-		"1.3",
-		"1.4",
-		"1.5",
-		"1.6",
-	}
+// DNSProvider represents a DNS provider.
+type DNSProvider int
+
+// Supported DNS providers.
+const (
+	UnknownDNS DNSProvider = iota
+	CoreDNS
+	KubeDNS
 )
+
+var supportedCoreDNSVersions = []string{
+	"1.3",
+	"1.4",
+	"1.5",
+	"1.6",
+}
 
 // Preparer is an interface for the prepare methods.
 type Preparer interface {
-	CheckCluster() error
+	CheckDNSProvider() (DNSProvider, error)
 	StartInformers(smi bool) error
-	PatchDNS(namespace string, clusterDomain string) error
+	ConfigureCoreDNS(namespace, clusterDomain string) error
+	ConfigureKubeDNS() error
 }
 
 // Ensure the Prepare fits the Preparer interface
@@ -55,44 +66,43 @@ func NewPrepare(log logrus.FieldLogger, client k8s.Client) Preparer {
 	}
 }
 
-// CheckCluster is used to check the cluster.
-func (p *Prepare) CheckCluster() error {
-	p.log.Infoln("Checking Cluster...")
+// CheckDNSProvider checks that the DNS provider that is deployed in the cluster
+// is supported and returns it.
+func (p *Prepare) CheckDNSProvider() (DNSProvider, error) {
+	p.log.Infoln("Checking DNS provider")
 
 	match, err := p.coreDNSMatch()
 	if err != nil {
-		return err
+		return UnknownDNS, err
 	}
 
-	if !match {
-		match, err = p.kubeDNSMatch()
-		if err != nil {
-			return err
-		}
+	if match {
+		return CoreDNS, nil
 	}
 
-	if !match {
-		return fmt.Errorf("no core dns service available for installing maesh: %v", err)
+	match, err = p.kubeDNSMatch()
+	if err != nil {
+		return UnknownDNS, err
 	}
 
-	return nil
+	if match {
+		return KubeDNS, nil
+	}
+
+	return UnknownDNS, fmt.Errorf("no core DNS service available for installing maesh: %w", err)
 }
 
-// coreDNSMatch checks if CoreDNS service can match.
 func (p *Prepare) coreDNSMatch() (bool, error) {
-	p.log.Infoln("Checking CoreDNS...")
-	p.log.Debugln("Get CoreDNS version...")
+	p.log.Infoln("Checking CoreDNS")
 
 	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
-	exists, err := k8s.TranslateNotFoundError(err)
-
-	if err != nil {
-		return false, fmt.Errorf("unable to get deployment %q in namespace %q: %v", "coredns", metav1.NamespaceSystem, err)
-	}
-
-	if !exists {
+	if kubeerror.IsNotFound(err) {
 		p.log.Debugf("%s does not exist in namespace %s", "coredns", metav1.NamespaceSystem)
 		return false, nil
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("unable to get deployment %q in namesapce %q: %w", "coredns", metav1.NamespaceSystem, err)
 	}
 
 	var version string
@@ -102,10 +112,8 @@ func (p *Prepare) coreDNSMatch() (bool, error) {
 			continue
 		}
 
-		split := strings.Split(c.Image, ":")
-		if len(split) == 2 {
-			version = split[1]
-		}
+		sp := strings.Split(c.Image, ":")
+		version = sp[len(sp)-1]
 	}
 
 	if !isCoreDNSVersionSupported(version) {
@@ -117,21 +125,27 @@ func (p *Prepare) coreDNSMatch() (bool, error) {
 	return true, nil
 }
 
-// kubeDNSMatch checks if KubeDNS service can match.
-func (p *Prepare) kubeDNSMatch() (bool, error) {
-	p.log.Infoln("Checking KubeDNS...")
-	p.log.Debugln("Get KubeDNS version...")
-
-	_, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
-	exists, err := k8s.TranslateNotFoundError(err)
-
-	if err != nil {
-		return false, fmt.Errorf("unable to get deployment %q in namesapce %q: %v", "kube-dns", metav1.NamespaceSystem, err)
+func isCoreDNSVersionSupported(versionLine string) bool {
+	for _, v := range supportedCoreDNSVersions {
+		if strings.Contains(versionLine, v) || strings.Contains(versionLine, "v"+v) {
+			return true
+		}
 	}
 
-	if !exists {
+	return false
+}
+
+func (p *Prepare) kubeDNSMatch() (bool, error) {
+	p.log.Infoln("Checking KubeDNS")
+
+	_, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
+	if kubeerror.IsNotFound(err) {
 		p.log.Debugf("%s does not exist in namespace %s", "kube-dns", metav1.NamespaceSystem)
 		return false, nil
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("unable to get deployment %q in namesapce %q: %w", "kube-dns", metav1.NamespaceSystem, err)
 	}
 
 	p.log.Info("KubeDNS match")
@@ -139,10 +153,218 @@ func (p *Prepare) kubeDNSMatch() (bool, error) {
 	return true, nil
 }
 
+// ConfigureCoreDNS patches the CoreDNS configuration for Maesh.
+func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
+	p.log.Debugln("Patching CoreDNS")
+	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	coreConfigMap, err := p.getCorefileConfigMap(deployment)
+	if err != nil {
+		return err
+	}
+
+	if isPatched(coreConfigMap) {
+		// CoreDNS has already been patched.
+		p.log.Debugln("Configmap already patched")
+		return nil
+	}
+
+	p.log.Debugln("Patching CoreDNS configmap")
+	if err := p.patchCoreDNSConfigMap(coreConfigMap, clusterDomain, maeshNamespace, deployment.Namespace); err != nil {
+		return err
+	}
+
+	p.log.Debugln("Restarting CoreDNS pods")
+	if err := p.restartPods(deployment); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Prepare) patchCoreDNSConfigMap(coreConfigMap *corev1.ConfigMap, clusterDomain, maeshNamespace, coreNamespace string) error {
+	serverBlock := fmt.Sprintf(
+		`
+maesh:53 {
+    errors
+    rewrite continue {
+        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh %[3]s-{1}-6d61657368-{2}.%[3]s.svc.%[1]s
+        answer name %[3]s-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.%[3]s\.svc\.%[2]s {1}.{2}.maesh
+    }
+    kubernetes %[1]s in-addr.arpa ip6.arpa {
+        pods insecure
+        upstream
+    	fallthrough in-addr.arpa ip6.arpa
+    }
+    forward . /etc/resolv.conf
+    cache 30
+    loop
+    reload
+    loadbalance
+}
+`,
+		clusterDomain,
+		strings.Replace(clusterDomain, ".", "\\.", -1),
+		maeshNamespace,
+	)
+
+	originalBlock := coreConfigMap.Data["Corefile"]
+	newBlock := originalBlock + serverBlock
+	coreConfigMap.Data["Corefile"] = newBlock
+
+	if coreConfigMap.ObjectMeta.Labels == nil {
+		coreConfigMap.ObjectMeta.Labels = make(map[string]string)
+	}
+
+	coreConfigMap.ObjectMeta.Labels["maesh-patched"] = "true"
+
+	if _, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(coreNamespace).Update(coreConfigMap); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// getCorefileConfigMap returns the name of a coreDNS config map.
+func (p *Prepare) getCorefileConfigMap(coreDeployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
+	for _, volume := range coreDeployment.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap == nil {
+			continue
+		}
+
+		cfgMap, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(coreDeployment.Namespace).Get(volume.ConfigMap.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		if cfgMap.Data == nil {
+			continue
+		}
+
+		if _, exists := cfgMap.Data["Corefile"]; !exists {
+			continue
+		}
+
+		return cfgMap, nil
+	}
+
+	return nil, errors.New("corefile configmap not found")
+}
+
+// ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
+func (p *Prepare) ConfigureKubeDNS() error {
+	p.log.Debugln("Patching KubeDNS")
+
+	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	var (
+		serviceIP string
+		ebo       = backoff.NewConstantBackOff(10 * time.Second)
+	)
+
+	p.log.Debugln("Getting CoreDNS service IP")
+	if err = backoff.Retry(safe.OperationWithRecover(func() error {
+		svc, errSvc := p.client.GetKubernetesClient().CoreV1().Services("maesh").Get("coredns", metav1.GetOptions{})
+		if errSvc != nil {
+			return fmt.Errorf("unable get the service %q in namespace %q: %w", "coredns", "maesh", errSvc)
+		}
+		if svc.Spec.ClusterIP == "" {
+			return fmt.Errorf("service %q has no clusterIP", "coredns")
+		}
+
+		serviceIP = svc.Spec.ClusterIP
+		return nil
+	}), ebo); err != nil {
+		return fmt.Errorf("unable get the service %q in namespace %q: %w", "coredns", "maesh", err)
+	}
+
+	configMap, err := p.getKubeDNSConfigMap(deployment)
+	if err != nil {
+		return err
+	}
+
+	if isPatched(configMap) {
+		p.log.Debugln("Configmap already patched")
+		return nil
+	}
+
+	p.log.Debugln("Patching KubeDNS configmap with IP", serviceIP)
+	if err := p.patchKubeDNSConfigMap(configMap, deployment.Namespace, serviceIP); err != nil {
+		return err
+	}
+
+	p.log.Debugln("Restarting KubeDNS pods", serviceIP)
+	if err := p.restartPods(deployment); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Prepare) getKubeDNSConfigMap(kubeDeployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
+	for _, volume := range kubeDeployment.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap == nil {
+			continue
+		}
+
+		cfgMap, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(kubeDeployment.Namespace).Get(volume.ConfigMap.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		return cfgMap, nil
+	}
+
+	return nil, errors.New("corefile configmap not found")
+}
+
+func (p *Prepare) patchKubeDNSConfigMap(kubeConfigMap *corev1.ConfigMap, namespace, coreDNSIp string) error {
+	originalBlock, exist := kubeConfigMap.Data["stubDomains"]
+	if !exist {
+		originalBlock = "{}"
+	}
+
+	stubDomains := make(map[string][]string)
+	if err := json.Unmarshal([]byte(originalBlock), &stubDomains); err != nil {
+		return err
+	}
+
+	stubDomains["maesh"] = []string{coreDNSIp}
+
+	var newData []byte
+
+	newData, err := json.Marshal(stubDomains)
+	if err != nil {
+		return err
+	}
+
+	if kubeConfigMap.Data == nil {
+		kubeConfigMap.Data = make(map[string]string)
+	}
+
+	kubeConfigMap.Data["stubDomains"] = string(newData)
+
+	if len(kubeConfigMap.ObjectMeta.Labels) == 0 {
+		kubeConfigMap.ObjectMeta.Labels = make(map[string]string)
+	}
+
+	kubeConfigMap.ObjectMeta.Labels["maesh-patched"] = "true"
+
+	if _, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(namespace).Update(kubeConfigMap); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // StartInformers checks if the required informers can start and sync in a reasonable time.
 func (p *Prepare) StartInformers(smi bool) error {
-	p.log.Debug("Creating and Starting Informers")
-
 	stopCh := make(chan struct{})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -198,235 +420,17 @@ func (p *Prepare) StartInformers(smi bool) error {
 	return nil
 }
 
-// PatchDNS is used to initialize a kubernetes cluster with a variety of configuration options.
-func (p *Prepare) PatchDNS(namespace string, clusterDomain string) error {
-	p.log.Infoln("Preparing Cluster...")
-	p.log.Debugln("Patching DNS...")
-
-	if err := p.patchDNS(metav1.NamespaceSystem, clusterDomain, namespace); err != nil {
-		return err
+func isPatched(cfgMap *corev1.ConfigMap) bool {
+	var patched bool
+	if len(cfgMap.ObjectMeta.Labels) > 0 {
+		_, patched = cfgMap.ObjectMeta.Labels["maesh-patched"]
 	}
 
-	p.log.Infoln("Cluster Preparation Complete...")
-
-	return nil
-}
-
-// patchDNS is used to patch the CoreDNS configmap if needed.
-func (p *Prepare) patchDNS(coreNamespace, clusterDomain, maeshNamespace string) error {
-	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(coreNamespace).Get("coredns", metav1.GetOptions{})
-	exists, err := k8s.TranslateNotFoundError(err)
-
-	if err != nil {
-		return err
-	}
-
-	// If CoreDNS exist we will patch it.
-	if exists {
-		p.log.Debugln("Patching CoreDNS configmap...")
-
-		var patched bool
-
-		patched, err = p.patchCoreDNSConfigMap(deployment, clusterDomain, maeshNamespace)
-		if err != nil {
-			return err
-		}
-
-		if !patched {
-			p.log.Debugln("Restarting CoreDNS pods...")
-
-			if err = p.restartPods(deployment); err != nil {
-				return err
-			}
-
-			return nil
-		}
-
-		return nil
-	}
-
-	p.log.Debugln("coredns not available fallback to kube-dns")
-	// If coreDNS does not exist we try to get the kube-dns
-	deployment, err = p.client.GetKubernetesClient().AppsV1().Deployments(coreNamespace).Get("kube-dns", metav1.GetOptions{})
-	exists, err = k8s.TranslateNotFoundError(err)
-
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return fmt.Errorf("neither CoreDNS or KubeDNS are available in namespace %q", coreNamespace)
-	}
-
-	ebo := backoff.NewConstantBackOff(10 * time.Second)
-
-	var serviceIP string
-
-	p.log.Debugln("Get CoreDNS service IP")
-
-	if err = backoff.Retry(safe.OperationWithRecover(func() error {
-		svc, errSvc := p.client.GetKubernetesClient().CoreV1().Services("maesh").Get("coredns", metav1.GetOptions{})
-		exists, errSvc := k8s.TranslateNotFoundError(errSvc)
-		if errSvc != nil {
-			return fmt.Errorf("unable get the service %q in namespace %q: %v", "coredns", "maesh", errSvc)
-		}
-		if !exists {
-			return fmt.Errorf("service %q has not been yet created", "coredns")
-		}
-		if svc.Spec.ClusterIP == "" {
-			return fmt.Errorf("service %q has no clusterIP", "coredns")
-		}
-
-		serviceIP = svc.Spec.ClusterIP
-		return nil
-	}), ebo); err != nil {
-		return fmt.Errorf("unable get the service %q in namespace %q: %v", "coredns", "maesh", err)
-	}
-
-	// Patch KubeDNS
-	p.log.Debugln("Patching KubeDNS configmap... with IP: ", serviceIP)
-
-	patched, err := p.patchKubeDNSConfigMap(deployment, serviceIP)
-	if err != nil {
-		return err
-	}
-
-	if !patched {
-		p.log.Debugln("Restarting KubeDNS pods...")
-
-		if err := p.restartPods(deployment); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (p *Prepare) patchCoreDNSConfigMap(coreDeployment *appsv1.Deployment, clusterDomain, maeshNamespace string) (bool, error) {
-	var coreConfigMapName string
-
-	if len(coreDeployment.Spec.Template.Spec.Volumes) == 0 {
-		return false, errors.New("coreDNS configmap not defined")
-	}
-
-	coreConfigMapName = getCoreDNSConfigMapName(coreDeployment)
-
-	coreConfigMap, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(coreDeployment.Namespace).Get(coreConfigMapName, metav1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
-
-	if len(coreConfigMap.ObjectMeta.Labels) > 0 {
-		if _, ok := coreConfigMap.ObjectMeta.Labels["maesh-patched"]; ok {
-			p.log.Debugln("Configmap already patched...")
-			return true, nil
-		}
-	}
-
-	serverBlock := fmt.Sprintf(
-		`
-maesh:53 {
-    errors
-    rewrite continue {
-        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh %[3]s-{1}-6d61657368-{2}.%[3]s.svc.%[1]s
-        answer name %[3]s-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.%[3]s\.svc\.%[2]s {1}.{2}.maesh
-    }
-    kubernetes %[1]s in-addr.arpa ip6.arpa {
-        pods insecure
-        upstream
-    	fallthrough in-addr.arpa ip6.arpa
-    }
-    forward . /etc/resolv.conf
-    cache 30
-    loop
-    reload
-    loadbalance
-}
-`,
-		clusterDomain,
-		strings.Replace(clusterDomain, ".", "\\.", -1),
-		maeshNamespace,
-	)
-
-	originalBlock := coreConfigMap.Data["Corefile"]
-	newBlock := originalBlock + serverBlock
-	coreConfigMap.Data["Corefile"] = newBlock
-
-	if len(coreConfigMap.ObjectMeta.Labels) == 0 {
-		coreConfigMap.ObjectMeta.Labels = make(map[string]string)
-	}
-
-	coreConfigMap.ObjectMeta.Labels["maesh-patched"] = "true"
-
-	if _, err = p.client.GetKubernetesClient().CoreV1().ConfigMaps(coreDeployment.Namespace).Update(coreConfigMap); err != nil {
-		return false, err
-	}
-
-	return false, nil
-}
-
-func (p *Prepare) patchKubeDNSConfigMap(deployment *appsv1.Deployment, coreDNSIp string) (bool, error) {
-	var configMapName string
-
-	if len(deployment.Spec.Template.Spec.Volumes) == 0 {
-		return false, errors.New("kube-dns configmap not defined")
-	}
-
-	configMapName = deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
-
-	configMap, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(deployment.Namespace).Get(configMapName, metav1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
-
-	if len(configMap.ObjectMeta.Labels) > 0 {
-		if _, ok := configMap.ObjectMeta.Labels["maesh-patched"]; ok {
-			p.log.Debugln("Configmap already patched...")
-			return true, nil
-		}
-	}
-
-	stubDomains := make(map[string][]string)
-	originalBlock, exist := configMap.Data["stubDomains"]
-
-	if !exist {
-		originalBlock = "{}"
-	}
-
-	if err = json.Unmarshal([]byte(originalBlock), &stubDomains); err != nil {
-		return false, err
-	}
-
-	stubDomains["maesh"] = []string{coreDNSIp}
-
-	var newData []byte
-
-	newData, err = json.Marshal(stubDomains)
-	if err != nil {
-		return false, err
-	}
-
-	if configMap.Data == nil {
-		configMap.Data = make(map[string]string)
-	}
-
-	configMap.Data["stubDomains"] = string(newData)
-
-	if len(configMap.ObjectMeta.Labels) == 0 {
-		configMap.ObjectMeta.Labels = make(map[string]string)
-	}
-
-	configMap.ObjectMeta.Labels["maesh-patched"] = "true"
-
-	if _, err = p.client.GetKubernetesClient().CoreV1().ConfigMaps(deployment.Namespace).Update(configMap); err != nil {
-		return false, err
-	}
-
-	return false, nil
+	return patched
 }
 
 func (p *Prepare) restartPods(deployment *appsv1.Deployment) error {
-	p.log.Infof("Restarting %s pods...\n", deployment.Name)
+	p.log.Info("Restarting %s pods", deployment.Name)
 
 	// Never edit original object, always work with a clone for updates.
 	newDeployment := deployment.DeepCopy()
@@ -441,26 +445,4 @@ func (p *Prepare) restartPods(deployment *appsv1.Deployment) error {
 	_, err := p.client.GetKubernetesClient().AppsV1().Deployments(newDeployment.Namespace).Update(newDeployment)
 
 	return err
-}
-
-// getCoreDNSConfigMapName returns the dected coredns configmap name
-func getCoreDNSConfigMapName(coreDeployment *appsv1.Deployment) string {
-	for _, volume := range coreDeployment.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap != nil {
-			return volume.ConfigMap.Name
-		}
-	}
-
-	return ""
-}
-
-// isCoreDNSVersionSupported returns true if the provided string contains a supported CoreDNS version.
-func isCoreDNSVersionSupported(versionLine string) bool {
-	for _, v := range supportedCoreDNSVersions {
-		if strings.Contains(versionLine, v) || strings.Contains(versionLine, "v"+v) {
-			return true
-		}
-	}
-
-	return false
 }
