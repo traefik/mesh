@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-dns
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      volumes:
+        - configMap:
+            name: "kubedns-cfgmap"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubedns-cfgmap
+  namespace: kube-system
+  labels:
+    maesh-patched: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns
+  namespace: maesh
+spec:
+  clusterIP: "1.2.3.4"
