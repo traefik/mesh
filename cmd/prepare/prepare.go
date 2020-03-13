@@ -56,7 +56,7 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 
 	switch provider {
 	case prepare.CoreDNS:
-		if err := p.ConfigureCoreDNS(pConfig.Namespace, pConfig.ClusterDomain); err != nil {
+		if err := p.ConfigureCoreDNS(pConfig.ClusterDomain, pConfig.Namespace); err != nil {
 			return fmt.Errorf("unable to configure CoreDNS: %v", err)
 		}
 	case prepare.KubeDNS:
