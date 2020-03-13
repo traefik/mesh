@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/containous/traefik/v2/pkg/testhelpers"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,7 +25,12 @@ var (
 
 func TestEnableReadiness(t *testing.T) {
 	config := safe.Safe{}
-	api := NewAPI(9000, localhost, &config, nil, nil, "foo")
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	api := NewAPI(log, 9000, localhost, &config, nil, nil, "foo")
 
 	assert.Equal(t, false, api.readiness)
 
@@ -55,7 +62,12 @@ func TestGetReadiness(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			config := safe.Safe{}
-			api := NewAPI(9000, localhost, &config, nil, nil, "foo")
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			api := NewAPI(log, 9000, localhost, &config, nil, nil, "foo")
 			api.readiness = test.readiness
 
 			res := httptest.NewRecorder()
@@ -70,7 +82,12 @@ func TestGetReadiness(t *testing.T) {
 
 func TestGetCurrentConfiguration(t *testing.T) {
 	config := safe.Safe{}
-	api := NewAPI(9000, localhost, &config, nil, nil, "foo")
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	api := NewAPI(log, 9000, localhost, &config, nil, nil, "foo")
 
 	config.Set("foo")
 
@@ -84,11 +101,15 @@ func TestGetCurrentConfiguration(t *testing.T) {
 
 func TestGetDeployLog(t *testing.T) {
 	config := safe.Safe{}
-	log := deploylog.NewDeployLog(1000)
-	api := NewAPI(9000, localhost, &config, log, nil, "foo")
+	log := logrus.New()
 
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	deploylog := deploylog.NewDeployLog(log, 1000)
+	api := NewAPI(log, 9000, localhost, &config, deploylog, nil, "foo")
 	currentTime := time.Now()
-	log.LogDeploy(currentTime, "foo", "bar", true, "blabla")
+	deploylog.LogDeploy(currentTime, "foo", "bar", true, "blabla")
 
 	data, err := currentTime.MarshalJSON()
 	assert.NoError(t, err)
@@ -137,14 +158,18 @@ func TestGetMeshNodes(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 			config := safe.Safe{}
-			log := deploylog.NewDeployLog(1000)
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			deploylog := deploylog.NewDeployLog(log, 1000)
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
-			api := NewAPI(9000, localhost, &config, log, clientMock.PodLister, "foo")
-
+			api := NewAPI(log, 9000, localhost, &config, deploylog, clientMock.PodLister, "foo")
 			res := httptest.NewRecorder()
 			req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/nodes", nil)
 
@@ -183,14 +208,18 @@ func TestGetMeshNodeConfiguration(t *testing.T) {
 
 	for _, test := range testCases {
 		config := safe.Safe{}
-		log := deploylog.NewDeployLog(1000)
+		log := logrus.New()
+
+		log.SetOutput(os.Stdout)
+		log.SetLevel(logrus.DebugLevel)
+
+		deploylog := deploylog.NewDeployLog(log, 1000)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
-		api := NewAPI(9000, localhost, &config, log, clientMock.PodLister, "foo")
-
+		api := NewAPI(log, 9000, localhost, &config, deploylog, clientMock.PodLister, "foo")
 		res := httptest.NewRecorder()
 		req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/node/mesh-pod-1/configuration", nil)
 

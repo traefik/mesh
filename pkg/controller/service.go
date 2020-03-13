@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/containous/maesh/pkg/k8s"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,6 +18,7 @@ import (
 
 // ShadowServiceManager manages shadow services.
 type ShadowServiceManager struct {
+	log           logrus.FieldLogger
 	lister        listers.ServiceLister
 	namespace     string
 	tcpStateTable TCPPortMapper
@@ -28,8 +29,9 @@ type ShadowServiceManager struct {
 }
 
 // NewShadowServiceManager returns new shadow service manager.
-func NewShadowServiceManager(lister listers.ServiceLister, namespace string, tcpStateTable TCPPortMapper, defaultMode string, minHTTPPort, maxHTTPPort int32, kubeClient kubernetes.Interface) *ShadowServiceManager {
+func NewShadowServiceManager(log logrus.FieldLogger, lister listers.ServiceLister, namespace string, tcpStateTable TCPPortMapper, defaultMode string, minHTTPPort, maxHTTPPort int32, kubeClient kubernetes.Interface) *ShadowServiceManager {
 	return &ShadowServiceManager{
+		log:           log,
 		lister:        lister,
 		namespace:     namespace,
 		tcpStateTable: tcpStateTable,
@@ -44,7 +46,7 @@ func NewShadowServiceManager(lister listers.ServiceLister, namespace string, tcp
 func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 	name := s.getShadowServiceName(userSvc.Name, userSvc.Namespace)
 
-	log.Debugf("Creating mesh service: %s", name)
+	s.log.Debugf("Creating mesh service: %s", name)
 
 	_, err := s.lister.Services(s.namespace).Get(name)
 	if err == nil {
@@ -108,7 +110,7 @@ func (s *ShadowServiceManager) Update(oldUserSvc *v1.Service, newUserSvc *v1.Ser
 		return nil, fmt.Errorf("unable to update service %q: %v", name, retryErr)
 	}
 
-	log.Debugf("Updated service: %s/%s", s.namespace, name)
+	s.log.Debugf("Updated service: %s/%s", s.namespace, name)
 
 	return updatedSvc, nil
 }
@@ -128,7 +130,7 @@ func (s *ShadowServiceManager) Delete(userSvc *v1.Service) error {
 		return err
 	}
 
-	log.Debugf("Deleted service: %s/%s", s.namespace, name)
+	s.log.Debugf("Deleted service: %s/%s", s.namespace, name)
 
 	return nil
 }
@@ -153,7 +155,7 @@ func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, ne
 				Port:      old.Port,
 			})
 			if err != nil {
-				log.Warnf("Unable to remove port mapping for %s/%s on port %d", oldUserSvc.Namespace, oldUserSvc.Name, old.Port)
+				s.log.Warnf("Unable to remove port mapping for %s/%s on port %d", oldUserSvc.Namespace, oldUserSvc.Name, old.Port)
 			}
 		}
 	}
@@ -169,13 +171,13 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) []core
 
 	for i, sp := range svc.Spec.Ports {
 		if sp.Protocol != corev1.ProtocolTCP {
-			log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, svc.Namespace, svc.Name)
+			s.log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, svc.Namespace, svc.Name)
 			continue
 		}
 
 		targetPort, err := s.getTargetPort(svcMode, i, svc.Name, svc.Namespace, sp.Port)
 		if err != nil {
-			log.Errorf("Unable to find available %s port: %v, skipping port %s on service %s/%s", sp.Name, err, sp.Name, svc.Namespace, svc.Name)
+			s.log.Errorf("Unable to find available %s port: %v, skipping port %s on service %s/%s", sp.Name, err, sp.Name, svc.Namespace, svc.Name)
 			continue
 		}
 
@@ -226,14 +228,14 @@ func (s *ShadowServiceManager) getTCPPort(svcName, svcNamespace string, svcPort 
 		return port, nil
 	}
 
-	log.Debugf("No match found for %s/%s %d - Add a new port", svcName, svcNamespace, svcPort)
+	s.log.Debugf("No match found for %s/%s %d - Add a new port", svcName, svcNamespace, svcPort)
 
 	port, err := s.tcpStateTable.Add(&svc)
 	if err != nil {
 		return 0, fmt.Errorf("unable to add service to the TCP state table: %w", err)
 	}
 
-	log.Debugf("Service %s/%s %d as been assigned port %d", svcName, svcNamespace, svcPort, port)
+	s.log.Debugf("Service %s/%s %d as been assigned port %d", svcName, svcNamespace, svcPort, port)
 
 	return port, nil
 }
