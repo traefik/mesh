@@ -343,9 +343,7 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 	err := backoff.Retry(safe.OperationWithRecover(func() error {
 		// Get current coreDNS deployment.
 		deployment, err := s.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
-		exists, err := k8s.TranslateNotFoundError(err)
 		c.Assert(err, checker.IsNil)
-		c.Assert(exists, checker.True)
 
 		newDeployment := deployment.DeepCopy()
 		c.Assert(len(newDeployment.Spec.Template.Spec.Containers), checker.Equals, 1)
