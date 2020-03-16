@@ -197,6 +197,7 @@ func (s *ShadowServiceManager) getServiceMode(svc *corev1.Service) string {
 	if svcMode, ok := svc.Annotations[k8s.AnnotationServiceType]; ok {
 		return svcMode
 	}
+
 	return s.defaultMode
 }
 
