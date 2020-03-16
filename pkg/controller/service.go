@@ -136,6 +136,10 @@ func (s *ShadowServiceManager) Delete(userSvc *v1.Service) error {
 }
 
 func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, newUserSvc *corev1.Service) {
+	if svcMode := s.getServiceMode(oldUserSvc); svcMode != k8s.ServiceTypeTCP {
+		return
+	}
+
 	for _, old := range oldUserSvc.Spec.Ports {
 		var found bool
 
@@ -164,10 +168,7 @@ func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, ne
 func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) []corev1.ServicePort {
 	var ports []corev1.ServicePort
 
-	svcMode := svc.Annotations[k8s.AnnotationServiceType]
-	if svcMode == "" {
-		svcMode = s.defaultMode
-	}
+	svcMode := s.getServiceMode(svc)
 
 	for i, sp := range svc.Spec.Ports {
 		if sp.Protocol != corev1.ProtocolTCP {
@@ -190,6 +191,14 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) []core
 	}
 
 	return ports
+}
+
+func (s *ShadowServiceManager) getServiceMode(svc *corev1.Service) string {
+	if svcMode, ok := svc.Annotations[k8s.AnnotationServiceType]; ok {
+		return svcMode
+	}
+
+	return s.defaultMode
 }
 
 // userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.
