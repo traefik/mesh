@@ -96,14 +96,14 @@ func (t *Try) WaitDeleteDeployment(name string, namespace string, timeout time.D
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
 		_, err := t.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
-			if !kubeerror.IsNotFound(err) {
-				return fmt.Errorf("deployment %q exist", name)
+			if kubeerror.IsNotFound(err) {
+				return nil
 			}
 
 			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 		}
 
-		return nil
+		return fmt.Errorf("deployment %q exist", name)
 	}), ebo); err != nil {
 		return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 	}
@@ -209,14 +209,14 @@ func (t *Try) WaitDeleteNamespace(name string, timeout time.Duration) error {
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
 		_, err := t.client.GetKubernetesClient().CoreV1().Namespaces().Get(name, metav1.GetOptions{})
 		if err != nil {
-			if !kubeerror.IsNotFound(err) {
-				return fmt.Errorf("namesapce %q exist", name)
+			if kubeerror.IsNotFound(err) {
+				return nil
 			}
 
 			return fmt.Errorf("unable get the namesapce %q: %v", name, err)
 		}
 
-		return nil
+		return fmt.Errorf("namesapce %q exist", name)
 	}), ebo); err != nil {
 		return fmt.Errorf("unable get the namesapce %q: %v", name, err)
 	}
