@@ -15,6 +15,11 @@ helm install maesh maesh/maesh
 
 ## Install from source
 
+!!! Note Supported Installations
+    Please be aware that the supported installation method is via Helm, using official releases.
+    If you want to build/install/run Maesh from source, we may not be able to provide support.
+    Installing from source is intended for development/contributing .
+
 To build the image locally, run:
 
 ```shell
@@ -22,6 +27,7 @@ make
 ```
 
  to build the binary and build/tag the local image.
+You will then be able to use the tagged image as your image in your `values.yaml` file.
 
 ## Deploy helm chart
 
