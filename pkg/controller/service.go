@@ -3,6 +3,8 @@ package controller
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
@@ -169,11 +171,19 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) []core
 	var ports []corev1.ServicePort
 
 	svcMode := s.getServiceMode(svc)
+	allowedPorts := s.getServiceExposedPorts(svc)
 
 	for i, sp := range svc.Spec.Ports {
 		if sp.Protocol != corev1.ProtocolTCP {
 			s.log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, svc.Namespace, svc.Name)
 			continue
+		}
+
+		if len(allowedPorts) > 0 {
+			if !s.portMatch(sp, allowedPorts) {
+				// Port is not to be exposed
+				continue
+			}
 		}
 
 		targetPort, err := s.getTargetPort(svcMode, i, svc.Name, svc.Namespace, sp.Port)
@@ -201,11 +211,21 @@ func (s *ShadowServiceManager) getServiceMode(svc *corev1.Service) string {
 	return s.defaultMode
 }
 
+// getServiceExposedPorts returns the exposed port annotation from the service.
+func (s *ShadowServiceManager) getServiceExposedPorts(svc *corev1.Service) []string {
+	if rawPorts, ok := svc.Annotations[k8s.AnnotationServiceExposedPorts]; ok && rawPorts != "" {
+		return strings.Split(rawPorts, ",")
+	}
+
+	return []string{}
+}
+
 // userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.
 func (s *ShadowServiceManager) getShadowServiceName(name string, namespace string) string {
 	return fmt.Sprintf("%s-%s-6d61657368-%s", s.namespace, name, namespace)
 }
 
+// getTargetPort returns the port number from a variety of service details.
 func (s *ShadowServiceManager) getTargetPort(svcMode string, portID int, name, namespace string, port int32) (int32, error) {
 	switch svcMode {
 	case k8s.ServiceTypeHTTP:
@@ -247,4 +267,25 @@ func (s *ShadowServiceManager) getTCPPort(svcName, svcNamespace string, svcPort 
 	s.log.Debugf("Service %s/%s %d as been assigned port %d", svcName, svcNamespace, svcPort, port)
 
 	return port, nil
+}
+
+// portMatch returns a boolean if the port matches any of the descriptors in the slice.
+func (s *ShadowServiceManager) portMatch(sp corev1.ServicePort, allowed []string) bool {
+	for _, v := range allowed {
+		trimmed := strings.TrimSpace(v)
+		if sp.Name == trimmed {
+			return true
+		}
+
+		intVal, err := strconv.ParseInt(trimmed, 10, 32)
+		if err != nil {
+			continue
+		}
+
+		if sp.Port == int32(intVal) {
+			return true
+		}
+	}
+
+	return false
 }
