@@ -21,7 +21,7 @@ blocks:
     task:
       prologue:
         commands:
-          - sem-version go 1.13
+          - sem-version go 1.14
           - go version
           - checkout
       jobs:
