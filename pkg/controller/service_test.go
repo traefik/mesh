@@ -152,6 +152,65 @@ func Test_ServiceCreate(t *testing.T) {
 			expectedErr: false,
 		},
 		{
+			name: "create HTTP service with restricted ports",
+			provided: corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "http",
+					Namespace: "namespace",
+					Annotations: map[string]string{
+						"maesh.containo.us/exposed-ports": "http, 3722",
+					}},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:     "http",
+							Protocol: corev1.ProtocolTCP,
+							Port:     80,
+						},
+						{
+							Name:     "https",
+							Protocol: corev1.ProtocolTCP,
+							Port:     443,
+						},
+						{
+							Name:     "app",
+							Protocol: corev1.ProtocolTCP,
+							Port:     3722,
+						},
+					},
+				},
+			},
+			expected: corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "maesh-http-6d61657368-namespace",
+					Namespace: "maesh",
+					Labels: map[string]string{
+						"app": "maesh",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       80,
+							TargetPort: intstr.FromInt(5000),
+						},
+						{
+							Name:       "app",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       3722,
+							TargetPort: intstr.FromInt(5002),
+						},
+					},
+					Selector: map[string]string{
+						"component": "maesh-mesh",
+					},
+				},
+			},
+			expectedErr: false,
+		},
+		{
 			name: "create TCP service, reuse TCP port",
 			provided: corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
@@ -241,17 +300,6 @@ func Test_ServiceCreate(t *testing.T) {
 		},
 	}
 
-	client, lister := makeClient(&corev1.Service{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      "maesh-alreadyexist-6d61657368-namespace",
-			Namespace: "maesh",
-			Labels: map[string]string{
-				"app":               "maesh",
-				"test-alreadyexist": "true",
-			},
-		},
-	})
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			tcpPortMapper := tcpPortMapperMock{
@@ -274,7 +322,18 @@ func Test_ServiceCreate(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, "http", 5000, 5002, client)
+			client, lister := makeClient(&corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "maesh-alreadyexist-6d61657368-namespace",
+					Namespace: "maesh",
+					Labels: map[string]string{
+						"app":               "maesh",
+						"test-alreadyexist": "true",
+					},
+				},
+			})
+
+			service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, "http", 5000, 5005, client)
 			err := service.Create(&test.provided)
 			if test.expectedErr {
 				assert.Error(t, err)

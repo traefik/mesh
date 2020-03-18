@@ -26,6 +26,22 @@ Dynamic configuration can be provided to Maesh using either annotations on kuber
 
 ### With Kubernetes Services
 
+#### Exposed ports
+
+By default, all ports on services are exposed by maesh.
+If you would like to define which ports are exposed, you can use the following annotation:
+
+```yaml
+maesh.containo.us/exposed-ports: "http, admin, 8553"
+```
+
+The list of ports can be names or port numbers.
+Any ports that match will be exposed via maesh.
+
+??? Note "TargetPorts"
+    Please keep in mind, that the matching is done against the service ports only.
+    TargetPorts are not checked at the time being.
+
 #### Traffic type
 
 Annotations on services are the main way to configure maesh behavior.

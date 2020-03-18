@@ -20,6 +20,8 @@ const (
 
 	// AnnotationServiceType service type annotation.
 	AnnotationServiceType = baseAnnotation + "traffic-type"
+	// AnnotationServiceExposedPorts service ports annotation.
+	AnnotationServiceExposedPorts = baseAnnotation + "exposed-ports"
 	// AnnotationScheme scheme.
 	AnnotationScheme = baseAnnotation + "scheme"
 	// AnnotationRetryAttempts retry attempts annotation.
