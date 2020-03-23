@@ -16,6 +16,7 @@ import (
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
@@ -51,13 +52,12 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
 		d, err := t.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
-		exists, err := k8s.TranslateNotFoundError(err)
-
 		if err != nil {
+			if kubeerror.IsNotFound(err) {
+				return fmt.Errorf("deployment %q has not been yet created", name)
+			}
+
 			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
-		}
-		if !exists {
-			return fmt.Errorf("deployment %q has not been yet created", name)
 		}
 		if d.Status.Replicas == 0 {
 			return fmt.Errorf("deployment %q has no replicas", name)
@@ -95,16 +95,15 @@ func (t *Try) WaitDeleteDeployment(name string, namespace string, timeout time.D
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
 		_, err := t.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
-		exists, err := k8s.TranslateNotFoundError(err)
-
 		if err != nil {
+			if kubeerror.IsNotFound(err) {
+				return nil
+			}
+
 			return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 		}
-		if exists {
-			return fmt.Errorf("deployment %q exist", name)
-		}
 
-		return nil
+		return fmt.Errorf("deployment %q exist", name)
 	}), ebo); err != nil {
 		return fmt.Errorf("unable get the deployment %q in namespace %q: %v", name, namespace, err)
 	}
@@ -209,16 +208,15 @@ func (t *Try) WaitDeleteNamespace(name string, timeout time.Duration) error {
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
 		_, err := t.client.GetKubernetesClient().CoreV1().Namespaces().Get(name, metav1.GetOptions{})
-		exists, err := k8s.TranslateNotFoundError(err)
-
 		if err != nil {
+			if kubeerror.IsNotFound(err) {
+				return nil
+			}
+
 			return fmt.Errorf("unable get the namesapce %q: %v", name, err)
 		}
-		if exists {
-			return fmt.Errorf("namesapce %q exist", name)
-		}
 
-		return nil
+		return fmt.Errorf("namesapce %q exist", name)
 	}), ebo); err != nil {
 		return fmt.Errorf("unable get the namesapce %q: %v", name, err)
 	}
