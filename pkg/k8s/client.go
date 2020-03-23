@@ -7,7 +7,6 @@ import (
 	specsClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
 	splitClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	kubeClient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -133,14 +132,4 @@ func buildSmiSplitClient(log logrus.FieldLogger, config *rest.Config) (*splitCli
 	}
 
 	return client, nil
-}
-
-// TranslateNotFoundError will translate a "not found" error to a boolean return
-// value which indicates if the resource exists and a nil error.
-func TranslateNotFoundError(err error) (bool, error) {
-	if kubeerror.IsNotFound(err) {
-		return false, nil
-	}
-
-	return err == nil, err
 }
