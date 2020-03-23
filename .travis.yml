@@ -1,6 +1,10 @@
 language: go
 
-sudo: required
+go:
+  - 1.14
+
+os: linux
+
 dist: xenial
 
 git:
@@ -15,10 +19,10 @@ cache:
   directories:
     - $GOPATH/pkg/mod
 
-matrix:
+jobs:
   fast_finish: true
   include:
-    - go: 1.12.x
+    - go: 1.14
       env: STABLE=true
 
 env:
@@ -80,8 +84,9 @@ deploy:
       tags: true
       condition: $STABLE = true
   - provider: pages
+    strategy: git
     edge: false
-    github_token: ${GITHUB_TOKEN}
+    token: ${GITHUB_TOKEN}
     target_branch: gh-pages
     local_dir: site
     skip_cleanup: true
