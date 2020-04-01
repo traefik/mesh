@@ -1,13 +1,13 @@
 package controller
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -75,7 +75,7 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 		},
 	}
 
-	if _, err = s.kubeClient.CoreV1().Services(s.namespace).Create(svc); err != nil {
+	if _, err = s.kubeClient.CoreV1().Services(s.namespace).Create(context.TODO(), svc, metav1.CreateOptions{}); err != nil {
 		return fmt.Errorf("unable to create kubernetes service: %w", err)
 	}
 
@@ -83,7 +83,7 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 }
 
 // Update updates the shadow service associated with the old user service following the content of the new user service.
-func (s *ShadowServiceManager) Update(oldUserSvc *v1.Service, newUserSvc *v1.Service) (*v1.Service, error) {
+func (s *ShadowServiceManager) Update(oldUserSvc *corev1.Service, newUserSvc *corev1.Service) (*corev1.Service, error) {
 	name := s.getShadowServiceName(newUserSvc.Name, newUserSvc.Namespace)
 
 	s.cleanupPortMapping(oldUserSvc, newUserSvc)
@@ -99,7 +99,7 @@ func (s *ShadowServiceManager) Update(oldUserSvc *v1.Service, newUserSvc *v1.Ser
 		newSvc := svc.DeepCopy()
 		newSvc.Spec.Ports = s.getShadowServicePorts(newUserSvc)
 
-		if updatedSvc, err = s.kubeClient.CoreV1().Services(s.namespace).Update(newSvc); err != nil {
+		if updatedSvc, err = s.kubeClient.CoreV1().Services(s.namespace).Update(context.TODO(), newSvc, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("unable to update kubernetes service: %w", err)
 		}
 
@@ -116,7 +116,7 @@ func (s *ShadowServiceManager) Update(oldUserSvc *v1.Service, newUserSvc *v1.Ser
 }
 
 // Delete deletes a shadow service associated with the given user service.
-func (s *ShadowServiceManager) Delete(userSvc *v1.Service) error {
+func (s *ShadowServiceManager) Delete(userSvc *corev1.Service) error {
 	name := s.getShadowServiceName(userSvc.Name, userSvc.Namespace)
 
 	s.cleanupPortMapping(userSvc, nil)
@@ -126,7 +126,7 @@ func (s *ShadowServiceManager) Delete(userSvc *v1.Service) error {
 		return err
 	}
 
-	if err := s.kubeClient.CoreV1().Services(s.namespace).Delete(name, &metav1.DeleteOptions{}); err != nil {
+	if err := s.kubeClient.CoreV1().Services(s.namespace).Delete(context.TODO(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

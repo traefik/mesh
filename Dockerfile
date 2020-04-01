@@ -1,5 +1,5 @@
 # Let's build maesh for linux-amd64
-FROM golang:1.13-alpine AS base-image
+FROM golang:1.14-alpine AS base-image
 
 # Package dependencies
 RUN apk --no-cache --no-progress add \
@@ -22,7 +22,7 @@ WORKDIR /go/src/github.com/containous/maesh
 RUN curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
 
 # Download golangci-lint binary to bin folder in $GOPATH
-RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.22.2
+RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.24.0
 
 ENV GO111MODULE on
 COPY go.mod go.sum ./

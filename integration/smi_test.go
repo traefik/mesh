@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -19,7 +20,7 @@ func (s *SMISuite) SetUpSuite(c *check.C) {
 		"containous/maesh:latest",
 		"containous/whoami:v1.0.1",
 		"coredns/coredns:1.6.3",
-		"traefik:v2.1.6",
+		"traefik:v2.2.0",
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
@@ -95,7 +96,7 @@ func (s *SMISuite) checkWhitelistSourceRanges(c *check.C, config *dynamic.Config
 		source := string(name[0])
 		expected := []string{}
 
-		podList, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).List(metav1.ListOptions{})
+		podList, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).List(context.TODO(), metav1.ListOptions{})
 		c.Assert(err, checker.IsNil)
 
 		for _, pod := range podList.Items {
@@ -130,7 +131,7 @@ func (s *SMISuite) checkHTTPServiceServerURLs(c *check.C, config *dynamic.Config
 
 		serviceName := string(name[0])
 
-		endpoints, err := s.client.GetKubernetesClient().CoreV1().Endpoints(testNamespace).Get(serviceName, metav1.GetOptions{})
+		endpoints, err := s.client.GetKubernetesClient().CoreV1().Endpoints(testNamespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
 		c.Assert(err, checker.IsNil)
 
 		for _, subset := range endpoints.Subsets {
@@ -161,7 +162,7 @@ func (s *SMISuite) checkTCPServiceServerURLs(c *check.C, config *dynamic.Configu
 	for name, service := range config.TCP.Services {
 		serviceName := "tcp"
 
-		endpoints, err := s.client.GetKubernetesClient().CoreV1().Endpoints(testNamespace).Get(serviceName, metav1.GetOptions{})
+		endpoints, err := s.client.GetKubernetesClient().CoreV1().Endpoints(testNamespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
 		c.Assert(err, checker.IsNil)
 
 		for _, subset := range endpoints.Subsets {
