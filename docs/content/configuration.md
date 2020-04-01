@@ -18,7 +18,7 @@ and is configured via the values.yaml file in the helm install.
 - Service Mesh Interface (SMI) mode can be enabled.
     This configures maesh to run in SMI mode, where access and routes are explicitly enabled.
     Note: By default, all routes and access is denied.
-    Please see the [SMI Specification](https://github.com/deislabs/smi-spec) for more information
+    Please see the [SMI Specification](https://github.com/servicemeshinterface/smi-spec) for more information
 
 ## Dynamic configuration
 
@@ -121,7 +121,7 @@ More precisely, the `server` app is composed by two routes:
 - The `api` route under the `/api` path, accepting all methods
 - The `metrics` routes under the `/metrics` path, accepting only `GET` requests
 
-Other types of route groups and detailed information are available [in the specification](https://github.com/deislabs/smi-spec/blob/master/traffic-specs.md).
+Other types of route groups and detailed information are available [in the specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-specs.md).
 
 By default, all traffic is denied so we need to grant access to clients to our application. This is done by defining a `TrafficTarget`.
 
@@ -154,7 +154,7 @@ In this example, we grant access to all pods running with the service account `c
 
 Any client running with the service account `client` under the `client` namespace accessing `server.server.maesh/api` is allowed to access the `/api` resource. Others will receive 404 answers from the Maesh node.
 
-More information can be found [in the SMI specification](https://github.com/deislabs/smi-spec/blob/master/traffic-access-control.md).
+More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md).
 
 #### Traffic Splitting
 
@@ -178,8 +178,8 @@ spec:
 In this example, we define a traffic split for our server service between two versions of our server, v1 and v2.
 `server.server.maesh` directs 80% of the traffic to the server-v1 pods, and 20% of the traffic to the server-v2 pods.
 
-More information can be found [in the SMI specification](https://github.com/deislabs/smi-spec/blob/master/traffic-split.md).
+More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-split.md).
 
 #### Traffic Metrics
 
-At the moment, Maesh does not implement the [Traffic Metrics specification](https://github.com/deislabs/smi-spec/blob/master/traffic-metrics.md).
+At the moment, Maesh does not implement the [Traffic Metrics specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-metrics.md).

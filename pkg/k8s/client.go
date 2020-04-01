@@ -3,9 +3,9 @@ package k8s
 import (
 	"fmt"
 
-	accessClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
-	specsClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
-	splitClient "github.com/deislabs/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
+	accessClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	specsClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
+	splitClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	kubeClient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
