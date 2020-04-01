@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -69,7 +70,7 @@ func Test(t *testing.T) {
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7", true})
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7", true})
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7", true})
-	images = append(images, image{"traefik:v2.1.6", true})
+	images = append(images, image{"traefik:v2.2.0", true})
 
 	for _, image := range images {
 		if image.pull {
@@ -342,7 +343,7 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 
 	err := backoff.Retry(safe.OperationWithRecover(func() error {
 		// Get current coreDNS deployment.
-		deployment, err := s.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+		deployment, err := s.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get(context.TODO(), "coredns", metav1.GetOptions{})
 		c.Assert(err, checker.IsNil)
 
 		newDeployment := deployment.DeepCopy()
@@ -367,7 +368,7 @@ func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
 }
 
 func (s *BaseSuite) getToolsPodMaesh(c *check.C) *corev1.Pod {
-	podList, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).List(metav1.ListOptions{
+	podList, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "app=tiny-tools",
 	})
 	c.Assert(err, checker.IsNil)

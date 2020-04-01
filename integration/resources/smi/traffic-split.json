@@ -59,26 +59,6 @@
                 "rule": "Path(`/ping`)"
             }
         },
-        "middlewares": {
-            "a-b-test-b-test-80-a-b-test-e0425d13b2a322ad-whitelist": {
-                "ipWhiteList":{"sourceRange":["XXXX"]}
-            },
-            "a-b-test-b-v1-test-80-a-b-test-03b338bc8ba21fbc-whitelist": {
-                "ipWhiteList":{"sourceRange":["XXXX"]}
-            },
-            "a-b-test-b-v2-test-80-a-b-test-c2918aa87de2f415-whitelist": {
-                "ipWhiteList":{"sourceRange":["XXXX"]}
-            },
-            "a-b-test-b1-test-80-a-b-test-ce97b257f9b2710f-whitelist": {
-                "ipWhiteList":{"sourceRange":["XXXX"]}
-            },
-            "a-b-test-b2-test-80-a-b-test-6485fb29d873a5c3-whitelist": {
-                "ipWhiteList":{"sourceRange":["XXXX"]}
-            },
-            "smi-block-all-middleware": {
-                "ipWhiteList":{"sourceRange":["XXXX"]}
-            }
-        },
         "services": {
             "b-test-80-a-b-test-e0425d13b2a322ad": {
                 "weighted": {
@@ -151,6 +131,26 @@
                     ],
                     "passHostHeader": true
                 }
+            }
+        },
+        "middlewares": {
+            "a-b-test-b-test-80-a-b-test-e0425d13b2a322ad-whitelist": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
+            },
+            "a-b-test-b-v1-test-80-a-b-test-03b338bc8ba21fbc-whitelist": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
+            },
+            "a-b-test-b-v2-test-80-a-b-test-c2918aa87de2f415-whitelist": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
+            },
+            "a-b-test-b1-test-80-a-b-test-ce97b257f9b2710f-whitelist": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
+            },
+            "a-b-test-b2-test-80-a-b-test-6485fb29d873a5c3-whitelist": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
+            },
+            "smi-block-all-middleware": {
+                "ipWhiteList":{"sourceRange":["XXXX"]}
             }
         }
     },

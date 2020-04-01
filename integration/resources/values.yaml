@@ -25,7 +25,7 @@ mesh:
     # (Optional)
     # pullPolicy: IfNotPresent
     # (Optional)
-    tag: v2.1.6
+    tag: v2.2.0
     # (Optional)
     # pullSecret: xxx
   resources:
