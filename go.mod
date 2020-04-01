@@ -4,21 +4,21 @@ go 1.13
 
 // Kubernetes version kubernetes-1.15.3
 require (
-	github.com/abronan/valkeyrie v0.0.0-20190822142731-f2e1850dc905
+	github.com/abronan/valkeyrie v0.0.0-20200127174252-ef4277a138cd
 	github.com/cenkalti/backoff/v4 v4.0.0
-	github.com/containous/traefik/v2 v2.1.6
-	github.com/deislabs/smi-sdk-go v0.2.1-0.20191211172751-4e51d4dc331e
+	github.com/containous/traefik/v2 v2.2.0
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
 	github.com/pmezard/go-difflib v1.0.0
+	github.com/servicemeshinterface/smi-sdk-go v0.3.1-0.20200326101714-d0668c95e1dc
 	github.com/sirupsen/logrus v1.4.2
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/vdemeester/shakers v0.1.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	k8s.io/api v0.0.0-20190819141258-3544db3b9e44
-	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
-	k8s.io/client-go v0.0.0-20190819141724-e14f31a72a77
+	k8s.io/api v0.18.0
+	k8s.io/apimachinery v0.18.0
+	k8s.io/client-go v0.18.0
 )
 
 replace (

@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -83,7 +84,7 @@ func TestTCPPortMapping_AddWithState(t *testing.T) {
 	require.NotNil(t, gotSvc)
 	assert.Equal(t, wantSvc, gotSvc)
 
-	cfgMap, err = client.CoreV1().ConfigMaps("maesh").Get("tcp-state-table", metav1.GetOptions{})
+	cfgMap, err = client.CoreV1().ConfigMaps("maesh").Get(context.TODO(), "tcp-state-table", metav1.GetOptions{})
 	require.NoError(t, err)
 	assert.Len(t, cfgMap.Data, 1)
 	assert.Equal(t, "my-ns/my-app:9090", cfgMap.Data["10000"])
@@ -131,7 +132,7 @@ func TestTCPPortMapping_AddOverflow(t *testing.T) {
 	gotSvc = m.Get(10002)
 	assert.Nil(t, gotSvc)
 
-	cfgMap, err = client.CoreV1().ConfigMaps("maesh").Get("tcp-state-table", metav1.GetOptions{})
+	cfgMap, err = client.CoreV1().ConfigMaps("maesh").Get(context.TODO(), "tcp-state-table", metav1.GetOptions{})
 	require.NoError(t, err)
 	assert.Len(t, cfgMap.Data, 2)
 }
