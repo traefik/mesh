@@ -3,7 +3,7 @@ package base
 import (
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	splitv1alpha2 "github.com/deislabs/smi-sdk-go/pkg/apis/split/v1alpha2"
+	splitv1alpha2 "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 )
 

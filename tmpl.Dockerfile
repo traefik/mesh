@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine AS builder
+FROM golang:1.14-alpine AS builder
 
 # Package dependencies
 RUN apk --no-cache --no-progress add \
