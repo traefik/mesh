@@ -20,7 +20,7 @@ to provide early visibility to reviewers, create a [Draft Pull Request].
 
 ## Release Process
 
-Maesh follows the [semver](https://semver.org/) sheme when releasing new versions.
+Maesh follows the [semver](https://semver.org/) scheme when releasing new versions.
 
 Therefore, all PR's (except fixing a bug in a specific version) should be made against the `master` branch. If you're attempting to fix a bug in an already released version, please use the correct branch of that release (e.g. `v1.1`). All bug-fixes made to a specific branch will be backported to master, prior to releasing a new (major / minor) version. Patch releases will be made out of the version branch.
 

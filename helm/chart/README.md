@@ -3,7 +3,8 @@
 ## Prerequisites
 
 With the command `helm version`, make sure that you have:
-- Helm v3[installed](https://helm.sh/docs/using_helm/#installing-helm) 
+
+- Helm v3 [installed](https://helm.sh/docs/using_helm/#installing-helm) 
 
 Add Maesh's chart repository to Helm:
 
