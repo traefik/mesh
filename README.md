@@ -12,7 +12,7 @@
 
 ## Maesh: Simpler Service Mesh
 
-Maesh is a simple, yet full-featured service mesh.. 
+Maesh is a simple, yet full-featured service mesh. 
 It is container-native and fits as your de-facto service mesh in your Kubernetes cluster. 
 It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io) that facilitates integration with pre-existing solution. 
 Moreover, Maesh is opt-in by default, 
@@ -44,7 +44,7 @@ To run this app, you require the following:
 - CoreDNS installed as [Cluster DNS Provider](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/) (versions 1.3+ supported)
 - Helm v3
 
-## Install (Helm v2 only)
+## Install (Helm v3 only)
 
 ```shell
 helm repo add maesh https://containous.github.io/maesh/charts
