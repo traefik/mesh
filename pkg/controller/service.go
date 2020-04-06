@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
@@ -73,6 +74,13 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 				"component": "maesh-mesh",
 			},
 		},
+	}
+
+	major, minor := parseKubernetesServerVersion(s.kubeClient)
+
+	// If the kuberentes server version is 1.17+, then use the topology key.
+	if major == 1 && minor >= 17 {
+		svc.Spec.TopologyKeys = []string{"kubernetes.io/hostname", "*"}
 	}
 
 	if _, err = s.kubeClient.CoreV1().Services(s.namespace).Create(context.TODO(), svc, metav1.CreateOptions{}); err != nil {
@@ -247,4 +255,23 @@ func (s *ShadowServiceManager) getTCPPort(svcName, svcNamespace string, svcPort 
 	s.log.Debugf("Service %s/%s %d as been assigned port %d", svcName, svcNamespace, svcPort, port)
 
 	return port, nil
+}
+
+func parseKubernetesServerVersion(kubeClient kubernetes.Interface) (major, minor int) {
+	kubeVersion, err := kubeClient.Discovery().ServerVersion()
+	if err != nil {
+		return 0, 0
+	}
+
+	major, err = strconv.Atoi(kubeVersion.Major)
+	if err != nil {
+		return 0, 0
+	}
+
+	minor, err = strconv.Atoi(kubeVersion.Minor)
+	if err != nil {
+		return 0, 0
+	}
+
+	return major, minor
 }
