@@ -29,7 +29,7 @@ helm install maesh maesh/maesh
 ### Deploy Maesh in a Custom Namespace
 
 ```bash
-helm install maesh maesh/maesh
+helm install maesh --namespace=maesh maesh/maesh
 ```
 
 ### Deploy with Custom Configuration
