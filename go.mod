@@ -2,7 +2,6 @@ module github.com/containous/maesh
 
 go 1.14
 
-// Kubernetes version kubernetes-1.18
 require (
 	github.com/abronan/valkeyrie v0.0.0-20200127174252-ef4277a138cd
 	github.com/cenkalti/backoff/v4 v4.0.0
