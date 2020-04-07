@@ -112,7 +112,7 @@ func (s *CoreDNSSuite) TestCoreDNSDig(c *check.C) {
 	defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
 	s.WaitForCoreDNS(c)
 
-	cmd := s.startMaeshBinaryCmd(c, false)
+	cmd := s.startMaeshBinaryCmd(c, false, false)
 	err := cmd.Start()
 
 	c.Assert(err, checker.IsNil)

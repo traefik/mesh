@@ -1,6 +1,0 @@
----
-apiVersion: specs.smi-spec.io/v1alpha1
-kind: TCPRoute
-metadata:
-  name: tcp-access
-  namespace: test
