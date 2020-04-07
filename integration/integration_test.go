@@ -27,6 +27,8 @@ import (
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/go-check/check"
 	"github.com/pmezard/go-difflib/difflib"
+	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
+	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
 	checker "github.com/vdemeester/shakers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,14 +54,15 @@ func Test(t *testing.T) {
 		return
 	}
 
+	check.Suite(&ACLDisabledSuite{})
+	check.Suite(&ACLEnabledSuite{})
 	check.Suite(&CoreDNSSuite{})
-	check.Suite(&SMISuite{})
-	check.Suite(&KubernetesSuite{})
 	check.Suite(&KubeDNSSuite{})
 	check.Suite(&HelmSuite{})
 
 	images = append(images, image{"containous/maesh:latest", false})
 	images = append(images, image{"containous/whoami:v1.0.1", true})
+	images = append(images, image{"containous/whoamitcp", true})
 	images = append(images, image{"coredns/coredns:1.2.6", true})
 	images = append(images, image{"coredns/coredns:1.3.1", true})
 	images = append(images, image{"coredns/coredns:1.4.0", true})
@@ -120,7 +123,7 @@ func (s *BaseSuite) maeshPrepareWithArgs(args ...string) *exec.Cmd {
 	return exec.Command(maeshBinary, args...)
 }
 
-func (s *BaseSuite) startMaeshBinaryCmd(c *check.C, smi bool) *exec.Cmd {
+func (s *BaseSuite) startMaeshBinaryCmd(c *check.C, smi bool, acl bool) *exec.Cmd {
 	args := []string{}
 	if smi {
 		args = append(args, "--smi")
@@ -134,6 +137,9 @@ func (s *BaseSuite) startMaeshBinaryCmd(c *check.C, smi bool) *exec.Cmd {
 
 	// Ignore the kube-system namespace since we don't care about system events.
 	args = append(args, "--ignoreNamespaces=kube-system")
+	if acl {
+		args = append(args, "--acl")
+	}
 
 	return s.maeshStartControllerWithArgsCmd(args...)
 }
@@ -267,6 +273,28 @@ func (s *BaseSuite) deleteResources(c *check.C, dirPath string, force bool) {
 	s.kubectlCommand(c, args...)
 }
 
+func (s *BaseSuite) deleteShadowServices(c *check.C) {
+	opts := metav1.ListOptions{
+		LabelSelector: "app=maesh",
+	}
+	svcs, err := s.client.GetKubernetesClient().CoreV1().Services(maeshNamespace).List(context.Background(), opts)
+	c.Assert(err, checker.IsNil)
+
+	for _, svc := range svcs.Items {
+		c.Logf("Deleting shadow service %s.", svc.Name)
+		err = s.client.GetKubernetesClient().CoreV1().Services(maeshNamespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
+		c.Assert(err, checker.IsNil)
+	}
+}
+
+func (s *BaseSuite) waitForPods(c *check.C, pods []string) {
+	for _, pod := range pods {
+		c.Logf("Waiting for pod: %q to have IP assigned.", pod)
+		err := s.try.WaitPodIPAssigned(pod, testNamespace, 30*time.Second)
+		c.Assert(err, checker.IsNil)
+	}
+}
+
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
 	s.createResources(c, "resources/coredns/coredns.yaml")
 	s.WaitForCoreDNS(c)
@@ -311,7 +339,7 @@ func (s *BaseSuite) createRequiredNamespaces(c *check.C) {
 	s.kubectlCommand(c, "create", "namespace", testNamespace)
 }
 
-func (s *BaseSuite) installHelmMaesh(c *check.C, smi bool, kubeDNS bool) error {
+func (s *BaseSuite) installHelmMaesh(c *check.C, smi bool, kubeDNS bool, acl bool) error {
 	c.Log("Installing Maesh via helm...")
 	// Install the helm chart.
 	argSlice := []string{"install", "powpow", "../helm/chart/maesh", "--values", "resources/values.yaml", "--namespace", maeshNamespace}
@@ -323,6 +351,10 @@ func (s *BaseSuite) installHelmMaesh(c *check.C, smi bool, kubeDNS bool) error {
 
 	if kubeDNS {
 		argSlice = append(argSlice, "--set", "kubedns=true")
+	}
+
+	if acl {
+		argSlice = append(argSlice, "--set", "acl=true")
 	}
 
 	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 10*time.Second)
@@ -376,20 +408,6 @@ func (s *BaseSuite) getToolsPodMaesh(c *check.C) *corev1.Pod {
 	return &podList.Items[0]
 }
 
-func (s *BaseSuite) testConfiguration(c *check.C, path string) {
-	err := try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 20*time.Second, try.BodyContains(`"service":"readiness"`))
-	c.Assert(err, checker.IsNil)
-
-	expectedJSON := filepath.FromSlash(path)
-
-	var buf bytes.Buffer
-
-	err = try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 10*time.Second, try.StatusCodeIs(http.StatusOK), matchesConfig(expectedJSON, &buf))
-	if err != nil {
-		c.Error(err)
-	}
-}
-
 func (s *BaseSuite) testConfigurationWithReturn(c *check.C, path string) *dynamic.Configuration {
 	err := try.GetRequest(fmt.Sprintf("http://127.0.0.1:%d/api/configuration/current", maeshAPIPort), 20*time.Second, try.BodyContains(`"service":"readiness"`))
 	c.Assert(err, checker.IsNil)
@@ -437,7 +455,7 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 			}
 		}
 
-		got, err := json.MarshalIndent(obtained, "", "    ")
+		got, err := json.MarshalIndent(obtained, "", "  ")
 		if err != nil {
 			return err
 		}
@@ -467,11 +485,17 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 		sanitizedExpected = rxTCPEntrypoints.ReplaceAll(sanitizedExpected, []byte(`"tcp-1000X"`))
 		sanitizedGot = rxTCPEntrypoints.ReplaceAll(sanitizedGot, []byte(`"tcp-1000X"`))
 
-		// The IPWhiteList source ranges are dynamic, so we cannot predict them,
+		// The source range of whitelist middlewares is dynamic, so we cannot predict them,
 		// which is why we have to ignore them in the comparison.
-		rxIPWhiteList := regexp.MustCompile(`"ipWhiteList":\s*{\s*"sourceRange":\s*\[(\s*"((\d+)\.(\d+)\.(\d+)\.(\d+))",?)*\s*\]\s*}`)
-		sanitizedExpected = rxIPWhiteList.ReplaceAll(sanitizedExpected, []byte(`"ipWhiteList":{"sourceRange":["XXXX"]}`))
-		sanitizedGot = rxIPWhiteList.ReplaceAll(sanitizedGot, []byte(`"ipWhiteList":{"sourceRange":["XXXX"]}`))
+		rxSourceRange := regexp.MustCompile(`"sourceRange":\s*\[(\s*"((\d+)\.(\d+)\.(\d+)\.(\d+))",?)*\s*\]`)
+		sanitizedExpected = rxSourceRange.ReplaceAll(sanitizedExpected, []byte(`"sourceRange":["XXXX"]`))
+		sanitizedGot = rxSourceRange.ReplaceAll(sanitizedGot, []byte(`"sourceRange":["XXXX"]`))
+
+		// The excluded IPs of whitelist middlewares are dynamic, so we cannot predict them,
+		// which is why we have to ignore them in the comparison.
+		rxExcludedIPs := regexp.MustCompile(`"ipStrategy":\s*{\s*"excludedIPs":\s*\[(\s*"((\d+)\.(\d+)\.(\d+)\.(\d+))",?)*\s*\]\s*}`)
+		sanitizedExpected = rxExcludedIPs.ReplaceAll(sanitizedExpected, []byte(`"ipStrategy":{"excludedIPs":["XXXX"]}`))
+		sanitizedGot = rxExcludedIPs.ReplaceAll(sanitizedGot, []byte(`"ipStrategy":{"excludedIPs":["XXXX"]}`))
 
 		if bytes.Equal(sanitizedExpected, sanitizedGot) {
 			return nil
@@ -507,12 +531,171 @@ func (s *BaseSuite) digHost(c *check.C, source, namespace, destination string) {
 	c.Assert(IP, checker.NotNil)
 }
 
-func contains(s []string, x string) bool {
-	for _, v := range s {
-		if x == v {
-			return true
+func (s *BaseSuite) getPod(c *check.C, name string) *corev1.Pod {
+	pod, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	c.Assert(err, checker.IsNil)
+
+	return pod
+}
+
+func (s *BaseSuite) getService(c *check.C, name string) *corev1.Service {
+	svc, err := s.client.GetKubernetesClient().CoreV1().Services(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	c.Assert(err, checker.IsNil)
+
+	return svc
+}
+
+func (s *BaseSuite) getTrafficTarget(c *check.C, name string) *access.TrafficTarget {
+	tt, err := s.client.GetAccessClient().AccessV1alpha1().TrafficTargets(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	c.Assert(err, checker.IsNil)
+
+	return tt
+}
+
+func (s *BaseSuite) getTrafficSplit(c *check.C, name string) *split.TrafficSplit {
+	ts, err := s.client.GetSplitClient().SplitV1alpha2().TrafficSplits(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	c.Assert(err, checker.IsNil)
+
+	return ts
+}
+
+func (s *BaseSuite) checkBlockAllMiddleware(c *check.C, config *dynamic.Configuration) {
+	c.Log("Checking if the block-all-middleware is blocks everything")
+
+	middleware := config.HTTP.Middlewares["block-all-middleware"]
+	c.Assert(middleware, checker.NotNil)
+
+	c.Assert(middleware.IPWhiteList.SourceRange, checker.HasLen, 1)
+	c.Assert(middleware.IPWhiteList.SourceRange[0], checker.Equals, "255.255.255.255")
+}
+
+func (s *BaseSuite) checkHTTPReadinessService(c *check.C, config *dynamic.Configuration) {
+	c.Log("Checking if the readiness service is correctly defined")
+
+	service := config.HTTP.Services["readiness"]
+	c.Assert(service, checker.NotNil)
+
+	c.Assert(service.LoadBalancer.Servers, checker.HasLen, 1)
+	c.Assert(service.LoadBalancer.Servers[0].URL, checker.Equals, "http://127.0.0.1:8080")
+}
+
+func (s *BaseSuite) checkHTTPServiceLoadBalancer(c *check.C, config *dynamic.Configuration, svc *corev1.Service, pods []*corev1.Pod) {
+	for _, port := range svc.Spec.Ports {
+		svcKey := fmt.Sprintf("%s-%s-%d", svc.Namespace, svc.Name, port.Port)
+
+		service := config.HTTP.Services[svcKey]
+		c.Assert(service, checker.NotNil)
+
+		c.Assert(service.LoadBalancer.Servers, checker.HasLen, len(pods))
+
+		for _, pod := range pods {
+			wantURL := fmt.Sprintf("http://%s:%d", pod.Status.PodIP, port.TargetPort.IntVal)
+			c.Logf("Checking if HTTP service %q loadbalancer contains an URL for pod %q: %s", svcKey, pod.Name, wantURL)
+
+			var found bool
+
+			for _, server := range service.LoadBalancer.Servers {
+				if wantURL == server.URL {
+					found = true
+					break
+				}
+			}
+
+			c.Assert(found, checker.True)
 		}
 	}
+}
 
-	return false
+func (s *BaseSuite) checkTCPServiceLoadBalancer(c *check.C, config *dynamic.Configuration, svc *corev1.Service, pods []*corev1.Pod) {
+	for _, port := range svc.Spec.Ports {
+		svcKey := fmt.Sprintf("%s-%s-%d", svc.Namespace, svc.Name, port.Port)
+
+		service := config.TCP.Services[svcKey]
+		c.Assert(service, checker.NotNil)
+
+		c.Assert(service.LoadBalancer.Servers, checker.HasLen, len(pods))
+
+		for _, pod := range pods {
+			wantURL := fmt.Sprintf("%s:%d", pod.Status.PodIP, port.TargetPort.IntVal)
+			c.Logf("Checking if TCP service %q loadbalancer contains an URL for pod %q: %s", svcKey, pod.Name, wantURL)
+
+			var found bool
+
+			for _, server := range service.LoadBalancer.Servers {
+				if wantURL == server.Address {
+					found = true
+					break
+				}
+			}
+
+			c.Assert(found, checker.True)
+		}
+	}
+}
+
+func (s *BaseSuite) checkTrafficTargetLoadBalancer(c *check.C, config *dynamic.Configuration, tt *access.TrafficTarget, svc *corev1.Service, pods []*corev1.Pod) {
+	for _, port := range svc.Spec.Ports {
+		svcKey := fmt.Sprintf("%s-%s-%s-%d-traffic-target", svc.Namespace, svc.Name, tt.Name, port.Port)
+
+		service := config.HTTP.Services[svcKey]
+		c.Assert(service, checker.NotNil)
+
+		c.Assert(service.LoadBalancer.Servers, checker.HasLen, len(pods))
+
+		for _, pod := range pods {
+			wantURL := fmt.Sprintf("http://%s:%d", pod.Status.PodIP, port.TargetPort.IntVal)
+			c.Logf("Checking if traffic-target service %q loadbalancer contains an URL for pod %q: %s", svcKey, pod.Name, wantURL)
+
+			var found bool
+
+			for _, server := range service.LoadBalancer.Servers {
+				if wantURL == server.URL {
+					found = true
+					break
+				}
+			}
+
+			c.Assert(found, checker.True)
+		}
+	}
+}
+
+func (s *BaseSuite) checkTrafficTargetWhitelistDirect(c *check.C, config *dynamic.Configuration, tt *access.TrafficTarget, svc *corev1.Service, pods []*corev1.Pod) {
+	middlewareKey := fmt.Sprintf("%s-%s-%s-whitelist-traffic-target-direct", svc.Namespace, svc.Name, tt.Name)
+
+	s.checkWhitelistSourceRange(c, config, middlewareKey, svc, pods)
+}
+
+func (s *BaseSuite) checkTrafficTargetWhitelistIndirect(c *check.C, config *dynamic.Configuration, tt *access.TrafficTarget, svc *corev1.Service, pods []*corev1.Pod) {
+	middlewareKey := fmt.Sprintf("%s-%s-%s-whitelist-traffic-target-indirect", svc.Namespace, svc.Name, tt.Name)
+
+	s.checkWhitelistSourceRange(c, config, middlewareKey, svc, pods)
+}
+
+func (s *BaseSuite) checkTrafficSplitWhitelistDirect(c *check.C, config *dynamic.Configuration, ts *split.TrafficSplit, svc *corev1.Service, pods []*corev1.Pod) {
+	middlewareKey := fmt.Sprintf("%s-%s-%s-whitelist-traffic-split-direct", svc.Namespace, svc.Name, ts.Name)
+
+	s.checkWhitelistSourceRange(c, config, middlewareKey, svc, pods)
+}
+
+func (s *BaseSuite) checkWhitelistSourceRange(c *check.C, config *dynamic.Configuration, key string, svc *corev1.Service, pods []*corev1.Pod) {
+	middleware := config.HTTP.Middlewares[key]
+	c.Assert(middleware, checker.NotNil)
+
+	c.Assert(middleware.IPWhiteList.SourceRange, checker.HasLen, 1)
+
+	for _, pod := range pods {
+		c.Logf("Checking if traffic-target indirect whitelist middleware %q allows pod %q: %s", key, pod.Name, pod.Status.PodIP)
+
+		var found bool
+
+		for _, ip := range middleware.IPWhiteList.SourceRange {
+			if pod.Status.PodIP == ip {
+				found = true
+				break
+			}
+		}
+
+		c.Assert(found, checker.True)
+	}
 }
