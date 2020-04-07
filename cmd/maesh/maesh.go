@@ -77,13 +77,16 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 
 	minHTTPPort := int32(5000)
 	minTCPPort := int32(10000)
+	aclEnabled := iConfig.ACL || iConfig.SMI
+
+	log.Debugf("ACL mode enable: %t", aclEnabled)
 
 	// Create a new stop Channel
 	stopCh := signals.SetupSignalHandler()
 	// Create a new ctr.
 	ctr, err := controller.NewMeshController(clients, controller.MeshControllerConfig{
 		Log:              log,
-		SMIEnabled:       iConfig.SMI,
+		ACLEnabled:       aclEnabled,
 		DefaultMode:      iConfig.DefaultMode,
 		Namespace:        iConfig.Namespace,
 		IgnoreNamespaces: iConfig.IgnoreNamespaces,
