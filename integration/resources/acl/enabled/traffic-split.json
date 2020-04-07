@@ -1,0 +1,223 @@
+{
+  "http": {
+    "routers": {
+      "readiness": {
+        "entryPoints": [
+          "readiness"
+        ],
+        "service": "readiness",
+        "rule": "Path(`/ping`)"
+      },
+      "test-server-8080": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "middlewares": [
+          "block-all-middleware"
+        ],
+        "service": "block-all-service",
+        "rule": "Host(`server.test.maesh`) || Host(`10.43.58.187`)",
+        "priority": 1
+      },
+      "test-server-traffic-split-8080-traffic-split-direct": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "middlewares": [
+          "test-server-traffic-split-whitelist-traffic-split-direct"
+        ],
+        "service": "test-server-traffic-split-8080-traffic-split",
+        "rule": "Host(`server.test.maesh`) || Host(`10.43.58.187`)",
+        "priority": 4001
+      },
+      "test-server-v1-8080": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "middlewares": [
+          "block-all-middleware"
+        ],
+        "service": "block-all-service",
+        "rule": "Host(`server-v1.test.maesh`) || Host(`10.43.28.85`)",
+        "priority": 1
+      },
+      "test-server-v1-traffic-target-8080-traffic-target-direct": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "middlewares": [
+          "test-server-v1-traffic-target-whitelist-traffic-target-direct"
+        ],
+        "service": "test-server-v1-traffic-target-8080-traffic-target",
+        "rule": "Host(`server-v1.test.maesh`) || Host(`10.43.28.85`)",
+        "priority": 2001
+      },
+      "test-server-v1-traffic-target-8080-traffic-target-indirect": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "middlewares": [
+          "test-server-v1-traffic-target-whitelist-traffic-target-indirect"
+        ],
+        "service": "test-server-v1-traffic-target-8080-traffic-target",
+        "rule": "(Host(`server-v1.test.maesh`) || Host(`10.43.28.85`)) \u0026\u0026 HeadersRegexp(`X-Forwarded-For`, `.+`)",
+        "priority": 3002
+      },
+      "test-server-v2-8080": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "middlewares": [
+          "block-all-middleware"
+        ],
+        "service": "block-all-service",
+        "rule": "Host(`server-v2.test.maesh`) || Host(`10.43.39.151`)",
+        "priority": 1
+      },
+      "test-server-v2-traffic-target-8080-traffic-target-direct": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "middlewares": [
+          "test-server-v2-traffic-target-whitelist-traffic-target-direct"
+        ],
+        "service": "test-server-v2-traffic-target-8080-traffic-target",
+        "rule": "Host(`server-v2.test.maesh`) || Host(`10.43.39.151`)",
+        "priority": 2001
+      },
+      "test-server-v2-traffic-target-8080-traffic-target-indirect": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "middlewares": [
+          "test-server-v2-traffic-target-whitelist-traffic-target-indirect"
+        ],
+        "service": "test-server-v2-traffic-target-8080-traffic-target",
+        "rule": "(Host(`server-v2.test.maesh`) || Host(`10.43.39.151`)) \u0026\u0026 HeadersRegexp(`X-Forwarded-For`, `.+`)",
+        "priority": 3002
+      }
+    },
+    "services": {
+      "block-all-service": {
+        "loadBalancer": {
+          "passHostHeader": null
+        }
+      },
+      "readiness": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://127.0.0.1:8080"
+            }
+          ],
+          "passHostHeader": true
+        }
+      },
+      "test-server-traffic-split-8080-server-v1-traffic-split-backend": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://server-v1.test.maesh:8080"
+            }
+          ],
+          "passHostHeader": false
+        }
+      },
+      "test-server-traffic-split-8080-server-v2-traffic-split-backend": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://server-v2.test.maesh:8080"
+            }
+          ],
+          "passHostHeader": false
+        }
+      },
+      "test-server-traffic-split-8080-traffic-split": {
+        "weighted": {
+          "services": [
+            {
+              "name": "test-server-traffic-split-8080-server-v1-traffic-split-backend",
+              "weight": 50
+            },
+            {
+              "name": "test-server-traffic-split-8080-server-v2-traffic-split-backend",
+              "weight": 50
+            }
+          ]
+        }
+      },
+      "test-server-v1-traffic-target-8080-traffic-target": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://10.42.1.7:80"
+            }
+          ],
+          "passHostHeader": true
+        }
+      },
+      "test-server-v2-traffic-target-8080-traffic-target": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://10.42.0.5:80"
+            }
+          ],
+          "passHostHeader": true
+        }
+      }
+    },
+    "middlewares": {
+      "block-all-middleware": {
+        "ipWhiteList": {
+          "sourceRange": [
+            "255.255.255.255"
+          ]
+        }
+      },
+      "test-server-traffic-split-whitelist-traffic-split-direct": {
+        "ipWhiteList": {
+          "sourceRange": [
+            "10.42.1.5"
+          ]
+        }
+      },
+      "test-server-v1-traffic-target-whitelist-traffic-target-direct": {
+        "ipWhiteList": {
+          "sourceRange": [
+            "10.42.1.5"
+          ]
+        }
+      },
+      "test-server-v1-traffic-target-whitelist-traffic-target-indirect": {
+        "ipWhiteList": {
+          "sourceRange": [
+            "10.42.1.5"
+          ],
+          "ipStrategy": {
+            "depth": 1
+          }
+        }
+      },
+      "test-server-v2-traffic-target-whitelist-traffic-target-direct": {
+        "ipWhiteList": {
+          "sourceRange": [
+            "10.42.1.5"
+          ]
+        }
+      },
+      "test-server-v2-traffic-target-whitelist-traffic-target-indirect": {
+        "ipWhiteList": {
+          "sourceRange": [
+            "10.42.1.5"
+          ],
+          "ipStrategy": {
+            "depth": 1
+          }
+        }
+      }
+    }
+  },
+  "tcp": {}
+}

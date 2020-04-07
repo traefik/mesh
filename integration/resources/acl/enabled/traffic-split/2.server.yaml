@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: server
+  namespace: test
+  labels:
+    app: server
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: server
+  selector:
+    app: server
+
+---
+apiVersion: split.smi-spec.io/v1alpha2
+kind: TrafficSplit
+metadata:
+  name: traffic-split
+  namespace: test
+spec:
+  service: server
+  backends:
+    - service: server-v1
+      weight: 50
+    - service: server-v2
+      weight: 50
+

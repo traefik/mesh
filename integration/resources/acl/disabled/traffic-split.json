@@ -1,0 +1,131 @@
+{
+  "http": {
+    "routers": {
+      "readiness": {
+        "entryPoints": [
+          "readiness"
+        ],
+        "service": "readiness",
+        "rule": "Path(`/ping`)"
+      },
+      "test-server-8080": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "service": "test-server-8080",
+        "rule": "Host(`server.test.maesh`) || Host(`10.43.173.123`)",
+        "priority": 1001
+      },
+      "test-server-server-traffic-split-8080-traffic-split-direct": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "service": "test-server-server-traffic-split-8080-traffic-split",
+        "rule": "Host(`server.test.maesh`) || Host(`10.43.173.123`)",
+        "priority": 4001
+      },
+      "test-server-v1-8080": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "service": "test-server-v1-8080",
+        "rule": "Host(`server-v1.test.maesh`) || Host(`10.43.93.31`)",
+        "priority": 1001
+      },
+      "test-server-v2-8080": {
+        "entryPoints": [
+          "http-5000"
+        ],
+        "service": "test-server-v2-8080",
+        "rule": "Host(`server-v2.test.maesh`) || Host(`10.43.97.109`)",
+        "priority": 1001
+      }
+    },
+    "services": {
+      "block-all-service": {
+        "loadBalancer": {
+          "passHostHeader": null
+        }
+      },
+      "readiness": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://127.0.0.1:8080"
+            }
+          ],
+          "passHostHeader": true
+        }
+      },
+      "test-server-8080": {
+        "loadBalancer": {
+          "passHostHeader": true
+        }
+      },
+      "test-server-server-traffic-split-8080-server-v1-traffic-split-backend": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://server-v1.test.maesh:8080"
+            }
+          ],
+          "passHostHeader": false
+        }
+      },
+      "test-server-server-traffic-split-8080-server-v2-traffic-split-backend": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://server-v2.test.maesh:8080"
+            }
+          ],
+          "passHostHeader": false
+        }
+      },
+      "test-server-server-traffic-split-8080-traffic-split": {
+        "weighted": {
+          "services": [
+            {
+              "name": "test-server-server-traffic-split-8080-server-v1-traffic-split-backend",
+              "weight": 50
+            },
+            {
+              "name": "test-server-server-traffic-split-8080-server-v2-traffic-split-backend",
+              "weight": 50
+            }
+          ]
+        }
+      },
+      "test-server-v1-8080": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://10.42.1.3:80"
+            }
+          ],
+          "passHostHeader": true
+        }
+      },
+      "test-server-v2-8080": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://10.42.1.4:80"
+            }
+          ],
+          "passHostHeader": true
+        }
+      }
+    },
+    "middlewares": {
+      "block-all-middleware": {
+        "ipWhiteList": {
+          "sourceRange": [
+            "255.255.255.255"
+          ]
+        }
+      }
+    }
+  },
+  "tcp": {}
+}
