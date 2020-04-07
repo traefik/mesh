@@ -121,7 +121,7 @@ spec:
             - "infinity"
 ```
 
-Create the namespace then deploy those two applications
+Create the namespace then deploy those two applications:
 
 ```bash
 kubectl create namespace maesh-test
@@ -129,7 +129,7 @@ kubectl apply -f server.yaml
 kubectl apply -f client.yaml
 ```
 
-You should now see the following output
+You should now see the following output:
 
 ```bash tab="Command"
 kubectl get all -n maesh-test

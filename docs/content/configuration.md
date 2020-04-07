@@ -1,12 +1,11 @@
 # Configuration
 
-The configuration for maesh is broken down into two parts: the static configuration, and the dynamic configuration.
-The static configuration is configured when the maesh service mesh is installed,
-and is configured via the values.yaml file in the helm install.
+The configuration for Maesh is broken down into two parts: the static configuration, and the dynamic configuration.
+The static configuration is configured when the Maesh service mesh is installed, and is configured via the values.yaml file in the helm install.
 
 ## Static configuration
 
-- The maesh image version can be manually defined if needed, as can the version for the Traefik CE mesh nodes.
+- The Maesh image version can be manually defined if needed, as can the version for the Traefik mesh nodes.
 
 - Debug logging can be globally enabled.
 
@@ -16,9 +15,9 @@ and is configured via the values.yaml file in the helm install.
 - Tracing can be enabled.
 
 - Service Mesh Interface (SMI) mode can be enabled.
-    This configures maesh to run in SMI mode, where access and routes are explicitly enabled.
-    Note: By default, all routes and access is denied.
-    Please see the [SMI Specification](https://github.com/servicemeshinterface/smi-spec) for more information
+    This configures Maesh to run in SMI mode, where access and routes are explicitly enabled.
+    Note: By default, all routes and access are denied.
+    Please see the [SMI Specification](https://github.com/servicemeshinterface/smi-spec) for more information.
 
 ## Dynamic configuration
 
@@ -28,7 +27,7 @@ Dynamic configuration can be provided to Maesh using either annotations on kuber
 
 #### Traffic type
 
-Annotations on services are the main way to configure maesh behavior.
+Annotations on services are the main way to configure Maesh behavior.
 
 The service mode can be enabled by using the following annotation:
 
@@ -61,7 +60,7 @@ Retries can be enabled by using the following annotation:
 maesh.containo.us/retry-attempts: "2"
 ```
 
-This annotation sets the number of retry attempts that maesh will make if a network error occurrs.
+This annotation sets the number of retry attempts that Maesh will make if a network error occurs.
 Please note that this value is a string, and needs to be quoted.
 
 #### Circuit breaker
@@ -76,7 +75,7 @@ This annotation sets the expression for circuit breaking.
 The circuit breaker protects your system from stacking requests to unhealthy services (resulting in cascading failures).
 When your system is healthy, the circuit is closed (normal operations). When your system becomes unhealthy, the circuit opens, and requests are no longer forwarded (but handled by a fallback mechanism).
 
-All configuration options are available [here](https://docs.traefik.io/v2.0/middlewares/circuitbreaker/#configuration-options)
+All configuration options are available [here](https://docs.traefik.io/v2.0/middlewares/circuitbreaker/#configuration-options).
 
 #### Rate Limit
 
@@ -90,7 +89,7 @@ maesh.containo.us/ratelimit-burst: "200"
 These annotation sets average and burst requests per second limit for the service.
 Please note that this value is a string, and needs to be quoted.
 
-Further details about the rate limiting can be found [here](https://docs.traefik.io/v2.0/middlewares/ratelimit/#configuration-options)
+Further details about the rate limiting can be found [here](https://docs.traefik.io/v2.0/middlewares/ratelimit/#configuration-options).
 
 ### With Service Mesh Interface
 
@@ -118,8 +117,8 @@ In this example, we define a set of HTTP routes for our `server` application.
 
 More precisely, the `server` app is composed by two routes:
 
-- The `api` route under the `/api` path, accepting all methods
-- The `metrics` routes under the `/metrics` path, accepting only `GET` requests
+- The `api` route under the `/api` path, accepting all methods.
+- The `metrics` routes under the `/metrics` path, accepting only `GET` requests.
 
 Other types of route groups and detailed information are available [in the specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-specs.md).
 

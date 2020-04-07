@@ -10,7 +10,7 @@ The API can be accessed by making a `GET` request to `http://<control pod IP>:90
 This endpoint provides raw json of the current configuration built by the controller.
 
 !!! Note
-    This may change each request, as it is a live data structure.
+    This may change on each request, as it is a live data structure.
 
 ## `/api/status/nodes`
 
