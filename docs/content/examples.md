@@ -3,7 +3,7 @@
 Here are some examples on how to easily deploy Maesh on your cluster.
 
 ??? Note "Prerequisites"
-    Before following those examples, make sure your cluster follows [the prerequisites for deploying Maesh](quickstart.md#prerequisites)
+    Before following those examples, make sure your cluster follows [the prerequisites for deploying Maesh](quickstart.md#prerequisites).
 
 ## Simple Example
 

@@ -8,8 +8,7 @@ Maesh is a lightweight and simpler service mesh designed from the ground up to b
 
 Built on top of Traefik, Maesh fits as your de-facto service mesh in your Kubernetes cluster supporting the latest Service Mesh Interface specification (SMI).
 
-Moreover, Maesh is opt-in by default,
-which means that your existing services are unaffected until you decide to add them to the mesh.
+Moreover, Maesh is opt-in by default, which means that your existing services are unaffected until you decide to add them to the mesh.
 
 <p align="center">
 <a href="https://smi-spec.io" target="_blank"><img width="150" src="assets/img/smi.png" alt="SMI" title="SMI" /></a>
