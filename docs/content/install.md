@@ -1,13 +1,13 @@
 # Installation
 
-To install maesh, the installation method is quite simple:
+To install Maesh, the installation method is quite simple:
 
 ```bash
 helm repo add maesh https://containous.github.io/maesh/charts
 helm repo update
 ```
 
-Install maesh helm chart:
+Install Maesh helm chart:
 
 ```bash
 helm install maesh maesh/maesh
@@ -18,7 +18,7 @@ helm install maesh maesh/maesh
 !!! Note Supported Installations
     Please be aware that the supported installation method is via Helm, using official releases.
     If you want to build/install/run Maesh from source, we may not be able to provide support.
-    Installing from source is intended for development/contributing .
+    Installing from source is intended for development/contributing.
 
 To build the image locally, run:
 
@@ -26,13 +26,12 @@ To build the image locally, run:
 make
 ```
 
- to build the binary and build/tag the local image.
 You will then be able to use the tagged image as your image in your `values.yaml` file.
 
-## Deploy helm chart
+### Deploy helm chart
 
 ??? Note "Helm V3"
-    Please keep in mind, that our current Helm Chart (v1.0.0) is v2 compatible only. The v3 compatible Chart will be released with v1.1 of Maesh.
+    Please keep in mind, that our current Helm Chart (v1.1.0) is v3 compatible only.
 
 To deploy the helm chart, run:
 
@@ -42,7 +41,7 @@ helm install maesh helm/chart/maesh --set controller.image.pullPolicy=IfNotPrese
 
 ## KubeDNS support
 
-Maesh can support KubeDNS
+Maesh can support KubeDNS:
 
 ```bash
 helm install maesh maesh/maesh --set kubedns=true
@@ -77,7 +76,7 @@ helm install maesh --namespace=maesh maesh/maesh --set smi.enable=true`
     If you are re-installing into a cluster with the CRDs already present, helm may give you a warning.
     If you do not want to install them, or want to avoid the warning during a re-install,
     please use the new `--skip-crds` flag.
-    More informationcan be found on the [helm documentation](https://helm.sh/docs/topics/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you)
+    More information can be found on the [helm documentation](https://helm.sh/docs/topics/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
 
 ## Platform recommendations
 
@@ -122,7 +121,7 @@ replicaset.apps/maesh-controller-676fb86b89   1         1         0       28s
 
 ## Usage
 
-To use maesh, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.maesh`.
-This will access the maesh service mesh, and will allow you to route requests through maesh.
+To use Maesh, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.maesh`.
+This will access the Maesh service mesh, and will allow you to route requests through Maesh.
 
-By default, maesh is opt-in, meaning you have to use the maesh service names to access the mesh, so you can have some services running through the mesh, and some services not.
+By default, Maesh is opt-in, meaning you have to use the Maesh service names to access the mesh, so you can have some services running through the mesh, and some services not.
