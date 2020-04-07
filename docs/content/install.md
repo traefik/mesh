@@ -76,7 +76,7 @@ helm install maesh --namespace=maesh maesh/maesh --set smi.enable=true`
     If you are re-installing into a cluster with the CRDs already present, helm may give you a warning.
     If you do not want to install them, or want to avoid the warning during a re-install,
     please use the new `--skip-crds` flag.
-    More information can be found on the [helm documentation](https://helm.sh/docs/topics/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
+    More information can be found on the [helm documentation](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
 
 ## Platform recommendations
 
