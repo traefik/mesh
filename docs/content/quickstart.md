@@ -1,7 +1,7 @@
 # Quickstart
 
 Maesh can be installed in your cluster without affecting any running services.
-It will safely install itself via the helm chart, and will be ready for use immediately after.
+It will safely install itself via the Helm Chart, and will be ready for use immediately after.
 
 ## Prerequisites
 
@@ -159,7 +159,7 @@ Take note of the client app pod name (here it's `client-7446fdf848-x96fq`) and o
 kubectl -n maesh-test exec -ti client-7446fdf848-x96fq ash
 ```
 
-From inside the client container make sure you are able to reach your server using kubernetes DNS service discovery.
+From inside the client container make sure you are able to reach your server using Kubernetes DNS service discovery.
 
 ```bash tab="Command"
 curl server.maesh-test.svc.cluster.local

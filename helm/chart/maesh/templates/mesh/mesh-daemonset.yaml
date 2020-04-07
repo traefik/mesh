@@ -62,9 +62,11 @@ spec:
             - "--entryPoints.liveness.address=:1082"
             {{- range $i, $e := until (.Values.limits.http|int) }}
             - {{ printf "\"--entryPoints.http-%d.address=:%d\"" (add $i 5000) (add $i 5000) }}
+            - {{ printf "\"--entryPoints.http-%d.forwardedHeaders.insecure=true\"" (add $i 5000) }}
             {{- end }}
             {{- range $i, $e := until (.Values.limits.tcp|int) }}
             - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" (add $i 10000) (add $i 10000) }}
+            - {{ printf "\"--entryPoints.tcp-%d.forwardedHeaders.insecure=true\"" (add $i 10000) }}
             {{- end }}
             - "--providers.rest"
             - "--providers.rest.insecure"

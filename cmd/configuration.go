@@ -9,7 +9,8 @@ type MaeshConfiguration struct {
 	KubeConfig       string   `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL        string   `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	Debug            bool     `description:"Debug mode" export:"true"`
-	SMI              bool     `description:"Enable SMI operation" export:"true"`
+	ACL              bool     `description:"Enable ACL mode" export:"true"`
+	SMI              bool     `description:"Enable SMI operation, deprecated, use --acl instead" export:"true"`
 	DefaultMode      string   `description:"Default mode for mesh services" export:"true"`
 	Namespace        string   `description:"The namespace that maesh is installed in." export:"true"`
 	IgnoreNamespaces []string `description:"The namespace that maesh should be ignoring." export:"true"`
@@ -25,6 +26,7 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 		ConfigFile:    "",
 		KubeConfig:    os.Getenv("KUBECONFIG"),
 		Debug:         false,
+		ACL:           false,
 		SMI:           false,
 		DefaultMode:   "http",
 		Namespace:     "maesh",
