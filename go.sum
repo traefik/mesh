@@ -114,9 +114,11 @@ github.com/containerd/typeurl v0.0.0-20180627222232-a93fcdb778cd/go.mod h1:Cm3kw
 github.com/containous/alice v0.0.0-20181107144136-d83ebdd94cbd/go.mod h1:BbQgeDS5i0tNvypwEoF1oNjOJw8knRAE1DnVvjDstcQ=
 github.com/containous/check v0.0.0-20170915194414-ca0bf163426a h1:8esAQaPKjfntQR1bag/mAOvWJd5HqSX5nsa+0KT63zo=
 github.com/containous/check v0.0.0-20170915194414-ca0bf163426a/go.mod h1:eQOqZ7GoFsLxI7jFKLs7+Nv2Rm1x4FyK8d2NV+yGjwQ=
-github.com/containous/go-http-auth v0.4.1-0.20180112153951-65b0cdae8d7f/go.mod h1:dCmRGidPSLagL8D/2u7yIO6Y/8D/yuYX9EdKrnrhpCA=
+github.com/containous/go-http-auth v0.4.1-0.20200324110947-a37a7636d23e/go.mod h1:s8kLgBQolDbsJOPVIGCEEv9zGAKUUf/685Gi0Qqg8z8=
 github.com/containous/minheap v0.0.0-20190809180810-6e71eb837595/go.mod h1:+lHFbEasIiQVGzhVDVw/cn0ZaOzde2OwNncp1NhXV4c=
 github.com/containous/multibuf v0.0.0-20190809014333-8b6c9a7e6bba/go.mod h1:zkWcASFUJEst6QwCrxLdkuw1gvaKqmflEipm+iecV5M=
+github.com/containous/mux v0.0.0-20200408164629-f779179d490a h1:9HowJycBgtJU6s+2ic6cTeAV1CaJC+dJfC7rFoMwoyc=
+github.com/containous/mux v0.0.0-20200408164629-f779179d490a/go.mod h1:z8WW7n06n8/1xF9Jl9WmuDeZuHAhfL+bwarNjsciwwg=
 github.com/containous/traefik/v2 v2.2.0 h1:PENEJ9WLG3uGxkQcvGl8BzSqg54Y+ui+WT0Cy8fiiLM=
 github.com/containous/traefik/v2 v2.2.0/go.mod h1:G/eRMBAyVSnLvYT/chGPWxdyqUgfg8/T6E2/OKr8zRU=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
@@ -259,10 +261,8 @@ github.com/googleapis/gnostic v0.2.0/go.mod h1:sJBsCZ4ayReDTBIg8b9dl28c5xFWyhBTV
 github.com/gophercloud/gophercloud v0.1.0/go.mod h1:vxM41WHh5uqHVBMZHzuwNOHh8XEoIEcSTewFxm1c5g8=
 github.com/gophercloud/gophercloud v0.3.0/go.mod h1:vxM41WHh5uqHVBMZHzuwNOHh8XEoIEcSTewFxm1c5g8=
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
+github.com/gorilla/context v1.1.1 h1:AWwleXJkX/nhcU9bZSnZoi3h/qGYqQAGhq6zZe/aQW8=
 github.com/gorilla/context v1.1.1/go.mod h1:kBGZzfjB9CEq2AlWe17Uuf7NDRt0dE0s8S51q0aT7Yg=
-github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
-github.com/gorilla/mux v1.7.3 h1:gnP5JzjVOuiZD07fKKToCAOjS0yOpj/qPETTXCCS6hw=
-github.com/gorilla/mux v1.7.3/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/gravitational/trace v0.0.0-20190726142706-a535a178675f/go.mod h1:RvdOUHE4SHqR3oXlFFKnGzms8a5dugHygGw1bqDstYI=
@@ -557,8 +557,9 @@ golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4/go.mod h1:yigFU9vqHzYiE8U
 golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
 golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
 golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
-golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073 h1:xMPOj6Pz6UipU1wXLkrtqpHbR0AVFnyPEQq/wRWz9lM=
 golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+golang.org/x/crypto v0.0.0-20200317142112-1b76d66859c6 h1:TjszyFsQsyZNHwdVdZ5m7bjmreu0znc2kRYsEml9/Ww=
+golang.org/x/crypto v0.0.0-20200317142112-1b76d66859c6/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
