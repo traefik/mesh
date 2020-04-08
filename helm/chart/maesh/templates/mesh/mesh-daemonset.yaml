@@ -56,7 +56,7 @@ spec:
       containers:
         - name: maesh-mesh
           image: {{ include "maesh.controllerImage" . | quote }}
-          imagePullPolicy: {{ .Values.mesh.image.pullPolicy | default "IfNotPresent" }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "proxy"
             - "--entryPoints.readiness.address=:1081"
