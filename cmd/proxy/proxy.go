@@ -33,7 +33,7 @@ import (
 	"github.com/containous/traefik/v2/pkg/types"
 	"github.com/containous/traefik/v2/pkg/version"
 	"github.com/coreos/go-systemd/daemon"
-	assetfs "github.com/elazarl/go-bindata-assetfs"
+	// assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/sirupsen/logrus"
 	"github.com/vulcand/oxy/roundrobin"
 )
