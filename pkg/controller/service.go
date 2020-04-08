@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -83,7 +82,7 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 		svc.Spec.TopologyKeys = []string{"kubernetes.io/hostname", "*"}
 	}
 
-	if _, err = s.kubeClient.CoreV1().Services(s.namespace).Create(context.TODO(), svc, metav1.CreateOptions{}); err != nil {
+	if _, err = s.kubeClient.CoreV1().Services(s.namespace).Create(svc); err != nil {
 		return fmt.Errorf("unable to create kubernetes service: %w", err)
 	}
 
@@ -107,7 +106,7 @@ func (s *ShadowServiceManager) Update(oldUserSvc *corev1.Service, newUserSvc *co
 		newSvc := svc.DeepCopy()
 		newSvc.Spec.Ports = s.getShadowServicePorts(newUserSvc)
 
-		if updatedSvc, err = s.kubeClient.CoreV1().Services(s.namespace).Update(context.TODO(), newSvc, metav1.UpdateOptions{}); err != nil {
+		if updatedSvc, err = s.kubeClient.CoreV1().Services(s.namespace).Update(newSvc); err != nil {
 			return fmt.Errorf("unable to update kubernetes service: %w", err)
 		}
 
@@ -134,7 +133,7 @@ func (s *ShadowServiceManager) Delete(userSvc *corev1.Service) error {
 		return err
 	}
 
-	if err := s.kubeClient.CoreV1().Services(s.namespace).Delete(context.TODO(), name, metav1.DeleteOptions{}); err != nil {
+	if err := s.kubeClient.CoreV1().Services(s.namespace).Delete(name, &metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 
