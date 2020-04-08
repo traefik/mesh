@@ -10,14 +10,14 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
 	github.com/pmezard/go-difflib v1.0.0
-	github.com/servicemeshinterface/smi-sdk-go v0.3.1-0.20200326101714-d0668c95e1dc
+	github.com/servicemeshinterface/smi-sdk-go v0.3.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.5.1
 	github.com/vdemeester/shakers v0.1.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	k8s.io/api v0.18.0
-	k8s.io/apimachinery v0.18.0
-	k8s.io/client-go v0.18.0
+	k8s.io/api v0.17.4
+	k8s.io/apimachinery v0.17.4
+	k8s.io/client-go v0.17.4
 )
 
 replace (
