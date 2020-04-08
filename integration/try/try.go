@@ -1,7 +1,6 @@
 package try
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -52,7 +51,7 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		d, err := t.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		d, err := t.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			if kubeerror.IsNotFound(err) {
 				return fmt.Errorf("deployment %q has not been yet created", name)
@@ -78,7 +77,7 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 // WaitUpdateDeployment waits until the deployment is successfully updated and ready.
 func (t *Try) WaitUpdateDeployment(deployment *appsv1.Deployment, timeout time.Duration) error {
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_, err := t.client.GetKubernetesClient().AppsV1().Deployments(deployment.Namespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
+		_, err := t.client.GetKubernetesClient().AppsV1().Deployments(deployment.Namespace).Update(deployment)
 		return err
 	})
 
@@ -95,7 +94,7 @@ func (t *Try) WaitDeleteDeployment(name string, namespace string, timeout time.D
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		_, err := t.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		_, err := t.client.GetKubernetesClient().AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			if kubeerror.IsNotFound(err) {
 				return nil
@@ -118,7 +117,7 @@ func (t *Try) WaitPodIPAssigned(name string, namespace string, timeout time.Dura
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		pod, err := t.client.GetKubernetesClient().CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		pod, err := t.client.GetKubernetesClient().CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("unable get the pod %q in namespace %q: %v", name, namespace, err)
 		}
@@ -208,7 +207,7 @@ func (t *Try) WaitDeleteNamespace(name string, timeout time.Duration) error {
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(func() error {
-		_, err := t.client.GetKubernetesClient().CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
+		_, err := t.client.GetKubernetesClient().CoreV1().Namespaces().Get(name, metav1.GetOptions{})
 		if err != nil {
 			if kubeerror.IsNotFound(err) {
 				return nil

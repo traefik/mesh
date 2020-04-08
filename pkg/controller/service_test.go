@@ -282,7 +282,7 @@ func Test_ServiceCreate(t *testing.T) {
 			}
 			assert.NoError(t, err)
 
-			svcGot, err := client.CoreV1().Services("maesh").Get(context.TODO(), test.expected.Name, v1.GetOptions{})
+			svcGot, err := client.CoreV1().Services("maesh").Get(test.expected.Name, v1.GetOptions{})
 			assert.NoError(t, err)
 
 			assert.Equal(t, &test.expected, svcGot)
@@ -407,7 +407,7 @@ func Test_ServiceUpdate(t *testing.T) {
 		Port:      80,
 	}, addedPortMapping)
 
-	svcGot, err = client.CoreV1().Services("maesh").Get(context.TODO(), expected.Name, v1.GetOptions{})
+	svcGot, err = client.CoreV1().Services("maesh").Get(expected.Name, v1.GetOptions{})
 	assert.NoError(t, err)
 
 	assert.Equal(t, &expected, svcGot)
@@ -477,7 +477,7 @@ func Test_ServiceDelete(t *testing.T) {
 		Port:      8088,
 	}, removedPortMapping)
 
-	_, err = client.CoreV1().Services("maesh").Get(context.TODO(), "maesh-my-svc-6d61657368-my-ns", v1.GetOptions{})
+	_, err = client.CoreV1().Services("maesh").Get("maesh-my-svc-6d61657368-my-ns", v1.GetOptions{})
 	assert.Error(t, err)
 }
 

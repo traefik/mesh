@@ -2,7 +2,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -343,7 +342,7 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 
 	err := backoff.Retry(safe.OperationWithRecover(func() error {
 		// Get current coreDNS deployment.
-		deployment, err := s.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get(context.TODO(), "coredns", metav1.GetOptions{})
+		deployment, err := s.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
 		c.Assert(err, checker.IsNil)
 
 		newDeployment := deployment.DeepCopy()
@@ -368,7 +367,7 @@ func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
 }
 
 func (s *BaseSuite) getToolsPodMaesh(c *check.C) *corev1.Pod {
-	podList, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).List(context.TODO(), metav1.ListOptions{
+	podList, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).List(metav1.ListOptions{
 		LabelSelector: "app=tiny-tools",
 	})
 	c.Assert(err, checker.IsNil)
