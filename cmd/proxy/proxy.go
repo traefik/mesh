@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/containous/traefik/v2/autogen/genstatic"
 	"github.com/containous/traefik/v2/cmd"
 	"github.com/containous/traefik/v2/cmd/healthcheck"
 	"github.com/containous/traefik/v2/pkg/cli"
@@ -32,7 +31,6 @@ import (
 	"github.com/containous/traefik/v2/pkg/types"
 	"github.com/containous/traefik/v2/pkg/version"
 	"github.com/coreos/go-systemd/daemon"
-	// assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/sirupsen/logrus"
 	"github.com/vulcand/oxy/roundrobin"
 )
@@ -63,6 +61,7 @@ func runCmd(staticConfiguration *static.Configuration) error {
 	}
 
 	staticConfiguration.SetEffectiveConfiguration()
+
 	if err := staticConfiguration.ValidateConfiguration(); err != nil {
 		return err
 	}
@@ -75,14 +74,6 @@ func runCmd(staticConfiguration *static.Configuration) error {
 		log.WithoutContext().Debugf("Static configuration loaded [struct] %#v", staticConfiguration)
 	} else {
 		log.WithoutContext().Debugf("Static configuration loaded %s", string(jsonConf))
-	}
-
-	// if staticConfiguration.API != nil && staticConfiguration.API.Dashboard {
-	// 	staticConfiguration.API.DashboardAssets = &assetfs.AssetFS{Asset: genstatic.Asset, AssetInfo: genstatic.AssetInfo, AssetDir: genstatic.AssetDir, Prefix: "static"}
-	// }
-
-	if staticConfiguration.Global.CheckNewVersion {
-		checkNewVersion()
 	}
 
 	stats(staticConfiguration)
@@ -114,8 +105,8 @@ func runCmd(staticConfiguration *static.Configuration) error {
 		t /= 2
 		log.WithoutContext().Infof("Watchdog activated with timer duration %s", t)
 		safe.Go(func() {
-			tick := time.Tick(t)
-			for range tick {
+			tick := time.NewTicker(t)
+			for range tick.C {
 				resp, errHealthCheck := healthcheck.Do(*staticConfiguration)
 				if resp != nil {
 					_ = resp.Body.Close()
@@ -134,6 +125,7 @@ func runCmd(staticConfiguration *static.Configuration) error {
 
 	svr.Wait()
 	log.WithoutContext().Info("Shutting down")
+
 	return nil
 }
 
@@ -170,13 +162,9 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 	routerFactory := server.NewRouterFactory(*staticConfiguration, managerFactory, tlsManager, chainBuilder)
 
 	var defaultEntryPoints []string
-	for name, cfg := range staticConfiguration.EntryPoints {
-		protocol, err := cfg.GetProtocol()
-		if err != nil {
-			// Should never happen because Traefik should not start if protocol is invalid.
-			log.WithoutContext().Errorf("Invalid protocol: %v", err)
-		}
 
+	for name, cfg := range staticConfiguration.EntryPoints {
+		protocol, _ := cfg.GetProtocol()
 		if protocol != "udp" && name != static.DefaultInternalEntryPointName {
 			defaultEntryPoints = append(defaultEntryPoints, name)
 		}
@@ -217,6 +205,7 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 	resolverNames := map[string]struct{}{}
 	for _, p := range acmeProviders {
 		resolverNames[p.ResolverName] = struct{}{}
+
 		watcher.AddListener(p.ListenConfiguration)
 	}
 
@@ -246,6 +235,7 @@ func switchRouter(routerFactory *server.RouterFactory, acmeProviders []*acme.Pro
 				}
 			}
 		}
+
 		serverEntryPointsTCP.Switch(routers)
 		serverEntryPointsUDP.Switch(udpRouters)
 	}
@@ -257,6 +247,7 @@ func initACMEProvider(c *static.Configuration, providerAggregator *aggregator.Pr
 	localStores := map[string]*acme.LocalStore{}
 
 	var resolvers []*acme.Provider
+
 	for name, resolver := range c.CertificatesResolvers {
 		if resolver.ACME != nil {
 			if localStores[resolver.ACME.Storage] == nil {
@@ -286,6 +277,7 @@ func initACMEProvider(c *static.Configuration, providerAggregator *aggregator.Pr
 			resolvers = append(resolvers, p)
 		}
 	}
+
 	return resolvers
 }
 
@@ -299,8 +291,10 @@ func registerMetricClients(metricsConfig *types.Metrics) metrics.Registry {
 	if metricsConfig.Prometheus != nil {
 		ctx := log.With(context.Background(), log.Str(log.MetricsProviderName, "prometheus"))
 		prometheusRegister := metrics.RegisterPrometheus(ctx, metricsConfig.Prometheus)
+
 		if prometheusRegister != nil {
 			registries = append(registries, prometheusRegister)
+
 			log.FromContext(ctx).Debug("Configured Prometheus metrics")
 		}
 	}
@@ -308,6 +302,7 @@ func registerMetricClients(metricsConfig *types.Metrics) metrics.Registry {
 	if metricsConfig.Datadog != nil {
 		ctx := log.With(context.Background(), log.Str(log.MetricsProviderName, "datadog"))
 		registries = append(registries, metrics.RegisterDatadog(ctx, metricsConfig.Datadog))
+
 		log.FromContext(ctx).Debugf("Configured Datadog metrics: pushing to %s once every %s",
 			metricsConfig.Datadog.Address, metricsConfig.Datadog.PushInterval)
 	}
@@ -360,6 +355,7 @@ func configureLogging(staticConfiguration *static.Configuration) {
 	if err != nil {
 		log.WithoutContext().Errorf("Error getting level: %v", err)
 	}
+
 	log.SetLevel(level)
 
 	var logFile string
@@ -375,34 +371,28 @@ func configureLogging(staticConfiguration *static.Configuration) {
 		disableColors := len(logFile) > 0
 		formatter = &logrus.TextFormatter{DisableColors: disableColors, FullTimestamp: true, DisableSorting: true}
 	}
+
 	log.SetFormatter(formatter)
 
 	if len(logFile) > 0 {
 		dir := filepath.Dir(logFile)
 
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err = os.MkdirAll(dir, 0755); err != nil {
 			log.WithoutContext().Errorf("Failed to create log path %s: %s", dir, err)
 		}
 
 		err = log.OpenFile(logFile)
+
 		logrus.RegisterExitHandler(func() {
-			if err := log.CloseFile(); err != nil {
-				log.WithoutContext().Errorf("Error while closing log: %v", err)
+			if closeErr := log.CloseFile(); closeErr != nil {
+				log.WithoutContext().Errorf("Error while closing log: %v", closeErr)
 			}
 		})
+
 		if err != nil {
 			log.WithoutContext().Errorf("Error while opening log file %s: %v", logFile, err)
 		}
 	}
-}
-
-func checkNewVersion() {
-	ticker := time.Tick(24 * time.Hour)
-	safe.Go(func() {
-		for time.Sleep(10 * time.Minute); ; <-ticker {
-			version.CheckNewVersion()
-		}
-	})
 }
 
 func stats(staticConfiguration *static.Configuration) {
@@ -424,9 +414,10 @@ More details on: https://docs.traefik.io/contributing/data-collection/
 }
 
 func collect(staticConfiguration *static.Configuration) {
-	ticker := time.Tick(24 * time.Hour)
+	ticker := time.NewTicker(24 * time.Hour)
+
 	safe.Go(func() {
-		for time.Sleep(10 * time.Minute); ; <-ticker {
+		for time.Sleep(10 * time.Minute); ; <-ticker.C {
 			if err := collector.Collect(staticConfiguration); err != nil {
 				log.WithoutContext().Debug(err)
 			}
