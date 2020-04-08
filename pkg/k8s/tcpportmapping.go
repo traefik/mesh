@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -112,7 +111,7 @@ func (m *TCPPortMapping) Remove(svc ServiceWithPort) (int32, error) {
 }
 
 func (m *TCPPortMapping) loadState() error {
-	cfg, err := m.client.CoreV1().ConfigMaps(m.cfgMapNamespace).Get(context.TODO(), m.cfgMapName, metav1.GetOptions{})
+	cfg, err := m.client.CoreV1().ConfigMaps(m.cfgMapNamespace).Get(m.cfgMapName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("unable to load state from ConfigMap %q in namespace %q: %w", m.cfgMapName, m.cfgMapNamespace, err)
 	}
@@ -140,7 +139,7 @@ func (m *TCPPortMapping) loadState() error {
 }
 
 func (m *TCPPortMapping) saveState() error {
-	cfg, err := m.client.CoreV1().ConfigMaps(m.cfgMapNamespace).Get(context.TODO(), m.cfgMapName, metav1.GetOptions{})
+	cfg, err := m.client.CoreV1().ConfigMaps(m.cfgMapNamespace).Get(m.cfgMapName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -161,7 +160,7 @@ func (m *TCPPortMapping) saveState() error {
 			cpy.Data[key] = value
 		}
 
-		_, err := m.client.CoreV1().ConfigMaps(cfg.Namespace).Update(context.TODO(), cpy, metav1.UpdateOptions{})
+		_, err := m.client.CoreV1().ConfigMaps(cfg.Namespace).Update(cpy)
 
 		return err
 	})
