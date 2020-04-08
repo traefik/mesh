@@ -19,7 +19,6 @@ func (s *SMISuite) SetUpSuite(c *check.C) {
 		"containous/maesh:latest",
 		"containous/whoami:v1.0.1",
 		"coredns/coredns:1.6.3",
-		"traefik:v2.2.0",
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)

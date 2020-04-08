@@ -20,14 +20,6 @@ controller:
 
 
 mesh:
-  image:
-    name: traefik
-    # (Optional)
-    # pullPolicy: IfNotPresent
-    # (Optional)
-    tag: v2.2.0
-    # (Optional)
-    # pullSecret: xxx
   resources:
     limit:
       mem: "100Mi"
