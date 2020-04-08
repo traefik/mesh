@@ -133,7 +133,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			assert.NoError(t, err)
 
-			cfgMap, err := clt.GetKubernetesClient().CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "coredns-cfgmap", metav1.GetOptions{})
+			cfgMap, err := clt.GetKubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-cfgmap", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedCorefile, cfgMap.Data["Corefile"])
@@ -190,7 +190,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			assert.NoError(t, err)
 
-			cfgMap, err := clt.GetKubernetesClient().CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "kubedns-cfgmap", metav1.GetOptions{})
+			cfgMap, err := clt.GetKubernetesClient().CoreV1().ConfigMaps("kube-system").Get("kubedns-cfgmap", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedStubDomains, cfgMap.Data["stubDomains"])
