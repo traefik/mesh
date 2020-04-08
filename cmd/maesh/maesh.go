@@ -7,6 +7,7 @@ import (
 
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/cmd/prepare"
+	"github.com/containous/maesh/cmd/proxy"
 	"github.com/containous/maesh/cmd/version"
 	"github.com/containous/maesh/pkg/controller"
 	"github.com/containous/maesh/pkg/k8s"
@@ -32,6 +33,11 @@ func main() {
 
 	pConfig := cmd.NewPrepareConfig()
 	if err := cmdMaesh.AddCommand(prepare.NewCmd(pConfig, loaders)); err != nil {
+		stdlog.Println(err)
+		os.Exit(1)
+	}
+
+	if err := cmdMaesh.AddCommand(proxy.NewCmd(loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
