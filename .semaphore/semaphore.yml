@@ -15,6 +15,22 @@ fail_fast:
     when: "branch != 'master'"
     
 blocks:
+  - name: Build and Check
+    skip:
+     when: "branch = 'gh-pages'"
+    task:
+      prologue:
+       commands:
+         - sem-version go 1.14
+         - checkout
+      jobs:
+        - name: Build and Check
+          commands:
+            - make check build
+            - cache store maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA dist
+            - docker save containous/maesh:latest > maesh-img.tar
+            - cache store maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA maesh-img.tar
+
   - name: Tests
     skip:
       when: "branch = 'gh-pages'"
@@ -22,24 +38,26 @@ blocks:
       prologue:
         commands:
           - sem-version go 1.14
-          - go version
           - checkout
+          - cache restore maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA
+          - cache restore maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA
+          - docker load < build.tar
       jobs:
-        - name: Build and Unit Tests
+        - name: Unit Tests
           commands:
-            - make
+            - make test
         - name: SMI Integration Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f SMISuite\""
+            -  "make test-integration-nobuild TESTFLAGS=\"-check.f SMISuite\""
         - name: Kubernetes Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f KubernetesSuite\""
+            -  "make test-integration-nobuild TESTFLAGS=\"-check.f KubernetesSuite\""
         - name: CoreDNS Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f CoreDNSSuite\""
+            -  "make test-integration-nobuild TESTFLAGS=\"-check.f CoreDNSSuite\""
         - name: KubeDNS Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f KubeDNSSuite\""
+            -  "make test-integration-nobuild TESTFLAGS=\"-check.f KubeDNSSuite\""
         - name: Helm Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f HelmSuite\""
+            -  "make test-integration-nobuild TESTFLAGS=\"-check.f HelmSuite\""
