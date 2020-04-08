@@ -24,9 +24,16 @@ blocks:
          - sem-version go 1.14
          - checkout
       jobs:
-        - name: Build and Check
+        - name: Cache Dependencies
           commands:
-            - make check build
+            - go mod download
+            - cache store
+        - name: Check
+          commands:
+            - make check
+        - name: Build
+          commands:
+            - make build
             - cache store maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA dist
             - docker save containous/maesh:latest > maesh-img.tar
             - cache store maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA maesh-img.tar
@@ -39,6 +46,7 @@ blocks:
         commands:
           - sem-version go 1.14
           - checkout
+          - cache restore
           - cache restore maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA
           - cache restore maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA
           - docker load < maesh-img.tar
