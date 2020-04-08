@@ -27,14 +27,6 @@ kubedns: false
 #clusterDomain: cluster.local
 
 mesh:
-  image:
-    name: traefik
-    # (Optional)
-    # pullPolicy: IfNotPresent
-    # (Optional)
-    # tag: v2.2
-    # (Optional)
-    # pullSecret: xxx
   resources:
     limit:
       mem: "100Mi"
