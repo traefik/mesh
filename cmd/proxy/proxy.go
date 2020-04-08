@@ -1,4 +1,4 @@
-package main
+package proxy
 
 import (
 	"context"
@@ -14,7 +14,6 @@ import (
 	// "github.com/containous/traefik/v2/autogen/genstatic"
 	"github.com/containous/traefik/v2/cmd"
 	"github.com/containous/traefik/v2/cmd/healthcheck"
-	cmdVersion "github.com/containous/traefik/v2/cmd/version"
 	"github.com/containous/traefik/v2/pkg/cli"
 	"github.com/containous/traefik/v2/pkg/collector"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
@@ -38,41 +37,20 @@ import (
 	"github.com/vulcand/oxy/roundrobin"
 )
 
-func main() {
+// NewCmd builds a new Proxy command.
+func NewCmd(loaders []cli.ResourceLoader) *cli.Command {
 	// traefik config inits
 	tConfig := cmd.NewTraefikConfiguration()
 
-	loaders := []cli.ResourceLoader{&cli.FileLoader{}, &cli.FlagLoader{}, &cli.EnvLoader{}}
-
-	cmdTraefik := &cli.Command{
+	return &cli.Command{
 		Name:          "proxy",
-		Description:   `Proxy Command.`,
+		Description:   `Proxy command.`,
 		Configuration: tConfig,
-		Resources:     loaders,
 		Run: func(_ []string) error {
 			return runCmd(&tConfig.Configuration)
 		},
+		Resources: loaders,
 	}
-
-	err := cmdTraefik.AddCommand(healthcheck.NewCmd(&tConfig.Configuration, loaders))
-	if err != nil {
-		stdlog.Println(err)
-		os.Exit(1)
-	}
-
-	err = cmdTraefik.AddCommand(cmdVersion.NewCmd())
-	if err != nil {
-		stdlog.Println(err)
-		os.Exit(1)
-	}
-
-	err = cli.Execute(cmdTraefik)
-	if err != nil {
-		stdlog.Println(err)
-		logrus.Exit(1)
-	}
-
-	logrus.Exit(0)
 }
 
 func runCmd(staticConfiguration *static.Configuration) error {
