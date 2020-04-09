@@ -7,7 +7,6 @@ import (
 	mk8s "github.com/containous/maesh/pkg/k8s"
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
 	spec "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
-	"github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
 	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
 	accessLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
 	specLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
@@ -181,7 +180,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 // evaluateTrafficSplit evaluates the given traffic-split. If the traffic-split targets a known Service, a new TrafficSplit
 // will be added to it. The TrafficSplit will be added only if all its backends expose the ports required by the Service.
-func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *v1alpha2.TrafficSplit) error {
+func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.TrafficSplit) error {
 	svcKey := NameNamespace{trafficSplit.Spec.Service, trafficSplit.Namespace}
 
 	svc, ok := topology.Services[svcKey]
@@ -537,24 +536,33 @@ func (b *Builder) loadResources(ignored mk8s.IgnoreWrapper) (*resources, error) 
 		return nil, fmt.Errorf("unable to list Services: %w", err)
 	}
 
-	httpRtGrps, err := b.httpRouteGroupLister.List(labels.Everything())
-	if err != nil {
-		return nil, fmt.Errorf("unable to list HTTPRouteGroups: %w", err)
-	}
-
-	tcpRts, err := b.tcpRoutesLister.List(labels.Everything())
-	if err != nil {
-		return nil, fmt.Errorf("unable to list TCPRouteGroups: %w", err)
-	}
-
-	tts, err := b.trafficTargetLister.List(labels.Everything())
-	if err != nil {
-		return nil, fmt.Errorf("unable to list TrafficTargets: %w", err)
-	}
-
 	tss, err := b.trafficSplitLister.List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to list TrafficSplits: %w", err)
+	}
+
+	var httpRtGrps []*spec.HTTPRouteGroup
+	if b.httpRouteGroupLister != nil {
+		httpRtGrps, err = b.httpRouteGroupLister.List(labels.Everything())
+		if err != nil {
+			return nil, fmt.Errorf("unable to list HTTPRouteGroups: %w", err)
+		}
+	}
+
+	var tcpRts []*spec.TCPRoute
+	if b.tcpRoutesLister != nil {
+		tcpRts, err = b.tcpRoutesLister.List(labels.Everything())
+		if err != nil {
+			return nil, fmt.Errorf("unable to list TCPRouteGroups: %w", err)
+		}
+	}
+
+	var tts []*access.TrafficTarget
+	if b.trafficTargetLister != nil {
+		tts, err = b.trafficTargetLister.List(labels.Everything())
+		if err != nil {
+			return nil, fmt.Errorf("unable to list TrafficTargets: %w", err)
+		}
 	}
 
 	for _, svc := range svcs {

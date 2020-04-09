@@ -17,13 +17,14 @@ func (s *HelmSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
 	s.startWhoami(c)
+	s.createResources(c, "resources/smi/crds/")
 }
 
 func (s *HelmSuite) TearDownSuite(c *check.C) {
 	s.stopK3s()
 }
 
-func (s *HelmSuite) TestKubernetesInstall(c *check.C) {
+func (s *HelmSuite) TestACLDisabled(c *check.C) {
 	err := s.installHelmMaesh(c, false, false, false)
 	c.Assert(err, checker.IsNil)
 
@@ -32,11 +33,8 @@ func (s *HelmSuite) TestKubernetesInstall(c *check.C) {
 	s.waitForMaeshControllerStarted(c)
 }
 
-func (s *HelmSuite) TestSMIInstall(c *check.C) {
-	s.createResources(c, "resources/smi/crds/")
-	defer s.deleteResources(c, "resources/smi/crds/", true)
-
-	err := s.installHelmMaesh(c, true, false, false)
+func (s *HelmSuite) TestACLEnabled(c *check.C) {
+	err := s.installHelmMaesh(c, false, false, true)
 	c.Assert(err, checker.IsNil)
 
 	defer s.unInstallHelmMaesh(c)

@@ -123,6 +123,9 @@ spec:
             {{- if .Values.smi.enable }}
             - "--smi"
             {{- end }}
+            {{- if .Values.acl }}
+            - "--acl"
+            {{- end }}
             - "--clusterdomain"
             - {{ default "cluster.local" .Values.clusterDomain | quote }}
             - "--namespace=$(POD_NAMESPACE)"
