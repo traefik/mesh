@@ -5,4 +5,5 @@
 - Michaël Matur [@mmatur](https://github.com/mmatur)
 - Landry Benguigui [@LandryBe](https://github.com/LandryBe)
 - Harold Ozouf [@jspdown](https://github.com/jspdown)
+- Julien Levesy [@jlevesy](https://github.com/jlevesy)
 - Kevin Pollet [@kevinpollet](https://github.com/kevinpollet)
