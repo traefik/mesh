@@ -173,24 +173,25 @@ func (c *Controller) init() {
 	c.deployLog = deploylog.NewDeployLog(c.log, 1000)
 	c.api = api.NewAPI(c.log, c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
 
-	topologyBuilder := topology.NewBuilder(
-		c.ServiceLister,
-		c.EndpointsLister,
-		c.PodLister,
-		c.TrafficTargetLister,
-		c.TrafficSplitLister,
-		c.HTTPRouteGroupLister,
-		c.TCPRouteLister,
-		c.log)
-
-	c.provider = provider.New(topologyBuilder, c.tcpStateTable, provider.Config{
+	topologyBuilder := &topology.Builder{
+		ServiceLister:        c.ServiceLister,
+		EndpointsLister:      c.EndpointsLister,
+		PodLister:            c.PodLister,
+		TrafficTargetLister:  c.TrafficTargetLister,
+		TrafficSplitLister:   c.TrafficSplitLister,
+		HTTPRouteGroupLister: c.HTTPRouteGroupLister,
+		TCPRoutesLister:      c.TCPRouteLister,
+		Logger:               c.log,
+	}
+	providerCfg := provider.Config{
 		IgnoredResources:   c.ignored,
 		MinHTTPPort:        c.minHTTPPort,
 		MaxHTTPPort:        c.maxHTTPPort,
 		ACL:                c.aclEnabled,
 		DefaultTrafficType: c.defaultMode,
 		MaeshNamespace:     c.meshNamespace,
-	}, c.log)
+	}
+	c.provider = provider.New(topologyBuilder, c.tcpStateTable, providerCfg, c.log)
 }
 
 // Run is the main entrypoint for the controller.
@@ -280,7 +281,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 	for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.log.Errorf("timed out waiting for controller cache to sync: %s", t.String())
+			c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
 	}
 

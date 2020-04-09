@@ -715,15 +715,16 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
-	return topology.NewBuilder(
-		svcLister,
-		epLister,
-		podLister,
-		trafficTargetLister,
-		trafficSplitLister,
-		httpRouteGroupLister,
-		tcpRouteLister,
-		logger), nil
+	return &topology.Builder{
+		ServiceLister:        svcLister,
+		EndpointsLister:      epLister,
+		PodLister:            podLister,
+		TrafficTargetLister:  trafficTargetLister,
+		TrafficSplitLister:   trafficSplitLister,
+		HTTPRouteGroupLister: httpRouteGroupLister,
+		TCPRoutesLister:      tcpRouteLister,
+		Logger:               logger,
+	}, nil
 }
 
 func podToTopologyPod(pod *corev1.Pod) *topology.Pod {
