@@ -6,23 +6,23 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NameNamespace is a key for referencing unique resources.
-type NameNamespace struct {
+// Key references a resource.
+type Key struct {
 	Name      string
 	Namespace string
 }
 
 // Topology holds the graph. Each Pods and services are nodes of the graph.
 type Topology struct {
-	Services map[NameNamespace]*Service
-	Pods     map[NameNamespace]*Pod
+	Services map[Key]*Service
+	Pods     map[Key]*Pod
 }
 
 // NewTopology creates a new Topology.
 func NewTopology() *Topology {
 	return &Topology{
-		Services: make(map[NameNamespace]*Service),
-		Pods:     make(map[NameNamespace]*Pod),
+		Services: make(map[Key]*Service),
+		Pods:     make(map[Key]*Pod),
 	}
 }
 
