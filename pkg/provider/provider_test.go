@@ -17,9 +17,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-type TopologyBuilderMock func() (*topology.Topology, error)
+type topologyBuilderMock func() (*topology.Topology, error)
 
-func (m TopologyBuilderMock) Build(_ mk8s.IgnoreWrapper) (*topology.Topology, error) {
+func (m topologyBuilderMock) Build(_ mk8s.IgnoreWrapper) (*topology.Topology, error) {
 	return m()
 }
 
@@ -90,7 +90,7 @@ func TestProvider_BuildConfigWithACLDisabled(t *testing.T) {
 		DefaultTrafficType: "http",
 		MaeshNamespace:     "maesh",
 	}
-	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), cfg, logger)
+	p := provider.New(topologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), cfg, logger)
 
 	got, err := p.BuildConfig()
 	require.NoError(t, err)
@@ -301,7 +301,7 @@ func TestProvider_BuildConfigTCP(t *testing.T) {
 		DefaultTrafficType: "tcp",
 		MaeshNamespace:     "maesh",
 	}
-	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), cfg, logger)
+	p := provider.New(topologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), cfg, logger)
 
 	got, err := p.BuildConfig()
 	require.NoError(t, err)
@@ -484,7 +484,7 @@ func TestProvider_BuildConfigHTTP(t *testing.T) {
 		DefaultTrafficType: "http",
 		MaeshNamespace:     "maesh",
 	}
-	p := provider.New(TopologyBuilderMock(builder), nil, cfg, logger)
+	p := provider.New(topologyBuilderMock(builder), nil, cfg, logger)
 
 	got, err := p.BuildConfig()
 	require.NoError(t, err)
