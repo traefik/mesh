@@ -37,13 +37,19 @@ const (
 	priorityTrafficSplit
 )
 
+// Config holds the Provider configuration.
+type Config struct {
+	IgnoredResources   k8s.IgnoreWrapper
+	MinHTTPPort        int32
+	MaxHTTPPort        int32
+	ACL                bool
+	DefaultTrafficType string
+	MaeshNamespace     string
+}
+
 // Provider holds the configuration for generating dynamic configuration from a kubernetes cluster state.
 type Provider struct {
-	acl                bool
-	minHTTPPort        int32
-	maxHTTPPort        int32
-	defaultTrafficType string
-	maeshNamespace     string
+	config Config
 
 	topologyBuilder        TopologyBuilder
 	tcpStateTable          TCPPortFinder
@@ -54,16 +60,11 @@ type Provider struct {
 }
 
 // New creates a new Provider.
-func New(topologyBuilder TopologyBuilder, tcpStateTable TCPPortFinder, ignoredResources k8s.IgnoreWrapper, minHTTPPort, maxHTTPPort int32, acl bool, defaultTrafficType, maeshNamespace string, logger logrus.FieldLogger) *Provider {
+func New(topologyBuilder TopologyBuilder, tcpStateTable TCPPortFinder, cfg Config, logger logrus.FieldLogger) *Provider {
 	return &Provider{
-		acl:                    acl,
-		minHTTPPort:            minHTTPPort,
-		maxHTTPPort:            maxHTTPPort,
-		defaultTrafficType:     defaultTrafficType,
-		maeshNamespace:         maeshNamespace,
+		config:                 cfg,
 		topologyBuilder:        topologyBuilder,
 		tcpStateTable:          tcpStateTable,
-		ignoredResources:       ignoredResources,
 		logger:                 logger,
 		buildServiceMiddleware: buildMiddlewareFromAnnotations,
 	}
@@ -117,7 +118,7 @@ func (p *Provider) buildConfigForService(cfg *dynamic.Configuration, svc *topolo
 	}
 
 	// When ACL mode is on, all traffic must be forbidden unless explicitly authorized via a TrafficTarget.
-	if p.acl {
+	if p.config.ACL {
 		if trafficType == k8s.ServiceTypeHTTP {
 			p.buildBlockAllRouters(cfg, svc)
 		}
@@ -253,7 +254,7 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(cfg *dynamic.Configurat
 
 		rtrMiddlewares := middlewares
 
-		if p.acl {
+		if p.config.ACL {
 			whitelistDirect := buildWhitelistMiddlewareFromTrafficSplitDirect(ts)
 			whitelistDirectKey := getWhitelistMiddlewareKeyFromTrafficSplitDirect(ts)
 			cfg.HTTP.Middlewares[whitelistDirectKey] = whitelistDirect
@@ -293,7 +294,7 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(cfg *dynamic.Configurat
 
 			// If the ServiceTrafficSplit is a backend of at least one TrafficSplit we need an additional router with
 			// a whitelist middleware which whitelists based on the X-Forwarded-For header instead of on the RemoteAddr value.
-			if len(ts.Service.BackendOf) > 0 && p.acl {
+			if len(ts.Service.BackendOf) > 0 && p.config.ACL {
 				whitelistIndirect := buildWhitelistMiddlewareFromTrafficSplitIndirect(ts)
 				whitelistIndirectKey := getWhitelistMiddlewareKeyFromTrafficSplitIndirect(ts)
 				cfg.HTTP.Middlewares[whitelistIndirectKey] = whitelistIndirect
@@ -360,8 +361,8 @@ func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topolog
 }
 
 func (p Provider) buildHTTPEntrypoint(portID int) (string, error) {
-	port := p.minHTTPPort + int32(portID)
-	if port >= p.maxHTTPPort {
+	port := p.config.MinHTTPPort + int32(portID)
+	if port >= p.config.MaxHTTPPort {
 		return "", errors.New("too many HTTP entrypoints")
 	}
 
@@ -386,7 +387,7 @@ func (p *Provider) getTrafficTypeAnnotation(svc *topology.Service) (string, erro
 	trafficType, ok := svc.Annotations[k8s.AnnotationServiceType]
 
 	if !ok {
-		return p.defaultTrafficType, nil
+		return p.config.DefaultTrafficType, nil
 	}
 
 	if trafficType != k8s.ServiceTypeHTTP && trafficType != k8s.ServiceTypeTCP {
