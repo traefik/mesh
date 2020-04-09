@@ -560,7 +560,7 @@ func (s *BaseSuite) getTrafficSplit(c *check.C, name string) *split.TrafficSplit
 }
 
 func (s *BaseSuite) checkBlockAllMiddleware(c *check.C, config *dynamic.Configuration) {
-	c.Log("Checking if the block-all-middleware is blocks everything")
+	c.Log("Checking if the block-all-middleware blocks everything")
 
 	middleware := config.HTTP.Middlewares["block-all-middleware"]
 	c.Assert(middleware, checker.NotNil)

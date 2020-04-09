@@ -18,7 +18,7 @@ type Topology struct {
 	Pods     map[NameNamespace]*Pod
 }
 
-// NewTopology create a new Topology.
+// NewTopology creates a new Topology.
 func NewTopology() *Topology {
 	return &Topology{
 		Services: make(map[NameNamespace]*Service),
@@ -45,7 +45,7 @@ type Service struct {
 }
 
 // ServiceTrafficTarget represents a TrafficTarget applied a on Service. TrafficTargets have a Destination service
-// account. This service account can be set on many pods, each of them, potentially accessible via different services.
+// account. This service account can be set on many pods, each of them, potentially accessible through different services.
 // A ServiceTrafficTarget is a TrafficTarget for a Service which exposes a Pod which has the TrafficTarget Destination
 // service-account.
 type ServiceTrafficTarget struct {

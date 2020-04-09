@@ -12,24 +12,24 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// TopologyBuilder is capable of building Topologies.
+// TopologyBuilder builds Topologies.
 type TopologyBuilder interface {
 	Build(ignored k8s.IgnoreWrapper) (*topology.Topology, error)
 }
 
-// TCPPortFinder is capable for finding a TCP port mapping.
+// TCPPortFinder finds TCP port mappings.
 type TCPPortFinder interface {
 	Find(svc k8s.ServiceWithPort) (int32, bool)
 }
 
-// When multiple Traefik Routers listen to the same entrypoint and have the same Rule, the chosen router will be the one
-// with the highest priority. There are few cases where this priority is crucial when building the dynamic configuration:
-// - When a TrafficSplit is set on a k8s service, this will create 2 Traefik Routers. One for accessing the k8s service
+// When multiple Traefik Routers listen to the same entrypoint and have the same Rule, the chosen router is the one
+// with the highest priority. There are a few cases where this priority is crucial when building the dynamic configuration:
+// - When a TrafficSplit is set on a k8s service, 2 Traefik Routers are created. One for accessing the k8s service
 //   endpoints and one for accessing the services endpoints mentioned in the TrafficSplit. They both have the same Rule
 //   but we should always prioritize the TrafficSplit. Therefore, TrafficSplit Routers should always have a higher priority.
 // - When a TrafficTarget Destination targets pods of a k8s service and a TrafficSplit is set on this service. This
-//   will create 2 Traefik Routers. One for the TrafficSplit and one for the TrafficTarget. We should always prioritize
-//   TrafficSplits Routers and so, TrafficSplit Routers should always have a higher priority than TrafficTarget Routers.
+//   creates 2 Traefik Routers. One for the TrafficSplit and one for the TrafficTarget. We should always prioritize
+//   TrafficSplits Routers and TrafficSplit Routers should always have a higher priority than TrafficTarget Routers.
 const (
 	priorityService               = 1
 	priorityTrafficTargetDirect   = 2
@@ -207,7 +207,7 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(cfg *dynamic.Configur
 			directRtrKey := getRouterKeyFromTrafficTargetDirect(tt, svcPort.Port)
 			cfg.HTTP.Routers[directRtrKey] = buildHTTPRouter(rule, entrypoint, rtrMiddlewares, svcKey, priorityTrafficTargetDirect)
 
-			// If the ServiceTrafficTarget is a backend of at least one TrafficSplit we need an additional router with
+			// If the ServiceTrafficTarget is the backend of at least one TrafficSplit we need an additional router with
 			// a whitelist middleware which whitelists based on the X-Forwarded-For header instead of on the RemoteAddr value.
 			if len(tt.Service.BackendOf) > 0 {
 				whitelistIndirect := buildWhitelistMiddlewareFromTrafficTargetIndirect(tt)
@@ -362,7 +362,7 @@ func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topolog
 func (p Provider) buildHTTPEntrypoint(portID int) (string, error) {
 	port := p.minHTTPPort + int32(portID)
 	if port >= p.maxHTTPPort {
-		return "", errors.New("too many HTTP entrypoint")
+		return "", errors.New("too many HTTP entrypoints")
 	}
 
 	return fmt.Sprintf("http-%d", port), nil
@@ -390,7 +390,7 @@ func (p *Provider) getTrafficTypeAnnotation(svc *topology.Service) (string, erro
 	}
 
 	if trafficType != k8s.ServiceTypeHTTP && trafficType != k8s.ServiceTypeTCP {
-		return "", fmt.Errorf("traffic-type annotation references an unknown traffic type %q", trafficType)
+		return "", fmt.Errorf("traffic-type annotation references an unsupported traffic type %q", trafficType)
 	}
 
 	return trafficType, nil
