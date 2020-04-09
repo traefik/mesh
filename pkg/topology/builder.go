@@ -132,7 +132,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 		var destPods []*Pod
 
-		// Find out who are the destination pods.
+		// Find out which are the destination pods.
 		for _, pod := range pods {
 			if pod.Status.PodIP == "" {
 				continue
@@ -141,7 +141,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			destPods = append(destPods, getOrCreatePod(topology, pod))
 		}
 
-		// Find out which port can be used on the destination service.
+		// Find out which ports can be used on the destination service.
 		destPorts, err := b.getTrafficTargetDestinationPorts(svc, tt)
 		if err != nil {
 			return fmt.Errorf("unable to find destination ports on Service %s/%s: %w", svc.Namespace, svc.Name, err)
@@ -169,7 +169,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			}
 		}
 
-		// Add the ServiceTrafficTarget to the destination pods
+		// Add the ServiceTrafficTarget to the destination pods.
 		for _, pod := range svcTT.Destination.Pods {
 			pod.Incoming = append(pod.Incoming, svcTT)
 		}
@@ -459,8 +459,8 @@ func (b *Builder) buildTCPRoute(tcpRts map[NameNamespace]*spec.TCPRoute, ns stri
 }
 
 // getTrafficTargetDestinationPorts gets the ports mentioned in the TrafficTarget.Destination.Port.
-// If the port is "", it will returns all the ports of the Service.
-// If the port is an integer, it will returns on this port.
+// If the port is "", all of the Service's ports are returned.
+// If the port is an integer, it is returned.
 func (b *Builder) getTrafficTargetDestinationPorts(svc *Service, tt *access.TrafficTarget) ([]v1.ServicePort, error) {
 	if tt.Destination.Port == "" {
 		return svc.Ports, nil
@@ -503,7 +503,7 @@ type resources struct {
 	HTTPRouteGroups map[NameNamespace]*spec.HTTPRouteGroup
 	TCPRoutes       map[NameNamespace]*spec.TCPRoute
 
-	// Pods indexes
+	// Pods indexes.
 	PodsBySvc     map[NameNamespace][]*v1.Pod
 	PodsBySa      map[NameNamespace][]*v1.Pod
 	PodsBySvcBySa map[NameNamespace]map[NameNamespace][]*v1.Pod
@@ -579,7 +579,7 @@ func (b *Builder) loadResources(ignored mk8s.IgnoreWrapper) (*resources, error) 
 	return res, nil
 }
 
-// indexPods populate the different pod indexes in the given resources object. It builds 3 indexes:
+// indexPods populates the different pod indexes in the given resources object. It builds 3 indexes:
 // - pods indexed by service-account
 // - pods indexed by service
 // - pods indexed by service indexed by service-account

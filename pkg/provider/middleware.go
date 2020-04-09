@@ -10,7 +10,7 @@ import (
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 )
 
-// MiddlewareBuilder is capable of building middlewares for a service.
+// MiddlewareBuilder builds middlewares for a service.
 type MiddlewareBuilder interface {
 	Build(svc *topology.Service) (*dynamic.Middleware, error)
 }
@@ -44,12 +44,12 @@ func (b *AnnotationBasedMiddlewareBuilder) Build(svc *topology.Service) (*dynami
 	if hasRateLimitAverage && hasRateLimitBurst {
 		average, err := strconv.Atoi(rateLimitAverage)
 		if err != nil {
-			return nil, fmt.Errorf("unable to build rate-limit middleware, %q annotaiton is invalid: %w", k8s.AnnotationRateLimitAverage, err)
+			return nil, fmt.Errorf("unable to build rate-limit middleware, %q annotation is invalid: %w", k8s.AnnotationRateLimitAverage, err)
 		}
 
 		burst, err := strconv.Atoi(rateLimitBurst)
 		if err != nil {
-			return nil, fmt.Errorf("unable to build rate-limit middleware, %q annotaiton is invalid: %w", k8s.AnnotationRateLimitBurst, err)
+			return nil, fmt.Errorf("unable to build rate-limit middleware, %q annotation is invalid: %w", k8s.AnnotationRateLimitBurst, err)
 		}
 
 		if burst <= 0 || average <= 0 {
@@ -69,8 +69,8 @@ func (b *AnnotationBasedMiddlewareBuilder) Build(svc *topology.Service) (*dynami
 	return &middleware, nil
 }
 
-// buildWhitelistMiddlewareFromTrafficTargetDirect builds an IPWhiteList middleware which blocks every requests except
-// those originating from an authorized Pod. Authorized Pods are all the Pods listed in the ServiceTrafficTarget.Sources.
+// buildWhitelistMiddlewareFromTrafficTargetDirect builds an IPWhiteList middleware which blocks requests from
+// unauthorized Pods. Authorized Pods are those listed in the ServiceTrafficTarget.Sources.
 // This middleware doesn't work if there's a proxy between the authorized Pod and this Maesh proxy.
 func buildWhitelistMiddlewareFromTrafficTargetDirect(tt *topology.ServiceTrafficTarget) *dynamic.Middleware {
 	var IPs []string
@@ -88,9 +88,8 @@ func buildWhitelistMiddlewareFromTrafficTargetDirect(tt *topology.ServiceTraffic
 	}
 }
 
-// buildWhitelistMiddlewareFromTrafficSplitDirect builds an IPWhiteList middleware which blocks every requests except
-// those originating from an authorized Pod. Authorized pods are the pods that can access all the leaves of the
-// TrafficSplit.
+// buildWhitelistMiddlewareFromTrafficSplitDirect builds an IPWhiteList middleware which blocks requests from
+// unauthorized Pods. Authorized Pods are those that can access all the leaves of the TrafficSplit.
 func buildWhitelistMiddlewareFromTrafficSplitDirect(ts *topology.TrafficSplit) *dynamic.Middleware {
 	var IPs []string
 

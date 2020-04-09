@@ -273,7 +273,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 	for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			c.log.Errorf("timed out waiting for controller cache to sync: %s", t.String())
 		}
 	}
 

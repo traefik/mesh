@@ -58,13 +58,13 @@ If you use a cluster domain other than `cluster.local` set it by using the `clus
 helm install maesh maesh/maesh --set clusterDomain=my.custom.domain.com
 ```
 
-## Access-Control List
+## Access Control List
 
-By default Maesh does not restrict traffic between pods and services. However, some scenarios requires more control
-over who can talk to who. The Access-control List mode (ACL) allows to define a set of rules to explicitly allow 
+By default, Maesh does not restrict traffic between pods and services. However, some scenarios require more control
+over the rules for internal communication. The Access Control List mode (ACL) requires a set of rules to explicitly allow 
 traffic between different resources.
 
-To enable ACL, install Maesh in ACL mode by setting the `acl` Helm Chart option to true.
+To enable ACL, install Maesh in ACL mode by setting the `acl` Helm Chart option to `true`.
 
 ```bash
 helm install maesh --namespace=maesh maesh/maesh --set acl=true
@@ -75,14 +75,14 @@ to provide a fine-grained control over instrumentation, routing and access contr
 
 !!! Note CRDs
     Helm v3 automatically will install the CRDs in the `/crds` directory.
-    If you are re-installing into a cluster with the CRDs already present, Helm may give you a warning.
+    If you are re-installing into a cluster with the CRDs already present, Helm may print a warning.
     If you do not want to install them, or want to avoid the warning during a re-install,
     please use the new `--skip-crds` flag.
     More information can be found on the [helm documentation](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
 
 ## Platform recommendations
 
-Maesh will work on pretty much any Kubernetes environment that conforms to the global Kubernetes specification.
+Maesh works on Kubernetes environments that conforms to the global Kubernetes specification.
 That being said, we have had users encounter issues when using variants such as minikube, microk8s,
 and other development distributions.
 

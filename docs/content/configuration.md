@@ -1,7 +1,7 @@
 # Configuration
 
 The configuration for Maesh is broken down into two parts: the static configuration, and the dynamic configuration.
-The static configuration is configured when the Maesh service mesh is installed, and is configured via the `values.yaml` file in the Helm install.
+The static configuration is configured when the service mesh is installed and is configured via the `values.yaml` file in the Helm install.
 
 ## Static configuration
 
@@ -15,7 +15,7 @@ The static configuration is configured when the Maesh service mesh is installed,
 - Tracing can be enabled.
 
 - Access-Control List (ACL) mode can be enabled.
-    This configures Maesh to run in ACL mode, where all traffic become forbidden unless explicitly allowed via 
+    This configures Maesh to run in ACL mode, where all traffic is forbidden unless explicitly allowed via 
     an SMI [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md).
     Please see the [SMI Specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md) for more information.
 
@@ -33,9 +33,9 @@ Dynamic configuration can be provided to Maesh using annotations on Kubernetes s
  | Traffic-Split (SMI)   | ✔            | ✔           |
  | Traffic-Target (SMI)  | ✘            | ✔           |
 
-### Kubernetes Services Annotations
+### Kubernetes Service Annotations
 
-Annotations on services give the ability to configure how Maesh will interpret them.
+Annotations on services give the ability to configure how Maesh interprets them.
 
 #### Traffic type
 
