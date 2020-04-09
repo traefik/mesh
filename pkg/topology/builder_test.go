@@ -77,8 +77,8 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 	require.NoError(t, err)
 
 	want := &topology.Topology{
-		Services: make(map[topology.NameNamespace]*topology.Service),
-		Pods:     make(map[topology.NameNamespace]*topology.Pod),
+		Services: make(map[topology.Key]*topology.Service),
+		Pods:     make(map[topology.Key]*topology.Pod),
 	}
 
 	assert.Equal(t, want, got)
@@ -394,12 +394,12 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit(t *testing.T) {
 	wantServiceD.BackendOf = []*topology.TrafficSplit{wantTrafficSplit}
 
 	want := &topology.Topology{
-		Services: map[topology.NameNamespace]*topology.Service{
+		Services: map[topology.Key]*topology.Service{
 			nn(svcB.Name, svcB.Namespace): wantServiceB,
 			nn(svcC.Name, svcC.Namespace): wantServiceC,
 			nn(svcD.Name, svcD.Namespace): wantServiceD,
 		},
-		Pods: map[topology.NameNamespace]*topology.Pod{
+		Pods: map[topology.Key]*topology.Pod{
 			nn(podA.Name, podA.Namespace): wantPodA,
 			nn(podB.Name, podB.Namespace): wantPodB,
 			nn(podC.Name, podC.Namespace): wantPodC,
@@ -480,10 +480,10 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 	wantServiceB.TrafficTargets = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
 
 	want := &topology.Topology{
-		Services: map[topology.NameNamespace]*topology.Service{
+		Services: map[topology.Key]*topology.Service{
 			nn(svcB.Name, svcB.Namespace): wantServiceB,
 		},
-		Pods: map[topology.NameNamespace]*topology.Pod{
+		Pods: map[topology.Key]*topology.Pod{
 			nn(podA.Name, podA.Namespace): wantPodA,
 			nn(podB.Name, podB.Namespace): wantPodB,
 		},
@@ -562,10 +562,10 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	wantServiceB.TrafficTargets = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
 
 	want := &topology.Topology{
-		Services: map[topology.NameNamespace]*topology.Service{
+		Services: map[topology.Key]*topology.Service{
 			nn(svcB.Name, svcB.Namespace): wantServiceB,
 		},
-		Pods: map[topology.NameNamespace]*topology.Pod{
+		Pods: map[topology.Key]*topology.Pod{
 			nn(podA.Name, podA.Namespace): wantPodA,
 			nn(podB.Name, podB.Namespace): wantPodB,
 		},
@@ -648,10 +648,10 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 	wantServiceC.TrafficTargets = []*topology.ServiceTrafficTarget{wantServiceCTrafficTarget}
 
 	want := &topology.Topology{
-		Services: map[topology.NameNamespace]*topology.Service{
+		Services: map[topology.Key]*topology.Service{
 			nn(svcC.Name, svcC.Namespace): wantServiceC,
 		},
-		Pods: map[topology.NameNamespace]*topology.Pod{
+		Pods: map[topology.Key]*topology.Pod{
 			nn(podA.Name, podA.Namespace):   wantPodA,
 			nn(podB.Name, podB.Namespace):   wantPodB,
 			nn(podC1.Name, podC1.Namespace): wantPodC1,
@@ -748,8 +748,8 @@ func serviceToTopologyService(svc *corev1.Service, pods []*topology.Pod) *topolo
 	}
 }
 
-func nn(name, ns string) topology.NameNamespace {
-	return topology.NameNamespace{
+func nn(name, ns string) topology.Key {
+	return topology.Key{
 		Name:      name,
 		Namespace: ns,
 	}

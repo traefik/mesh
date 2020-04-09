@@ -60,13 +60,13 @@ func TestProvider_BuildConfigWithACLDisabled(t *testing.T) {
 	svcB.TrafficSplits = []*topology.TrafficSplit{ts}
 
 	top := &topology.Topology{
-		Services: map[topology.NameNamespace]*topology.Service{
+		Services: map[topology.Key]*topology.Service{
 			nn(svcB.Name, svcB.Namespace): svcB,
 			nn(svcD.Name, svcD.Namespace): svcD,
 			nn(svcE.Name, svcE.Namespace): svcE,
 			nn(svcF.Name, svcF.Namespace): svcF,
 		},
-		Pods: map[topology.NameNamespace]*topology.Pod{
+		Pods: map[topology.Key]*topology.Pod{
 			nn(podB1.Name, podB1.Namespace): podB1,
 			nn(podB2.Name, podB2.Namespace): podB2,
 		},
@@ -254,12 +254,12 @@ func TestProvider_BuildConfigTCP(t *testing.T) {
 	svcB.TrafficSplits = []*topology.TrafficSplit{ts}
 
 	top := &topology.Topology{
-		Services: map[topology.NameNamespace]*topology.Service{
+		Services: map[topology.Key]*topology.Service{
 			nn(svcB.Name, svcB.Namespace): svcB,
 			nn(svcC.Name, svcC.Namespace): svcC,
 			nn(svcD.Name, svcD.Namespace): svcD,
 		},
-		Pods: map[topology.NameNamespace]*topology.Pod{
+		Pods: map[topology.Key]*topology.Pod{
 			nn(podA.Name, podA.Namespace): podA,
 			nn(podB.Name, podB.Namespace): podB,
 			nn(podC.Name, podC.Namespace): podC,
@@ -441,12 +441,12 @@ func TestProvider_BuildConfigHTTP(t *testing.T) {
 	svcB.TrafficSplits = []*topology.TrafficSplit{ts}
 
 	top := &topology.Topology{
-		Services: map[topology.NameNamespace]*topology.Service{
+		Services: map[topology.Key]*topology.Service{
 			nn(svcB.Name, svcB.Namespace): svcB,
 			nn(svcD.Name, svcD.Namespace): svcD,
 			nn(svcE.Name, svcE.Namespace): svcE,
 		},
-		Pods: map[topology.NameNamespace]*topology.Pod{
+		Pods: map[topology.Key]*topology.Pod{
 			nn(podA.Name, podA.Namespace):   podA,
 			nn(podC.Name, podC.Namespace):   podC,
 			nn(podB1.Name, podB1.Namespace): podB1,
@@ -674,8 +674,8 @@ func TestProvider_BuildConfigHTTP(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-func nn(name, ns string) topology.NameNamespace {
-	return topology.NameNamespace{
+func nn(name, ns string) topology.Key {
+	return topology.Key{
 		Name:      name,
 		Namespace: ns,
 	}
