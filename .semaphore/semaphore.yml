@@ -36,7 +36,20 @@ blocks:
             - docker save containous/maesh:latest > maesh-img.tar
             - cache store maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID maesh-img.tar
 
-  - name: Tests
+  - name: Unit Tests
+      skip:
+        when: "branch = 'gh-pages'"
+      task:
+        prologue:
+          commands:
+            - sem-version go 1.14
+            - checkout
+        jobs:
+          - name: Unit Tests
+            commands:
+                - make local-test
+
+  - name: Integration Tests
     skip:
       when: "branch = 'gh-pages'"
     task:
@@ -49,9 +62,6 @@ blocks:
           - cache restore maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
           - docker load < maesh-img.tar
       jobs:
-        - name: Unit Tests
-          commands:
-            - make test
         - name: SMI Integration Suite
           commands:
             -  "make test-integration-nobuild TESTFLAGS=\"-check.f SMISuite\""
