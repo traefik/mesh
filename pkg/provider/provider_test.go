@@ -82,8 +82,15 @@ func TestProvider_BuildConfigWithACLDisabled(t *testing.T) {
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
-	ignoredResources := mk8s.NewIgnored()
-	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), ignoredResources, 10000, 10001, false, "http", "maesh", logger)
+	cfg := provider.Config{
+		IgnoredResources:   mk8s.NewIgnored(),
+		MinHTTPPort:        10000,
+		MaxHTTPPort:        10001,
+		ACL:                false,
+		DefaultTrafficType: "http",
+		MaeshNamespace:     "maesh",
+	}
+	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), cfg, logger)
 
 	got, err := p.BuildConfig()
 	require.NoError(t, err)
@@ -286,8 +293,15 @@ func TestProvider_BuildConfigTCP(t *testing.T) {
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
-	ignoredResources := mk8s.NewIgnored()
-	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), ignoredResources, 10000, 10001, true, "tcp", "maesh", logger)
+	cfg := provider.Config{
+		IgnoredResources:   mk8s.NewIgnored(),
+		MinHTTPPort:        10000,
+		MaxHTTPPort:        10001,
+		ACL:                true,
+		DefaultTrafficType: "tcp",
+		MaeshNamespace:     "maesh",
+	}
+	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), cfg, logger)
 
 	got, err := p.BuildConfig()
 	require.NoError(t, err)
@@ -462,8 +476,15 @@ func TestProvider_BuildConfigHTTP(t *testing.T) {
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
-	ignoredResources := mk8s.NewIgnored()
-	p := provider.New(TopologyBuilderMock(builder), nil, ignoredResources, 10000, 10001, true, "http", "maesh", logger)
+	cfg := provider.Config{
+		IgnoredResources:   mk8s.NewIgnored(),
+		MinHTTPPort:        10000,
+		MaxHTTPPort:        10001,
+		ACL:                true,
+		DefaultTrafficType: "http",
+		MaeshNamespace:     "maesh",
+	}
+	p := provider.New(TopologyBuilderMock(builder), nil, cfg, logger)
 
 	got, err := p.BuildConfig()
 	require.NoError(t, err)
