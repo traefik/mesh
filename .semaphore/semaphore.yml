@@ -15,7 +15,7 @@ fail_fast:
     when: "branch != 'master'"
     
 blocks:
-  - name: Build and Check
+  - name: Build
     skip:
      when: "branch = 'gh-pages'"
     task:
@@ -24,11 +24,11 @@ blocks:
          - sem-version go 1.14
          - checkout
       jobs:
-        - name: Cache Dependencies
+        - name: Cache Go dependencies
           commands:
             - go mod download
             - cache store
-        - name: Build and Check
+        - name: Build and check
           commands:
             - make check build
             - cache store maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA dist
