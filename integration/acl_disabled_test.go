@@ -29,7 +29,7 @@ func (s *ACLDisabledSuite) TearDownSuite(c *check.C) {
 
 func (s *ACLDisabledSuite) TestHTTPService(c *check.C) {
 	s.createResources(c, "resources/acl/disabled/http")
-	defer s.deleteResources(c, "resources/acl/disabled/http", true)
+	defer s.deleteResources(c, "resources/acl/disabled/http")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"server"})
@@ -52,7 +52,7 @@ func (s *ACLDisabledSuite) TestHTTPService(c *check.C) {
 
 func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
 	s.createResources(c, "resources/acl/disabled/tcp")
-	defer s.deleteResources(c, "resources/acl/disabled/tcp", true)
+	defer s.deleteResources(c, "resources/acl/disabled/tcp")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"server"})
@@ -74,7 +74,7 @@ func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
 
 func (s *ACLDisabledSuite) TestSplitTraffic(c *check.C) {
 	s.createResources(c, "resources/acl/disabled/traffic-split")
-	defer s.deleteResources(c, "resources/acl/disabled/traffic-split", true)
+	defer s.deleteResources(c, "resources/acl/disabled/traffic-split")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"server-v1", "server-v2"})

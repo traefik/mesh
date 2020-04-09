@@ -29,14 +29,23 @@ func (s *ACLEnabledSuite) TearDownSuite(c *check.C) {
 	s.stopK3s()
 }
 
-func (s *ACLEnabledSuite) TestTrafficTarget(c *check.C) {
+func (s *ACLEnabledSuite) TestTrafficTargetWithACL(c *check.C) {
+	s.testTrafficTarget(false, true, c)
+}
+
+// For the sake of BC, we need be check if the SMI option is handle correctly.
+func (s *ACLEnabledSuite) TestTrafficTargetWithSMI(c *check.C) {
+	s.testTrafficTarget(true, false, c)
+}
+
+func (s *ACLEnabledSuite) testTrafficTarget(smi, acl bool, c *check.C) {
 	s.createResources(c, "resources/acl/enabled/traffic-target")
-	defer s.deleteResources(c, "resources/acl/enabled/traffic-target", true)
+	defer s.deleteResources(c, "resources/acl/enabled/traffic-target")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"client-a", "client-b", "server"})
 
-	cmd := s.startMaeshBinaryCmd(c, false, true)
+	cmd := s.startMaeshBinaryCmd(c, smi, acl)
 	err := cmd.Start()
 
 	c.Assert(err, checker.IsNil)
@@ -55,14 +64,23 @@ func (s *ACLEnabledSuite) TestTrafficTarget(c *check.C) {
 	s.checkTrafficTargetWhitelistDirect(c, config, tt, svc, []*corev1.Pod{clientAPod})
 }
 
-func (s *ACLEnabledSuite) TestTrafficSplit(c *check.C) {
+func (s *ACLEnabledSuite) TestTrafficSplitACLEnable(c *check.C) {
+	s.testTrafficSplit(false, true, c)
+}
+
+// For the sake of BC, we need be check if the SMI option is handle correctly.
+func (s *ACLEnabledSuite) TestTrafficSplitSMIEnable(c *check.C) {
+	s.testTrafficSplit(true, false, c)
+}
+
+func (s *ACLEnabledSuite) testTrafficSplit(smi, acl bool, c *check.C) {
 	s.createResources(c, "resources/acl/enabled/traffic-split")
-	defer s.deleteResources(c, "resources/acl/enabled/traffic-split", true)
+	defer s.deleteResources(c, "resources/acl/enabled/traffic-split")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"client-a", "client-b", "server-v1", "server-v2"})
 
-	cmd := s.startMaeshBinaryCmd(c, false, true)
+	cmd := s.startMaeshBinaryCmd(c, smi, acl)
 	err := cmd.Start()
 
 	c.Assert(err, checker.IsNil)

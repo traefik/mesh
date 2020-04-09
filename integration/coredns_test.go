@@ -55,7 +55,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersionSafe(c *check.C) {
 	}
 
 	s.createResources(c, "resources/coredns/corednssafe.yaml")
-	defer s.deleteResources(c, "resources/coredns/corednssafe.yaml", true)
+	defer s.deleteResources(c, "resources/coredns/corednssafe.yaml")
 
 	for _, test := range testCases {
 		s.WaitForCoreDNS(c)
@@ -92,7 +92,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 	}
 
 	s.createResources(c, "resources/coredns/coredns.yaml")
-	defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
+	defer s.deleteResources(c, "resources/coredns/coredns.yaml")
 
 	for _, test := range testCases {
 		s.WaitForCoreDNS(c)
@@ -110,7 +110,7 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 
 func (s *CoreDNSSuite) TestCoreDNSDig(c *check.C) {
 	s.createResources(c, "resources/coredns/coredns.yaml")
-	defer s.deleteResources(c, "resources/coredns/coredns.yaml", true)
+	defer s.deleteResources(c, "resources/coredns/coredns.yaml")
 	s.WaitForCoreDNS(c)
 
 	cmd := s.startMaeshBinaryCmd(c, false, false)

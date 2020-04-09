@@ -57,10 +57,10 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
-	rtGrp := createHTTPRouteGroup("ignored-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
+	rtGrp := createHTTPRouteGroup("ignored-ns", "http-rt-grp-ignored", []spec.HTTPMatch{apiMatch, metricMatch})
 
 	tt := createTrafficTarget("ignored-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, []string{})
-	ts := createTrafficSplit("ignored-ns", "ts", svcB, svcC, 80, svcD, 20)
+	ts := createTrafficSplit("ignored-ns", "ts", svcB, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, svcB, podB, svcC, svcD)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
@@ -128,8 +128,8 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 	ttd := createTrafficTarget("my-ns", "tt-d", saD, "8080", []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
 	ttc := createTrafficTarget("my-ns", "tt-c", saC, "8080", []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
 	tte := createTrafficTarget("my-ns", "tt-e", saE, "8080", []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
-	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, 80, svcD, 20)
-	tsErr := createTrafficSplit("my-ns", "tsErr", svcC, svcB, 80, svcE, 20)
+	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
+	tsErr := createTrafficSplit("my-ns", "tsErr", svcC, svcB, svcE)
 
 	k8sClient := fake.NewSimpleClientset(saA1, saA2, saB, saC, saD, saE,
 		podA1, podA2, podB, podC, podD, podE,
@@ -191,7 +191,7 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	tt := createTrafficTarget("my-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
 	ttc := createTrafficTarget("my-ns", "tt-c", saC, "8080", []*corev1.ServiceAccount{saA, saA2}, rtGrp, ttMatch)
 	ttd := createTrafficTarget("my-ns", "tt-d", saD, "8080", []*corev1.ServiceAccount{saC}, rtGrp, ttMatch)
-	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, 80, svcD, 20)
+	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, podA2, saB, svcB, podB, svcC, svcD, podC, podD, epB, epC, epD)
 	smiAccessClient := accessfake.NewSimpleClientset(tt, ttc, ttd)
@@ -252,8 +252,8 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	ttd := createTrafficTarget("my-ns", "tt-d", saD, "8080", []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
 	ttc := createTrafficTarget("my-ns", "tt-c", saC, "8080", []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
 	tte := createTrafficTarget("my-ns", "tt-e", saE, "8080", []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
-	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, 80, svcD, 20)
-	ts2 := createTrafficSplit("my-ns", "ts2", svcB, svcC, 80, svcE, 20)
+	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
+	ts2 := createTrafficSplit("my-ns", "ts2", svcB, svcC, svcE)
 
 	k8sClient := fake.NewSimpleClientset(saA1, saA2, saB, saC, saD, saE,
 		podA1, podA2, podB, podC, podD, podE,
@@ -321,7 +321,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit(t *testing.T) {
 
 	ttMatch := []string{apiMatch.Name}
 	tt := createTrafficTarget("my-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
-	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, 80, svcD, 20)
+	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, saB, saC, saD,
 		podA, podB, podC, podD,
@@ -764,7 +764,7 @@ func svcPort(name string, port, targetPort int32) corev1.ServicePort {
 	}
 }
 
-func createTrafficSplit(ns, name string, svc *corev1.Service, backend1 *corev1.Service, weight1 int, backend2 *corev1.Service, weight2 int) *split.TrafficSplit {
+func createTrafficSplit(ns, name string, svc *corev1.Service, backend1 *corev1.Service, backend2 *corev1.Service) *split.TrafficSplit {
 	return &split.TrafficSplit{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TrafficSplit",
@@ -779,11 +779,11 @@ func createTrafficSplit(ns, name string, svc *corev1.Service, backend1 *corev1.S
 			Backends: []split.TrafficSplitBackend{
 				{
 					Service: backend1.Name,
-					Weight:  weight1,
+					Weight:  80,
 				},
 				{
 					Service: backend2.Name,
-					Weight:  weight2,
+					Weight:  20,
 				},
 			},
 		},
