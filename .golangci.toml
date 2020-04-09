@@ -40,7 +40,6 @@
     "funlen",
     "bodyclose", # Too many false positives
     "godox",
-    "unparam", # Often leads to bad practice
     "goconst", # Too many false positives
   ]
 

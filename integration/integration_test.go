@@ -263,12 +263,10 @@ func (s *BaseSuite) createResources(c *check.C, dirPath string) {
 	time.Sleep(kubectlCreateWaitTime)
 }
 
-func (s *BaseSuite) deleteResources(c *check.C, dirPath string, force bool) {
+func (s *BaseSuite) deleteResources(c *check.C, dirPath string) {
 	// Delete the required objects from the configured directory
 	args := []string{"delete", "-f", path.Join(s.dir, dirPath)}
-	if force {
-		args = append(args, "--force", "--grace-period=0")
-	}
+	args = append(args, "--force", "--grace-period=0")
 
 	s.kubectlCommand(c, args...)
 }
@@ -663,22 +661,22 @@ func (s *BaseSuite) checkTrafficTargetLoadBalancer(c *check.C, config *dynamic.C
 func (s *BaseSuite) checkTrafficTargetWhitelistDirect(c *check.C, config *dynamic.Configuration, tt *access.TrafficTarget, svc *corev1.Service, pods []*corev1.Pod) {
 	middlewareKey := fmt.Sprintf("%s-%s-%s-whitelist-traffic-target-direct", svc.Namespace, svc.Name, tt.Name)
 
-	s.checkWhitelistSourceRange(c, config, middlewareKey, svc, pods)
+	s.checkWhitelistSourceRange(c, config, middlewareKey, pods)
 }
 
 func (s *BaseSuite) checkTrafficTargetWhitelistIndirect(c *check.C, config *dynamic.Configuration, tt *access.TrafficTarget, svc *corev1.Service, pods []*corev1.Pod) {
 	middlewareKey := fmt.Sprintf("%s-%s-%s-whitelist-traffic-target-indirect", svc.Namespace, svc.Name, tt.Name)
 
-	s.checkWhitelistSourceRange(c, config, middlewareKey, svc, pods)
+	s.checkWhitelistSourceRange(c, config, middlewareKey, pods)
 }
 
 func (s *BaseSuite) checkTrafficSplitWhitelistDirect(c *check.C, config *dynamic.Configuration, ts *split.TrafficSplit, svc *corev1.Service, pods []*corev1.Pod) {
 	middlewareKey := fmt.Sprintf("%s-%s-%s-whitelist-traffic-split-direct", svc.Namespace, svc.Name, ts.Name)
 
-	s.checkWhitelistSourceRange(c, config, middlewareKey, svc, pods)
+	s.checkWhitelistSourceRange(c, config, middlewareKey, pods)
 }
 
-func (s *BaseSuite) checkWhitelistSourceRange(c *check.C, config *dynamic.Configuration, key string, svc *corev1.Service, pods []*corev1.Pod) {
+func (s *BaseSuite) checkWhitelistSourceRange(c *check.C, config *dynamic.Configuration, key string, pods []*corev1.Pod) {
 	middleware := config.HTTP.Middlewares[key]
 	c.Assert(middleware, checker.NotNil)
 

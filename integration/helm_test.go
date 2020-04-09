@@ -41,3 +41,12 @@ func (s *HelmSuite) TestACLEnabled(c *check.C) {
 
 	s.waitForMaeshControllerStarted(c)
 }
+
+func (s *HelmSuite) TestSMIEnabled(c *check.C) {
+	err := s.installHelmMaesh(c, true, false, false)
+	c.Assert(err, checker.IsNil)
+
+	defer s.unInstallHelmMaesh(c)
+
+	s.waitForMaeshControllerStarted(c)
+}

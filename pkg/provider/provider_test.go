@@ -44,12 +44,12 @@ func TestProvider_BuildConfigWithACLDisabled(t *testing.T) {
 	ports := []v1.ServicePort{svcPort("port-8080", 8080, 8080)}
 	saB := "sa-b"
 
-	podB1 := createPod("my-ns", "pod-b1", saB, "10.10.2.1")
-	podB2 := createPod("my-ns", "pod-b2", saB, "10.10.2.2")
-	svcB := createSvc("my-ns", "svc-b", svcbAnnotations, ports, "10.10.14.1", []*topology.Pod{podB1, podB2})
-	svcD := createSvc("my-ns", "svc-d", annotations, ports, "10.10.15.1", []*topology.Pod{})
-	svcE := createSvc("my-ns", "svc-e", annotations, ports, "10.10.16.1", []*topology.Pod{})
-	svcF := createSvc("my-ns", "svc-f", svcfAnnotations, ports, "10.10.17.1", []*topology.Pod{podB1, podB2})
+	podB1 := createPod("pod-b1", saB, "10.10.2.1")
+	podB2 := createPod("pod-b2", saB, "10.10.2.2")
+	svcB := createSvc("svc-b", svcbAnnotations, ports, "10.10.14.1", []*topology.Pod{podB1, podB2})
+	svcD := createSvc("svc-d", annotations, ports, "10.10.15.1", []*topology.Pod{})
+	svcE := createSvc("svc-e", annotations, ports, "10.10.16.1", []*topology.Pod{})
+	svcF := createSvc("svc-f", svcfAnnotations, ports, "10.10.17.1", []*topology.Pod{podB1, podB2})
 
 	backendSvcD := createTrafficSplitBackend(svcD, 80)
 	backendSvcE := createTrafficSplitBackend(svcE, 20)
@@ -220,13 +220,13 @@ func TestProvider_BuildConfigTCP(t *testing.T) {
 	ports := []v1.ServicePort{svcPort("port-8080", 8080, 8080)}
 	annotations := map[string]string{}
 
-	podA := createPod("my-ns", "pod-a", saA, "10.10.1.1")
-	podB := createPod("my-ns", "pod-b", saB, "10.10.1.2")
-	podC := createPod("my-ns", "pod-c", saB, "10.10.1.3")
-	podD := createPod("my-ns", "pod-d", saB, "10.10.1.4")
-	svcB := createSvc("my-ns", "svc-b", annotations, ports, "10.10.13.1", []*topology.Pod{podB})
-	svcC := createSvc("my-ns", "svc-c", annotations, ports, "10.10.13.2", []*topology.Pod{podC})
-	svcD := createSvc("my-ns", "svc-d", annotations, ports, "10.10.13.3", []*topology.Pod{podD})
+	podA := createPod("pod-a", saA, "10.10.1.1")
+	podB := createPod("pod-b", saB, "10.10.1.2")
+	podC := createPod("pod-c", saB, "10.10.1.3")
+	podD := createPod("pod-d", saB, "10.10.1.4")
+	svcB := createSvc("svc-b", annotations, ports, "10.10.13.1", []*topology.Pod{podB})
+	svcC := createSvc("svc-c", annotations, ports, "10.10.13.2", []*topology.Pod{podC})
+	svcD := createSvc("svc-d", annotations, ports, "10.10.13.3", []*topology.Pod{podD})
 
 	backendSvcC := createTrafficSplitBackend(svcC, 80)
 	backendSvcD := createTrafficSplitBackend(svcD, 20)
@@ -236,13 +236,13 @@ func TestProvider_BuildConfigTCP(t *testing.T) {
 	svcD.BackendOf = []*topology.TrafficSplit{ts}
 
 	sourceA := createTrafficTargetSource("my-ns", saA, []*topology.Pod{podA})
-	destSvcB := createTrafficTargetDestination("my-ns", saB, []*topology.Pod{podB}, ports)
+	destSvcB := createTrafficTargetDestination(saB, []*topology.Pod{podB}, ports)
 	spec := topology.TrafficSpec{TCPRoute: createTCPRoute("my-ns", "my-tcp-route")}
-	ttSvcB := createTrafficTarget("tt", svcB, []topology.ServiceTrafficTargetSource{sourceA}, destSvcB, []topology.TrafficSpec{spec})
-	destSvcC := createTrafficTargetDestination("my-ns", saB, []*topology.Pod{podC}, ports)
-	ttSvcC := createTrafficTarget("tt", svcC, []topology.ServiceTrafficTargetSource{sourceA}, destSvcC, []topology.TrafficSpec{spec})
-	destSvcD := createTrafficTargetDestination("my-ns", saB, []*topology.Pod{podD}, ports)
-	ttSvcD := createTrafficTarget("tt", svcD, []topology.ServiceTrafficTargetSource{sourceA}, destSvcD, []topology.TrafficSpec{spec})
+	ttSvcB := createTrafficTarget("tt-saB", svcB, []topology.ServiceTrafficTargetSource{sourceA}, destSvcB, []topology.TrafficSpec{spec})
+	destSvcC := createTrafficTargetDestination(saB, []*topology.Pod{podC}, ports)
+	ttSvcC := createTrafficTarget("tt-saB", svcC, []topology.ServiceTrafficTargetSource{sourceA}, destSvcC, []topology.TrafficSpec{spec})
+	destSvcD := createTrafficTargetDestination(saB, []*topology.Pod{podD}, ports)
+	ttSvcD := createTrafficTarget("tt-saB", svcD, []topology.ServiceTrafficTargetSource{sourceA}, destSvcD, []topology.TrafficSpec{spec})
 
 	podA.Outgoing = []*topology.ServiceTrafficTarget{ttSvcB, ttSvcC, ttSvcD}
 	podB.Incoming = []*topology.ServiceTrafficTarget{ttSvcB}
@@ -390,20 +390,20 @@ func TestProvider_BuildConfigHTTP(t *testing.T) {
 		"maesh.containo.us/circuit-breaker-expression": "LatencyAtQuantileMS(50.0) > 100",
 	}
 	ports := []v1.ServicePort{svcPort("port-8080", 8080, 8080)}
-	saA := "sa-a"
-	saB := "sa-b"
-	saC := "sa-c"
+	saClient1 := "sa-client1"
+	saClient2 := "sa-client2"
+	saServer := "sa-server"
 
-	podA := createPod("my-ns", "pod-a", saA, "10.10.1.1")
-	podC := createPod("my-ns", "pod-c", saC, "10.10.3.1")
-	podB1 := createPod("my-ns", "pod-b1", saB, "10.10.2.1")
-	podB2 := createPod("my-ns", "pod-b2", saB, "10.10.2.2")
-	podD := createPod("my-ns", "pod-d", saB, "10.10.4.1")
-	podE := createPod("my-ns", "pod-e", saB, "10.10.5.1")
+	podA := createPod("pod-a", saClient1, "10.10.1.1")
+	podC := createPod("pod-c", saClient2, "10.10.3.1")
+	podB1 := createPod("pod-b1", saServer, "10.10.2.1")
+	podB2 := createPod("pod-b2", saServer, "10.10.2.2")
+	podD := createPod("pod-d", saServer, "10.10.4.1")
+	podE := createPod("pod-e", saServer, "10.10.5.1")
 
-	svcB := createSvc("my-ns", "svc-b", svcbAnnotations, ports, "10.10.14.1", []*topology.Pod{podB1, podB2})
-	svcD := createSvc("my-ns", "svc-d", annotations, ports, "10.10.15.1", []*topology.Pod{podD})
-	svcE := createSvc("my-ns", "svc-e", annotations, ports, "10.10.16.1", []*topology.Pod{podE})
+	svcB := createSvc("svc-b", svcbAnnotations, ports, "10.10.14.1", []*topology.Pod{podB1, podB2})
+	svcD := createSvc("svc-d", annotations, ports, "10.10.15.1", []*topology.Pod{podD})
+	svcE := createSvc("svc-e", annotations, ports, "10.10.16.1", []*topology.Pod{podE})
 
 	backendSvcD := createTrafficSplitBackend(svcD, 80)
 	backendSvcE := createTrafficSplitBackend(svcE, 20)
@@ -416,17 +416,17 @@ func TestProvider_BuildConfigHTTP(t *testing.T) {
 	metricMatch := createHTTPMatch("metric", []string{"POST"}, "/metric")
 	rtGrp := createHTTPRouteGroup("my-ns", "rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
 
-	sourceA := createTrafficTargetSource("my-ns", saA, []*topology.Pod{podA})
-	sourceC := createTrafficTargetSource("my-ns", saC, []*topology.Pod{podC})
+	sourceA := createTrafficTargetSource("my-ns", saClient1, []*topology.Pod{podA})
+	sourceC := createTrafficTargetSource("my-ns", saClient2, []*topology.Pod{podC})
 	specTt := topology.TrafficSpec{HTTPRouteGroup: rtGrp, HTTPMatches: []*spec.HTTPMatch{&apiMatch, &metricMatch}}
 
-	destSvcB := createTrafficTargetDestination("my-ns", saB, []*topology.Pod{podB1, podB2}, ports)
+	destSvcB := createTrafficTargetDestination(saServer, []*topology.Pod{podB1, podB2}, ports)
 	ttSvcB := createTrafficTarget("tt", svcB, []topology.ServiceTrafficTargetSource{sourceA, sourceC}, destSvcB, []topology.TrafficSpec{specTt})
 
-	destSvcD := createTrafficTargetDestination("my-ns", saB, []*topology.Pod{podD}, ports)
+	destSvcD := createTrafficTargetDestination(saServer, []*topology.Pod{podD}, ports)
 	ttSvcD := createTrafficTarget("tt", svcD, []topology.ServiceTrafficTargetSource{sourceA, sourceC}, destSvcD, []topology.TrafficSpec{specTt})
 
-	destSvcE := createTrafficTargetDestination("my-ns", saB, []*topology.Pod{podE}, ports)
+	destSvcE := createTrafficTargetDestination(saServer, []*topology.Pod{podE}, ports)
 	ttSvcE := createTrafficTarget("tt", svcE, []topology.ServiceTrafficTargetSource{sourceA, sourceC}, destSvcE, []topology.TrafficSpec{specTt})
 
 	podA.Outgoing = []*topology.ServiceTrafficTarget{ttSvcB, ttSvcD, ttSvcE}
@@ -690,16 +690,16 @@ func svcPort(name string, port, targetPort int32) v1.ServicePort {
 	}
 }
 
-func createPod(ns, name, sa, ip string) *topology.Pod {
+func createPod(name, sa, ip string) *topology.Pod {
 	return &topology.Pod{
 		Name:           name,
-		Namespace:      ns,
+		Namespace:      "my-ns",
 		ServiceAccount: sa,
 		IP:             ip,
 	}
 }
 
-func createSvc(ns, name string, annotations map[string]string, ports []v1.ServicePort, ip string, pods []*topology.Pod) *topology.Service {
+func createSvc(name string, annotations map[string]string, ports []v1.ServicePort, ip string, pods []*topology.Pod) *topology.Service {
 	subsetPorts := make([]v1.EndpointPort, len(ports))
 	for i, p := range ports {
 		subsetPorts[i] = v1.EndpointPort{
@@ -716,7 +716,7 @@ func createSvc(ns, name string, annotations map[string]string, ports []v1.Servic
 
 	return &topology.Service{
 		Name:        name,
-		Namespace:   ns,
+		Namespace:   "my-ns",
 		Annotations: annotations,
 		Ports:       ports,
 		ClusterIP:   ip,
@@ -771,10 +771,10 @@ func createTrafficTargetSource(ns, sa string, pods []*topology.Pod) topology.Ser
 	}
 }
 
-func createTrafficTargetDestination(ns, sa string, pods []*topology.Pod, ports []v1.ServicePort) topology.ServiceTrafficTargetDestination {
+func createTrafficTargetDestination(sa string, pods []*topology.Pod, ports []v1.ServicePort) topology.ServiceTrafficTargetDestination {
 	return topology.ServiceTrafficTargetDestination{
 		ServiceAccount: sa,
-		Namespace:      ns,
+		Namespace:      "my-ns",
 		Ports:          ports,
 		Pods:           pods,
 	}
