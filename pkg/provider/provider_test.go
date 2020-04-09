@@ -82,8 +82,8 @@ func TestProvider_BuildConfigWithACLDisabled(t *testing.T) {
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
-	ignored := mk8s.NewIgnored()
-	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), ignored, 10000, 10001, false, "http", "maesh", logger)
+	ignoredResources := mk8s.NewIgnored()
+	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), ignoredResources, 10000, 10001, false, "http", "maesh", logger)
 
 	got, err := p.BuildConfig()
 	require.NoError(t, err)
@@ -286,8 +286,8 @@ func TestProvider_BuildConfigTCP(t *testing.T) {
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
-	ignored := mk8s.NewIgnored()
-	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), ignored, 10000, 10001, true, "tcp", "maesh", logger)
+	ignoredResources := mk8s.NewIgnored()
+	p := provider.New(TopologyBuilderMock(builder), tcpStateTableMock(tcpStatetable), ignoredResources, 10000, 10001, true, "tcp", "maesh", logger)
 
 	got, err := p.BuildConfig()
 	require.NoError(t, err)
@@ -462,8 +462,8 @@ func TestProvider_BuildConfigHTTP(t *testing.T) {
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
-	ignored := mk8s.NewIgnored()
-	p := provider.New(TopologyBuilderMock(builder), nil, ignored, 10000, 10001, true, "http", "maesh", logger)
+	ignoredResources := mk8s.NewIgnored()
+	p := provider.New(TopologyBuilderMock(builder), nil, ignoredResources, 10000, 10001, true, "http", "maesh", logger)
 
 	got, err := p.BuildConfig()
 	require.NoError(t, err)

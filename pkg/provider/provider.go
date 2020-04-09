@@ -14,7 +14,7 @@ import (
 
 // TopologyBuilder builds Topologies.
 type TopologyBuilder interface {
-	Build(ignored k8s.IgnoreWrapper) (*topology.Topology, error)
+	Build(ignoredResources k8s.IgnoreWrapper) (*topology.Topology, error)
 }
 
 // TCPPortFinder finds TCP port mappings.
@@ -31,10 +31,10 @@ type TCPPortFinder interface {
 //   creates 2 Traefik Routers. One for the TrafficSplit and one for the TrafficTarget. We should always prioritize
 //   TrafficSplits Routers and TrafficSplit Routers should always have a higher priority than TrafficTarget Routers.
 const (
-	priorityService               = 1
-	priorityTrafficTargetDirect   = 2
-	priorityTrafficTargetIndirect = 3
-	priorityTrafficSplit          = 4
+	priorityService = iota + 1
+	priorityTrafficTargetDirect
+	priorityTrafficTargetIndirect
+	priorityTrafficSplit
 )
 
 // Provider holds the configuration for generating dynamic configuration from a kubernetes cluster state.
@@ -45,27 +45,27 @@ type Provider struct {
 	defaultTrafficType string
 	maeshNamespace     string
 
-	topologyBuilder   TopologyBuilder
-	tcpStateTable     TCPPortFinder
-	middlewareBuilder MiddlewareBuilder
-	ignored           k8s.IgnoreWrapper
+	topologyBuilder        TopologyBuilder
+	tcpStateTable          TCPPortFinder
+	buildServiceMiddleware MiddlewareBuilder
+	ignoredResources       k8s.IgnoreWrapper
 
 	logger logrus.FieldLogger
 }
 
 // New creates a new Provider.
-func New(topologyBuilder TopologyBuilder, tcpStateTable TCPPortFinder, ignored k8s.IgnoreWrapper, minHTTPPort, maxHTTPPort int32, acl bool, defaultTrafficType, maeshNamespace string, logger logrus.FieldLogger) *Provider {
+func New(topologyBuilder TopologyBuilder, tcpStateTable TCPPortFinder, ignoredResources k8s.IgnoreWrapper, minHTTPPort, maxHTTPPort int32, acl bool, defaultTrafficType, maeshNamespace string, logger logrus.FieldLogger) *Provider {
 	return &Provider{
-		acl:                acl,
-		minHTTPPort:        minHTTPPort,
-		maxHTTPPort:        maxHTTPPort,
-		defaultTrafficType: defaultTrafficType,
-		maeshNamespace:     maeshNamespace,
-		middlewareBuilder:  &AnnotationBasedMiddlewareBuilder{},
-		topologyBuilder:    topologyBuilder,
-		tcpStateTable:      tcpStateTable,
-		ignored:            ignored,
-		logger:             logger,
+		acl:                    acl,
+		minHTTPPort:            minHTTPPort,
+		maxHTTPPort:            maxHTTPPort,
+		defaultTrafficType:     defaultTrafficType,
+		maeshNamespace:         maeshNamespace,
+		topologyBuilder:        topologyBuilder,
+		tcpStateTable:          tcpStateTable,
+		ignoredResources:       ignoredResources,
+		logger:                 logger,
+		buildServiceMiddleware: buildMiddlewareFromAnnotations,
 	}
 }
 
@@ -73,7 +73,7 @@ func New(topologyBuilder TopologyBuilder, tcpStateTable TCPPortFinder, ignored k
 func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	cfg := buildDefaultDynamicConfig()
 
-	t, err := p.topologyBuilder.Build(p.ignored)
+	t, err := p.topologyBuilder.Build(p.ignoredResources)
 	if err != nil {
 		return nil, fmt.Errorf("unable to build topology: %w", err)
 	}
@@ -103,7 +103,7 @@ func (p *Provider) buildConfigForService(cfg *dynamic.Configuration, svc *topolo
 
 	// Middlewares are currently supported only for HTTP services.
 	if trafficType == k8s.ServiceTypeHTTP {
-		middleware, err := p.middlewareBuilder.Build(svc)
+		middleware, err := p.buildServiceMiddleware(svc)
 		if err != nil {
 			return fmt.Errorf("unable to build middlewares: %w", err)
 		}

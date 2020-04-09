@@ -50,6 +50,10 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
+	if pConfig.SMI {
+		log.Warnf("SMI mode is deprecated, please consider using --acl instead")
+	}
+
 	aclEnabled := pConfig.ACL || pConfig.SMI
 
 	log.Debugf("ACL mode enabled: %t", aclEnabled)
