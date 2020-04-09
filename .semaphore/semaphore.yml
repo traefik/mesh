@@ -44,6 +44,7 @@ blocks:
         commands:
           - sem-version go 1.14
           - checkout
+          - cache restore
       jobs:
         - name: Unit Tests
           commands:
