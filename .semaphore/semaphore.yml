@@ -13,33 +13,68 @@ auto_cancel:
 fail_fast:
   stop:
     when: "branch != 'master'"
-    
+
 blocks:
-  - name: Tests
+  - name: Build
     skip:
       when: "branch = 'gh-pages'"
     task:
       prologue:
         commands:
           - sem-version go 1.14
-          - go version
           - checkout
       jobs:
-        - name: Build and Unit Tests
+        - name: Cache Go dependencies
           commands:
-            - make
+            - cache restore
+            - go mod download -x
+            - cache store
+        - name: Build and check
+          commands:
+            - make check build
+            - cache store maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID dist
+            - docker save containous/maesh:latest > maesh-img.tar
+            - cache store maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID maesh-img.tar
+
+  - name: Unit Tests
+    skip:
+      when: "branch = 'gh-pages'"
+    task:
+      prologue:
+        commands:
+          - sem-version go 1.14
+          - checkout
+          - cache restore
+      jobs:
+        - name: Unit Tests
+          commands:
+            - make local-test
+
+  - name: Integration Tests
+    skip:
+      when: "branch = 'gh-pages'"
+    task:
+      prologue:
+        commands:
+          - sem-version go 1.14
+          - checkout
+          - cache restore
+          - cache restore maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
+          - cache restore maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
+          - docker load < maesh-img.tar
+      jobs:
         - name: SMI Integration Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f SMISuite\""
+            - "make test-integration-nobuild TESTFLAGS=\"-check.f SMISuite\""
         - name: Kubernetes Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f KubernetesSuite\""
+            - "make test-integration-nobuild TESTFLAGS=\"-check.f KubernetesSuite\""
         - name: CoreDNS Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f CoreDNSSuite\""
+            - "make test-integration-nobuild TESTFLAGS=\"-check.f CoreDNSSuite\""
         - name: KubeDNS Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f KubeDNSSuite\""
+            - "make test-integration-nobuild TESTFLAGS=\"-check.f KubeDNSSuite\""
         - name: Helm Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f HelmSuite\""
+            - "make test-integration-nobuild TESTFLAGS=\"-check.f HelmSuite\""
