@@ -70,10 +70,10 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignored := mk8s.NewIgnored()
-	ignored.AddIgnoredNamespace("ignored-ns")
+	ignoredResources := mk8s.NewIgnored()
+	ignoredResources.AddIgnoredNamespace("ignored-ns")
 
-	got, err := builder.Build(ignored)
+	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
 	want := &topology.Topology{
@@ -142,8 +142,8 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignored := mk8s.NewIgnored()
-	got, err := builder.Build(ignored)
+	ignoredResources := mk8s.NewIgnored()
+	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
 	assert.Len(t, got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits, 0)
@@ -201,8 +201,8 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignored := mk8s.NewIgnored()
-	got, err := builder.Build(ignored)
+	ignoredResources := mk8s.NewIgnored()
+	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
 	assert.Equal(t, 0, len(got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits[0].Incoming))
@@ -266,8 +266,8 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignored := mk8s.NewIgnored()
-	got, err := builder.Build(ignored)
+	ignoredResources := mk8s.NewIgnored()
+	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, len(got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits[0].Incoming))
@@ -334,8 +334,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignored := mk8s.NewIgnored()
-	got, err := builder.Build(ignored)
+	ignoredResources := mk8s.NewIgnored()
+	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
 	wantPodA := podToTopologyPod(podA)
@@ -442,8 +442,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignored := mk8s.NewIgnored()
-	got, err := builder.Build(ignored)
+	ignoredResources := mk8s.NewIgnored()
+	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
 	wantPodA := podToTopologyPod(podA)
@@ -527,8 +527,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignored := mk8s.NewIgnored()
-	got, err := builder.Build(ignored)
+	ignoredResources := mk8s.NewIgnored()
+	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
 	wantPodA := podToTopologyPod(podA)
@@ -606,8 +606,8 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignored := mk8s.NewIgnored()
-	got, err := builder.Build(ignored)
+	ignoredResources := mk8s.NewIgnored()
+	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
 	wantPodA := podToTopologyPod(podA)

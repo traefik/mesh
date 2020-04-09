@@ -10,16 +10,11 @@ import (
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 )
 
-// MiddlewareBuilder builds middlewares for a service.
-type MiddlewareBuilder interface {
-	Build(svc *topology.Service) (*dynamic.Middleware, error)
-}
+// MiddlewareBuilder is capable of building a middleware for the given service.
+type MiddlewareBuilder func(svc *topology.Service) (*dynamic.Middleware, error)
 
-// AnnotationBasedMiddlewareBuilder build middlewares from service annotations.
-type AnnotationBasedMiddlewareBuilder struct{}
-
-// Build builds middlewares for the given service.
-func (b *AnnotationBasedMiddlewareBuilder) Build(svc *topology.Service) (*dynamic.Middleware, error) {
+// Build builds middlewares for the given service using annotations.
+func buildMiddlewareFromAnnotations(svc *topology.Service) (*dynamic.Middleware, error) {
 	var middleware dynamic.Middleware
 
 	// Build circuit-breaker middleware.
@@ -71,7 +66,7 @@ func (b *AnnotationBasedMiddlewareBuilder) Build(svc *topology.Service) (*dynami
 
 // buildWhitelistMiddlewareFromTrafficTargetDirect builds an IPWhiteList middleware which blocks requests from
 // unauthorized Pods. Authorized Pods are those listed in the ServiceTrafficTarget.Sources.
-// This middleware doesn't work if there's a proxy between the authorized Pod and this Maesh proxy.
+// This middleware doesn't work if used behind a proxy.
 func buildWhitelistMiddlewareFromTrafficTargetDirect(tt *topology.ServiceTrafficTarget) *dynamic.Middleware {
 	var IPs []string
 
@@ -90,6 +85,7 @@ func buildWhitelistMiddlewareFromTrafficTargetDirect(tt *topology.ServiceTraffic
 
 // buildWhitelistMiddlewareFromTrafficSplitDirect builds an IPWhiteList middleware which blocks requests from
 // unauthorized Pods. Authorized Pods are those that can access all the leaves of the TrafficSplit.
+// This middleware doesn't work if used behind a proxy.
 func buildWhitelistMiddlewareFromTrafficSplitDirect(ts *topology.TrafficSplit) *dynamic.Middleware {
 	var IPs []string
 
@@ -104,9 +100,9 @@ func buildWhitelistMiddlewareFromTrafficSplitDirect(ts *topology.TrafficSplit) *
 	}
 }
 
-// buildWhitelistMiddlewareFromTrafficTargetIndirect builds an IPWhiteList middleware like
-// buildWhitelistMiddlewareFromTrafficTargetDirect except it's intended to be used when there is at least one proxy
-// between the authorized Pod and this Maesh proxy. This middleware doesn't support nested TrafficSplit.
+// buildWhitelistMiddlewareFromTrafficTargetIndirect builds an IPWhiteList middleware which blocks requests from
+// unauthorized Pods. Authorized Pods are those listed in the ServiceTrafficTarget.Sources.
+// This middleware works only when used behind a proxy.
 func buildWhitelistMiddlewareFromTrafficTargetIndirect(tt *topology.ServiceTrafficTarget) *dynamic.Middleware {
 	whitelist := buildWhitelistMiddlewareFromTrafficTargetDirect(tt)
 	whitelist.IPWhiteList.IPStrategy = &dynamic.IPStrategy{
@@ -116,9 +112,9 @@ func buildWhitelistMiddlewareFromTrafficTargetIndirect(tt *topology.ServiceTraff
 	return whitelist
 }
 
-// buildWhitelistMiddlewareFromTrafficSplitIndirect builds an IPWhiteList middleware like
-// buildWhitelistMiddlewareFromTrafficSplitDirect except it's intended to be used when there is at least one proxy
-// between the authorized Pod and this Maesh proxy. This middleware doesn't support nested TrafficSplit.
+// buildWhitelistMiddlewareFromTrafficSplitIndirect builds an IPWhiteList middleware which blocks requests from
+// unauthorized Pods. Authorized Pods are those that can access all the leaves of the TrafficSplit.
+// This middleware works only when used behind a proxy.
 func buildWhitelistMiddlewareFromTrafficSplitIndirect(ts *topology.TrafficSplit) *dynamic.Middleware {
 	whitelist := buildWhitelistMiddlewareFromTrafficSplitDirect(ts)
 	whitelist.IPWhiteList.IPStrategy = &dynamic.IPStrategy{

@@ -77,6 +77,11 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 
 	minHTTPPort := int32(5000)
 	minTCPPort := int32(10000)
+
+	if iConfig.SMI {
+		log.Warnf("SMI mode is deprecated, please consider using --acl instead")
+	}
+
 	aclEnabled := iConfig.ACL || iConfig.SMI
 
 	log.Debugf("ACL mode enabled: %t", aclEnabled)

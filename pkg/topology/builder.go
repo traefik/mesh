@@ -54,10 +54,10 @@ func NewBuilder(
 
 // Build builds a graph representing the possible interactions between Pods and Services based on the current state
 // of the kubernetes cluster.
-func (b *Builder) Build(ignored mk8s.IgnoreWrapper) (*Topology, error) {
+func (b *Builder) Build(ignoredResources mk8s.IgnoreWrapper) (*Topology, error) {
 	topology := NewTopology()
 
-	res, err := b.loadResources(ignored)
+	res, err := b.loadResources(ignoredResources)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load resources: %w", err)
 	}
@@ -509,7 +509,7 @@ type resources struct {
 	PodsBySvcBySa map[Key]map[Key][]*v1.Pod
 }
 
-func (b *Builder) loadResources(ignored mk8s.IgnoreWrapper) (*resources, error) {
+func (b *Builder) loadResources(ignoredResources mk8s.IgnoreWrapper) (*resources, error) {
 	res := &resources{
 		Services:        make(map[Key]*v1.Service),
 		TrafficTargets:  make(map[Key]*access.TrafficTarget),
@@ -566,15 +566,15 @@ func (b *Builder) loadResources(ignored mk8s.IgnoreWrapper) (*resources, error) 
 	}
 
 	for _, svc := range svcs {
-		if ignored.IsIgnored(svc.ObjectMeta) {
+		if ignoredResources.IsIgnored(svc.ObjectMeta) {
 			continue
 		}
 
 		res.Services[Key{svc.Name, svc.Namespace}] = svc
 	}
 
-	b.indexSMIResources(res, ignored, tts, tss, tcpRts, httpRtGrps)
-	b.indexPods(res, ignored, pods, eps)
+	b.indexSMIResources(res, ignoredResources, tts, tss, tcpRts, httpRtGrps)
+	b.indexPods(res, ignoredResources, pods, eps)
 
 	return res, nil
 }
@@ -583,11 +583,11 @@ func (b *Builder) loadResources(ignored mk8s.IgnoreWrapper) (*resources, error) 
 // - pods indexed by service-account
 // - pods indexed by service
 // - pods indexed by service indexed by service-account
-func (b *Builder) indexPods(res *resources, ignored mk8s.IgnoreWrapper, pods []*v1.Pod, eps []*v1.Endpoints) {
+func (b *Builder) indexPods(res *resources, ignoredResources mk8s.IgnoreWrapper, pods []*v1.Pod, eps []*v1.Endpoints) {
 	podsByName := make(map[Key]*v1.Pod)
 
 	for _, pod := range pods {
-		if ignored.IsIgnored(pod.ObjectMeta) {
+		if ignoredResources.IsIgnored(pod.ObjectMeta) {
 			continue
 		}
 
@@ -599,7 +599,7 @@ func (b *Builder) indexPods(res *resources, ignored mk8s.IgnoreWrapper, pods []*
 	}
 
 	for _, ep := range eps {
-		if ignored.IsIgnored(ep.ObjectMeta) {
+		if ignoredResources.IsIgnored(ep.ObjectMeta) {
 			continue
 		}
 
@@ -630,9 +630,9 @@ func (b *Builder) indexPods(res *resources, ignored mk8s.IgnoreWrapper, pods []*
 	}
 }
 
-func (b *Builder) indexSMIResources(res *resources, ignored mk8s.IgnoreWrapper, tts []*access.TrafficTarget, tss []*split.TrafficSplit, tcpRts []*spec.TCPRoute, httpRtGrps []*spec.HTTPRouteGroup) {
+func (b *Builder) indexSMIResources(res *resources, ignoredResources mk8s.IgnoreWrapper, tts []*access.TrafficTarget, tss []*split.TrafficSplit, tcpRts []*spec.TCPRoute, httpRtGrps []*spec.HTTPRouteGroup) {
 	for _, httpRouteGroup := range httpRtGrps {
-		if ignored.IsIgnored(httpRouteGroup.ObjectMeta) {
+		if ignoredResources.IsIgnored(httpRouteGroup.ObjectMeta) {
 			continue
 		}
 
@@ -640,7 +640,7 @@ func (b *Builder) indexSMIResources(res *resources, ignored mk8s.IgnoreWrapper, 
 	}
 
 	for _, tcpRoute := range tcpRts {
-		if ignored.IsIgnored(tcpRoute.ObjectMeta) {
+		if ignoredResources.IsIgnored(tcpRoute.ObjectMeta) {
 			continue
 		}
 
@@ -648,7 +648,7 @@ func (b *Builder) indexSMIResources(res *resources, ignored mk8s.IgnoreWrapper, 
 	}
 
 	for _, trafficTarget := range tts {
-		if ignored.IsIgnored(trafficTarget.ObjectMeta) {
+		if ignoredResources.IsIgnored(trafficTarget.ObjectMeta) {
 			continue
 		}
 
@@ -656,7 +656,7 @@ func (b *Builder) indexSMIResources(res *resources, ignored mk8s.IgnoreWrapper, 
 	}
 
 	for _, trafficSplit := range tss {
-		if ignored.IsIgnored(trafficSplit.ObjectMeta) {
+		if ignoredResources.IsIgnored(trafficSplit.ObjectMeta) {
 			continue
 		}
 
