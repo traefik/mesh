@@ -31,9 +31,9 @@ blocks:
         - name: Build and check
           commands:
             - make check build
-            - cache store maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA dist
+            - cache store maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID dist
             - docker save containous/maesh:latest > maesh-img.tar
-            - cache store maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA maesh-img.tar
+            - cache store maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID maesh-img.tar
 
   - name: Tests
     skip:
@@ -44,8 +44,8 @@ blocks:
           - sem-version go 1.14
           - checkout
           - cache restore
-          - cache restore maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA
-          - cache restore maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_GIT_SHA
+          - cache restore maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
+          - cache restore maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
           - docker load < maesh-img.tar
       jobs:
         - name: Unit Tests
