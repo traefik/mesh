@@ -148,7 +148,7 @@ func (p *Provider) buildConfigForService(cfg *dynamic.Configuration, svc *topolo
 func (p *Provider) buildServicesAndRoutersForService(cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewares []string) error {
 	switch trafficType {
 	case k8s.ServiceTypeHTTP:
-		httpRule := fmt.Sprintf("Host(`%s.%s.maesh`) || Host(`%s`)", svc.Name, svc.Namespace, svc.ClusterIP)
+		httpRule := buildHTTPRuleFromService(svc)
 
 		for portID, svcPort := range svc.Ports {
 			entrypoint, err := p.buildHTTPEntrypoint(portID)

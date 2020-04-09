@@ -24,6 +24,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
 	s.createResources(c, "resources/tcp-state-table/")
+	s.createResources(c, "resources/smi/crds/")
 }
 
 func (s *CoreDNSSuite) TearDownSuite(c *check.C) {

@@ -50,7 +50,11 @@ func prepareCommand(pConfig *cmd.PrepareConfig) error {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
-	if err = p.StartInformers(pConfig.SMI); err != nil {
+	aclEnabled := pConfig.ACL || pConfig.SMI
+
+	log.Debugf("ACL mode enabled: %t", aclEnabled)
+
+	if err = p.StartInformers(aclEnabled); err != nil {
 		return fmt.Errorf("error during informer check: %v, this can be caused by pre-existing objects in your cluster that do not conform to the spec", err)
 	}
 

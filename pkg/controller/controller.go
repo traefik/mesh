@@ -135,42 +135,43 @@ func NewMeshController(clients k8s.Client, cfg MeshControllerConfig) (*Controlle
 }
 
 func (c *Controller) init() {
-	// Create a new SharedInformerFactory, and register the event handler to informers.
+	// Create SharedInformers for non-ACL related resources.
 	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.GetKubernetesClient(), k8s.ResyncPeriod)
+	c.splitFactory = splitInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSplitClient(), k8s.ResyncPeriod)
 
-	// Create the base listers
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
-	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
-	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
-
 	c.serviceManager = NewShadowServiceManager(c.log, c.ServiceLister, c.meshNamespace, c.tcpStateTable, c.defaultMode, c.minHTTPPort, c.maxHTTPPort, c.clients.GetKubernetesClient())
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	c.configRefreshChan = make(chan string)
 	c.handler = NewHandler(c.log, c.ignored, c.serviceManager, c.configRefreshChan)
 
+	// Create listers and register the event handler to informers that are not ACL related.
+	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
+	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
+	c.TrafficSplitLister = c.splitFactory.Split().V1alpha2().TrafficSplits().Lister()
+
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
+	c.splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(c.handler)
+
+	// Create SharedInformers, listers and register the event handler for ACL related resources.
+	if c.aclEnabled {
+		c.accessFactory = accessInformer.NewSharedInformerFactoryWithOptions(c.clients.GetAccessClient(), k8s.ResyncPeriod)
+		c.specsFactory = specsInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSpecsClient(), k8s.ResyncPeriod)
+
+		c.TrafficTargetLister = c.accessFactory.Access().V1alpha1().TrafficTargets().Lister()
+		c.HTTPRouteGroupLister = c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
+		c.TCPRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
+
+		c.accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
+		c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
+		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
+	}
 
 	c.deployLog = deploylog.NewDeployLog(c.log, 1000)
 	c.api = api.NewAPI(c.log, c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
-
-	// Create new SharedInformerFactories, and register the event handler to informers.
-	c.accessFactory = accessInformer.NewSharedInformerFactoryWithOptions(c.clients.GetAccessClient(), k8s.ResyncPeriod)
-	c.splitFactory = splitInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSplitClient(), k8s.ResyncPeriod)
-	c.specsFactory = specsInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSpecsClient(), k8s.ResyncPeriod)
-
-	c.accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
-	c.splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(c.handler)
-	c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
-	c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
-
-	// Create the SMI listers
-	c.TrafficTargetLister = c.accessFactory.Access().V1alpha1().TrafficTargets().Lister()
-	c.HTTPRouteGroupLister = c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
-	c.TCPRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
-	c.TrafficSplitLister = c.splitFactory.Split().V1alpha2().TrafficSplits().Lister()
 
 	topologyBuilder := topology.NewBuilder(
 		c.ServiceLister,
@@ -196,13 +197,13 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Start the informers.
 	c.startInformers(stopCh, 10*time.Second)
 
-	// Create the mesh services here to ensure that they exist
+	// Create the mesh services here to ensure that they exist.
 	c.log.Info("Creating initial mesh services")
 
 	if err = c.createMeshServices(); err != nil {
 		c.log.Errorf("could not create mesh services: %v", err)
 	}
-	// Start the api, and enable the readiness endpoint
+	// Start the api, and enable the readiness endpoint.
 	c.api.Start()
 
 	for {
@@ -212,7 +213,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 			c.log.Info("Shutting down workers")
 			return nil
 		case message := <-c.configRefreshChan:
-			// Reload the configuration
+			// Reload the configuration.
 			conf, confErr := c.provider.BuildConfig()
 			if confErr != nil {
 				c.log.Errorf("Unable to build dynamic configuration: %v", confErr)
@@ -268,27 +269,29 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 		}
 	}
 
-	c.accessFactory.Start(stopCh)
-
-	for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
-		if !ok {
-			c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
-		}
-	}
-
-	c.specsFactory.Start(stopCh)
-
-	for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
-		if !ok {
-			c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
-		}
-	}
-
 	c.splitFactory.Start(stopCh)
 
 	for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
 			c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+		}
+	}
+
+	if c.aclEnabled {
+		c.accessFactory.Start(stopCh)
+
+		for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
+			if !ok {
+				c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			}
+		}
+
+		c.specsFactory.Start(stopCh)
+
+		for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
+			if !ok {
+				c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			}
 		}
 	}
 }
