@@ -26,6 +26,7 @@ blocks:
       jobs:
         - name: Cache Go dependencies
           commands:
+            - cache restore
             - go mod download
             - cache store
         - name: Build and check
