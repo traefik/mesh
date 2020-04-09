@@ -220,7 +220,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 
 	for _, svc := range topology.Services {
 		for _, ts := range svc.TrafficSplits {
-			pods, err := b.getIncomingPodsForTrafficSplit(ts, map[Key]bool{})
+			pods, err := b.getIncomingPodsForTrafficSplit(ts, map[Key]struct{}{})
 			if err != nil {
 				loopDetected[svc] = append(loopDetected[svc], ts)
 				b.Logger.Errorf("Unable to get incoming pods for TrafficSplit %s/%s: %v", ts.Namespace, ts.Name, err)
@@ -245,13 +245,13 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 	}
 }
 
-func (b *Builder) getIncomingPodsForTrafficSplit(ts *TrafficSplit, visited map[Key]bool) ([]*Pod, error) {
+func (b *Builder) getIncomingPodsForTrafficSplit(ts *TrafficSplit, visited map[Key]struct{}) ([]*Pod, error) {
 	keyTS := Key{ts.Name, ts.Namespace}
 	if _, found := visited[keyTS]; found {
 		return nil, fmt.Errorf("circular reference detected on traffic split %s/%s in service %s/%s", ts.Namespace, ts.Name, ts.Service.Namespace, ts.Service.Name)
 	}
 
-	visited[keyTS] = true
+	visited[keyTS] = struct{}{}
 
 	var union []*Pod
 
@@ -271,7 +271,7 @@ func (b *Builder) getIncomingPodsForTrafficSplit(ts *TrafficSplit, visited map[K
 	return union, nil
 }
 
-func (b *Builder) getIncomingPodsForService(svc *Service, visited map[Key]bool) ([]*Pod, error) {
+func (b *Builder) getIncomingPodsForService(svc *Service, visited map[Key]struct{}) ([]*Pod, error) {
 	var union []*Pod
 
 	if len(svc.TrafficSplits) == 0 {
@@ -641,8 +641,8 @@ func (b *Builder) indexSMIResources(res *resources, ignoredResources mk8s.Ignore
 	}
 }
 
-func mapCopy(m map[Key]bool) map[Key]bool {
-	copy := map[Key]bool{}
+func mapCopy(m map[Key]struct{}) map[Key]struct{} {
+	copy := map[Key]struct{}{}
 
 	for k, b := range m {
 		copy[k] = b
