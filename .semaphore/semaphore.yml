@@ -27,7 +27,7 @@ blocks:
         - name: Cache Go dependencies
           commands:
             - cache restore
-            - go mod download
+            - go mod download -x
             - cache store
         - name: Build and check
           commands:
