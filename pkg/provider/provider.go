@@ -154,7 +154,7 @@ func (p *Provider) buildServicesAndRoutersForService(cfg *dynamic.Configuration,
 		for portID, svcPort := range svc.Ports {
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP entrypoint for Service %s/%s and portID %d: %v", svc.Namespace, svc.Name, portID, err)
+				p.logger.Errorf("Unable to build HTTP entrypoint for Service %s/%s and port %d: %v", svc.Namespace, svc.Name, svcPort.Port, err)
 				continue
 			}
 
@@ -196,7 +196,7 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(cfg *dynamic.Configur
 		for portID, svcPort := range tt.Destination.Ports {
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP entrypoint for Service %s/%s and portID %d: %v", tt.Service.Namespace, tt.Service.Name, portID, err)
+				p.logger.Errorf("Unable to build HTTP entrypoint for Service %s/%s and port %d: %v", tt.Service.Namespace, tt.Service.Name, svcPort.Port, err)
 				continue
 			}
 
@@ -282,7 +282,7 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(cfg *dynamic.Configurat
 
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP entrypoint for Service %s/%s and portID %d: %v", ts.Service.Namespace, ts.Service.Name, portID, err)
+				p.logger.Errorf("Unable to build HTTP entrypoint for Service %s/%s and port %d: %v", ts.Service.Namespace, ts.Service.Name, svcPort.Port, err)
 				continue
 			}
 
@@ -345,7 +345,7 @@ func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topolog
 	for portID, svcPort := range svc.Ports {
 		entrypoint, err := p.buildHTTPEntrypoint(portID)
 		if err != nil {
-			p.logger.Errorf("unable to build HTTP entrypoint for Service %s/%s and portID %d: %w", svc.Namespace, svc.Name, portID, err)
+			p.logger.Errorf("unable to build HTTP entrypoint for Service %s/%s and port %d: %w", svc.Namespace, svc.Name, svcPort.Port, err)
 			continue
 		}
 
