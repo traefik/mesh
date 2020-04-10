@@ -40,8 +40,8 @@ Requirements:
 - `Go` v1.14+
 - Environment variable `GO111MODULE=on`
 
-One you've setup your Go environment you can build Maesh from the sources by using the `go build` command. The Go 
-compiler will build a binary for your platform which can be run via a shell.
+One your Go environment is set up, you can build Maesh from the sources by using the `go build` command. The Go compiler 
+will build an executable for your platform.
 
 ```bash
 $ go build -o dist/maesh cmd/maesh/*.go

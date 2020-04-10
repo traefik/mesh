@@ -25,9 +25,12 @@ what matters, and help them understand the structure of your message (see the [G
 ## Content
 
 - Make it small.
-- One feature per Pull Request.
+- Each PR should be linked to an issue.
+- One feature per PR.
+- PRs should be standalone (they should not depend on an upcoming PR).
 - Write useful descriptions and titles.
 - Avoid re-formatting code that is not on the path of your PR.
+- Commits should be split properly (in order to guide reviewers through the code).
 - Make sure the [code builds](building-testing.md).
 - Make sure [all tests pass](building-testing.md).
 - Add tests.

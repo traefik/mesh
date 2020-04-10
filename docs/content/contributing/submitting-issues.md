@@ -17,7 +17,7 @@ The title must be short and descriptive. (~60 characters)
 
 Follow the [issue template](https://github.com/containous/maesh/blob/master/.github/ISSUE_TEMPLATE/) as much as possible.
 
-Explain us in which conditions you encountered the issue, what is your context.
+Explain in which context you encountered the issue.
 
 Remain clear and concise.
 
@@ -32,5 +32,5 @@ Do your best to explain what you're looking for, and why it would improve Maesh 
 
 ## International English
 
-Every Maesh maintainer/user is not a native English speaker, so if you sometimes feel that some messages sound rude, 
+Maesh maintainers/users are not all native English speakers, so if you sometimes feel that some messages sound rude, 
 remember that it's probably a language barrier problem from someone willing to help you.
