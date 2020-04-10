@@ -189,8 +189,8 @@ func (t *Try) WaitCommandExecuteReturn(command string, argSlice []string, timeou
 	return string(output), nil
 }
 
-// WaitFunction wait until the command is executed.
-func (t *Try) WaitFunction(f func() error, timeout time.Duration) error {
+// Retry runs a function over and over until it doesn't return an error or the given timeout duration is reached.
+func (t *Try) Retry(f func() error, timeout time.Duration) error {
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
