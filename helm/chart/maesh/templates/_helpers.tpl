@@ -15,13 +15,6 @@ Define the templated image with tag
 {{- end -}}
 
 {{/*
-Define the templated mesh image with tag
-*/}}
-{{- define "maesh.meshImage" -}}
-    {{- printf "%s:%s" .Values.mesh.image.name ( .Values.mesh.image.tag | default "v2.2" ) -}}
-{{- end -}}
-
-{{/*
 Define the ignoreNamespaces List
 */}}
 {{- define "maesh.controllerIgnoreNamespaces" -}}
