@@ -7,7 +7,6 @@ require (
 	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/containous/traefik/v2 v2.2.0
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
-	github.com/elazarl/go-bindata-assetfs v1.0.0
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
@@ -25,8 +24,8 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.1.0+incompatible
-	github.com/docker/docker => github.com/docker/engine v1.4.2-0.20200204220554-5f6d6f3f2203
 	github.com/aliyun/alibaba-cloud-sdk-go => github.com/aliyun/alibaba-cloud-sdk-go v1.61.112
+	github.com/docker/docker => github.com/docker/engine v1.4.2-0.20200204220554-5f6d6f3f2203
 )
 
 // Containous forks
