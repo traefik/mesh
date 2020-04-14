@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/abronan/valkeyrie v0.0.0-20200127174252-ef4277a138cd
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.112 // indirect
 	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/containous/traefik/v2 v2.2.0
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
@@ -24,7 +25,6 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.1.0+incompatible
-	github.com/aliyun/alibaba-cloud-sdk-go => github.com/aliyun/alibaba-cloud-sdk-go v1.61.112
 	github.com/docker/docker => github.com/docker/engine v1.4.2-0.20200204220554-5f6d6f3f2203
 )
 
