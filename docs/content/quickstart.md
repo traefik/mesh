@@ -1,7 +1,7 @@
 # Quickstart
 
 Maesh can be installed in your cluster without affecting any running services.
-It can safely be installed using the Helm Chart.
+It can safely be installed using the [Helm Chart](https://helm.sh/docs/intro/using_helm/#helm-install-installing-a-package).
 
 ## Prerequisites
 

@@ -10,10 +10,10 @@ import (
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 )
 
-// MiddlewareBuilder is capable of building a middleware for the given service.
+// MiddlewareBuilder builds middlewares of a service.
 type MiddlewareBuilder func(svc *topology.Service) (*dynamic.Middleware, error)
 
-// Build builds middlewares for the given service using annotations.
+// Build builds middlewares of the given service using annotations.
 func buildMiddlewareFromAnnotations(svc *topology.Service) (*dynamic.Middleware, error) {
 	var middleware dynamic.Middleware
 
