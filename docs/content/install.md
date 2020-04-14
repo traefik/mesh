@@ -7,7 +7,7 @@ helm repo add maesh https://containous.github.io/maesh/charts
 helm repo update
 ```
 
-Install Maesh helm chart:
+Install Maesh Helm Chart:
 
 ```bash
 helm install maesh maesh/maesh
@@ -28,12 +28,12 @@ make
 
 You will then be able to use the tagged image as your image in your `values.yaml` file.
 
-### Deploy helm chart
+### Deploy Helm Chart
 
 ??? Note "Helm V3"
     Please keep in mind, that our current Helm Chart (v1.1.0) is v3 compatible only.
 
-To deploy the helm chart, run:
+To deploy the Helm Chart, run:
 
 ```shell
 helm install maesh helm/chart/maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
@@ -58,29 +58,31 @@ If you use a cluster domain other than `cluster.local` set it by using the `clus
 helm install maesh maesh/maesh --set clusterDomain=my.custom.domain.com
 ```
 
-## Service Mesh Interface
+## Access Control List
+
+By default, Maesh does not restrict traffic between pods and services. However, some scenarios require more control
+over the rules for internal communication. The Access Control List mode (ACL) requires a set of rules to explicitly allow 
+traffic between different resources.
+
+To enable ACL, install Maesh in ACL mode by setting the `acl` Helm Chart option to `true`.
+
+```bash
+helm install maesh --namespace=maesh maesh/maesh --set acl=true
+```
 
 Maesh supports the [SMI specification](https://smi-spec.io/) which defines a set of custom resources
 to provide a fine-grained control over instrumentation, routing and access control of east-west communications.
 
-To enable SMI, install maesh in SMI mode by setting the `smi.enable` helm chart option to true.
-
-```bash
-helm install maesh --namespace=maesh maesh/maesh --set smi.enable=true`
-```
-
-- The `smi.enable` option makes Maesh process SMI resources.
-
 !!! Note CRDs
     Helm v3 automatically will install the CRDs in the `/crds` directory.
-    If you are re-installing into a cluster with the CRDs already present, helm may give you a warning.
+    If you are re-installing into a cluster with the CRDs already present, Helm may print a warning.
     If you do not want to install them, or want to avoid the warning during a re-install,
     please use the new `--skip-crds` flag.
     More information can be found on the [helm documentation](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
 
 ## Platform recommendations
 
-Maesh will work on pretty much any kubernetes environment that conforms to the global kubernetes specification.
+Maesh works on Kubernetes environments that conforms to the global Kubernetes specification.
 That being said, we have had users encounter issues when using variants such as minikube, microk8s,
 and other development distributions.
 
@@ -89,7 +91,7 @@ If you want to run Maesh in development, we would recommend using [k3s](https://
 We use k3s in Maesh's integration tests, so you can be sure that it works properly.
 
 If you encounter issues on variants such as minikube or microk8s, please try and reproduce the issue on k3s.
-If you are unable to reproduce, it may be an issue with the distribution behaving differently than official kubernetes.
+If you are unable to reproduce, it may be an issue with the distribution behaving differently than official Kubernetes.
 
 ## Verify your installation
 

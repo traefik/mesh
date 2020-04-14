@@ -243,9 +243,9 @@ Accept: */*
 X-Forwarded-For: 3.4.5.6
 ```
 
-## SMI Example
+## ACL Example
 
-In order to expose the HTTP Services from above with SMI enabled, please create the following resources:
+In order to expose the HTTP Services from above with ACL enabled, please create the following resources:
 
 ```yaml
 ---

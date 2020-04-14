@@ -31,7 +31,7 @@ func TestNewController(t *testing.T) {
 	// Create a new controller with base HTTP mode.
 	controller, err := NewMeshController(clientMock, MeshControllerConfig{
 		Log:              log,
-		SMIEnabled:       false,
+		ACLEnabled:       false,
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,
 		IgnoreNamespaces: []string{},
@@ -58,7 +58,7 @@ func TestNewControllerWithSMI(t *testing.T) {
 	// Create a new controller with base HTTP mode, in SMI mode.
 	controller, err := NewMeshController(clientMock, MeshControllerConfig{
 		Log:              log,
-		SMIEnabled:       true,
+		ACLEnabled:       true,
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,
 		IgnoreNamespaces: []string{},
