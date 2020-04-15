@@ -1,0 +1,208 @@
+{
+  "services": {
+    "svc-b@my-ns": {
+      "name": "svc-b",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-b"
+      },
+      "annotations": {
+        "maesh.containo.us/ratelimit-average": "100",
+        "maesh.containo.us/ratelimit-burst": "200",
+        "maesh.containo.us/traffic-type": "http"
+      },
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.16",
+      "pods": [
+        "app-b@my-ns"
+      ],
+      "trafficTargets": [
+        "svc-b@my-ns:tt@my-ns"
+      ],
+      "trafficSplits": [
+        "ts@my-ns"
+      ]
+    },
+    "svc-c@my-ns": {
+      "name": "svc-c",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-c"
+      },
+      "annotations": {
+        "maesh.containo.us/ratelimit-average": "100",
+        "maesh.containo.us/ratelimit-burst": "200",
+        "maesh.containo.us/traffic-type": "http"
+      },
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.17",
+      "pods": [
+        "app-c@my-ns"
+      ],
+      "backendOf": [
+        "ts@my-ns"
+      ]
+    },
+    "svc-d@my-ns": {
+      "name": "svc-d",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-d"
+      },
+      "annotations": {
+        "maesh.containo.us/ratelimit-average": "100",
+        "maesh.containo.us/ratelimit-burst": "200",
+        "maesh.containo.us/traffic-type": "http"
+      },
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.18",
+      "pods": [
+        "app-d@my-ns"
+      ],
+      "backendOf": [
+        "ts@my-ns"
+      ]
+    }
+  },
+  "pods": {
+    "app-a@my-ns": {
+      "name": "app-a",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-a",
+      "ip": "10.10.1.1",
+      "sourceOf": [
+        "svc-b@my-ns:tt@my-ns"
+      ]
+    },
+    "app-b@my-ns": {
+      "name": "app-b",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-b",
+      "ip": "10.10.2.1",
+      "destinationOf": [
+        "svc-b@my-ns:tt@my-ns"
+      ]
+    },
+    "app-c@my-ns": {
+      "name": "app-c",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-c",
+      "ip": "10.10.2.2"
+    },
+    "app-d@my-ns": {
+      "name": "app-d",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-d",
+      "ip": "10.10.2.3"
+    }
+  },
+  "serviceTrafficTargets": {
+    "svc-b@my-ns:tt@my-ns": {
+      "service": "svc-b@my-ns",
+      "name": "tt",
+      "namespace": "my-ns",
+      "sources": [
+        {
+          "serviceAccount": "service-account-a",
+          "namespace": "my-ns",
+          "pods": [
+            "app-a@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "service-account-b",
+        "namespace": "my-ns",
+        "ports": [
+          {
+            "name": "port-8080",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "pods": [
+          "app-b@my-ns"
+        ]
+      },
+      "specs": [
+        {
+          "httpRouteGroup": {
+            "kind": "HTTPRouteGroup",
+            "apiVersion": "specs.smi-spec.io/v1alpha1",
+            "metadata": {
+              "name": "http-rt-grp",
+              "namespace": "my-ns",
+              "creationTimestamp": null
+            },
+            "matches": [
+              {
+                "name": "api",
+                "methods": [
+                  "GET",
+                  "POST"
+                ],
+                "pathRegex": "/api"
+              },
+              {
+                "name": "metric",
+                "methods": [
+                  "GET"
+                ],
+                "pathRegex": "/metric"
+              }
+            ]
+          },
+          "httpMatches": [
+            {
+              "name": "api",
+              "methods": [
+                "GET",
+                "POST"
+              ],
+              "pathRegex": "/api"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "trafficSplits": {
+    "ts@my-ns": {
+      "name": "ts",
+      "namespace": "my-ns",
+      "service": "svc-b@my-ns",
+      "backends": [
+        {
+          "weight": 80,
+          "service": "svc-c@my-ns"
+        },
+        {
+          "weight": 20,
+          "service": "svc-d@my-ns"
+        }
+      ]
+    }
+  }
+}

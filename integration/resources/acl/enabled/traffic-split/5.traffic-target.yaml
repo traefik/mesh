@@ -1,0 +1,13 @@
+apiVersion: access.smi-spec.io/v1alpha1
+kind: TrafficTarget
+metadata:
+  name: traffic-target
+  namespace: test
+destination:
+  kind: ServiceAccount
+  name: server
+  namespace: test
+sources:
+  - kind: ServiceAccount
+    name: client-a
+    namespace: test
