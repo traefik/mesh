@@ -1,0 +1,126 @@
+{
+  "services": {
+    "svc-b@my-ns": {
+      "name": "svc-b",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-b"
+      },
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.16",
+      "pods": [
+        "app-b@my-ns"
+      ],
+      "trafficTargets": [
+        "svc-b@my-ns:tt@my-ns"
+      ]
+    }
+  },
+  "pods": {
+    "app-a@my-ns": {
+      "name": "app-a",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-a",
+      "ip": "10.10.1.1",
+      "sourceOf": [
+        "svc-b@my-ns:tt@my-ns"
+      ]
+    },
+    "app-b@my-ns": {
+      "name": "app-b",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-b",
+      "ip": "10.10.2.1",
+      "destinationOf": [
+        "svc-b@my-ns:tt@my-ns"
+      ]
+    }
+  },
+  "trafficSplits": {},
+  "serviceTrafficTargets": {
+    "svc-b@my-ns:tt@my-ns": {
+      "service": "svc-b@my-ns",
+      "name": "tt",
+      "namespace": "my-ns",
+      "sources": [
+        {
+          "serviceAccount": "service-account-a",
+          "namespace": "my-ns",
+          "pods": [
+            "app-a@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "service-account-b",
+        "namespace": "my-ns",
+        "ports": [
+          {
+            "name": "port-8080",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "pods": [
+          "app-b@my-ns"
+        ]
+      },
+      "specs": [
+        {
+          "httpRouteGroup": {
+            "kind": "HTTPRouteGroup",
+            "apiVersion": "specs.smi-spec.io/v1alpha1",
+            "metadata": {
+              "name": "http-rt-grp",
+              "namespace": "my-ns",
+              "creationTimestamp": null
+            },
+            "matches": [
+              {
+                "name": "api",
+                "methods": [
+                  "GET",
+                  "POST"
+                ],
+                "pathRegex": "/api"
+              },
+              {
+                "name": "metric",
+                "methods": [
+                  "GET"
+                ],
+                "pathRegex": "/metric"
+              }
+            ]
+          },
+          "httpMatches": [
+            {
+              "name": "api",
+              "methods": [
+                "GET",
+                "POST"
+              ],
+              "pathRegex": "/api"
+            },
+            {
+              "name": "metric",
+              "methods": [
+                "GET"
+              ],
+              "pathRegex": "/metric"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
