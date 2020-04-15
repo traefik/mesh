@@ -147,6 +147,8 @@ metrics:
     # (Optional)
     # pushInterval: 10s
 
+acl: false
+
 smi:
   enable: false
 
