@@ -489,12 +489,6 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 		sanitizedExpected = rxSourceRange.ReplaceAll(sanitizedExpected, []byte(`"sourceRange":["XXXX"]`))
 		sanitizedGot = rxSourceRange.ReplaceAll(sanitizedGot, []byte(`"sourceRange":["XXXX"]`))
 
-		// The excluded IPs of whitelist middlewares are dynamic, so we cannot predict them,
-		// which is why we have to ignore them in the comparison.
-		rxExcludedIPs := regexp.MustCompile(`"ipStrategy":\s*{\s*"excludedIPs":\s*\[(\s*"((\d+)\.(\d+)\.(\d+)\.(\d+))",?)*\s*\]\s*}`)
-		sanitizedExpected = rxExcludedIPs.ReplaceAll(sanitizedExpected, []byte(`"ipStrategy":{"excludedIPs":["XXXX"]}`))
-		sanitizedGot = rxExcludedIPs.ReplaceAll(sanitizedGot, []byte(`"ipStrategy":{"excludedIPs":["XXXX"]}`))
-
 		if bytes.Equal(sanitizedExpected, sanitizedGot) {
 			return nil
 		}
