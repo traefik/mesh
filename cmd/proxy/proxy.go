@@ -37,7 +37,6 @@ import (
 
 // NewCmd builds a new Proxy command.
 func NewCmd(loaders []cli.ResourceLoader) *cli.Command {
-	// traefik config inits
 	tConfig := cmd.NewTraefikConfiguration()
 
 	return &cli.Command{
@@ -101,7 +100,7 @@ func runCmd(staticConfiguration *static.Configuration) error {
 	if err != nil {
 		log.WithoutContext().Errorf("Could not enable Watchdog: %v", err)
 	} else if t != 0 {
-		// Send a ping each half time given
+		// Call SdNotify every time / 2 as specified by SdWatchdogEnabled doc.
 		t /= 2
 		log.WithoutContext().Infof("Watchdog activated with timer duration %s", t)
 		safe.Go(func() {
@@ -216,7 +215,7 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 			}
 
 			if _, ok := resolverNames[rt.TLS.CertResolver]; !ok {
-				log.WithoutContext().Errorf("the router %s uses a non-existent resolver: %s", rtName, rt.TLS.CertResolver)
+				log.WithoutContext().Errorf("the router %s uses an unknown resolver: %s", rtName, rt.TLS.CertResolver)
 			}
 		}
 	})
@@ -262,7 +261,7 @@ func initACMEProvider(c *static.Configuration, providerAggregator *aggregator.Pr
 			}
 
 			if err := providerAggregator.AddProvider(p); err != nil {
-				log.WithoutContext().Errorf("The ACME resolver %q is skipped from the resolvers list because: %v", name, err)
+				log.WithoutContext().Errorf("Skipping ACME resolver %q: %v", name, err)
 				continue
 			}
 
@@ -331,7 +330,7 @@ func setupAccessLog(conf *types.AccessLog) *accesslog.Handler {
 
 	accessLoggerMiddleware, err := accesslog.NewHandler(conf)
 	if err != nil {
-		log.WithoutContext().Warnf("Unable to create access logger : %v", err)
+		log.WithoutContext().Warnf("Unable to create access logger: %v", err)
 		return nil
 	}
 
@@ -353,7 +352,7 @@ func configureLogging(staticConfiguration *static.Configuration) {
 
 	level, err := logrus.ParseLevel(levelStr)
 	if err != nil {
-		log.WithoutContext().Errorf("Error getting level: %v", err)
+		log.WithoutContext().Errorf("Error getting log level: %v", err)
 	}
 
 	log.SetLevel(level)
@@ -385,7 +384,7 @@ func configureLogging(staticConfiguration *static.Configuration) {
 
 		logrus.RegisterExitHandler(func() {
 			if closeErr := log.CloseFile(); closeErr != nil {
-				log.WithoutContext().Errorf("Error while closing log: %v", closeErr)
+				log.WithoutContext().Errorf("Error while closing log file: %v", closeErr)
 			}
 		})
 
