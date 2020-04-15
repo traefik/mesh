@@ -131,7 +131,7 @@ func runCmd(staticConfiguration *static.Configuration) error {
 func setupServer(staticConfiguration *static.Configuration) (*server.Server, error) {
 	providerAggregator := aggregator.NewProviderAggregator(*staticConfiguration.Providers)
 
-	// adds internal provider
+	// Adds internal provider.
 	err := providerAggregator.AddProvider(traefik.New(*staticConfiguration))
 	if err != nil {
 		return nil, err
@@ -338,11 +338,11 @@ func setupAccessLog(conf *types.AccessLog) *accesslog.Handler {
 }
 
 func configureLogging(staticConfiguration *static.Configuration) {
-	// configure default log flags
+	// Configure default log flags.
 	stdlog.SetFlags(stdlog.Lshortfile | stdlog.LstdFlags)
 
-	// configure log level
-	// an explicitly defined log level always has precedence. if none is
+	// Configure log level.
+	// An explicitly defined log level always has precedence. If none is
 	// given and debug mode is disabled, the default is ERROR, and DEBUG
 	// otherwise.
 	levelStr := "error"
@@ -362,7 +362,7 @@ func configureLogging(staticConfiguration *static.Configuration) {
 		logFile = staticConfiguration.Log.FilePath
 	}
 
-	// configure log format
+	// Configure log format.
 	var formatter logrus.Formatter
 	if staticConfiguration.Log != nil && staticConfiguration.Log.Format == "json" {
 		formatter = &logrus.JSONFormatter{}
