@@ -10,7 +10,6 @@ Here are some examples on how to easily deploy Maesh on your cluster.
 Deploy those two yaml files on your Kubernetes cluster in order to add a simple backend example, available through HTTP and TCP.
 
 ```yaml tab="namespace.yaml"
----
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -184,7 +183,6 @@ Now, in order to configure Maesh for your `whoami` service, you just need to upd
 The HTTP service needs to have `maesh.containo.us/traffic-type: "http"` and the TCP service, `maesh.containo.us/traffic-type: "tcp"`.
 
 ```yaml
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -245,10 +243,14 @@ X-Forwarded-For: 3.4.5.6
 
 ## ACL Example
 
-In order to expose the HTTP Services from above with ACL enabled, please create the following resources:
+The [ACL mode](install.md#access-control-list) can be enabled when installing Maesh. Once activated, all traffic is forbidden unless explicitly authorized
+using the SMI [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md#traffictarget-v1alpha1) resource. This example will present the configuration required to allow the client
+pod to send traffic to the HTTP and TCP services defined in the previous example.
+
+Each `TrafficTarget` defines that a set of source `ServiceAccount` is capable of sending traffic to a destination `ServiceAccount`. To authorize the `whoami-client` pod to send traffic to `whoami.whoami.maesh`, we need to
+explicitly allow it to hit the pods exposed by the `whoami` service. 
 
 ```yaml
----
 apiVersion: specs.smi-spec.io/v1alpha1
 kind: HTTPRouteGroup
 metadata:
@@ -280,7 +282,8 @@ sources:
   namespace: whoami
 ```
 
-For TCP mode, you only need a TCPRoute and a TrafficTarget:
+
+Incoming traffic on a TCP service can also be authorized using a `TrafficTarget` and a `TCPRoute`.
 
 ```yaml
 kind: TrafficTarget
