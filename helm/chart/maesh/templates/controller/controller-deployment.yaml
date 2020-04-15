@@ -70,6 +70,9 @@ spec:
             {{- if .Values.mesh }}
             - "--defaultMode={{ .Values.mesh.defaultMode }}"
             {{- end }}
+            {{- if .Values.acl }}
+            - "--acl"
+            {{- end }}
             {{- if .Values.smi.enable }}
             - "--smi"
             {{- end }}
@@ -119,6 +122,9 @@ spec:
             {{- end }}
             {{- if .Values.smi.enable }}
             - "--smi"
+            {{- end }}
+            {{- if .Values.acl }}
+            - "--acl"
             {{- end }}
             - "--clusterdomain"
             - {{ default "cluster.local" .Values.clusterDomain | quote }}
