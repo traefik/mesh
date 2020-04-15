@@ -19,7 +19,6 @@ import (
 	"github.com/containous/traefik/v2/pkg/log"
 	"github.com/containous/traefik/v2/pkg/metrics"
 	"github.com/containous/traefik/v2/pkg/middlewares/accesslog"
-	"github.com/containous/traefik/v2/pkg/provider/acme"
 	"github.com/containous/traefik/v2/pkg/provider/aggregator"
 	"github.com/containous/traefik/v2/pkg/provider/traefik"
 	"github.com/containous/traefik/v2/pkg/safe"
@@ -136,8 +135,6 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 
 	tlsManager := traefiktls.NewManager()
 
-	acmeProviders := initACMEProvider(staticConfiguration, &providerAggregator, tlsManager)
-
 	serverEntryPointsTCP, err := server.NewTCPEntryPoints(staticConfiguration.EntryPoints)
 	if err != nil {
 		return nil, err
@@ -185,7 +182,7 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 		metricsRegistry.LastConfigReloadSuccessGauge().Set(float64(time.Now().Unix()))
 	})
 
-	watcher.AddListener(switchRouter(routerFactory, acmeProviders, serverEntryPointsTCP, serverEntryPointsUDP))
+	watcher.AddListener(switchRouter(routerFactory, serverEntryPointsTCP, serverEntryPointsUDP))
 
 	watcher.AddListener(func(conf dynamic.Configuration) {
 		if metricsRegistry.IsEpEnabled() || metricsRegistry.IsSvcEnabled() {
@@ -198,83 +195,16 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 		}
 	})
 
-	resolverNames := map[string]struct{}{}
-	for _, p := range acmeProviders {
-		resolverNames[p.ResolverName] = struct{}{}
-
-		watcher.AddListener(p.ListenConfiguration)
-	}
-
-	watcher.AddListener(func(config dynamic.Configuration) {
-		for rtName, rt := range config.HTTP.Routers {
-			if rt.TLS == nil || rt.TLS.CertResolver == "" {
-				continue
-			}
-
-			if _, ok := resolverNames[rt.TLS.CertResolver]; !ok {
-				log.WithoutContext().Errorf("the router %s uses an unknown resolver: %s", rtName, rt.TLS.CertResolver)
-			}
-		}
-	})
-
 	return server.NewServer(routinesPool, serverEntryPointsTCP, serverEntryPointsUDP, watcher, chainBuilder, accessLog), nil
 }
 
-func switchRouter(routerFactory *server.RouterFactory, acmeProviders []*acme.Provider, serverEntryPointsTCP server.TCPEntryPoints, serverEntryPointsUDP server.UDPEntryPoints) func(conf dynamic.Configuration) {
+func switchRouter(routerFactory *server.RouterFactory, serverEntryPointsTCP server.TCPEntryPoints, serverEntryPointsUDP server.UDPEntryPoints) func(conf dynamic.Configuration) {
 	return func(conf dynamic.Configuration) {
 		routers, udpRouters := routerFactory.CreateRouters(conf)
-		for entryPointName, rt := range routers {
-			for _, p := range acmeProviders {
-				if p != nil && p.HTTPChallenge != nil && p.HTTPChallenge.EntryPoint == entryPointName {
-					rt.HTTPHandler(p.CreateHandler(rt.GetHTTPHandler()))
-					break
-				}
-			}
-		}
 
 		serverEntryPointsTCP.Switch(routers)
 		serverEntryPointsUDP.Switch(udpRouters)
 	}
-}
-
-// initACMEProvider creates an acme provider from the ACME part of globalConfiguration
-func initACMEProvider(c *static.Configuration, providerAggregator *aggregator.ProviderAggregator, tlsManager *traefiktls.Manager) []*acme.Provider {
-	challengeStore := acme.NewLocalChallengeStore()
-	localStores := map[string]*acme.LocalStore{}
-
-	var resolvers []*acme.Provider
-
-	for name, resolver := range c.CertificatesResolvers {
-		if resolver.ACME != nil {
-			if localStores[resolver.ACME.Storage] == nil {
-				localStores[resolver.ACME.Storage] = acme.NewLocalStore(resolver.ACME.Storage)
-			}
-
-			p := &acme.Provider{
-				Configuration:  resolver.ACME,
-				Store:          localStores[resolver.ACME.Storage],
-				ChallengeStore: challengeStore,
-				ResolverName:   name,
-			}
-
-			if err := providerAggregator.AddProvider(p); err != nil {
-				log.WithoutContext().Errorf("Skipping ACME resolver %q: %v", name, err)
-				continue
-			}
-
-			p.SetTLSManager(tlsManager)
-
-			if p.TLSChallenge != nil {
-				tlsManager.TLSAlpnGetter = p.GetTLSALPNCertificate
-			}
-
-			p.SetConfigListenerChan(make(chan dynamic.Configuration))
-
-			resolvers = append(resolvers, p)
-		}
-	}
-
-	return resolvers
 }
 
 func registerMetricClients(metricsConfig *types.Metrics) metrics.Registry {
