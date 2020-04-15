@@ -1,13 +1,14 @@
 ## Default values for maesh
+image:
+  name: containous/maesh
+  # (Optional)
+  pullPolicy: IfNotPresent
+  # (Optional)
+  tag: latest
+  # (Optional)
+  # pullSecret: xxx
+
 controller:
-  image:
-    name: containous/maesh
-    # (Optional)
-    pullPolicy: IfNotPresent
-    # (Optional)
-    tag: latest
-    # (Optional)
-    # pullSecret: xxx
   resources:
     limit:
       mem: "100Mi"
@@ -17,7 +18,6 @@ controller:
       cpu: "100m"
   logging:
     debug: true
-
 
 mesh:
   resources:
