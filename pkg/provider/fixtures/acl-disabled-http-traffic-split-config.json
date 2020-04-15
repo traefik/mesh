@@ -1,0 +1,131 @@
+{
+  "http": {
+    "routers": {
+      "my-ns-svc-a-8080": {
+        "entryPoints": [
+          "http-10000"
+        ],
+        "service": "my-ns-svc-a-8080",
+        "rule": "Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
+        "priority": 1001
+      },
+      "my-ns-svc-b-8080": {
+        "entryPoints": [
+          "http-10000"
+        ],
+        "service": "my-ns-svc-b-8080",
+        "rule": "Host(`svc-b.my-ns.maesh`) || Host(`10.10.15.1`)",
+        "priority": 1001
+      },
+      "my-ns-svc-c-8080": {
+        "entryPoints": [
+          "http-10000"
+        ],
+        "service": "my-ns-svc-c-8080",
+        "rule": "Host(`svc-c.my-ns.maesh`) || Host(`10.10.16.1`)",
+        "priority": 1001
+      },
+      "my-ns-svc-a-split-8080-traffic-split-direct": {
+        "entryPoints": [
+          "http-10000"
+        ],
+        "service": "my-ns-svc-a-split-8080-traffic-split",
+        "rule": "Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
+        "priority": 4001
+      },
+      "readiness": {
+        "entryPoints": [
+          "readiness"
+        ],
+        "service": "readiness",
+        "rule": "Path(`/ping`)"
+      }
+    },
+    "services": {
+      "block-all-service": {
+        "loadBalancer": {
+          "passHostHeader": null
+        }
+      },
+      "my-ns-svc-a-8080": {
+        "loadBalancer": {
+          "passHostHeader": true
+        }
+      },
+      "my-ns-svc-a-split-8080-traffic-split": {
+        "weighted": {
+          "services": [
+            {
+              "name": "my-ns-svc-a-split-8080-svc-b-traffic-split-backend",
+              "weight": 80
+            },
+            {
+              "name": "my-ns-svc-a-split-8080-svc-c-traffic-split-backend",
+              "weight": 20
+            }
+          ]
+        }
+      },
+      "my-ns-svc-a-split-8080-svc-b-traffic-split-backend": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://svc-b.my-ns.maesh:8080"
+            }
+          ],
+          "passHostHeader": false
+        }
+      },
+      "my-ns-svc-a-split-8080-svc-c-traffic-split-backend": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://svc-c.my-ns.maesh:8080"
+            }
+          ],
+          "passHostHeader": false
+        }
+      },
+      "my-ns-svc-b-8080": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://10.10.2.1:80"
+            }
+          ],
+          "passHostHeader": true
+        }
+      },
+      "my-ns-svc-c-8080": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://10.10.3.1:80"
+            }
+          ],
+          "passHostHeader": true
+        }
+      },
+      "readiness": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://127.0.0.1:8080"
+            }
+          ],
+          "passHostHeader": true
+        }
+      }
+    },
+    "middlewares": {
+      "block-all-middleware": {
+        "ipWhiteList": {
+          "sourceRange": [
+            "255.255.255.255"
+          ]
+        }
+      }
+    }
+  },
+  "tcp": {}
+}

@@ -1,0 +1,106 @@
+{
+  "services": {
+    "svc-c@my-ns": {
+      "name": "svc-c",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-c"
+      },
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.16",
+      "pods": [
+        "app-c-1@my-ns",
+        "app-c-2@my-ns"
+      ],
+      "trafficTargets": [
+        "svc-c@my-ns:tt@my-ns"
+      ]
+    }
+  },
+  "pods": {
+    "app-a@my-ns": {
+      "name": "app-a",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-a",
+      "ip": "10.10.1.1",
+      "sourceOf": [
+        "svc-c@my-ns:tt@my-ns"
+      ]
+    },
+    "app-b@my-ns": {
+      "name": "app-b",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-b",
+      "ip": "10.10.2.1",
+      "sourceOf": [
+        "svc-c@my-ns:tt@my-ns"
+      ]
+    },
+    "app-c-1@my-ns": {
+      "name": "app-c-1",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-c",
+      "ip": "10.10.3.1",
+      "destinationOf": [
+        "svc-c@my-ns:tt@my-ns"
+      ]
+    },
+    "app-c-2@my-ns": {
+      "name": "app-c-2",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-c",
+      "ip": "10.10.3.2",
+      "destinationOf": [
+        "svc-c@my-ns:tt@my-ns"
+      ]
+    }
+  },
+  "serviceTrafficTargets": {
+    "svc-c@my-ns:tt@my-ns": {
+      "service": "svc-c@my-ns",
+      "name": "tt",
+      "namespace": "my-ns",
+      "sources": [
+        {
+          "serviceAccount": "service-account-a",
+          "namespace": "my-ns",
+          "pods": [
+            "app-a@my-ns"
+          ]
+        },
+        {
+          "serviceAccount": "service-account-b",
+          "namespace": "my-ns",
+          "pods": [
+            "app-b@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "service-account-c",
+        "namespace": "my-ns",
+        "ports": [
+          {
+            "name": "port-8080",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "pods": [
+          "app-c-1@my-ns",
+          "app-c-2@my-ns"
+        ]
+      }
+    }
+  },
+  "trafficSplits": {}
+}
