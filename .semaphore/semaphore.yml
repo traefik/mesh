@@ -63,12 +63,12 @@ blocks:
           - cache restore maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
           - docker load < maesh-img.tar
       jobs:
-        - name: SMI Integration Suite
+        - name: ACL Enabled Suite
           commands:
-            - "make test-integration-nobuild TESTFLAGS=\"-check.f SMISuite\""
-        - name: Kubernetes Suite
+            -  "make test-integration TESTFLAGS=\"-check.f ACLEnabledSuite\""
+        - name: ACL Disabled Suite
           commands:
-            - "make test-integration-nobuild TESTFLAGS=\"-check.f KubernetesSuite\""
+            -  "make test-integration TESTFLAGS=\"-check.f ACLDisabledSuite\""
         - name: CoreDNS Suite
           commands:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f CoreDNSSuite\""

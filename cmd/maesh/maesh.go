@@ -78,12 +78,19 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	minHTTPPort := int32(5000)
 	minTCPPort := int32(10000)
 
+	if iConfig.SMI {
+		log.Warnf("SMI mode is deprecated, please consider using --acl instead")
+	}
+
+	aclEnabled := iConfig.ACL || iConfig.SMI
+
+	log.Debugf("ACL mode enabled: %t", aclEnabled)
+
 	// Create a new stop Channel
 	stopCh := signals.SetupSignalHandler()
 	// Create a new ctr.
-	ctr, err := controller.NewMeshController(clients, controller.MeshControllerConfig{
-		Log:              log,
-		SMIEnabled:       iConfig.SMI,
+	ctr, err := controller.NewMeshController(clients, controller.Config{
+		ACLEnabled:       aclEnabled,
 		DefaultMode:      iConfig.DefaultMode,
 		Namespace:        iConfig.Namespace,
 		IgnoreNamespaces: iConfig.IgnoreNamespaces,
@@ -93,7 +100,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
-	})
+	}, log)
 	if err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)
 	}

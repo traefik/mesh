@@ -60,11 +60,13 @@ spec:
           args:
             - "--entryPoints.readiness.address=:1081"
             - "--entryPoints.liveness.address=:1082"
-            {{- range $i, $e := until (.Values.limits.http|int) }}
-            - {{ printf "\"--entryPoints.http-%d.address=:%d\"" (add $i 5000) (add $i 5000) }}
+            {{- range $i, $port := untilStep 5000 ((add (.Values.limits.http|int) 5000)|int) 1 }}
+            - {{ printf "\"--entryPoints.http-%d.address=:%d\"" $port $port }}
+            - {{ printf "\"--entryPoints.http-%d.forwardedHeaders.insecure=true\"" $port }}
             {{- end }}
-            {{- range $i, $e := until (.Values.limits.tcp|int) }}
-            - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" (add $i 10000) (add $i 10000) }}
+            {{- range $i, $port := untilStep 10000 ((add (.Values.limits.tcp|int) 10000)|int) 1 }}
+            - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" $port $port }}
+            - {{ printf "\"--entryPoints.tcp-%d.forwardedHeaders.insecure=true\"" $port }}
             {{- end }}
             - "--providers.rest"
             - "--providers.rest.insecure"

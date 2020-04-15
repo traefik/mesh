@@ -40,6 +40,7 @@
     "funlen",
     "bodyclose", # Too many false positives
     "godox",
+    "goconst", # Too many false positives
   ]
 
 [issues]
