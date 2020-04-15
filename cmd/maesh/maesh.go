@@ -89,8 +89,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	// Create a new stop Channel
 	stopCh := signals.SetupSignalHandler()
 	// Create a new ctr.
-	ctr, err := controller.NewMeshController(clients, controller.MeshControllerConfig{
-		Log:              log,
+	ctr, err := controller.NewMeshController(clients, controller.Config{
 		ACLEnabled:       aclEnabled,
 		DefaultMode:      iConfig.DefaultMode,
 		Namespace:        iConfig.Namespace,
@@ -101,7 +100,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
-	})
+	}, log)
 	if err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)
 	}

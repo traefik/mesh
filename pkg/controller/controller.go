@@ -49,42 +49,8 @@ type ServiceManager interface {
 	Delete(userSvc *corev1.Service) error
 }
 
-// Controller hold controller configuration.
-type Controller struct {
-	log                  logrus.FieldLogger
-	clients              k8s.Client
-	kubernetesFactory    informers.SharedInformerFactory
-	accessFactory        accessInformer.SharedInformerFactory
-	specsFactory         specsInformer.SharedInformerFactory
-	splitFactory         splitInformer.SharedInformerFactory
-	handler              *Handler
-	serviceManager       ServiceManager
-	configRefreshChan    chan string
-	provider             *provider.Provider
-	ignored              k8s.IgnoreWrapper
-	aclEnabled           bool
-	defaultMode          string
-	meshNamespace        string
-	tcpStateTable        TCPPortMapper
-	lastConfiguration    safe.Safe
-	api                  api.Interface
-	apiPort              int32
-	apiHost              string
-	deployLog            deploylog.Interface
-	PodLister            listers.PodLister
-	ServiceLister        listers.ServiceLister
-	EndpointsLister      listers.EndpointsLister
-	TrafficTargetLister  accessLister.TrafficTargetLister
-	HTTPRouteGroupLister specsLister.HTTPRouteGroupLister
-	TCPRouteLister       specsLister.TCPRouteLister
-	TrafficSplitLister   splitLister.TrafficSplitLister
-	minHTTPPort          int32
-	maxHTTPPort          int32
-}
-
-// MeshControllerConfig holds the configuration of the mesh controller.
-type MeshControllerConfig struct {
-	Log              logrus.FieldLogger
+// Config holds the configuration of the controller.
+type Config struct {
 	ACLEnabled       bool
 	DefaultMode      string
 	Namespace        string
@@ -97,9 +63,37 @@ type MeshControllerConfig struct {
 	MaxHTTPPort      int32
 }
 
+// Controller hold controller configuration.
+type Controller struct {
+	cfg               Config
+	handler           *Handler
+	serviceManager    ServiceManager
+	configRefreshChan chan string
+	provider          *provider.Provider
+	ignored           k8s.IgnoreWrapper
+	tcpStateTable     TCPPortMapper
+	lastConfiguration safe.Safe
+	api               api.Interface
+	deployLog         deploylog.Interface
+	logger            logrus.FieldLogger
+
+	clients              k8s.Client
+	kubernetesFactory    informers.SharedInformerFactory
+	accessFactory        accessInformer.SharedInformerFactory
+	specsFactory         specsInformer.SharedInformerFactory
+	splitFactory         splitInformer.SharedInformerFactory
+	PodLister            listers.PodLister
+	ServiceLister        listers.ServiceLister
+	EndpointsLister      listers.EndpointsLister
+	TrafficTargetLister  accessLister.TrafficTargetLister
+	HTTPRouteGroupLister specsLister.HTTPRouteGroupLister
+	TCPRouteLister       specsLister.TCPRouteLister
+	TrafficSplitLister   splitLister.TrafficSplitLister
+}
+
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
-func NewMeshController(clients k8s.Client, cfg MeshControllerConfig) (*Controller, error) {
+func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger) (*Controller, error) {
 	ignored := k8s.NewIgnored()
 
 	for _, ns := range cfg.IgnoreNamespaces {
@@ -116,17 +110,11 @@ func NewMeshController(clients k8s.Client, cfg MeshControllerConfig) (*Controlle
 	}
 
 	c := &Controller{
-		log:           cfg.Log,
+		logger:        logger,
+		cfg:           cfg,
 		clients:       clients,
 		ignored:       ignored,
-		aclEnabled:    cfg.ACLEnabled,
-		defaultMode:   cfg.DefaultMode,
-		meshNamespace: cfg.Namespace,
-		apiPort:       cfg.APIPort,
-		apiHost:       cfg.APIHost,
 		tcpStateTable: tcpStateTable,
-		minHTTPPort:   cfg.MinHTTPPort,
-		maxHTTPPort:   cfg.MaxHTTPPort,
 	}
 
 	c.init()
@@ -140,11 +128,11 @@ func (c *Controller) init() {
 	c.splitFactory = splitInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSplitClient(), k8s.ResyncPeriod)
 
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
-	c.serviceManager = NewShadowServiceManager(c.log, c.ServiceLister, c.meshNamespace, c.tcpStateTable, c.defaultMode, c.minHTTPPort, c.maxHTTPPort, c.clients.GetKubernetesClient())
+	c.serviceManager = NewShadowServiceManager(c.logger, c.ServiceLister, c.cfg.Namespace, c.tcpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	c.configRefreshChan = make(chan string)
-	c.handler = NewHandler(c.log, c.ignored, c.serviceManager, c.configRefreshChan)
+	c.handler = NewHandler(c.logger, c.ignored, c.serviceManager, c.configRefreshChan)
 
 	// Create listers and register the event handler to informers that are not ACL related.
 	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
@@ -157,7 +145,7 @@ func (c *Controller) init() {
 	c.splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(c.handler)
 
 	// Create SharedInformers, listers and register the event handler for ACL related resources.
-	if c.aclEnabled {
+	if c.cfg.ACLEnabled {
 		c.accessFactory = accessInformer.NewSharedInformerFactoryWithOptions(c.clients.GetAccessClient(), k8s.ResyncPeriod)
 		c.specsFactory = specsInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSpecsClient(), k8s.ResyncPeriod)
 
@@ -170,8 +158,8 @@ func (c *Controller) init() {
 		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
 	}
 
-	c.deployLog = deploylog.NewDeployLog(c.log, 1000)
-	c.api = api.NewAPI(c.log, c.apiPort, c.apiHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.meshNamespace)
+	c.deployLog = deploylog.NewDeployLog(c.logger, 1000)
+	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.cfg.Namespace)
 
 	topologyBuilder := &topology.Builder{
 		ServiceLister:        c.ServiceLister,
@@ -181,17 +169,17 @@ func (c *Controller) init() {
 		TrafficSplitLister:   c.TrafficSplitLister,
 		HTTPRouteGroupLister: c.HTTPRouteGroupLister,
 		TCPRoutesLister:      c.TCPRouteLister,
-		Logger:               c.log,
+		Logger:               c.logger,
 	}
 	providerCfg := provider.Config{
 		IgnoredResources:   c.ignored,
-		MinHTTPPort:        c.minHTTPPort,
-		MaxHTTPPort:        c.maxHTTPPort,
-		ACL:                c.aclEnabled,
-		DefaultTrafficType: c.defaultMode,
-		MaeshNamespace:     c.meshNamespace,
+		MinHTTPPort:        c.cfg.MinHTTPPort,
+		MaxHTTPPort:        c.cfg.MaxHTTPPort,
+		ACL:                c.cfg.ACLEnabled,
+		DefaultTrafficType: c.cfg.DefaultMode,
+		MaeshNamespace:     c.cfg.Namespace,
 	}
-	c.provider = provider.New(topologyBuilder, c.tcpStateTable, providerCfg, c.log)
+	c.provider = provider.New(topologyBuilder, c.tcpStateTable, providerCfg, c.logger)
 }
 
 // Run is the main entrypoint for the controller.
@@ -200,16 +188,16 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
-	c.log.Debug("Initializing Mesh controller")
+	c.logger.Debug("Initializing Mesh controller")
 
 	// Start the informers.
 	c.startInformers(stopCh, 10*time.Second)
 
 	// Create the mesh services here to ensure that they exist.
-	c.log.Info("Creating initial mesh services")
+	c.logger.Info("Creating initial mesh services")
 
 	if err = c.createMeshServices(); err != nil {
-		c.log.Errorf("could not create mesh services: %v", err)
+		c.logger.Errorf("could not create mesh services: %v", err)
 	}
 	// Start the api, and enable the readiness endpoint.
 	c.api.Start()
@@ -218,13 +206,13 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		timer := time.NewTimer(10 * time.Second)
 		select {
 		case <-stopCh:
-			c.log.Info("Shutting down workers")
+			c.logger.Info("Shutting down workers")
 			return nil
 		case message := <-c.configRefreshChan:
 			// Reload the configuration.
 			conf, confErr := c.provider.BuildConfig()
 			if confErr != nil {
-				c.log.Errorf("Unable to build dynamic configuration: %v", confErr)
+				c.logger.Errorf("Unable to build dynamic configuration: %v", confErr)
 				continue
 			}
 
@@ -246,11 +234,11 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 			dynCfg, ok := rawCfg.(*dynamic.Configuration)
 			if !ok {
-				c.log.Error("Received unexpected dynamic configuration, skipping")
+				c.logger.Error("Received unexpected dynamic configuration, skipping")
 				break
 			}
 
-			c.log.Debug("Deploying configuration to unready nodes")
+			c.logger.Debug("Deploying configuration to unready nodes")
 
 			if deployErr := c.deployConfigurationToUnreadyNodes(dynCfg); deployErr != nil {
 				break
@@ -268,12 +256,12 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
 	defer cancel()
 
-	c.log.Debug("Starting Informers")
+	c.logger.Debug("Starting Informers")
 	c.kubernetesFactory.Start(stopCh)
 
 	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			c.logger.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
 	}
 
@@ -281,16 +269,16 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 	for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			c.logger.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
 	}
 
-	if c.aclEnabled {
+	if c.cfg.ACLEnabled {
 		c.accessFactory.Start(stopCh)
 
 		for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
-				c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+				c.logger.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
 
@@ -298,7 +286,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 		for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
-				c.log.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+				c.logger.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
 		}
 	}
@@ -322,7 +310,7 @@ func (c *Controller) createMeshServices() error {
 			continue
 		}
 
-		c.log.Debugf("Creating mesh for service: %v", service.Name)
+		c.logger.Debugf("Creating mesh for service: %v", service.Name)
 
 		if err := c.serviceManager.Create(service); err != nil {
 			return fmt.Errorf("unable to create mesh service: %w", err)
@@ -343,7 +331,7 @@ func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
 
 	sel = sel.Add(*r)
 
-	podList, err := c.PodLister.Pods(c.meshNamespace).List(sel)
+	podList, err := c.PodLister.Pods(c.cfg.Namespace).List(sel)
 	if err != nil {
 		return fmt.Errorf("unable to get pods: %w", err)
 	}
@@ -370,7 +358,7 @@ func (c *Controller) deployConfigurationToUnreadyNodes(config *dynamic.Configura
 
 	sel = sel.Add(*r)
 
-	podList, err := c.PodLister.Pods(c.meshNamespace).List(sel)
+	podList, err := c.PodLister.Pods(c.cfg.Namespace).List(sel)
 	if err != nil {
 		return fmt.Errorf("unable to get pods: %w", err)
 	}
@@ -403,7 +391,7 @@ func (c *Controller) deployToPods(pods []*corev1.Pod, config *dynamic.Configurat
 	for _, p := range pods {
 		pod := p
 
-		c.log.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
+		c.logger.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
 
 		errg.Go(func() error {
 			b := backoff.NewExponentialBackOff()
@@ -461,7 +449,7 @@ func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration)
 	}
 
 	c.deployLog.LogDeploy(time.Now(), name, ip, true, "")
-	c.log.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
+	c.logger.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
 
 	return nil
 }
