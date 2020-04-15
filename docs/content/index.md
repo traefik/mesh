@@ -19,7 +19,7 @@ Moreover, Maesh is opt-in by default, which means that your existing services ar
 Maesh does not use any sidecar container but handles routing through proxy endpoints running on each node.
 The mesh controller runs in a dedicated pod and handles all the configuration parsing and deployment to the proxy nodes.
 Maesh supports multiple configuration options: annotations on user service objects, and SMI objects.
-Not using sidecars means that Maesh does not modify your kubernetes objects, and does not modify your traffic without your knowledge.
+Not using sidecars means that Maesh does not modify your Kubernetes objects and does not modify your traffic without your knowledge.
 Using the Maesh endpoints is all that is required.
 
 <p align="center">

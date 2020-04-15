@@ -29,9 +29,8 @@ func TestNewController(t *testing.T) {
 	log.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with base HTTP mode.
-	controller, err := NewMeshController(clientMock, MeshControllerConfig{
-		Log:              log,
-		SMIEnabled:       false,
+	controller, err := NewMeshController(clientMock, Config{
+		ACLEnabled:       false,
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,
 		IgnoreNamespaces: []string{},
@@ -40,7 +39,7 @@ func TestNewController(t *testing.T) {
 		MaxTCPPort:       maxTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,
-	})
+	}, log)
 	assert.NoError(t, err)
 	assert.NotNil(t, controller)
 }
@@ -56,9 +55,8 @@ func TestNewControllerWithSMI(t *testing.T) {
 	log.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with base HTTP mode, in SMI mode.
-	controller, err := NewMeshController(clientMock, MeshControllerConfig{
-		Log:              log,
-		SMIEnabled:       true,
+	controller, err := NewMeshController(clientMock, Config{
+		ACLEnabled:       true,
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,
 		IgnoreNamespaces: []string{},
@@ -67,7 +65,7 @@ func TestNewControllerWithSMI(t *testing.T) {
 		MaxTCPPort:       maxTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,
-	})
+	}, log)
 	assert.NoError(t, err)
 	assert.NotNil(t, controller)
 }

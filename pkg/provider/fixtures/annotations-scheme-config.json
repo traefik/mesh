@@ -1,0 +1,61 @@
+{
+  "http": {
+    "routers": {
+      "my-ns-svc-a-8080": {
+        "entryPoints": [
+          "http-10000"
+        ],
+        "service": "my-ns-svc-a-8080",
+        "rule": "Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
+        "priority": 1001
+      },
+      "readiness": {
+        "entryPoints": [
+          "readiness"
+        ],
+        "service": "readiness",
+        "rule": "Path(`/ping`)"
+      }
+    },
+    "services": {
+      "block-all-service": {
+        "loadBalancer": {
+          "passHostHeader": null
+        }
+      },
+      "my-ns-svc-a-8080": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "https://10.10.2.1:8080"
+            },
+            {
+              "url": "https://10.10.2.2:8080"
+            }
+          ],
+          "passHostHeader": true
+        }
+      },
+      "readiness": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://127.0.0.1:8080"
+            }
+          ],
+          "passHostHeader": true
+        }
+      }
+    },
+    "middlewares": {
+      "block-all-middleware": {
+        "ipWhiteList": {
+          "sourceRange": [
+            "255.255.255.255"
+          ]
+        }
+      }
+    }
+  },
+  "tcp": {}
+}

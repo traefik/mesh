@@ -1,0 +1,80 @@
+{
+  "services": {
+    "svc-b@my-ns": {
+      "name": "svc-b",
+      "namespace": "my-ns",
+      "selector": {},
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.14.1",
+      "pods": [
+        "pod-b@my-ns"
+      ],
+      "trafficTargets": ["svc-b@my-ns:tt@my-ns"]
+    }
+  },
+  "pods": {
+    "pod-a@my-ns": {
+      "name": "pod-a",
+      "namespace": "my-ns",
+      "serviceAccount": "client",
+      "ip": "10.10.2.1"
+    },
+    "pod-b@my-ns": {
+      "name": "pod-b",
+      "namespace": "my-ns",
+      "serviceAccount": "server",
+      "ip": "10.10.3.1"
+    }
+  },
+  "serviceTrafficTargets": {
+    "svc-b@my-ns:tt@my-ns": {
+      "service": "svc-b@my-ns",
+      "name": "tt",
+      "namespace": "my-ns",
+      "specs": [
+        {
+          "tcpRoute": {
+            "kind": "TCPRoute",
+            "metadata": {
+              "name": "tcp-route",
+              "namespace": "my-ns"
+            }
+          }
+        }
+      ],
+      "sources": [
+        {
+          "serviceAccount": "client",
+          "namespace": "my-ns",
+          "pods": [
+            "pod-a@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "server",
+        "namespace": "my-ns",
+        "ports": [
+          {
+            "name": "port-8080",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "pods": [
+          "pod-b@my-ns"
+        ]
+      }
+    }
+  },
+  "trafficSplits": {}
+}
