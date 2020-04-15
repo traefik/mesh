@@ -2,6 +2,7 @@ package topology_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -77,8 +78,10 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 	require.NoError(t, err)
 
 	want := &topology.Topology{
-		Services: make(map[topology.Key]*topology.Service),
-		Pods:     make(map[topology.Key]*topology.Pod),
+		Services:              make(map[topology.Key]*topology.Service),
+		Pods:                  make(map[topology.Key]*topology.Pod),
+		ServiceTrafficTargets: make(map[topology.ServiceTrafficTargetKey]*topology.ServiceTrafficTarget),
+		TrafficSplits:         make(map[topology.Key]*topology.TrafficSplit),
 	}
 
 	assert.Equal(t, want, got)
@@ -205,7 +208,10 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	assert.Equal(t, 0, len(got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits[0].Incoming))
+	svcKey := nn(svcB.Name, svcB.Namespace)
+	tsKey := got.Services[svcKey].TrafficSplits[0]
+
+	assert.Equal(t, 0, len(got.TrafficSplits[tsKey].Incoming))
 }
 
 func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
@@ -270,14 +276,20 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, len(got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits[0].Incoming))
-	assert.Equal(t, 1, len(got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits[1].Incoming))
+	svcKey := nn(svcB.Name, svcB.Namespace)
+	tsKeys := got.Services[svcKey].TrafficSplits
 
-	for _, ts := range got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits {
+	assert.Equal(t, 1, len(got.TrafficSplits[tsKeys[0]].Incoming))
+	assert.Equal(t, 1, len(got.TrafficSplits[tsKeys[1]].Incoming))
+
+	for _, tsKey := range tsKeys {
+		ts := got.TrafficSplits[tsKey]
+		pod := got.Pods[ts.Incoming[0]]
+
 		if ts.Name == "ts2" {
-			assert.Equal(t, "10.10.1.2", ts.Incoming[0].IP)
+			assert.Equal(t, "10.10.1.2", pod.IP)
 		} else {
-			assert.Equal(t, "10.10.1.1", ts.Incoming[0].IP)
+			assert.Equal(t, "10.10.1.1", pod.IP)
 		}
 	}
 }
@@ -338,76 +350,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit(t *testing.T) {
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	wantPodA := podToTopologyPod(podA)
-	wantPodB := podToTopologyPod(podB)
-	wantPodC := podToTopologyPod(podC)
-	wantPodD := podToTopologyPod(podD)
-
-	wantServiceB := serviceToTopologyService(svcB, []*topology.Pod{wantPodB})
-	wantServiceC := serviceToTopologyService(svcC, []*topology.Pod{wantPodC})
-	wantServiceD := serviceToTopologyService(svcD, []*topology.Pod{wantPodD})
-
-	wantServiceBTrafficTarget := &topology.ServiceTrafficTarget{
-		Service: wantServiceB,
-		Name:    tt.Name,
-		Sources: []topology.ServiceTrafficTargetSource{
-			{
-				ServiceAccount: saA.Name,
-				Namespace:      saA.Namespace,
-				Pods:           []*topology.Pod{wantPodA},
-			},
-		},
-		Destination: topology.ServiceTrafficTargetDestination{
-			ServiceAccount: saB.Name,
-			Namespace:      saB.Namespace,
-			Ports:          []corev1.ServicePort{svcPort("port-8080", 8080, 8080)},
-			Pods:           []*topology.Pod{wantPodB},
-		},
-		Specs: []topology.TrafficSpec{
-			{
-				HTTPRouteGroup: rtGrp,
-				HTTPMatches:    []*spec.HTTPMatch{&apiMatch},
-			},
-		},
-	}
-	wantTrafficSplit := &topology.TrafficSplit{
-		Name:      ts.Name,
-		Namespace: ts.Namespace,
-		Service:   wantServiceB,
-		Backends: []topology.TrafficSplitBackend{
-			{
-				Weight:  80,
-				Service: wantServiceC,
-			},
-			{
-				Weight:  20,
-				Service: wantServiceD,
-			},
-		},
-	}
-
-	wantPodA.Outgoing = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
-	wantPodB.Incoming = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
-	wantServiceB.TrafficTargets = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
-	wantServiceB.TrafficSplits = []*topology.TrafficSplit{wantTrafficSplit}
-	wantServiceC.BackendOf = []*topology.TrafficSplit{wantTrafficSplit}
-	wantServiceD.BackendOf = []*topology.TrafficSplit{wantTrafficSplit}
-
-	want := &topology.Topology{
-		Services: map[topology.Key]*topology.Service{
-			nn(svcB.Name, svcB.Namespace): wantServiceB,
-			nn(svcC.Name, svcC.Namespace): wantServiceC,
-			nn(svcD.Name, svcD.Namespace): wantServiceD,
-		},
-		Pods: map[topology.Key]*topology.Pod{
-			nn(podA.Name, podA.Namespace): wantPodA,
-			nn(podB.Name, podB.Namespace): wantPodB,
-			nn(podC.Name, podC.Namespace): wantPodC,
-			nn(podD.Name, podD.Namespace): wantPodD,
-		},
-	}
-
-	assert.Equal(t, want, got)
+	assertTopology(t, "fixtures/topology-basic.json", got)
 }
 
 // TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch makes sure that when TrafficTarget.Spec.Matches is empty,
@@ -446,50 +389,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	wantPodA := podToTopologyPod(podA)
-	wantPodB := podToTopologyPod(podB)
-
-	wantServiceB := serviceToTopologyService(svcB, []*topology.Pod{wantPodB})
-
-	wantServiceBTrafficTarget := &topology.ServiceTrafficTarget{
-		Service: wantServiceB,
-		Name:    tt.Name,
-		Sources: []topology.ServiceTrafficTargetSource{
-			{
-				ServiceAccount: saA.Name,
-				Namespace:      saA.Namespace,
-				Pods:           []*topology.Pod{wantPodA},
-			},
-		},
-		Destination: topology.ServiceTrafficTargetDestination{
-			ServiceAccount: saB.Name,
-			Namespace:      saB.Namespace,
-			Ports:          []corev1.ServicePort{svcPort("port-8080", 8080, 8080)},
-			Pods:           []*topology.Pod{wantPodB},
-		},
-		Specs: []topology.TrafficSpec{
-			{
-				HTTPRouteGroup: rtGrp,
-				HTTPMatches:    []*spec.HTTPMatch{&apiMatch, &metricMatch},
-			},
-		},
-	}
-
-	wantPodA.Outgoing = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
-	wantPodB.Incoming = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
-	wantServiceB.TrafficTargets = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
-
-	want := &topology.Topology{
-		Services: map[topology.Key]*topology.Service{
-			nn(svcB.Name, svcB.Namespace): wantServiceB,
-		},
-		Pods: map[topology.Key]*topology.Pod{
-			nn(podA.Name, podA.Namespace): wantPodA,
-			nn(podB.Name, podB.Namespace): wantPodB,
-		},
-	}
-
-	assert.Equal(t, want, got)
+	assertTopology(t, "fixtures/topology-spec-with-empty-match.json", got)
 }
 
 // TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort makes sure that when a TrafficTarget.Destination.Port
@@ -531,47 +431,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	wantPodA := podToTopologyPod(podA)
-	wantPodB := podToTopologyPod(podB)
-
-	wantServiceB := serviceToTopologyService(svcB, []*topology.Pod{wantPodB})
-
-	wantServiceBTrafficTarget := &topology.ServiceTrafficTarget{
-		Service: wantServiceB,
-		Name:    tt.Name,
-		Sources: []topology.ServiceTrafficTargetSource{
-			{
-				ServiceAccount: saA.Name,
-				Namespace:      saA.Namespace,
-				Pods:           []*topology.Pod{wantPodA},
-			},
-		},
-		Destination: topology.ServiceTrafficTargetDestination{
-			ServiceAccount: saB.Name,
-			Namespace:      saB.Namespace,
-			Ports: []corev1.ServicePort{
-				svcPort("port-8080", 8080, 8080),
-				svcPort("port-9090", 9090, 9090),
-			},
-			Pods: []*topology.Pod{wantPodB},
-		},
-	}
-
-	wantPodA.Outgoing = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
-	wantPodB.Incoming = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
-	wantServiceB.TrafficTargets = []*topology.ServiceTrafficTarget{wantServiceBTrafficTarget}
-
-	want := &topology.Topology{
-		Services: map[topology.Key]*topology.Service{
-			nn(svcB.Name, svcB.Namespace): wantServiceB,
-		},
-		Pods: map[topology.Key]*topology.Pod{
-			nn(podA.Name, podA.Namespace): wantPodA,
-			nn(podB.Name, podB.Namespace): wantPodB,
-		},
-	}
-
-	assert.Equal(t, want, got)
+	assertTopology(t, "fixtures/topology-empty-destination-port.json", got)
 }
 
 // TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations makes sure we can build a topology with
@@ -610,56 +470,7 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	wantPodA := podToTopologyPod(podA)
-	wantPodB := podToTopologyPod(podB)
-	wantPodC1 := podToTopologyPod(podC1)
-	wantPodC2 := podToTopologyPod(podC2)
-
-	wantServiceC := serviceToTopologyService(svcC, []*topology.Pod{wantPodC1, wantPodC2})
-
-	wantServiceCTrafficTarget := &topology.ServiceTrafficTarget{
-		Service: wantServiceC,
-		Name:    tt.Name,
-		Sources: []topology.ServiceTrafficTargetSource{
-			{
-				ServiceAccount: saA.Name,
-				Namespace:      saA.Namespace,
-				Pods:           []*topology.Pod{wantPodA},
-			},
-			{
-				ServiceAccount: saB.Name,
-				Namespace:      saB.Namespace,
-				Pods:           []*topology.Pod{wantPodB},
-			},
-		},
-		Destination: topology.ServiceTrafficTargetDestination{
-			ServiceAccount: saC.Name,
-			Namespace:      saC.Namespace,
-			Ports:          []corev1.ServicePort{svcPort("port-8080", 8080, 8080)},
-			Pods:           []*topology.Pod{wantPodC1, wantPodC2},
-		},
-	}
-
-	wantPodA.Outgoing = []*topology.ServiceTrafficTarget{wantServiceCTrafficTarget}
-	wantPodB.Outgoing = []*topology.ServiceTrafficTarget{wantServiceCTrafficTarget}
-	wantPodC1.Incoming = []*topology.ServiceTrafficTarget{wantServiceCTrafficTarget}
-	wantPodC2.Incoming = []*topology.ServiceTrafficTarget{wantServiceCTrafficTarget}
-
-	wantServiceC.TrafficTargets = []*topology.ServiceTrafficTarget{wantServiceCTrafficTarget}
-
-	want := &topology.Topology{
-		Services: map[topology.Key]*topology.Service{
-			nn(svcC.Name, svcC.Namespace): wantServiceC,
-		},
-		Pods: map[topology.Key]*topology.Pod{
-			nn(podA.Name, podA.Namespace):   wantPodA,
-			nn(podB.Name, podB.Namespace):   wantPodB,
-			nn(podC1.Name, podC1.Namespace): wantPodC1,
-			nn(podC2.Name, podC2.Namespace): wantPodC2,
-		},
-	}
-
-	assert.Equal(t, want, got)
+	assertTopology(t, "fixtures/topology-multi-sources-destinations.json", got)
 }
 
 // createBuilder initializes the different k8s factories and start them, initializes listers and create
@@ -725,28 +536,6 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 		TCPRoutesLister:      tcpRouteLister,
 		Logger:               logger,
 	}, nil
-}
-
-func podToTopologyPod(pod *corev1.Pod) *topology.Pod {
-	return &topology.Pod{
-		Name:           pod.Name,
-		Namespace:      pod.Namespace,
-		ServiceAccount: pod.Spec.ServiceAccountName,
-		Owner:          pod.OwnerReferences,
-		IP:             pod.Status.PodIP,
-	}
-}
-
-func serviceToTopologyService(svc *corev1.Service, pods []*topology.Pod) *topology.Service {
-	return &topology.Service{
-		Name:        svc.Name,
-		Namespace:   svc.Namespace,
-		Selector:    svc.Spec.Selector,
-		Annotations: svc.Annotations,
-		Ports:       svc.Spec.Ports,
-		ClusterIP:   svc.Spec.ClusterIP,
-		Pods:        pods,
-	}
 }
 
 func nn(name, ns string) topology.Key {
@@ -946,4 +735,22 @@ func createServiceAccount(ns, name string) *corev1.ServiceAccount {
 			Name:      name,
 		},
 	}
+}
+
+func assertTopology(t *testing.T, filename string, got *topology.Topology) {
+	data, err := ioutil.ReadFile(filename)
+	require.NoError(t, err)
+
+	var want topology.Topology
+
+	err = json.Unmarshal(data, &want)
+	require.NoError(t, err)
+
+	wantMarshaled, err := json.MarshalIndent(&want, "", "  ")
+	require.NoError(t, err)
+
+	gotMarshaled, err := json.MarshalIndent(got, "", "  ")
+	require.NoError(t, err)
+
+	assert.Equal(t, string(wantMarshaled), string(gotMarshaled))
 }

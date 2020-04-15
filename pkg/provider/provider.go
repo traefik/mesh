@@ -10,6 +10,7 @@ import (
 	"github.com/containous/maesh/pkg/topology"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // TopologyBuilder builds Topologies.
@@ -54,7 +55,6 @@ type Provider struct {
 	topologyBuilder        TopologyBuilder
 	tcpStateTable          TCPPortFinder
 	buildServiceMiddleware MiddlewareBuilder
-	ignoredResources       k8s.IgnoreWrapper
 
 	logger logrus.FieldLogger
 }
@@ -74,13 +74,13 @@ func New(topologyBuilder TopologyBuilder, tcpStateTable TCPPortFinder, cfg Confi
 func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 	cfg := buildDefaultDynamicConfig()
 
-	t, err := p.topologyBuilder.Build(p.ignoredResources)
+	t, err := p.topologyBuilder.Build(p.config.IgnoredResources)
 	if err != nil {
 		return nil, fmt.Errorf("unable to build topology: %w", err)
 	}
 
 	for _, svc := range t.Services {
-		if err := p.buildConfigForService(cfg, svc); err != nil {
+		if err := p.buildConfigForService(t, cfg, svc); err != nil {
 			p.logger.Errorf("Unable to build config for service %s/%s: %w", svc.Namespace, svc.Name, err)
 		}
 	}
@@ -89,7 +89,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 }
 
 // buildConfigForService builds the dynamic configuration for the given service.
-func (p *Provider) buildConfigForService(cfg *dynamic.Configuration, svc *topology.Service) error {
+func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service) error {
 	trafficType, err := p.getTrafficTypeAnnotation(svc)
 	if err != nil {
 		return fmt.Errorf("unable to evaluate traffic-type annotation: %w", err)
@@ -123,22 +123,22 @@ func (p *Provider) buildConfigForService(cfg *dynamic.Configuration, svc *topolo
 			p.buildBlockAllRouters(cfg, svc)
 		}
 
-		for _, tt := range svc.TrafficTargets {
-			if err := p.buildServicesAndRoutersForTrafficTarget(cfg, tt, scheme, trafficType, middlewares); err != nil {
-				p.logger.Errorf("Unable to build routers and services for service %s/%s for traffic-target %s: %v", svc.Namespace, svc.Name, tt.Name, err)
+		for _, ttKey := range svc.TrafficTargets {
+			if err := p.buildServicesAndRoutersForTrafficTarget(t, cfg, ttKey, scheme, trafficType, middlewares); err != nil {
+				p.logger.Errorf("Unable to build routers and services for service %s/%s for traffic-target %s: %v", svc.Namespace, svc.Name, ttKey.TrafficTarget.Name, err)
 				continue
 			}
 		}
 	} else {
-		err := p.buildServicesAndRoutersForService(cfg, svc, scheme, trafficType, middlewares)
+		err := p.buildServicesAndRoutersForService(t, cfg, svc, scheme, trafficType, middlewares)
 		if err != nil {
 			return fmt.Errorf("unable to build routers and services: %w", err)
 		}
 	}
 
-	for _, ts := range svc.TrafficSplits {
-		if err := p.buildServiceAndRoutersForTrafficSplit(cfg, ts, scheme, trafficType, middlewares); err != nil {
-			p.logger.Errorf("Unable to build routers and services for service %s/%s and traffic-split %s: %v", svc.Namespace, svc.Name, ts.Name, err)
+	for _, tsKey := range svc.TrafficSplits {
+		if err := p.buildServiceAndRoutersForTrafficSplit(t, cfg, tsKey, scheme, trafficType, middlewares); err != nil {
+			p.logger.Errorf("Unable to build routers and services for service %s/%s and traffic-split %s: %v", svc.Namespace, svc.Name, tsKey.Name, err)
 			continue
 		}
 	}
@@ -146,7 +146,7 @@ func (p *Provider) buildConfigForService(cfg *dynamic.Configuration, svc *topolo
 	return nil
 }
 
-func (p *Provider) buildServicesAndRoutersForService(cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewares []string) error {
+func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewares []string) error {
 	switch trafficType {
 	case k8s.ServiceTypeHTTP:
 		httpRule := buildHTTPRuleFromService(svc)
@@ -159,7 +159,7 @@ func (p *Provider) buildServicesAndRoutersForService(cfg *dynamic.Configuration,
 			}
 
 			key := getServiceRouterKeyFromService(svc, svcPort.Port)
-			cfg.HTTP.Services[key] = buildHTTPServiceFromService(svc, scheme, svcPort.TargetPort.IntVal)
+			cfg.HTTP.Services[key] = p.buildHTTPServiceFromService(t, svc, scheme, svcPort.TargetPort.IntVal)
 			cfg.HTTP.Routers[key] = buildHTTPRouter(httpRule, entrypoint, middlewares, key, priorityService)
 		}
 
@@ -174,7 +174,7 @@ func (p *Provider) buildServicesAndRoutersForService(cfg *dynamic.Configuration,
 			}
 
 			key := getServiceRouterKeyFromService(svc, svcPort.Port)
-			cfg.TCP.Services[key] = buildTCPServiceFromService(svc, svcPort.TargetPort.IntVal)
+			cfg.TCP.Services[key] = p.buildTCPServiceFromService(t, svc, svcPort.TargetPort.IntVal)
 			cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
 		}
 	default:
@@ -184,14 +184,24 @@ func (p *Provider) buildServicesAndRoutersForService(cfg *dynamic.Configuration,
 	return nil
 }
 
-func (p *Provider) buildServicesAndRoutersForTrafficTarget(cfg *dynamic.Configuration, tt *topology.ServiceTrafficTarget, scheme, trafficType string, middlewares []string) error {
+func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology, cfg *dynamic.Configuration, ttKey topology.ServiceTrafficTargetKey, scheme, trafficType string, middlewares []string) error {
+	tt, ok := t.ServiceTrafficTargets[ttKey]
+	if !ok {
+		return fmt.Errorf("unable to find TrafficTarget with key %q", ttKey)
+	}
+
+	ttSvc, ok := t.Services[tt.Service]
+	if !ok {
+		return fmt.Errorf("unable to find Service with key %q", tt.Service)
+	}
+
 	switch trafficType {
 	case k8s.ServiceTypeHTTP:
-		whitelistDirect := buildWhitelistMiddlewareFromTrafficTargetDirect(tt)
+		whitelistDirect := p.buildWhitelistMiddlewareFromTrafficTargetDirect(t, tt)
 		whitelistDirectKey := getWhitelistMiddlewareKeyFromTrafficTargetDirect(tt)
 		cfg.HTTP.Middlewares[whitelistDirectKey] = whitelistDirect
 
-		rule := buildHTTPRuleFromTrafficTarget(tt)
+		rule := buildHTTPRuleFromTrafficTarget(tt, ttSvc)
 
 		for portID, svcPort := range tt.Destination.Ports {
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
@@ -201,7 +211,7 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(cfg *dynamic.Configur
 			}
 
 			svcKey := getServiceKeyFromTrafficTarget(tt, svcPort.Port)
-			cfg.HTTP.Services[svcKey] = buildHTTPServiceFromTrafficTarget(tt, scheme, svcPort.TargetPort.IntVal)
+			cfg.HTTP.Services[svcKey] = p.buildHTTPServiceFromTrafficTarget(t, tt, scheme, svcPort.TargetPort.IntVal)
 
 			rtrMiddlewares := addToSliceCopy(middlewares, whitelistDirectKey)
 
@@ -210,12 +220,12 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(cfg *dynamic.Configur
 
 			// If the ServiceTrafficTarget is the backend of at least one TrafficSplit we need an additional router with
 			// a whitelist middleware which whitelists based on the X-Forwarded-For header instead of on the RemoteAddr value.
-			if len(tt.Service.BackendOf) > 0 {
-				whitelistIndirect := buildWhitelistMiddlewareFromTrafficTargetIndirect(tt)
+			if len(ttSvc.BackendOf) > 0 {
+				whitelistIndirect := p.buildWhitelistMiddlewareFromTrafficTargetIndirect(t, tt)
 				whitelistIndirectKey := getWhitelistMiddlewareKeyFromTrafficTargetIndirect(tt)
 				cfg.HTTP.Middlewares[whitelistIndirectKey] = whitelistIndirect
 
-				rule = buildHTTPRuleFromTrafficTargetIndirect(tt)
+				rule = buildHTTPRuleFromTrafficTargetIndirect(tt, ttSvc)
 				rtrMiddlewares = addToSliceCopy(middlewares, whitelistIndirectKey)
 
 				indirectRtrKey := getRouterKeyFromTrafficTargetIndirect(tt, svcPort.Port)
@@ -230,14 +240,14 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(cfg *dynamic.Configur
 		rule := buildTCPRouterRule()
 
 		for _, svcPort := range tt.Destination.Ports {
-			entrypoint, err := p.buildTCPEntrypoint(tt.Service, svcPort.Port)
+			entrypoint, err := p.buildTCPEntrypoint(ttSvc, svcPort.Port)
 			if err != nil {
 				p.logger.Errorf("Unable to build TCP entrypoint for Service %s/%s and port %d: %v", tt.Service.Namespace, tt.Service.Name, svcPort.Port, err)
 				continue
 			}
 
-			key := getServiceRouterKeyFromService(tt.Service, svcPort.Port)
-			cfg.TCP.Services[key] = buildTCPServiceFromTrafficTarget(tt, svcPort.TargetPort.IntVal)
+			key := getServiceRouterKeyFromService(ttSvc, svcPort.Port)
+			cfg.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(t, tt, svcPort.TargetPort.IntVal)
 			cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
 		}
 	default:
@@ -247,37 +257,36 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(cfg *dynamic.Configur
 	return nil
 }
 
-func (p *Provider) buildServiceAndRoutersForTrafficSplit(cfg *dynamic.Configuration, ts *topology.TrafficSplit, scheme, trafficType string, middlewares []string) error {
+func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, cfg *dynamic.Configuration, tsKey topology.Key, scheme, trafficType string, middlewares []string) error {
+	ts, ok := t.TrafficSplits[tsKey]
+	if !ok {
+		return fmt.Errorf("unable to find TrafficSplit with key %q", tsKey)
+	}
+
+	tsSvc, ok := t.Services[ts.Service]
+	if !ok {
+		return fmt.Errorf("unable to find Service with key %q", ts.Service)
+	}
+
 	switch trafficType {
 	case k8s.ServiceTypeHTTP:
-		rule := buildHTTPRuleFromService(ts.Service)
+		rule := buildHTTPRuleFromService(tsSvc)
 
 		rtrMiddlewares := middlewares
 
 		if p.config.ACL {
-			whitelistDirect := buildWhitelistMiddlewareFromTrafficSplitDirect(ts)
+			whitelistDirect := p.buildWhitelistMiddlewareFromTrafficSplitDirect(t, ts)
 			whitelistDirectKey := getWhitelistMiddlewareKeyFromTrafficSplitDirect(ts)
 			cfg.HTTP.Middlewares[whitelistDirectKey] = whitelistDirect
 
 			rtrMiddlewares = addToSliceCopy(middlewares, whitelistDirectKey)
 		}
 
-		for portID, svcPort := range ts.Service.Ports {
-			backendSvcs := make([]dynamic.WRRService, len(ts.Backends))
-
-			for i, backend := range ts.Backends {
-				if len(backend.Service.TrafficSplits) > 0 {
-					p.logger.Warnf("Nested TrafficSplits detected in TrafficSplit %s/%s: Maesh doesn't support nested TrafficSplits", ts.Namespace, ts.Name)
-				}
-
-				backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)
-				// This is unclear in SMI's specification if port mapping should be enforced between the Service and the
-				// TrafficSplit backends. https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-split.md#ports
-				cfg.HTTP.Services[backendSvcKey] = buildHTTPSplitTrafficBackendService(backend, scheme, svcPort.Port)
-				backendSvcs[i] = dynamic.WRRService{
-					Name:   backendSvcKey,
-					Weight: getIntRef(backend.Weight),
-				}
+		for portID, svcPort := range tsSvc.Ports {
+			backendSvcs, err := p.buildServicesForTrafficSplitBackends(t, cfg, ts, svcPort, scheme)
+			if err != nil {
+				p.logger.Errorf("Unable to build HTTP backend services for TrafficSplit %s/%s and port %d: %v", ts.Namespace, ts.Name, svcPort.Port, err)
+				continue
 			}
 
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
@@ -294,12 +303,12 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(cfg *dynamic.Configurat
 
 			// If the ServiceTrafficSplit is a backend of at least one TrafficSplit we need an additional router with
 			// a whitelist middleware which whitelists based on the X-Forwarded-For header instead of on the RemoteAddr value.
-			if len(ts.Service.BackendOf) > 0 && p.config.ACL {
-				whitelistIndirect := buildWhitelistMiddlewareFromTrafficSplitIndirect(ts)
+			if len(tsSvc.BackendOf) > 0 && p.config.ACL {
+				whitelistIndirect := p.buildWhitelistMiddlewareFromTrafficSplitIndirect(t, ts)
 				whitelistIndirectKey := getWhitelistMiddlewareKeyFromTrafficSplitIndirect(ts)
 				cfg.HTTP.Middlewares[whitelistIndirectKey] = whitelistIndirect
 
-				rule = buildHTTPRuleFromTrafficSplitIndirect(ts)
+				rule = buildHTTPRuleFromTrafficSplitIndirect(tsSvc)
 				rtrMiddlewaresindirect := addToSliceCopy(middlewares, whitelistIndirectKey)
 
 				indirectRtrKey := getRouterKeyFromTrafficSplitIndirect(ts, svcPort.Port)
@@ -309,7 +318,7 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(cfg *dynamic.Configurat
 	case k8s.ServiceTypeTCP:
 		tcpRule := buildTCPRouterRule()
 
-		for _, svcPort := range ts.Service.Ports {
+		for _, svcPort := range tsSvc.Ports {
 			backendSvcs := make([]dynamic.TCPWRRService, len(ts.Backends))
 
 			for i, backend := range ts.Backends {
@@ -321,13 +330,13 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(cfg *dynamic.Configurat
 				}
 			}
 
-			entrypoint, err := p.buildTCPEntrypoint(ts.Service, svcPort.Port)
+			entrypoint, err := p.buildTCPEntrypoint(tsSvc, svcPort.Port)
 			if err != nil {
 				p.logger.Errorf("Unable to build TCP entrypoint for Service %s/%s and port %d: %v", ts.Service.Namespace, ts.Service.Name, svcPort.Port, err)
 				continue
 			}
 
-			key := getServiceRouterKeyFromService(ts.Service, svcPort.Port)
+			key := getServiceRouterKeyFromService(tsSvc, svcPort.Port)
 			cfg.TCP.Services[key] = buildTCPServiceFromTrafficSplit(backendSvcs)
 			cfg.TCP.Routers[key] = buildTCPRouter(tcpRule, entrypoint, key)
 		}
@@ -337,6 +346,31 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(cfg *dynamic.Configurat
 	}
 
 	return nil
+}
+
+func (p *Provider) buildServicesForTrafficSplitBackends(t *topology.Topology, cfg *dynamic.Configuration, ts *topology.TrafficSplit, svcPort corev1.ServicePort, scheme string) ([]dynamic.WRRService, error) {
+	backendSvcs := make([]dynamic.WRRService, len(ts.Backends))
+
+	for i, backend := range ts.Backends {
+		backendSvc, ok := t.Services[backend.Service]
+		if !ok {
+			return nil, fmt.Errorf("unable to find Service with key %q", backend.Service)
+		}
+
+		if len(backendSvc.TrafficSplits) > 0 {
+			p.logger.Warnf("Nested TrafficSplits detected in TrafficSplit %s/%s: Maesh doesn't support nested TrafficSplits", ts.Namespace, ts.Name)
+		}
+
+		backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)
+
+		cfg.HTTP.Services[backendSvcKey] = buildHTTPSplitTrafficBackendService(backend, scheme, svcPort.Port)
+		backendSvcs[i] = dynamic.WRRService{
+			Name:   backendSvcKey,
+			Weight: getIntRef(backend.Weight),
+		}
+	}
+
+	return backendSvcs, nil
 }
 
 func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topology.Service) {
@@ -397,24 +431,16 @@ func (p *Provider) getTrafficTypeAnnotation(svc *topology.Service) (string, erro
 	return trafficType, nil
 }
 
-func getSchemeAnnotation(svc *topology.Service) (string, error) {
-	scheme, ok := svc.Annotations[k8s.AnnotationScheme]
-
-	if !ok {
-		return k8s.SchemeHTTP, nil
-	}
-
-	if scheme != k8s.SchemeHTTP && scheme != k8s.SchemeH2c && scheme != k8s.SchemeHTTPS {
-		return "", fmt.Errorf("scheme annotation references an unknown scheme %q", scheme)
-	}
-
-	return scheme, nil
-}
-
-func buildHTTPServiceFromService(svc *topology.Service, scheme string, port int32) *dynamic.Service {
+func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topology.Service, scheme string, port int32) *dynamic.Service {
 	var servers []dynamic.Server
 
-	for _, pod := range svc.Pods {
+	for _, podKey := range svc.Pods {
+		pod, ok := t.Pods[podKey]
+		if !ok {
+			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			continue
+		}
+
 		url := net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
 
 		servers = append(servers, dynamic.Server{
@@ -430,10 +456,39 @@ func buildHTTPServiceFromService(svc *topology.Service, scheme string, port int3
 	}
 }
 
-func buildTCPServiceFromService(svc *topology.Service, port int32) *dynamic.TCPService {
+func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, scheme string, port int32) *dynamic.Service {
+	servers := make([]dynamic.Server, len(tt.Destination.Pods))
+
+	for i, podKey := range tt.Destination.Pods {
+		pod, ok := t.Pods[podKey]
+		if !ok {
+			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			continue
+		}
+
+		url := net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
+
+		servers[i].URL = fmt.Sprintf("%s://%s", scheme, url)
+	}
+
+	return &dynamic.Service{
+		LoadBalancer: &dynamic.ServersLoadBalancer{
+			Servers:        servers,
+			PassHostHeader: getBoolRef(true),
+		},
+	}
+}
+
+func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topology.Service, port int32) *dynamic.TCPService {
 	var servers []dynamic.TCPServer
 
-	for _, pod := range svc.Pods {
+	for _, podKey := range svc.Pods {
+		pod, ok := t.Pods[podKey]
+		if !ok {
+			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			continue
+		}
+
 		address := net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
 
 		servers = append(servers, dynamic.TCPServer{
@@ -448,27 +503,16 @@ func buildTCPServiceFromService(svc *topology.Service, port int32) *dynamic.TCPS
 	}
 }
 
-func buildHTTPServiceFromTrafficTarget(tt *topology.ServiceTrafficTarget, scheme string, port int32) *dynamic.Service {
-	servers := make([]dynamic.Server, len(tt.Destination.Pods))
-
-	for i, pod := range tt.Destination.Pods {
-		url := net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
-
-		servers[i].URL = fmt.Sprintf("%s://%s", scheme, url)
-	}
-
-	return &dynamic.Service{
-		LoadBalancer: &dynamic.ServersLoadBalancer{
-			Servers:        servers,
-			PassHostHeader: getBoolRef(true),
-		},
-	}
-}
-
-func buildTCPServiceFromTrafficTarget(tt *topology.ServiceTrafficTarget, port int32) *dynamic.TCPService {
+func (p *Provider) buildTCPServiceFromTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, port int32) *dynamic.TCPService {
 	servers := make([]dynamic.TCPServer, len(tt.Destination.Pods))
 
-	for i, pod := range tt.Destination.Pods {
+	for i, podKey := range tt.Destination.Pods {
+		pod, ok := t.Pods[podKey]
+		if !ok {
+			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			continue
+		}
+
 		servers[i].Address = net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
 	}
 
@@ -477,6 +521,92 @@ func buildTCPServiceFromTrafficTarget(tt *topology.ServiceTrafficTarget, port in
 			Servers: servers,
 		},
 	}
+}
+
+// buildWhitelistMiddlewareFromTrafficTargetDirect builds an IPWhiteList middleware which blocks requests from
+// unauthorized Pods. Authorized Pods are those listed in the ServiceTrafficTarget.Sources.
+// This middleware doesn't work if used behind a proxy.
+func (p *Provider) buildWhitelistMiddlewareFromTrafficTargetDirect(t *topology.Topology, tt *topology.ServiceTrafficTarget) *dynamic.Middleware {
+	var IPs []string
+
+	for _, source := range tt.Sources {
+		for _, podKey := range source.Pods {
+			pod, ok := t.Pods[podKey]
+			if !ok {
+				p.logger.Errorf("Unable to find Pod with key %q", podKey)
+				continue
+			}
+
+			IPs = append(IPs, pod.IP)
+		}
+	}
+
+	return &dynamic.Middleware{
+		IPWhiteList: &dynamic.IPWhiteList{
+			SourceRange: IPs,
+		},
+	}
+}
+
+// buildWhitelistMiddlewareFromTrafficSplitDirect builds an IPWhiteList middleware which blocks requests from
+// unauthorized Pods. Authorized Pods are those that can access all the leaves of the TrafficSplit.
+// This middleware doesn't work if used behind a proxy.
+func (p *Provider) buildWhitelistMiddlewareFromTrafficSplitDirect(t *topology.Topology, ts *topology.TrafficSplit) *dynamic.Middleware {
+	var IPs []string
+
+	for _, podKey := range ts.Incoming {
+		pod, ok := t.Pods[podKey]
+		if !ok {
+			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			continue
+		}
+
+		IPs = append(IPs, pod.IP)
+	}
+
+	return &dynamic.Middleware{
+		IPWhiteList: &dynamic.IPWhiteList{
+			SourceRange: IPs,
+		},
+	}
+}
+
+// buildWhitelistMiddlewareFromTrafficTargetIndirect builds an IPWhiteList middleware which blocks requests from
+// unauthorized Pods. Authorized Pods are those listed in the ServiceTrafficTarget.Sources.
+// This middleware works only when used behind a proxy.
+func (p *Provider) buildWhitelistMiddlewareFromTrafficTargetIndirect(t *topology.Topology, tt *topology.ServiceTrafficTarget) *dynamic.Middleware {
+	whitelist := p.buildWhitelistMiddlewareFromTrafficTargetDirect(t, tt)
+	whitelist.IPWhiteList.IPStrategy = &dynamic.IPStrategy{
+		Depth: 1,
+	}
+
+	return whitelist
+}
+
+// buildWhitelistMiddlewareFromTrafficSplitIndirect builds an IPWhiteList middleware which blocks requests from
+// unauthorized Pods. Authorized Pods are those that can access all the leaves of the TrafficSplit.
+// This middleware works only when used behind a proxy.
+func (p *Provider) buildWhitelistMiddlewareFromTrafficSplitIndirect(t *topology.Topology, ts *topology.TrafficSplit) *dynamic.Middleware {
+	whitelist := p.buildWhitelistMiddlewareFromTrafficSplitDirect(t, ts)
+	whitelist.IPWhiteList.IPStrategy = &dynamic.IPStrategy{
+		Depth: 1,
+	}
+
+	return whitelist
+}
+
+func getSchemeAnnotation(svc *topology.Service) (string, error) {
+	scheme, ok := svc.Annotations[k8s.AnnotationScheme]
+
+	if !ok {
+		return k8s.SchemeHTTP, nil
+	}
+
+	if scheme != k8s.SchemeHTTP && scheme != k8s.SchemeH2c && scheme != k8s.SchemeHTTPS {
+		return "", fmt.Errorf("scheme annotation references an unknown scheme %q", scheme)
+	}
+
+	return scheme, nil
 }
 
 func buildHTTPServiceFromTrafficSplit(backendSvc []dynamic.WRRService) *dynamic.Service {

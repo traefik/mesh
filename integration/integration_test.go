@@ -275,12 +275,12 @@ func (s *BaseSuite) deleteShadowServices(c *check.C) {
 	opts := metav1.ListOptions{
 		LabelSelector: "app=maesh",
 	}
-	svcs, err := s.client.GetKubernetesClient().CoreV1().Services(maeshNamespace).List(context.Background(), opts)
+	svcs, err := s.client.GetKubernetesClient().CoreV1().Services(maeshNamespace).List(opts)
 	c.Assert(err, checker.IsNil)
 
 	for _, svc := range svcs.Items {
 		c.Logf("Deleting shadow service %s.", svc.Name)
-		err = s.client.GetKubernetesClient().CoreV1().Services(maeshNamespace).Delete(context.Background(), svc.Name, metav1.DeleteOptions{})
+		err = s.client.GetKubernetesClient().CoreV1().Services(maeshNamespace).Delete(svc.Name, &metav1.DeleteOptions{})
 		c.Assert(err, checker.IsNil)
 	}
 }
@@ -530,28 +530,28 @@ func (s *BaseSuite) digHost(c *check.C, source, namespace, destination string) {
 }
 
 func (s *BaseSuite) getPod(c *check.C, name string) *corev1.Pod {
-	pod, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	pod, err := s.client.GetKubernetesClient().CoreV1().Pods(testNamespace).Get(name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return pod
 }
 
 func (s *BaseSuite) getService(c *check.C, name string) *corev1.Service {
-	svc, err := s.client.GetKubernetesClient().CoreV1().Services(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	svc, err := s.client.GetKubernetesClient().CoreV1().Services(testNamespace).Get(name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return svc
 }
 
 func (s *BaseSuite) getTrafficTarget(c *check.C, name string) *access.TrafficTarget {
-	tt, err := s.client.GetAccessClient().AccessV1alpha1().TrafficTargets(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	tt, err := s.client.GetAccessClient().AccessV1alpha1().TrafficTargets(testNamespace).Get(name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return tt
 }
 
 func (s *BaseSuite) getTrafficSplit(c *check.C, name string) *split.TrafficSplit {
-	ts, err := s.client.GetSplitClient().SplitV1alpha2().TrafficSplits(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	ts, err := s.client.GetSplitClient().SplitV1alpha2().TrafficSplits(testNamespace).Get(name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return ts

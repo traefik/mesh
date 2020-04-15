@@ -1,6 +1,9 @@
 package topology
 
 import (
+	"fmt"
+	"strings"
+
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -8,40 +11,111 @@ import (
 
 // Key references a resource.
 type Key struct {
-	Name      string
-	Namespace string
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}
+
+// String stringifies the Key.
+func (k Key) String() string {
+	return fmt.Sprintf("%s@%s", k.Name, k.Namespace)
+}
+
+// MarshalText marshals the Key.
+func (k Key) MarshalText() ([]byte, error) {
+	return []byte(k.String()), nil
+}
+
+// UnmarshalText unmarshals the Key.
+func (k *Key) UnmarshalText(data []byte) error {
+	parts := strings.Split(string(data), "@")
+	if len(parts) != 2 {
+		return fmt.Errorf("unable to unmarshal Key: %s", string(data))
+	}
+
+	k.Name = parts[0]
+	k.Namespace = parts[1]
+
+	return nil
+}
+
+// ServiceTrafficTargetKey references a TrafficTarget applied on a Service.
+type ServiceTrafficTargetKey struct {
+	Service       Key
+	TrafficTarget Key
+}
+
+// String stringifies the ServiceTrafficTargetKey.
+func (k ServiceTrafficTargetKey) String() string {
+	return k.Service.String() + ":" + k.TrafficTarget.String()
+}
+
+// MarshalText marshals the ServiceTrafficTargetKey.
+func (k ServiceTrafficTargetKey) MarshalText() ([]byte, error) {
+	svcKey, err := k.Service.MarshalText()
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal ServiceTrafficTarget: Service is invalid: %w", err)
+	}
+
+	ttKey, err := k.TrafficTarget.MarshalText()
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal ServiceTrafficTarget: TrafficTarget is invalid: %w", err)
+	}
+
+	return []byte(string(svcKey) + ":" + string(ttKey)), nil
+}
+
+// UnmarshalText unmarshals the ServiceTrafficTargetKey.
+func (k *ServiceTrafficTargetKey) UnmarshalText(data []byte) error {
+	parts := strings.Split(string(data), ":")
+	if len(parts) != 2 {
+		return fmt.Errorf("unable to unmarshal ServiceTrafficTargetKey: %s", string(data))
+	}
+
+	if err := k.Service.UnmarshalText([]byte(parts[0])); err != nil {
+		return fmt.Errorf("unable to unmarshal ServiceTrafficTargetKey: Service Key is invalid: %w", err)
+	}
+
+	if err := k.TrafficTarget.UnmarshalText([]byte(parts[1])); err != nil {
+		return fmt.Errorf("unable to unmarshal ServiceTrafficTargetKey: TrafficTarget Key is invalid: %w", err)
+	}
+
+	return nil
 }
 
 // Topology holds the graph. Each Pods and services are nodes of the graph.
 type Topology struct {
-	Services map[Key]*Service
-	Pods     map[Key]*Pod
+	Services              map[Key]*Service                                  `json:"services"`
+	Pods                  map[Key]*Pod                                      `json:"pods"`
+	ServiceTrafficTargets map[ServiceTrafficTargetKey]*ServiceTrafficTarget `json:"serviceTrafficTargets"`
+	TrafficSplits         map[Key]*TrafficSplit                             `json:"trafficSplits"`
 }
 
 // NewTopology creates a new Topology.
 func NewTopology() *Topology {
 	return &Topology{
-		Services: make(map[Key]*Service),
-		Pods:     make(map[Key]*Pod),
+		Services:              make(map[Key]*Service),
+		Pods:                  make(map[Key]*Pod),
+		ServiceTrafficTargets: make(map[ServiceTrafficTargetKey]*ServiceTrafficTarget),
+		TrafficSplits:         make(map[Key]*TrafficSplit),
 	}
 }
 
 // Service is a node of the graph representing a kubernetes service.
 type Service struct {
-	Name        string
-	Namespace   string
-	Selector    map[string]string
-	Annotations map[string]string
-	Ports       []corev1.ServicePort
-	ClusterIP   string
-	Pods        []*Pod
+	Name        string               `json:"name"`
+	Namespace   string               `json:"namespace"`
+	Selector    map[string]string    `json:"selector"`
+	Annotations map[string]string    `json:"annotations"`
+	Ports       []corev1.ServicePort `json:"ports,omitempty"`
+	ClusterIP   string               `json:"clusterIp"`
+	Pods        []Key                `json:"pods,omitempty"`
 
 	// List of TrafficTargets that are targeting pods which are selected by this service.
-	TrafficTargets []*ServiceTrafficTarget
+	TrafficTargets []ServiceTrafficTargetKey `json:"trafficTargets,omitempty"`
 	// List of TrafficSplits that are targeting this service.
-	TrafficSplits []*TrafficSplit
+	TrafficSplits []Key `json:"trafficSplits,omitempty"`
 	// List of TrafficSplit mentioning this service as a backend.
-	BackendOf []*TrafficSplit
+	BackendOf []Key `json:"backendOf,omitempty"`
 }
 
 // ServiceTrafficTarget represents a TrafficTarget applied a on Service. TrafficTargets have a Destination service
@@ -49,68 +123,69 @@ type Service struct {
 // A ServiceTrafficTarget is a TrafficTarget for a Service which exposes a Pod which has the TrafficTarget Destination
 // service-account.
 type ServiceTrafficTarget struct {
-	Service *Service
-	Name    string
+	Service   Key    `json:"service"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
 
-	Sources     []ServiceTrafficTargetSource
-	Destination ServiceTrafficTargetDestination
-	Specs       []TrafficSpec
+	Sources     []ServiceTrafficTargetSource    `json:"sources,omitempty"`
+	Destination ServiceTrafficTargetDestination `json:"destination"`
+	Specs       []TrafficSpec                   `json:"specs,omitempty"`
 }
 
 // ServiceTrafficTargetSource represents a source of a ServiceTrafficTarget. In the SMI specification, a TrafficTarget
 // has a list of sources, each of them being a service-account name. ServiceTrafficTargetSource represents this
 // service-account, populated with the pods having this Service.
 type ServiceTrafficTargetSource struct {
-	ServiceAccount string
-	Namespace      string
-	Pods           []*Pod
+	ServiceAccount string `json:"serviceAccount"`
+	Namespace      string `json:"namespace"`
+	Pods           []Key  `json:"pods,omitempty"`
 }
 
 // ServiceTrafficTargetDestination represents a destination of a ServiceTrafficTarget. In the SMI specification, a
 // TrafficTarget has a destination service-account. ServiceTrafficTargetDestination holds the pods exposed by the
 // Service which has this service-account.
 type ServiceTrafficTargetDestination struct {
-	ServiceAccount string
-	Namespace      string
-	Ports          []corev1.ServicePort
-	Pods           []*Pod
+	ServiceAccount string               `json:"serviceAccount"`
+	Namespace      string               `json:"namespace"`
+	Ports          []corev1.ServicePort `json:"ports,omitempty"`
+	Pods           []Key                `json:"pods,omitempty"`
 }
 
 // TrafficSpec represents a Spec which can be used for restricting access to a route in a TrafficTarget.
 type TrafficSpec struct {
-	HTTPRouteGroup *specs.HTTPRouteGroup
-	TCPRoute       *specs.TCPRoute
+	HTTPRouteGroup *specs.HTTPRouteGroup `json:"httpRouteGroup,omitempty"`
+	TCPRoute       *specs.TCPRoute       `json:"tcpRoute,omitempty"`
 
 	// HTTPMatches is the list of HTTPMatch selected from the HTTPRouteGroup.
-	HTTPMatches []*specs.HTTPMatch
+	HTTPMatches []*specs.HTTPMatch `json:"httpMatches,omitempty"`
 }
 
 // Pod is a node of the graph representing a kubernetes pod.
 type Pod struct {
-	Name           string
-	Namespace      string
-	ServiceAccount string
-	Owner          []v1.OwnerReference
-	IP             string
+	Name            string              `json:"name"`
+	Namespace       string              `json:"namespace"`
+	ServiceAccount  string              `json:"serviceAccount"`
+	OwnerReferences []v1.OwnerReference `json:"ownerReferences,omitempty"`
+	IP              string              `json:"ip"`
 
-	Outgoing []*ServiceTrafficTarget
-	Incoming []*ServiceTrafficTarget
+	SourceOf      []ServiceTrafficTargetKey `json:"sourceOf,omitempty"`
+	DestinationOf []ServiceTrafficTargetKey `json:"destinationOf,omitempty"`
 }
 
 // TrafficSplit represents a TrafficSplit applied on a Service.
 type TrafficSplit struct {
-	Name      string
-	Namespace string
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
 
-	Service  *Service
-	Backends []TrafficSplitBackend
+	Service  Key                   `json:"service"`
+	Backends []TrafficSplitBackend `json:"backends,omitempty"`
 
 	// List of Pods that are explicitly allowed to pass through the TrafficSplit.
-	Incoming []*Pod
+	Incoming []Key `json:"incoming,omitempty"`
 }
 
 // TrafficSplitBackend is a backend of a TrafficSplit.
 type TrafficSplitBackend struct {
-	Weight  int
-	Service *Service
+	Weight  int `json:"weight"`
+	Service Key `json:"service"`
 }

@@ -62,9 +62,9 @@ func buildHTTPRuleFromService(svc *topology.Service) string {
 	return fmt.Sprintf("Host(`%s.%s.maesh`) || Host(`%s`)", svc.Name, svc.Namespace, svc.ClusterIP)
 }
 
-func buildHTTPRuleFromTrafficTarget(tt *topology.ServiceTrafficTarget) string {
+func buildHTTPRuleFromTrafficTarget(tt *topology.ServiceTrafficTarget, ttSvc *topology.Service) string {
 	ttRule := buildTrafficTargetRule(tt)
-	httpRule := buildHTTPRuleFromService(tt.Service)
+	httpRule := buildHTTPRuleFromService(ttSvc)
 
 	if ttRule != "" {
 		return fmt.Sprintf("(%s) && (%s)", httpRule, ttRule)
@@ -73,9 +73,9 @@ func buildHTTPRuleFromTrafficTarget(tt *topology.ServiceTrafficTarget) string {
 	return httpRule
 }
 
-func buildHTTPRuleFromTrafficTargetIndirect(tt *topology.ServiceTrafficTarget) string {
+func buildHTTPRuleFromTrafficTargetIndirect(tt *topology.ServiceTrafficTarget, ttSvc *topology.Service) string {
 	ttRule := buildTrafficTargetRule(tt)
-	svcRule := buildHTTPRuleFromService(tt.Service)
+	svcRule := buildHTTPRuleFromService(ttSvc)
 	indirectRule := "HeadersRegexp(`X-Forwarded-For`, `.+`)"
 
 	if ttRule != "" {
@@ -85,8 +85,8 @@ func buildHTTPRuleFromTrafficTargetIndirect(tt *topology.ServiceTrafficTarget) s
 	return fmt.Sprintf("(%s) && %s", svcRule, indirectRule)
 }
 
-func buildHTTPRuleFromTrafficSplitIndirect(ts *topology.TrafficSplit) string {
-	svcRule := buildHTTPRuleFromService(ts.Service)
+func buildHTTPRuleFromTrafficSplitIndirect(tsSvc *topology.Service) string {
+	svcRule := buildHTTPRuleFromService(tsSvc)
 	indirectRule := "HeadersRegexp(`X-Forwarded-For`, `.+`)"
 
 	return fmt.Sprintf("(%s) && %s", svcRule, indirectRule)
