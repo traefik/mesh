@@ -44,7 +44,7 @@ var supportedCoreDNSVersions = []string{
 // Preparer is an interface for the prepare methods.
 type Preparer interface {
 	CheckDNSProvider() (DNSProvider, error)
-	StartInformers(smi bool) error
+	StartInformers(acl bool) error
 	ConfigureCoreDNS(namespace, clusterDomain string) error
 	ConfigureKubeDNS() error
 }
@@ -367,7 +367,7 @@ func (p *Prepare) patchKubeDNSConfigMap(kubeConfigMap *corev1.ConfigMap, namespa
 }
 
 // StartInformers checks if the required informers can start and sync in a reasonable time.
-func (p *Prepare) StartInformers(smi bool) error {
+func (p *Prepare) StartInformers(acl bool) error {
 	stopCh := make(chan struct{})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -386,7 +386,17 @@ func (p *Prepare) StartInformers(smi bool) error {
 		}
 	}
 
-	if smi {
+	splitFactory := splitInformer.NewSharedInformerFactoryWithOptions(p.client.GetSplitClient(), k8s.ResyncPeriod)
+	splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	splitFactory.Start(stopCh)
+
+	for t, ok := range splitFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+		}
+	}
+
+	if acl {
 		// Create new SharedInformerFactories, and register the event handler to informers.
 		accessFactory := accessInformer.NewSharedInformerFactoryWithOptions(p.client.GetAccessClient(), k8s.ResyncPeriod)
 		accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
@@ -404,16 +414,6 @@ func (p *Prepare) StartInformers(smi bool) error {
 		specsFactory.Start(stopCh)
 
 		for t, ok := range specsFactory.WaitForCacheSync(ctx.Done()) {
-			if !ok {
-				return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
-			}
-		}
-
-		splitFactory := splitInformer.NewSharedInformerFactoryWithOptions(p.client.GetSplitClient(), k8s.ResyncPeriod)
-		splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-		splitFactory.Start(stopCh)
-
-		for t, ok := range splitFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
 				return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 			}
