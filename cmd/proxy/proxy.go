@@ -14,7 +14,6 @@ import (
 	"github.com/containous/traefik/v2/cmd"
 	"github.com/containous/traefik/v2/cmd/healthcheck"
 	"github.com/containous/traefik/v2/pkg/cli"
-	"github.com/containous/traefik/v2/pkg/collector"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/containous/traefik/v2/pkg/config/static"
 	"github.com/containous/traefik/v2/pkg/log"
@@ -74,8 +73,6 @@ func runCmd(staticConfiguration *static.Configuration) error {
 	} else {
 		log.WithoutContext().Debugf("Static configuration loaded %s", string(jsonConf))
 	}
-
-	stats(staticConfiguration)
 
 	svr, err := setupServer(staticConfiguration)
 	if err != nil {
@@ -392,34 +389,4 @@ func configureLogging(staticConfiguration *static.Configuration) {
 			log.WithoutContext().Errorf("Error while opening log file %s: %v", logFile, err)
 		}
 	}
-}
-
-func stats(staticConfiguration *static.Configuration) {
-	logger := log.WithoutContext()
-
-	if staticConfiguration.Global.SendAnonymousUsage {
-		logger.Info(`Stats collection is enabled.`)
-		logger.Info(`Many thanks for contributing to Traefik's improvement by allowing us to receive anonymous information from your configuration.`)
-		logger.Info(`Help us improve Traefik by leaving this feature on :)`)
-		logger.Info(`More details on: https://docs.traefik.io/contributing/data-collection/`)
-		collect(staticConfiguration)
-	} else {
-		logger.Info(`
-Stats collection is disabled.
-Help us improve Traefik by turning this feature on :)
-More details on: https://docs.traefik.io/contributing/data-collection/
-`)
-	}
-}
-
-func collect(staticConfiguration *static.Configuration) {
-	ticker := time.NewTicker(24 * time.Hour)
-
-	safe.Go(func() {
-		for time.Sleep(10 * time.Minute); ; <-ticker.C {
-			if err := collector.Collect(staticConfiguration); err != nil {
-				log.WithoutContext().Debug(err)
-			}
-		}
-	})
 }
