@@ -80,6 +80,20 @@ to provide a fine-grained control over instrumentation, routing and access contr
     please use the new `--skip-crds` flag.
     More information can be found on the [helm documentation](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
 
+## SMI Mode (Deprecated)
+
+Maesh supports the SMI specification which defines a set of custom resources to provide a fine-grained control over instrumentation, routing and access control of east-west communications.
+
+To enable SMI, install maesh in SMI mode by setting the smi.enable helm chart option to true.
+
+```bash
+helm install maesh --namespace=maesh maesh/maesh --set smi.enable=true`
+```
+
+The smi.enable option makes Maesh process SMI resources.
+
+!!! Note This option is deprecated. Please consider using `--acl` instead.
+
 ## Platform recommendations
 
 Maesh works on Kubernetes environments that conforms to the global Kubernetes specification.
