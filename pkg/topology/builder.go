@@ -41,7 +41,9 @@ func (b *Builder) Build(ignoredResources mk8s.IgnoreWrapper) (*Topology, error) 
 
 	// Populate services.
 	for _, svc := range res.Services {
-		b.evaluateService(res, topology, svc)
+		if err := b.evaluateService(res, topology, svc); err != nil {
+			b.Logger.Errorf("Unable to evaluate Service %s/%s: %v", svc.Namespace, svc.Name, err)
+		}
 	}
 
 	// Populate services with traffic-target definitions.
@@ -64,10 +66,14 @@ func (b *Builder) Build(ignoredResources mk8s.IgnoreWrapper) (*Topology, error) 
 }
 
 // evaluateService evaluates the given service. It adds the Service to the topology and it's selected Pods.
-func (b *Builder) evaluateService(res *resources, topology *Topology, svc *v1.Service) {
+func (b *Builder) evaluateService(res *resources, topology *Topology, svc *v1.Service) error {
 	svcKey := Key{svc.Name, svc.Namespace}
 
-	svcPods := res.PodsBySvc[svcKey]
+	svcPods, ok := res.PodsBySvc[svcKey]
+	if !ok {
+		return fmt.Errorf("unable to find Service %q", svcKey)
+	}
+
 	pods := make([]Key, len(svcPods))
 
 	for i, pod := range svcPods {
@@ -83,6 +89,8 @@ func (b *Builder) evaluateService(res *resources, topology *Topology, svc *v1.Se
 		ClusterIP:   svc.Spec.ClusterIP,
 		Pods:        pods,
 	}
+
+	return nil
 }
 
 // evaluateTrafficTarget evaluates the given traffic-target. It adds a ServiceTrafficTargets on every Service which
@@ -92,20 +100,25 @@ func (b *Builder) evaluateService(res *resources, topology *Topology, svc *v1.Se
 func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *access.TrafficTarget) error {
 	destSaKey := Key{tt.Destination.Name, tt.Destination.Namespace}
 
-	sources := b.buildTrafficTargetSources(res, topology, tt)
-
-	specs, err := b.buildTrafficTargetSpecs(res, tt)
-	if err != nil {
-		return fmt.Errorf("unable to build Specs: %w", err)
+	sources, srcErr := b.buildTrafficTargetSources(res, topology, tt)
+	if srcErr != nil {
+		return fmt.Errorf("unable to build TrafficTarget sources: %w", srcErr)
 	}
 
-	for svcNameNs, pods := range res.PodsBySvcBySa[destSaKey] {
-		svc := topology.Services[svcNameNs]
-		svcKey := Key{svc.Name, svc.Namespace}
+	specs, specsErr := b.buildTrafficTargetSpecs(res, tt)
+	if specsErr != nil {
+		return fmt.Errorf("unable to build Specs: %w", specsErr)
+	}
 
+	podsBySvc, ok := res.PodsBySvcBySa[destSaKey]
+	if !ok {
+		return fmt.Errorf("unable to find Pods with ServiceAccount %q", destSaKey)
+	}
+
+	for svcKey, pods := range podsBySvc {
 		svc, ok := topology.Services[svcKey]
 		if !ok {
-			return fmt.Errorf("unable to find Service %s/%s", svc.Namespace, svc.Name)
+			return fmt.Errorf("unable to find Service %q", svcKey)
 		}
 
 		var destPods []Key
@@ -122,7 +135,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 		// Find out which ports can be used on the destination service.
 		destPorts, err := b.getTrafficTargetDestinationPorts(svc, tt)
 		if err != nil {
-			return fmt.Errorf("unable to find destination ports on Service %s/%s: %w", svc.Namespace, svc.Name, err)
+			return fmt.Errorf("unable to find destination ports on Service %q: %w", svcKey, err)
 		}
 
 		// Create the ServiceTrafficTarget for the given service.
@@ -149,12 +162,22 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 		// Add the ServiceTrafficTarget to the source pods.
 		for _, source := range sources {
 			for _, podKey := range source.Pods {
+				// Skip pods which haven't been added to the topology.
+				if _, ok := topology.Pods[podKey]; !ok {
+					continue
+				}
+
 				topology.Pods[podKey].SourceOf = append(topology.Pods[podKey].SourceOf, svcTTKey)
 			}
 		}
 
 		// Add the ServiceTrafficTarget to the destination pods.
 		for _, podKey := range topology.ServiceTrafficTargets[svcTTKey].Destination.Pods {
+			// Skip pods which haven't been added to the topology.
+			if _, ok := topology.Pods[podKey]; !ok {
+				continue
+			}
+
 			topology.Pods[podKey].DestinationOf = append(topology.Pods[podKey].DestinationOf, svcTTKey)
 		}
 	}
@@ -169,7 +192,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 
 	svc, ok := topology.Services[svcKey]
 	if !ok {
-		return fmt.Errorf("unable to find root Service %s/%s", trafficSplit.Namespace, trafficSplit.Spec.Service)
+		return fmt.Errorf("unable to find root Service %q", svcKey)
 	}
 
 	tsKey := Key{trafficSplit.Name, trafficSplit.Namespace}
@@ -180,7 +203,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 
 		backendSvc, ok := topology.Services[backendSvcKey]
 		if !ok {
-			return fmt.Errorf("unable to find backend Service %s/%s", trafficSplit.Namespace, backend.Service)
+			return fmt.Errorf("unable to find backend Service %q", backendSvcKey)
 		}
 
 		// As required by the SMI specification, backends must expose at least the same ports as the Service on
@@ -196,7 +219,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 			}
 
 			if !portFound {
-				return fmt.Errorf("port %d must be exposed by Service %s/%s in order to be used as a backend", svcPort.Port, backendSvc.Namespace, backendSvc.Name)
+				return fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend", svcPort.Port, backendSvcKey)
 			}
 		}
 
@@ -230,7 +253,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 		for _, tsKey := range svc.TrafficSplits {
 			ts, ok := topology.TrafficSplits[tsKey]
 			if !ok {
-				b.Logger.Errorf("Unable to find TrafficSplit with key %q", tsKey)
+				b.Logger.Errorf("Unable to find TrafficSplit %q", tsKey)
 				continue
 			}
 
@@ -238,7 +261,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 			if err != nil {
 				loopDetected[svc] = append(loopDetected[svc], tsKey)
 
-				b.Logger.Errorf("Unable to get incoming pods for TrafficSplit %s/%s: %v", ts.Namespace, ts.Name, err)
+				b.Logger.Errorf("Unable to get incoming pods for TrafficSplit %q: %v", tsKey, err)
 
 				continue
 			}
@@ -262,8 +285,8 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 
 func (b *Builder) getIncomingPodsForTrafficSplit(topology *Topology, ts *TrafficSplit, visited map[Key]struct{}) ([]Key, error) {
 	tsKey := Key{ts.Name, ts.Namespace}
-	if _, found := visited[tsKey]; found {
-		return nil, fmt.Errorf("circular reference detected on traffic split %s/%s in service %s/%s", ts.Namespace, ts.Name, ts.Service.Namespace, ts.Service.Name)
+	if _, ok := visited[tsKey]; ok {
+		return nil, fmt.Errorf("circular reference detected on TrafficSplit %q in Service %q", tsKey, ts.Service)
 	}
 
 	visited[tsKey] = struct{}{}
@@ -291,7 +314,7 @@ func (b *Builder) getIncomingPodsForService(topology *Topology, svcKey Key, visi
 
 	svc, ok := topology.Services[svcKey]
 	if !ok {
-		return nil, fmt.Errorf("unable to find Service with key %q", svcKey)
+		return nil, fmt.Errorf("unable to find Service %q", svcKey)
 	}
 
 	if len(svc.TrafficSplits) == 0 {
@@ -300,7 +323,7 @@ func (b *Builder) getIncomingPodsForService(topology *Topology, svcKey Key, visi
 		for _, ttKey := range svc.TrafficTargets {
 			tt, ok := topology.ServiceTrafficTargets[ttKey]
 			if !ok {
-				return nil, fmt.Errorf("unable to find TrafficTarget with key %q", ttKey)
+				return nil, fmt.Errorf("unable to find TrafficTarget %q", ttKey)
 			}
 
 			for _, source := range tt.Sources {
@@ -314,7 +337,7 @@ func (b *Builder) getIncomingPodsForService(topology *Topology, svcKey Key, visi
 	for _, tsKey := range svc.TrafficSplits {
 		ts, ok := topology.TrafficSplits[tsKey]
 		if !ok {
-			return nil, fmt.Errorf("unable to find TrafficSplit with key %q", tsKey)
+			return nil, fmt.Errorf("unable to find TrafficSplit %q", tsKey)
 		}
 
 		tsPods, err := b.getIncomingPodsForTrafficSplit(topology, ts, visited)
@@ -343,11 +366,15 @@ func unionPod(pods1, pods2 []Key) []Key {
 	p := map[Key]struct{}{}
 
 	for _, pod := range pods1 {
-		p[Key{pod.Name, pod.Namespace}] = struct{}{}
+		key := Key{pod.Name, pod.Namespace}
+
+		p[key] = struct{}{}
 	}
 
 	for _, pod := range pods2 {
-		if _, found := p[Key{pod.Name, pod.Namespace}]; found {
+		key := Key{pod.Name, pod.Namespace}
+
+		if _, ok := p[key]; ok {
 			union = append(union, pod)
 		}
 	}
@@ -357,13 +384,17 @@ func unionPod(pods1, pods2 []Key) []Key {
 
 // buildTrafficTargetSources retrieves the Pod IPs for each Pod mentioned in a source of the given TrafficTarget.
 // If a Pod IP is not yet available, the pod will be skipped.
-func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *access.TrafficTarget) []ServiceTrafficTargetSource {
+func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *access.TrafficTarget) ([]ServiceTrafficTargetSource, error) {
 	sources := make([]ServiceTrafficTargetSource, len(tt.Sources))
 
 	for i, source := range tt.Sources {
 		srcSaKey := Key{source.Name, source.Namespace}
 
-		pods := res.PodsByServiceAccounts[srcSaKey]
+		pods, ok := res.PodsByServiceAccounts[srcSaKey]
+		if !ok {
+			return nil, fmt.Errorf("unable to find Pods with ServiceAccount %q", srcSaKey)
+		}
+
 		srcPods := make([]Key, len(pods))
 
 		for k, pod := range pods {
@@ -381,7 +412,7 @@ func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *acc
 		}
 	}
 
-	return sources
+	return sources, nil
 }
 
 func (b *Builder) buildTrafficTargetSpecs(res *resources, tt *access.TrafficTarget) ([]TrafficSpec, error) {
@@ -416,7 +447,7 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 
 	httpRouteGroup, ok := httpRtGrps[key]
 	if !ok {
-		return TrafficSpec{}, fmt.Errorf("unable to find HTTPRouteGroup %s/%s", ns, s.Name)
+		return TrafficSpec{}, fmt.Errorf("unable to find HTTPRouteGroup %q", key)
 	}
 
 	var httpMatches []*spec.HTTPMatch
@@ -442,7 +473,7 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 			}
 
 			if !found {
-				return TrafficSpec{}, fmt.Errorf("unable to find match %q in HTTPRouteGroup %s/%s", name, ns, s.Name)
+				return TrafficSpec{}, fmt.Errorf("unable to find match %q in HTTPRouteGroup %q", name, key)
 			}
 		}
 	}
@@ -458,7 +489,7 @@ func (b *Builder) buildTCPRoute(tcpRts map[Key]*spec.TCPRoute, ns string, s acce
 
 	tcpRoute, ok := tcpRts[key]
 	if !ok {
-		return TrafficSpec{}, fmt.Errorf("unable to find TCPRoute %s/%s", ns, s.Name)
+		return TrafficSpec{}, fmt.Errorf("unable to find TCPRoute %q", key)
 	}
 
 	return TrafficSpec{
@@ -474,9 +505,11 @@ func (b *Builder) getTrafficTargetDestinationPorts(svc *Service, tt *access.Traf
 		return svc.Ports, nil
 	}
 
+	key := Key{tt.Name, tt.Namespace}
+
 	port, err := strconv.ParseInt(tt.Destination.Port, 10, 32)
 	if err != nil {
-		return nil, fmt.Errorf("destination port of TrafficTarget %s/%s is not a valid port: %w", tt.Namespace, tt.Name, err)
+		return nil, fmt.Errorf("destination port of TrafficTarget %q is not a valid port: %w", key, err)
 	}
 
 	for _, svcPort := range svc.Ports {
@@ -485,7 +518,7 @@ func (b *Builder) getTrafficTargetDestinationPorts(svc *Service, tt *access.Traf
 		}
 	}
 
-	return nil, fmt.Errorf("destination port %d of TrafficTarget %s/%s is not exposed by the service", port, tt.Namespace, tt.Name)
+	return nil, fmt.Errorf("destination port %d of TrafficTarget %q is not exposed by the service", port, key)
 }
 
 func getOrCreatePod(topology *Topology, pod *v1.Pod) Key {
@@ -644,7 +677,8 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 			continue
 		}
 
-		r.HTTPRouteGroups[Key{httpRouteGroup.Name, httpRouteGroup.Namespace}] = httpRouteGroup
+		key := Key{httpRouteGroup.Name, httpRouteGroup.Namespace}
+		r.HTTPRouteGroups[key] = httpRouteGroup
 	}
 
 	for _, tcpRoute := range tcpRts {
@@ -652,7 +686,8 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 			continue
 		}
 
-		r.TCPRoutes[Key{tcpRoute.Name, tcpRoute.Namespace}] = tcpRoute
+		key := Key{tcpRoute.Name, tcpRoute.Namespace}
+		r.TCPRoutes[key] = tcpRoute
 	}
 
 	for _, trafficTarget := range tts {
@@ -660,7 +695,8 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 			continue
 		}
 
-		r.TrafficTargets[Key{trafficTarget.Name, trafficTarget.Namespace}] = trafficTarget
+		key := Key{trafficTarget.Name, trafficTarget.Namespace}
+		r.TrafficTargets[key] = trafficTarget
 	}
 
 	for _, trafficSplit := range tss {
@@ -668,7 +704,8 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 			continue
 		}
 
-		r.TrafficSplits[Key{trafficSplit.Name, trafficSplit.Namespace}] = trafficSplit
+		key := Key{trafficSplit.Name, trafficSplit.Namespace}
+		r.TrafficSplits[key] = trafficSplit
 	}
 }
 
