@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containous/maesh/pkg/version"
 	"github.com/containous/traefik/v2/cmd"
 	"github.com/containous/traefik/v2/cmd/healthcheck"
 	"github.com/containous/traefik/v2/pkg/cli"
@@ -27,7 +28,6 @@ import (
 	"github.com/containous/traefik/v2/pkg/server/service"
 	traefiktls "github.com/containous/traefik/v2/pkg/tls"
 	"github.com/containous/traefik/v2/pkg/types"
-	"github.com/containous/traefik/v2/pkg/version"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/sirupsen/logrus"
 	"github.com/vulcand/oxy/roundrobin"
@@ -63,7 +63,7 @@ func runCmd(staticConfiguration *static.Configuration) error {
 		return err
 	}
 
-	log.WithoutContext().Infof("Traefik version %s built on %s", version.Version, version.BuildDate)
+	log.WithoutContext().Infof("Maesh proxy version %s built on %s", version.Version, version.Date)
 
 	jsonConf, err := json.Marshal(staticConfiguration)
 	if err != nil {

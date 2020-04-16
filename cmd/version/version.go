@@ -4,35 +4,41 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/containous/maesh/pkg/version"
 	"github.com/containous/traefik/v2/pkg/cli"
 )
 
-var (
-	version = "dev"
-	commit  = "I don't remember exactly"
-	date    = "I don't remember exactly"
-)
+const versionFormat = `
+version     : %s
+commit      : %s
+build date  : %s
+go version  : %s
+go compiler : %s
+platform    : %s/%s
+`
 
 // NewCmd builds a new Version command.
 func NewCmd() *cli.Command {
 	return &cli.Command{
 		Name:          "version",
-		Description:   `Shows the current maesh version.`,
+		Description:   `Shows the current Maesh version.`,
 		Configuration: nil,
 		Run: func(_ []string) error {
-			displayVersion("version")
+			printVersion()
 			return nil
 		},
 	}
 }
 
-func displayVersion(name string) {
-	fmt.Printf(name+`:
- version     : %s
- commit      : %s
- build date  : %s
- go version  : %s
- go compiler : %s
- platform    : %s/%s
-`, version, commit, date, runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
+func printVersion() {
+	fmt.Printf(
+		versionFormat,
+		version.Version,
+		version.Commit,
+		version.Date,
+		runtime.Version(),
+		runtime.Compiler,
+		runtime.GOOS,
+		runtime.GOARCH,
+	)
 }
