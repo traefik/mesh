@@ -43,9 +43,9 @@ spec:
                       values:
                         - controller
                 topologyKey: "kubernetes.io/hostname"
-      {{- if .Values.controller.image.pullSecret }}
+      {{- if .Values.image.pullSecret }}
       imagePullSecrets:
-        - name: {{ .Values.controller.image.pullSecret }}
+        - name: {{ .Values.image.pullSecret }}
       {{- end }}
       {{- with .Values.controller.nodeSelector }}
       nodeSelector:
@@ -61,8 +61,8 @@ spec:
       {{- end }}
       containers:
         - name: maesh-controller
-          image: {{ include "maesh.controllerImage" . | quote }}
-          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent" }}
+          image: {{ include "maesh.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
             {{- if .Values.controller.logging.debug }}
             - "--debug"
@@ -113,8 +113,8 @@ spec:
             periodSeconds: 1
       initContainers:
         - name: maesh-prepare
-          image: {{ include "maesh.controllerImage" . | quote }}
-          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent"}}
+          image: {{ include "maesh.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent"}}
           args:
             - "prepare"
             {{- if .Values.controller.logging.debug }}

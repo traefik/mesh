@@ -16,7 +16,6 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 		"containous/whoamitcp",
 		"coredns/coredns:1.6.3",
 		"giantswarm/tiny-tools:3.9",
-		"traefik:v2.2.0",
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
