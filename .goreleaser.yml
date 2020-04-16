@@ -8,9 +8,9 @@ builds:
       - CGO_ENABLED=0
     ldflags:
       - -s -w
-      - -X github.com/containous/maesh/cmd/version.version={{.Version}}
-      - -X github.com/containous/maesh/cmd/version.commit={{.Commit}}
-      - -X github.com/containous/maesh/cmd/version.date={{.Date}}
+      - -X github.com/containous/maesh/pkg/version.Version={{.Version}}
+      - -X github.com/containous/maesh/pkg/version.Commit={{.Commit}}
+      - -X github.com/containous/maesh/pkg/version.Date={{.Date}}
     goos:
       - linux
       - darwin

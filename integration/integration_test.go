@@ -72,7 +72,6 @@ func Test(t *testing.T) {
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7", true})
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7", true})
 	images = append(images, image{"gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7", true})
-	images = append(images, image{"traefik:v2.2.0", true})
 
 	for _, image := range images {
 		if image.pull {
