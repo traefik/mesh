@@ -79,9 +79,9 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 		return nil, fmt.Errorf("unable to build topology: %w", err)
 	}
 
-	for _, svc := range t.Services {
+	for svcKey, svc := range t.Services {
 		if err := p.buildConfigForService(t, cfg, svc); err != nil {
-			p.logger.Errorf("Unable to build config for service %s/%s: %w", svc.Namespace, svc.Name, err)
+			p.logger.Errorf("Unable to build config for service %q: %w", svcKey, err)
 		}
 	}
 
@@ -125,7 +125,7 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 
 		for _, ttKey := range svc.TrafficTargets {
 			if err := p.buildServicesAndRoutersForTrafficTarget(t, cfg, ttKey, scheme, trafficType, middlewares); err != nil {
-				p.logger.Errorf("Unable to build routers and services for service %s/%s for traffic-target %s: %v", svc.Namespace, svc.Name, ttKey.TrafficTarget.Name, err)
+				p.logger.Errorf("Unable to build routers and services for traffic-target %q: %v", ttKey, err)
 				continue
 			}
 		}
@@ -138,7 +138,7 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 
 	for _, tsKey := range svc.TrafficSplits {
 		if err := p.buildServiceAndRoutersForTrafficSplit(t, cfg, tsKey, scheme, trafficType, middlewares); err != nil {
-			p.logger.Errorf("Unable to build routers and services for service %s/%s and traffic-split %s: %v", svc.Namespace, svc.Name, tsKey.Name, err)
+			p.logger.Errorf("Unable to build routers and services for traffic-split %q: %v", tsKey, err)
 			continue
 		}
 	}
@@ -147,6 +147,8 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 }
 
 func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewares []string) error {
+	svcKey := topology.Key{Name: svc.Name, Namespace: svc.Namespace}
+
 	switch trafficType {
 	case k8s.ServiceTypeHTTP:
 		httpRule := buildHTTPRuleFromService(svc)
@@ -154,7 +156,7 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 		for portID, svcPort := range svc.Ports {
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP entrypoint for Service %s/%s and port %d: %v", svc.Namespace, svc.Name, svcPort.Port, err)
+				p.logger.Errorf("Unable to build HTTP entrypoint for Service %q and port %d: %v", svcKey, svcPort.Port, err)
 				continue
 			}
 
@@ -169,7 +171,7 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 		for _, svcPort := range svc.Ports {
 			entrypoint, err := p.buildTCPEntrypoint(svc, svcPort.Port)
 			if err != nil {
-				p.logger.Errorf("Unable to build TCP entrypoint for Service %s/%s and port %d: %v", svc.Namespace, svc.Name, svcPort.Port, err)
+				p.logger.Errorf("Unable to build TCP entrypoint for Service %q and port %d: %v", svcKey, svcPort.Port, err)
 				continue
 			}
 
@@ -187,12 +189,12 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology, cfg *dynamic.Configuration, ttKey topology.ServiceTrafficTargetKey, scheme, trafficType string, middlewares []string) error {
 	tt, ok := t.ServiceTrafficTargets[ttKey]
 	if !ok {
-		return fmt.Errorf("unable to find TrafficTarget with key %q", ttKey)
+		return fmt.Errorf("unable to find TrafficTarget %q", ttKey)
 	}
 
 	ttSvc, ok := t.Services[tt.Service]
 	if !ok {
-		return fmt.Errorf("unable to find Service with key %q", tt.Service)
+		return fmt.Errorf("unable to find Service %q", tt.Service)
 	}
 
 	switch trafficType {
@@ -206,7 +208,7 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 		for portID, svcPort := range tt.Destination.Ports {
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP entrypoint for Service %s/%s and port %d: %v", tt.Service.Namespace, tt.Service.Name, svcPort.Port, err)
+				p.logger.Errorf("Unable to build HTTP entrypoint for TrafficTarget %q and port %d: %v", ttKey, svcPort.Port, err)
 				continue
 			}
 
@@ -242,7 +244,7 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 		for _, svcPort := range tt.Destination.Ports {
 			entrypoint, err := p.buildTCPEntrypoint(ttSvc, svcPort.Port)
 			if err != nil {
-				p.logger.Errorf("Unable to build TCP entrypoint for Service %s/%s and port %d: %v", tt.Service.Namespace, tt.Service.Name, svcPort.Port, err)
+				p.logger.Errorf("Unable to build TCP entrypoint for TrafficTarget %q and port %d: %v", ttKey, svcPort.Port, err)
 				continue
 			}
 
@@ -260,12 +262,12 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, cfg *dynamic.Configuration, tsKey topology.Key, scheme, trafficType string, middlewares []string) error {
 	ts, ok := t.TrafficSplits[tsKey]
 	if !ok {
-		return fmt.Errorf("unable to find TrafficSplit with key %q", tsKey)
+		return fmt.Errorf("unable to find TrafficSplit %q", tsKey)
 	}
 
 	tsSvc, ok := t.Services[ts.Service]
 	if !ok {
-		return fmt.Errorf("unable to find Service with key %q", ts.Service)
+		return fmt.Errorf("unable to find Service %q", ts.Service)
 	}
 
 	switch trafficType {
@@ -285,13 +287,13 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, c
 		for portID, svcPort := range tsSvc.Ports {
 			backendSvcs, err := p.buildServicesForTrafficSplitBackends(t, cfg, ts, svcPort, scheme)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP backend services for TrafficSplit %s/%s and port %d: %v", ts.Namespace, ts.Name, svcPort.Port, err)
+				p.logger.Errorf("Unable to build HTTP backend services for TrafficSplit %q and port %d: %v", tsKey, svcPort.Port, err)
 				continue
 			}
 
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP entrypoint for Service %s/%s and port %d: %v", ts.Service.Namespace, ts.Service.Name, svcPort.Port, err)
+				p.logger.Errorf("Unable to build HTTP entrypoint for TrafficSplit %q and port %d: %v", tsKey, svcPort.Port, err)
 				continue
 			}
 
@@ -332,7 +334,7 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, c
 
 			entrypoint, err := p.buildTCPEntrypoint(tsSvc, svcPort.Port)
 			if err != nil {
-				p.logger.Errorf("Unable to build TCP entrypoint for Service %s/%s and port %d: %v", ts.Service.Namespace, ts.Service.Name, svcPort.Port, err)
+				p.logger.Errorf("Unable to build TCP entrypoint for TrafficTarget %q and port %d: %v", tsKey, svcPort.Port, err)
 				continue
 			}
 
@@ -354,11 +356,12 @@ func (p *Provider) buildServicesForTrafficSplitBackends(t *topology.Topology, cf
 	for i, backend := range ts.Backends {
 		backendSvc, ok := t.Services[backend.Service]
 		if !ok {
-			return nil, fmt.Errorf("unable to find Service with key %q", backend.Service)
+			return nil, fmt.Errorf("unable to find Service %q", backend.Service)
 		}
 
 		if len(backendSvc.TrafficSplits) > 0 {
-			p.logger.Warnf("Nested TrafficSplits detected in TrafficSplit %s/%s: Maesh doesn't support nested TrafficSplits", ts.Namespace, ts.Name)
+			tsKey := topology.Key{Name: ts.Name, Namespace: ts.Namespace}
+			p.logger.Warnf("Nested TrafficSplits detected in TrafficSplit %q: Maesh doesn't support nested TrafficSplits", tsKey)
 		}
 
 		backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)
@@ -379,7 +382,8 @@ func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topolog
 	for portID, svcPort := range svc.Ports {
 		entrypoint, err := p.buildHTTPEntrypoint(portID)
 		if err != nil {
-			p.logger.Errorf("unable to build HTTP entrypoint for Service %s/%s and port %d: %w", svc.Namespace, svc.Name, svcPort.Port, err)
+			svcKey := topology.Key{Name: svc.Name, Namespace: svc.Namespace}
+			p.logger.Errorf("unable to build HTTP entrypoint for Service %q and port %d: %w", svcKey, svcPort.Port, err)
 			continue
 		}
 
@@ -437,7 +441,7 @@ func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topolo
 	for _, podKey := range svc.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			p.logger.Errorf("Unable to find Pod %q", podKey)
 			continue
 		}
 
@@ -462,7 +466,7 @@ func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *t
 	for i, podKey := range tt.Destination.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			p.logger.Errorf("Unable to find Pod %q", podKey)
 			continue
 		}
 
@@ -485,7 +489,7 @@ func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topolog
 	for _, podKey := range svc.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			p.logger.Errorf("Unable to find Pod %q", podKey)
 			continue
 		}
 
@@ -509,7 +513,7 @@ func (p *Provider) buildTCPServiceFromTrafficTarget(t *topology.Topology, tt *to
 	for i, podKey := range tt.Destination.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			p.logger.Errorf("Unable to find Pod %q", podKey)
 			continue
 		}
 
@@ -533,7 +537,7 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficTargetDirect(t *topology.T
 		for _, podKey := range source.Pods {
 			pod, ok := t.Pods[podKey]
 			if !ok {
-				p.logger.Errorf("Unable to find Pod with key %q", podKey)
+				p.logger.Errorf("Unable to find Pod %q", podKey)
 				continue
 			}
 
@@ -557,7 +561,7 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficSplitDirect(t *topology.To
 	for _, podKey := range ts.Incoming {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			p.logger.Errorf("Unable to find Pod with key %q", podKey)
+			p.logger.Errorf("Unable to find Pod %q", podKey)
 			continue
 		}
 
