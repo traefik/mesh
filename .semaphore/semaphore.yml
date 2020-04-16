@@ -65,10 +65,10 @@ blocks:
       jobs:
         - name: ACL Enabled Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f ACLEnabledSuite\""
+            - "make test-integration-nobuild TESTFLAGS=\"-check.f ACLEnabledSuite\""
         - name: ACL Disabled Suite
           commands:
-            -  "make test-integration TESTFLAGS=\"-check.f ACLDisabledSuite\""
+            - "make test-integration-nobuild TESTFLAGS=\"-check.f ACLDisabledSuite\""
         - name: CoreDNS Suite
           commands:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f CoreDNSSuite\""
