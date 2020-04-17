@@ -41,22 +41,20 @@ func (b *Builder) Build(ignoredResources mk8s.IgnoreWrapper) (*Topology, error) 
 
 	// Populate services.
 	for _, svc := range res.Services {
-		if err := b.evaluateService(res, topology, svc); err != nil {
-			b.Logger.Errorf("Unable to evaluate Service %s/%s: %v", svc.Namespace, svc.Name, err)
-		}
+		b.evaluateService(res, topology, svc)
 	}
 
 	// Populate services with traffic-target definitions.
-	for _, tt := range res.TrafficTargets {
+	for key, tt := range res.TrafficTargets {
 		if err := b.evaluateTrafficTarget(res, topology, tt); err != nil {
-			b.Logger.Errorf("Unable to evaluate TrafficSplit %s/%s: %v", tt.Namespace, tt.Name, err)
+			b.Logger.Errorf("Unable to evaluate TrafficSplit %q: %v", key, err)
 		}
 	}
 
 	// Populate services with traffic-split definitions.
-	for _, ts := range res.TrafficSplits {
+	for key, ts := range res.TrafficSplits {
 		if err := b.evaluateTrafficSplit(topology, ts); err != nil {
-			b.Logger.Errorf("Unable to evaluate TrafficSplit %s/%s: %v", ts.Namespace, ts.Name, err)
+			b.Logger.Errorf("Unable to evaluate TrafficSplit %q: %v", key, err)
 		}
 	}
 
@@ -66,14 +64,10 @@ func (b *Builder) Build(ignoredResources mk8s.IgnoreWrapper) (*Topology, error) 
 }
 
 // evaluateService evaluates the given service. It adds the Service to the topology and it's selected Pods.
-func (b *Builder) evaluateService(res *resources, topology *Topology, svc *v1.Service) error {
+func (b *Builder) evaluateService(res *resources, topology *Topology, svc *v1.Service) {
 	svcKey := Key{svc.Name, svc.Namespace}
 
-	svcPods, ok := res.PodsBySvc[svcKey]
-	if !ok {
-		return fmt.Errorf("unable to find Service %q", svcKey)
-	}
-
+	svcPods := res.PodsBySvc[svcKey]
 	pods := make([]Key, len(svcPods))
 
 	for i, pod := range svcPods {
@@ -89,8 +83,6 @@ func (b *Builder) evaluateService(res *resources, topology *Topology, svc *v1.Se
 		ClusterIP:   svc.Spec.ClusterIP,
 		Pods:        pods,
 	}
-
-	return nil
 }
 
 // evaluateTrafficTarget evaluates the given traffic-target. It adds a ServiceTrafficTargets on every Service which
@@ -100,22 +92,14 @@ func (b *Builder) evaluateService(res *resources, topology *Topology, svc *v1.Se
 func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *access.TrafficTarget) error {
 	destSaKey := Key{tt.Destination.Name, tt.Destination.Namespace}
 
-	sources, srcErr := b.buildTrafficTargetSources(res, topology, tt)
-	if srcErr != nil {
-		return fmt.Errorf("unable to build TrafficTarget sources: %w", srcErr)
+	sources := b.buildTrafficTargetSources(res, topology, tt)
+
+	specs, err := b.buildTrafficTargetSpecs(res, tt)
+	if err != nil {
+		return fmt.Errorf("unable to build Specs: %w", err)
 	}
 
-	specs, specsErr := b.buildTrafficTargetSpecs(res, tt)
-	if specsErr != nil {
-		return fmt.Errorf("unable to build Specs: %w", specsErr)
-	}
-
-	podsBySvc, ok := res.PodsBySvcBySa[destSaKey]
-	if !ok {
-		return fmt.Errorf("unable to find Pods with ServiceAccount %q", destSaKey)
-	}
-
-	for svcKey, pods := range podsBySvc {
+	for svcKey, pods := range res.PodsBySvcBySa[destSaKey] {
 		svc, ok := topology.Services[svcKey]
 		if !ok {
 			return fmt.Errorf("unable to find Service %q", svcKey)
@@ -384,17 +368,13 @@ func unionPod(pods1, pods2 []Key) []Key {
 
 // buildTrafficTargetSources retrieves the Pod IPs for each Pod mentioned in a source of the given TrafficTarget.
 // If a Pod IP is not yet available, the pod will be skipped.
-func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *access.TrafficTarget) ([]ServiceTrafficTargetSource, error) {
+func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *access.TrafficTarget) []ServiceTrafficTargetSource {
 	sources := make([]ServiceTrafficTargetSource, len(tt.Sources))
 
 	for i, source := range tt.Sources {
 		srcSaKey := Key{source.Name, source.Namespace}
 
-		pods, ok := res.PodsByServiceAccounts[srcSaKey]
-		if !ok {
-			return nil, fmt.Errorf("unable to find Pods with ServiceAccount %q", srcSaKey)
-		}
-
+		pods := res.PodsByServiceAccounts[srcSaKey]
 		srcPods := make([]Key, len(pods))
 
 		for k, pod := range pods {
@@ -412,7 +392,7 @@ func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *acc
 		}
 	}
 
-	return sources, nil
+	return sources
 }
 
 func (b *Builder) buildTrafficTargetSpecs(res *resources, tt *access.TrafficTarget) ([]TrafficSpec, error) {
