@@ -45,7 +45,7 @@ var supportedCoreDNSVersions = []string{
 type Preparer interface {
 	CheckDNSProvider() (DNSProvider, error)
 	StartInformers(acl bool) error
-	ConfigureCoreDNS(namespace, clusterDomain string) error
+	ConfigureCoreDNS(clusterDomain, namespace string) error
 	ConfigureKubeDNS() error
 }
 
