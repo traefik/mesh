@@ -4,10 +4,11 @@ site_author: containo.us
 site_url: https://docs.mae.sh
 dev_addr: 0.0.0.0:8000
 
-#repo_name: 'GitHub'
-#repo_url: 'https://github.com/containous/maesh'
+repo_name: 'GitHub'
+repo_url: 'https://github.com/containous/maesh'
 
 docs_dir: 'content'
+edit_uri: 'edit/master/docs/content/'
 
 # https://squidfunk.github.io/mkdocs-material/
 theme:
@@ -26,7 +27,7 @@ theme:
     prev: 'Previous'
     next: 'Next'
 
-copyright: "Copyright &copy; 2016-2019 Containous"
+copyright: "Copyright &copy; 2016-2020 Containous"
 
 extra_css:
   - assets/styles/extra.css # Our custom styles
