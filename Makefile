@@ -31,9 +31,9 @@ local-check: $(DIST_DIR) helm-lint
 # Local commands
 local-build: $(DIST_DIR)
 	CGO_ENABLED=0 go build -o ${DIST_DIR_MAESH} -ldflags="-s -w \
-	-X github.com/containous/$(BINARY_NAME)/cmd/version.version=$(VERSION) \
-	-X github.com/containous/$(BINARY_NAME)/cmd/version.commit=$(SHA) \
-	-X github.com/containous/$(BINARY_NAME)/cmd/version.date=$(BUILD_DATE)" \
+	-X github.com/containous/$(BINARY_NAME)/pkg/version.Version=$(VERSION) \
+	-X github.com/containous/$(BINARY_NAME)/pkg/version.Commit=$(SHA) \
+	-X github.com/containous/$(BINARY_NAME)/pkg/version.Date=$(BUILD_DATE)" \
 	$(CURDIR)/cmd/$(BINARY_NAME)/*.go
 
 local-test: clean
