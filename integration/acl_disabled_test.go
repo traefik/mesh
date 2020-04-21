@@ -15,7 +15,6 @@ func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 		"containous/whoami:v1.0.1",
 		"containous/whoamitcp",
 		"coredns/coredns:1.6.3",
-		"traefik:v2.2.0",
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)

@@ -5,7 +5,7 @@ The static configuration is configured when the service mesh is installed and is
 
 ## Static configuration
 
-- The Maesh image version can be manually defined if needed, as can the version for the Traefik mesh nodes.
+- The Maesh image version can be manually defined if needed.
 
 - Debug logging can be globally enabled.
 
