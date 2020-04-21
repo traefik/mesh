@@ -31,6 +31,10 @@ spec:
         runAsNonRoot: true
         runAsUser: 999
       terminationGracePeriodSeconds: 30
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      {{- end }}
       {{- with .Values.mesh.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}
@@ -55,9 +59,10 @@ spec:
       {{- end }}
       containers:
         - name: maesh-mesh
-          image: {{ include "maesh.meshImage" . | quote }} 
-          imagePullPolicy: {{ .Values.mesh.image.pullPolicy | default "IfNotPresent" }}
+          image: {{ include "maesh.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
+            - "proxy"
             - "--entryPoints.readiness.address=:1081"
             - "--entryPoints.liveness.address=:1082"
             {{- range $i, $port := untilStep 5000 ((add (.Values.limits.http|int) 5000)|int) 1 }}
