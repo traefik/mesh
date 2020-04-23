@@ -124,7 +124,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 				return p, ok
 			}
 
-			p := provider.New(tcpStateTableMock(tcpStateTable), cfg, logger)
+			p := provider.New(tcpStateTableMock(tcpStateTable), nil, cfg, logger)
 
 			topo, err := loadTopology(test.topology)
 			require.NoError(t, err)

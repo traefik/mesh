@@ -148,3 +148,4 @@ smi:
 limits:
   http: 10
   tcp: 25
+  udp: 25

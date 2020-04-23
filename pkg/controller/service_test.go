@@ -274,7 +274,8 @@ func Test_ServiceCreate(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, "http", 5000, 5002, client)
+			// TODO
+			service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, nil, "http", 5000, 5002, client)
 			err := service.Create(&test.provided)
 			if test.expectedErr {
 				assert.Error(t, err)
@@ -390,7 +391,8 @@ func Test_ServiceUpdate(t *testing.T) {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, "tcp", 5000, 5002, client)
+	// TODO
+	service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, nil, "tcp", 5000, 5002, client)
 	svcGot, err := service.Update(&oldUserSvc, &newUserSvc)
 
 	require.NoError(t, err)
@@ -467,7 +469,8 @@ func Test_ServiceDelete(t *testing.T) {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, "tcp", 5000, 5002, client)
+	// TODO
+	service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, nil, "tcp", 5000, 5002, client)
 	err := service.Delete(&userSvc)
 	require.NoError(t, err)
 
