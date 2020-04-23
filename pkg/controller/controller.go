@@ -161,16 +161,17 @@ func (c *Controller) init() {
 	c.deployLog = deploylog.NewDeployLog(c.logger, 1000)
 	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.cfg.Namespace)
 
-	topologyBuilder := &topology.Builder{
-		ServiceLister:        c.ServiceLister,
-		EndpointsLister:      c.EndpointsLister,
-		PodLister:            c.PodLister,
-		TrafficTargetLister:  c.TrafficTargetLister,
-		TrafficSplitLister:   c.TrafficSplitLister,
-		HTTPRouteGroupLister: c.HTTPRouteGroupLister,
-		TCPRoutesLister:      c.TCPRouteLister,
-		Logger:               c.logger,
-	}
+	topologyBuilder := topology.NewBuilder(
+		c.ServiceLister,
+		c.EndpointsLister,
+		c.PodLister,
+		c.TrafficTargetLister,
+		c.TrafficSplitLister,
+		c.HTTPRouteGroupLister,
+		c.TCPRouteLister,
+		c.logger,
+	)
+
 	providerCfg := provider.Config{
 		IgnoredResources:   c.ignored,
 		MinHTTPPort:        c.cfg.MinHTTPPort,

@@ -526,16 +526,16 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
-	return &topology.Builder{
-		ServiceLister:        svcLister,
-		EndpointsLister:      epLister,
-		PodLister:            podLister,
-		TrafficTargetLister:  trafficTargetLister,
-		TrafficSplitLister:   trafficSplitLister,
-		HTTPRouteGroupLister: httpRouteGroupLister,
-		TCPRoutesLister:      tcpRouteLister,
-		Logger:               logger,
-	}, nil
+	return topology.NewBuilder(
+		svcLister,
+		epLister,
+		podLister,
+		trafficTargetLister,
+		trafficSplitLister,
+		httpRouteGroupLister,
+		tcpRouteLister,
+		logger,
+	), nil
 }
 
 func nn(name, ns string) topology.Key {
