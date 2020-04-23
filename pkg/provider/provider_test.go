@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/containous/maesh/pkg/event"
 	mk8s "github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/provider"
 	"github.com/containous/maesh/pkg/topology"
@@ -131,7 +132,7 @@ func TestProvider(t *testing.T) {
 				p, ok := test.tcpStateTable[port]
 				return p, ok
 			}
-			p := provider.New(topologyBuilderMock(builder), tcpStateTableMock(tcpStateTable), cfg, logger)
+			p := provider.New(topologyBuilderMock(builder), tcpStateTableMock(tcpStateTable), cfg, event.NewLogrusReporter(logger))
 
 			got, err := p.BuildConfig()
 			require.NoError(t, err)
