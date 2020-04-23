@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/sirupsen/logrus"
+
+	"github.com/containous/maesh/pkg/event"
 	mk8s "github.com/containous/maesh/pkg/k8s"
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
 	spec "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
@@ -11,7 +14,6 @@ import (
 	accessLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
 	specLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
 	splitLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	listers "k8s.io/client-go/listers/core/v1"
@@ -19,14 +21,37 @@ import (
 
 // Builder builds Topology objects based on the current state of a kubernetes cluster.
 type Builder struct {
-	ServiceLister        listers.ServiceLister
-	EndpointsLister      listers.EndpointsLister
-	PodLister            listers.PodLister
-	TrafficTargetLister  accessLister.TrafficTargetLister
-	TrafficSplitLister   splitLister.TrafficSplitLister
-	HTTPRouteGroupLister specLister.HTTPRouteGroupLister
-	TCPRoutesLister      specLister.TCPRouteLister
-	Logger               logrus.FieldLogger
+	serviceLister        listers.ServiceLister
+	endpointsLister      listers.EndpointsLister
+	podLister            listers.PodLister
+	trafficTargetLister  accessLister.TrafficTargetLister
+	trafficSplitLister   splitLister.TrafficSplitLister
+	httpRouteGroupLister specLister.HTTPRouteGroupLister
+	tcpRoutesLister      specLister.TCPRouteLister
+	logger               event.LogrusReporter
+}
+
+// NewBuilder creates a new Builder.
+func NewBuilder(
+	svcLister listers.ServiceLister,
+	epLister listers.EndpointsLister,
+	podLister listers.PodLister,
+	trafficTargetLister accessLister.TrafficTargetLister,
+	trafficSplitLister splitLister.TrafficSplitLister,
+	httpRouteGroupLister specLister.HTTPRouteGroupLister,
+	tcpRouteLister specLister.TCPRouteLister,
+	logger logrus.FieldLogger,
+) *Builder {
+	return &Builder{
+		serviceLister:        svcLister,
+		endpointsLister:      epLister,
+		podLister:            podLister,
+		trafficTargetLister:  trafficTargetLister,
+		trafficSplitLister:   trafficSplitLister,
+		httpRouteGroupLister: httpRouteGroupLister,
+		tcpRoutesLister:      tcpRouteLister,
+		logger:               event.NewLogrusReporter(logger),
+	}
 }
 
 // Build builds a graph representing the possible interactions between Pods and Services based on the current state
@@ -45,16 +70,20 @@ func (b *Builder) Build(ignoredResources mk8s.IgnoreWrapper) (*Topology, error) 
 	}
 
 	// Populate services with traffic-target definitions.
-	for key, tt := range res.TrafficTargets {
+	for _, tt := range res.TrafficTargets {
 		if err := b.evaluateTrafficTarget(res, topology, tt); err != nil {
-			b.Logger.Errorf("Unable to evaluate TrafficSplit %q: %v", key, err)
+			b.logger.
+				ForSubject(tt.Namespace, "TrafficTarget", tt.Name).
+				Errorf("Unable to evaluate TrafficTarget: %v", err)
 		}
 	}
 
 	// Populate services with traffic-split definitions.
-	for key, ts := range res.TrafficSplits {
+	for _, ts := range res.TrafficSplits {
 		if err := b.evaluateTrafficSplit(topology, ts); err != nil {
-			b.Logger.Errorf("Unable to evaluate TrafficSplit %q: %v", key, err)
+			b.logger.
+				ForSubject(ts.Namespace, "TrafficTarget", ts.Name).
+				Errorf("Unable to evaluate TrafficSplit: %v", err)
 		}
 	}
 
@@ -237,7 +266,10 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 		for _, tsKey := range svc.TrafficSplits {
 			ts, ok := topology.TrafficSplits[tsKey]
 			if !ok {
-				b.Logger.Errorf("Unable to find TrafficSplit %q", tsKey)
+				b.logger.
+					ForSubject(ts.Namespace, "TrafficTarget", ts.Name).
+					Error("Unable to find TrafficSplit")
+
 				continue
 			}
 
@@ -245,7 +277,9 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 			if err != nil {
 				loopDetected[svc] = append(loopDetected[svc], tsKey)
 
-				b.Logger.Errorf("Unable to get incoming pods for TrafficSplit %q: %v", tsKey, err)
+				b.logger.
+					ForSubject(ts.Namespace, "TrafficTarget", ts.Name).
+					Errorf("Unable to get incoming pods for TrafficSplit: %v", err)
 
 				continue
 			}
@@ -529,45 +563,45 @@ func (b *Builder) loadResources(ignoredResources mk8s.IgnoreWrapper) (*resources
 		PodsBySvcBySa:         make(map[Key]map[Key][]*v1.Pod),
 	}
 
-	svcs, err := b.ServiceLister.List(labels.Everything())
+	svcs, err := b.serviceLister.List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to list Services: %w", err)
 	}
 
-	pods, err := b.PodLister.List(labels.Everything())
+	pods, err := b.podLister.List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to list Services: %w", err)
 	}
 
-	eps, err := b.EndpointsLister.List(labels.Everything())
+	eps, err := b.endpointsLister.List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to list Services: %w", err)
 	}
 
-	tss, err := b.TrafficSplitLister.List(labels.Everything())
+	tss, err := b.trafficSplitLister.List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to list TrafficSplits: %w", err)
 	}
 
 	var httpRtGrps []*spec.HTTPRouteGroup
-	if b.HTTPRouteGroupLister != nil {
-		httpRtGrps, err = b.HTTPRouteGroupLister.List(labels.Everything())
+	if b.httpRouteGroupLister != nil {
+		httpRtGrps, err = b.httpRouteGroupLister.List(labels.Everything())
 		if err != nil {
 			return nil, fmt.Errorf("unable to list HTTPRouteGroups: %w", err)
 		}
 	}
 
 	var tcpRts []*spec.TCPRoute
-	if b.TCPRoutesLister != nil {
-		tcpRts, err = b.TCPRoutesLister.List(labels.Everything())
+	if b.tcpRoutesLister != nil {
+		tcpRts, err = b.tcpRoutesLister.List(labels.Everything())
 		if err != nil {
 			return nil, fmt.Errorf("unable to list TCPRouteGroups: %w", err)
 		}
 	}
 
 	var tts []*access.TrafficTarget
-	if b.TrafficTargetLister != nil {
-		tts, err = b.TrafficTargetLister.List(labels.Everything())
+	if b.trafficTargetLister != nil {
+		tts, err = b.trafficTargetLister.List(labels.Everything())
 		if err != nil {
 			return nil, fmt.Errorf("unable to list TrafficTargets: %w", err)
 		}
