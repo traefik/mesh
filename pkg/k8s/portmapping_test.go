@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func TestTCPPortMapping_GetEmptyState(t *testing.T) {
+func TestPortMapping_GetEmptyState(t *testing.T) {
 	cfgMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tcp-state-table",
@@ -19,7 +19,7 @@ func TestTCPPortMapping_GetEmptyState(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset(cfgMap)
 
-	m, err := NewTCPPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
+	m, err := NewPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
 	require.NoError(t, err)
 
 	svc := m.Get(8080)
@@ -27,7 +27,7 @@ func TestTCPPortMapping_GetEmptyState(t *testing.T) {
 	assert.Nil(t, svc)
 }
 
-func TestTCPPortMapping_GetWithState(t *testing.T) {
+func TestPortMapping_GetWithState(t *testing.T) {
 	cfgMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tcp-state-table",
@@ -40,7 +40,7 @@ func TestTCPPortMapping_GetWithState(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset(cfgMap)
 
-	m, err := NewTCPPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
+	m, err := NewPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
 	require.NoError(t, err)
 
 	svc := m.Get(10000)
@@ -58,7 +58,7 @@ func TestTCPPortMapping_GetWithState(t *testing.T) {
 	assert.Equal(t, int32(9092), svc.Port)
 }
 
-func TestTCPPortMapping_AddWithState(t *testing.T) {
+func TestPortMapping_AddWithState(t *testing.T) {
 	cfgMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tcp-state-table",
@@ -67,7 +67,7 @@ func TestTCPPortMapping_AddWithState(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset(cfgMap)
 
-	m, err := NewTCPPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
+	m, err := NewPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
 	require.NoError(t, err)
 
 	wantSvc := &ServiceWithPort{
@@ -89,7 +89,7 @@ func TestTCPPortMapping_AddWithState(t *testing.T) {
 	assert.Equal(t, "my-ns/my-app:9090", cfgMap.Data["10000"])
 }
 
-func TestTCPPortMapping_AddOverflow(t *testing.T) {
+func TestPortMapping_AddOverflow(t *testing.T) {
 	cfgMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tcp-state-table",
@@ -98,8 +98,8 @@ func TestTCPPortMapping_AddOverflow(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset(cfgMap)
 
-	var m *TCPPortMapping
-	m, err := NewTCPPortMapping(client, "maesh", "tcp-state-table", 10000, 10001)
+	var m *PortMapping
+	m, err := NewPortMapping(client, "maesh", "tcp-state-table", 10000, 10001)
 	require.NoError(t, err)
 
 	wantSvc := &ServiceWithPort{
@@ -136,7 +136,7 @@ func TestTCPPortMapping_AddOverflow(t *testing.T) {
 	assert.Len(t, cfgMap.Data, 2)
 }
 
-func TestTCPPortMapping_FindWithState(t *testing.T) {
+func TestPortMapping_FindWithState(t *testing.T) {
 	cfgMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tcp-state-table",
@@ -149,7 +149,7 @@ func TestTCPPortMapping_FindWithState(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset(cfgMap)
 
-	m, err := NewTCPPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
+	m, err := NewPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
 	require.NoError(t, err)
 
 	svc := ServiceWithPort{
@@ -236,7 +236,7 @@ func TestFormatServiceNamePort(t *testing.T) {
 	assert.Equal(t, "ns/svc-name:8080", got)
 }
 
-func TestTCPPortMapping_Remove(t *testing.T) {
+func TestPortMapping_Remove(t *testing.T) {
 	cfgMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tcp-state-table",
@@ -248,7 +248,7 @@ func TestTCPPortMapping_Remove(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset(cfgMap)
 
-	m, err := NewTCPPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
+	m, err := NewPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
 	require.NoError(t, err)
 
 	svc := ServiceWithPort{
