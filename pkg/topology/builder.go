@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/containous/maesh/pkg/event"
 	mk8s "github.com/containous/maesh/pkg/k8s"
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
 	spec "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
@@ -11,7 +12,6 @@ import (
 	accessLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
 	specLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
 	splitLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	listers "k8s.io/client-go/listers/core/v1"
@@ -26,7 +26,7 @@ type Builder struct {
 	TrafficSplitLister   splitLister.TrafficSplitLister
 	HTTPRouteGroupLister specLister.HTTPRouteGroupLister
 	TCPRoutesLister      specLister.TCPRouteLister
-	Logger               logrus.FieldLogger
+	Logger               event.Reporter
 }
 
 // Build builds a graph representing the possible interactions between Pods and Services based on the current state
@@ -45,16 +45,20 @@ func (b *Builder) Build(ignoredResources mk8s.IgnoreWrapper) (*Topology, error) 
 	}
 
 	// Populate services with traffic-target definitions.
-	for key, tt := range res.TrafficTargets {
+	for _, tt := range res.TrafficTargets {
 		if err := b.evaluateTrafficTarget(res, topology, tt); err != nil {
-			b.Logger.Errorf("Unable to evaluate TrafficSplit %q: %v", key, err)
+			b.Logger.
+				ForSubject(tt.Namespace, "TrafficTarget", tt.Name).
+				Errorf("Unable to evaluate TrafficTarget: %v", err)
 		}
 	}
 
 	// Populate services with traffic-split definitions.
-	for key, ts := range res.TrafficSplits {
+	for _, ts := range res.TrafficSplits {
 		if err := b.evaluateTrafficSplit(topology, ts); err != nil {
-			b.Logger.Errorf("Unable to evaluate TrafficSplit %q: %v", key, err)
+			b.Logger.
+				ForSubject(ts.Namespace, "TrafficSplit", ts.Name).
+				Errorf("Unable to evaluate TrafficSplit: %v", err)
 		}
 	}
 
@@ -237,7 +241,10 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 		for _, tsKey := range svc.TrafficSplits {
 			ts, ok := topology.TrafficSplits[tsKey]
 			if !ok {
-				b.Logger.Errorf("Unable to find TrafficSplit %q", tsKey)
+				b.Logger.
+					ForSubject(ts.Namespace, "TrafficSplit", ts.Name).
+					Error("Unable to find TrafficSplit")
+
 				continue
 			}
 
@@ -245,7 +252,9 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 			if err != nil {
 				loopDetected[svc] = append(loopDetected[svc], tsKey)
 
-				b.Logger.Errorf("Unable to get incoming pods for TrafficSplit %q: %v", tsKey, err)
+				b.Logger.
+					ForSubject(ts.Namespace, "TrafficSplit", ts.Name).
+					Errorf("Unable to get incoming pods: %v", err)
 
 				continue
 			}

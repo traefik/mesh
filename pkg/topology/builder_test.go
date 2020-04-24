@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/containous/maesh/pkg/event"
 	mk8s "github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/topology"
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
@@ -526,6 +527,8 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
+	event.NewLogrusReporter(logger)
+
 	return &topology.Builder{
 		ServiceLister:        svcLister,
 		EndpointsLister:      epLister,
@@ -534,7 +537,7 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 		TrafficSplitLister:   trafficSplitLister,
 		HTTPRouteGroupLister: httpRouteGroupLister,
 		TCPRoutesLister:      tcpRouteLister,
-		Logger:               logger,
+		Logger:               event.NewLogrusReporter(logger),
 	}, nil
 }
 

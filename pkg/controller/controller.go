@@ -13,6 +13,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/containous/maesh/pkg/api"
 	"github.com/containous/maesh/pkg/deploylog"
+	"github.com/containous/maesh/pkg/event"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/provider"
 	"github.com/containous/maesh/pkg/topology"
@@ -161,6 +162,8 @@ func (c *Controller) init() {
 	c.deployLog = deploylog.NewDeployLog(c.logger, 1000)
 	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.cfg.Namespace)
 
+	logger := event.NewLogrusReporter(c.logger)
+
 	topologyBuilder := &topology.Builder{
 		ServiceLister:        c.ServiceLister,
 		EndpointsLister:      c.EndpointsLister,
@@ -169,8 +172,9 @@ func (c *Controller) init() {
 		TrafficSplitLister:   c.TrafficSplitLister,
 		HTTPRouteGroupLister: c.HTTPRouteGroupLister,
 		TCPRoutesLister:      c.TCPRouteLister,
-		Logger:               c.logger,
+		Logger:               logger,
 	}
+
 	providerCfg := provider.Config{
 		IgnoredResources:   c.ignored,
 		MinHTTPPort:        c.cfg.MinHTTPPort,
@@ -179,7 +183,7 @@ func (c *Controller) init() {
 		DefaultTrafficType: c.cfg.DefaultMode,
 		MaeshNamespace:     c.cfg.Namespace,
 	}
-	c.provider = provider.New(topologyBuilder, c.tcpStateTable, providerCfg, c.logger)
+	c.provider = provider.New(topologyBuilder, c.tcpStateTable, providerCfg, logger)
 }
 
 // Run is the main entrypoint for the controller.
