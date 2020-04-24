@@ -23,7 +23,6 @@ func TestPortMapping_GetEmptyState(t *testing.T) {
 	require.NoError(t, err)
 
 	svc := m.Get(8080)
-
 	assert.Nil(t, svc)
 }
 
@@ -45,20 +44,18 @@ func TestPortMapping_GetWithState(t *testing.T) {
 
 	svc := m.Get(10000)
 	require.NotNil(t, svc)
-
 	assert.Equal(t, "my-ns", svc.Namespace)
 	assert.Equal(t, "my-app", svc.Name)
 	assert.Equal(t, int32(9090), svc.Port)
 
 	svc = m.Get(10001)
 	require.NotNil(t, svc)
-
 	assert.Equal(t, "my-ns", svc.Namespace)
 	assert.Equal(t, "my-app2", svc.Name)
 	assert.Equal(t, int32(9092), svc.Port)
 }
 
-func TestPortMapping_AddWithState(t *testing.T) {
+func TestPortMapping_AddEmptyState(t *testing.T) {
 	cfgMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tcp-state-table",
@@ -98,7 +95,6 @@ func TestPortMapping_AddOverflow(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset(cfgMap)
 
-	var m *PortMapping
 	m, err := NewPortMapping(client, "maesh", "tcp-state-table", 10000, 10001)
 	require.NoError(t, err)
 
@@ -108,8 +104,7 @@ func TestPortMapping_AddOverflow(t *testing.T) {
 		Port:      9090,
 	}
 
-	var port int32
-	port, err = m.Add(wantSvc)
+	port, err := m.Add(wantSvc)
 	require.NoError(t, err)
 	assert.Equal(t, int32(10000), port)
 
@@ -259,6 +254,10 @@ func TestPortMapping_Remove(t *testing.T) {
 	port, err := m.Remove(svc)
 	require.NoError(t, err)
 	assert.Equal(t, int32(10000), port)
+
+	cfgMap, err = client.CoreV1().ConfigMaps("maesh").Get("tcp-state-table", metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Len(t, cfgMap.Data, 0)
 
 	_, err = m.Remove(svc)
 	assert.Error(t, err)

@@ -146,10 +146,7 @@ func (m *PortMapping) saveState() error {
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cpy := cfg.DeepCopy()
-
-		if cpy.Data == nil {
-			cpy.Data = make(map[string]string)
-		}
+		cpy.Data = make(map[string]string)
 
 		m.mu.RLock()
 		defer m.mu.RUnlock()
