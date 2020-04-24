@@ -39,3 +39,11 @@ metadata:
   namespace: maesh
 data:
   key: value
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udp-state-table
+  namespace: maesh
+data:
+  key: value
