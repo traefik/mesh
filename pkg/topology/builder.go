@@ -57,7 +57,7 @@ func (b *Builder) Build(ignoredResources mk8s.IgnoreWrapper) (*Topology, error) 
 	for _, ts := range res.TrafficSplits {
 		if err := b.evaluateTrafficSplit(topology, ts); err != nil {
 			b.Logger.
-				ForSubject(ts.Namespace, "TrafficTarget", ts.Name).
+				ForSubject(ts.Namespace, "TrafficSplit", ts.Name).
 				Errorf("Unable to evaluate TrafficSplit: %v", err)
 		}
 	}
@@ -242,7 +242,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 			ts, ok := topology.TrafficSplits[tsKey]
 			if !ok {
 				b.Logger.
-					ForSubject(ts.Namespace, "TrafficTarget", ts.Name).
+					ForSubject(ts.Namespace, "TrafficSplit", ts.Name).
 					Error("Unable to find TrafficSplit")
 
 				continue
@@ -253,8 +253,8 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 				loopDetected[svc] = append(loopDetected[svc], tsKey)
 
 				b.Logger.
-					ForSubject(ts.Namespace, "TrafficTarget", ts.Name).
-					Errorf("Unable to get incoming pods for TrafficSplit: %v", err)
+					ForSubject(ts.Namespace, "TrafficSplit", ts.Name).
+					Errorf("Unable to get incoming pods: %v", err)
 
 				continue
 			}

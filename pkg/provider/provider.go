@@ -169,7 +169,7 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 		for portID, svcPort := range svc.Ports {
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				logger.Errorf("Unable to build HTTP entrypoint for port %d: %v", portID, err)
+				logger.Errorf("Unable to build HTTP entrypoint for port %d: %v", svcPort.Port, err)
 				continue
 			}
 
@@ -212,7 +212,7 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 
 	logger := p.logger.
 		WithMetadata(ttSvc.Annotations).
-		ForSubject(tt.Service.Namespace, "Service", tt.Service.Name)
+		ForSubject(ttKey.TrafficTarget.Namespace, "TrafficTarget", ttKey.TrafficTarget.Namespace)
 
 	switch trafficType {
 	case k8s.ServiceTypeHTTP:
@@ -289,7 +289,7 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, c
 
 	logger := p.logger.
 		WithMetadata(tsSvc.Annotations).
-		ForSubject(ts.Service.Namespace, "Service", ts.Service.Name)
+		ForSubject(tsKey.Namespace, "TrafficSplit", tsKey.Name)
 
 	switch trafficType {
 	case k8s.ServiceTypeHTTP:
@@ -308,7 +308,7 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, c
 		for portID, svcPort := range tsSvc.Ports {
 			backendSvcs, err := p.buildServicesForTrafficSplitBackends(t, cfg, ts, svcPort, scheme)
 			if err != nil {
-				logger.Errorf("Unable to build HTTP backend services for TrafficSplit %q and port %d: %v", tsKey, svcPort.Port, err)
+				logger.Errorf("Unable to build HTTP backend services for port %d: %v", svcPort.Port, err)
 				continue
 			}
 
@@ -382,8 +382,8 @@ func (p *Provider) buildServicesForTrafficSplitBackends(t *topology.Topology, cf
 
 		if len(backendSvc.TrafficSplits) > 0 {
 			p.logger.
-				ForSubject(ts.Namespace, "Service", ts.Name).
-				Warnf("Nested TrafficSplits detected in TrafficSplit: Maesh doesn't support nested TrafficSplits")
+				ForSubject(ts.Namespace, "TrafficSplit", ts.Name).
+				Warnf("Unsupported nested TrafficSplits detected")
 		}
 
 		backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)
