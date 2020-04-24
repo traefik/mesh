@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type tcpStateTableMock func(svcPort mk8s.ServiceWithPort) (int32, bool)
+type stateTableMock func(svcPort mk8s.ServiceWithPort) (int32, bool)
 
-func (t tcpStateTableMock) Find(svcPort mk8s.ServiceWithPort) (int32, bool) {
+func (t stateTableMock) Find(svcPort mk8s.ServiceWithPort) (int32, bool) {
 	return t(svcPort)
 }
 
@@ -26,6 +26,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 		acl                bool
 		defaultTrafficType string
 		tcpStateTable      map[mk8s.ServiceWithPort]int32
+		udpStateTable      map[mk8s.ServiceWithPort]int32
 		topology           string
 		wantConfig         string
 	}{
@@ -35,6 +36,9 @@ func TestProvider_BuildConfig(t *testing.T) {
 			defaultTrafficType: "http",
 			tcpStateTable: map[mk8s.ServiceWithPort]int32{
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 5000,
+			},
+			udpStateTable: map[mk8s.ServiceWithPort]int32{
+				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 10000,
 			},
 			topology:   "fixtures/annotations-traffic-type-topology.json",
 			wantConfig: "fixtures/annotations-traffic-type-config.json",
@@ -62,6 +66,16 @@ func TestProvider_BuildConfig(t *testing.T) {
 			},
 			topology:   "fixtures/acl-disabled-tcp-basic-topology.json",
 			wantConfig: "fixtures/acl-disabled-tcp-basic-config.json",
+		},
+		{
+			desc:               "ACL disabled: basic UDP service",
+			acl:                false,
+			defaultTrafficType: "udp",
+			udpStateTable: map[mk8s.ServiceWithPort]int32{
+				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 10000,
+			},
+			topology:   "fixtures/acl-disabled-udp-basic-topology.json",
+			wantConfig: "fixtures/acl-disabled-udp-basic-config.json",
 		},
 		{
 			desc:               "ACL disabled: HTTP service with traffic-split",
@@ -123,8 +137,16 @@ func TestProvider_BuildConfig(t *testing.T) {
 				p, ok := test.tcpStateTable[port]
 				return p, ok
 			}
+			udpStateTable := func(port mk8s.ServiceWithPort) (int32, bool) {
+				if test.udpStateTable == nil {
+					return 0, false
+				}
 
-			p := provider.New(tcpStateTableMock(tcpStateTable), nil, cfg, logger)
+				p, ok := test.udpStateTable[port]
+				return p, ok
+			}
+
+			p := provider.New(stateTableMock(tcpStateTable), stateTableMock(udpStateTable), cfg, logger)
 
 			topo, err := loadTopology(test.topology)
 			require.NoError(t, err)

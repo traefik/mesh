@@ -36,14 +36,14 @@
       }
     }
   },
-  "tcp": {
+  "tcp": {},
+  "udp": {
     "routers": {
       "my-ns-svc-a-8080": {
         "entryPoints": [
-          "tcp-5000"
+          "udp-10000"
         ],
-        "service": "my-ns-svc-a-8080",
-        "rule": "HostSNI(`*`)"
+        "service": "my-ns-svc-a-8080"
       }
     },
     "services": {
@@ -60,6 +60,5 @@
         }
       }
     }
-  },
-  "udp": {}
+  }
 }

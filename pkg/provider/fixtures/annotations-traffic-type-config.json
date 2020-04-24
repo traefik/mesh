@@ -60,5 +60,29 @@
         }
       }
     }
+  },
+  "udp": {
+    "routers": {
+      "my-ns-svc-b-8080": {
+        "entryPoints": [
+          "udp-10000"
+        ],
+        "service": "my-ns-svc-b-8080"
+      }
+    },
+    "services": {
+      "my-ns-svc-b-8080": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "address": "10.10.2.1:8080"
+            },
+            {
+              "address": "10.10.2.2:8080"
+            }
+          ]
+        }
+      }
+    }
   }
 }
