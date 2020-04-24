@@ -149,7 +149,7 @@ spec:
             - "--tracing.haystack.baggagePrefixHeaderName={{ .Values.tracing.haystack.baggagePrefixHeaderName }}"
               {{- end }}
             {{- end }}
-            - "--api.dashboard"
+            - "--api.dashboard=false"
             - "--api.insecure"
             - "--ping"
             - "--log.level={{ .Values.mesh.logging }}"
