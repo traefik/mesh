@@ -79,7 +79,7 @@ func NewProxyConfiguration() *ProxyConfiguration {
 	return &ProxyConfiguration{
 		Configuration: static.Configuration{
 			Global: &traefikStatic.Global{
-				CheckNewVersion: true,
+				CheckNewVersion: false,
 			},
 			EntryPoints: make(traefikStatic.EntryPoints),
 			Providers: &static.Providers{
