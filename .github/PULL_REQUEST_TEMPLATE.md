@@ -2,9 +2,9 @@
 
 This PR:
 
--<!-- What does this PR do? -->
+- <!-- What does this PR do? -->
 
-Fixes <!-- #enter issue number here -->
+Fixes #<!-- enter issue number here -->
 
 <!-- A brief description of the change being made with this pull request. -->
 
