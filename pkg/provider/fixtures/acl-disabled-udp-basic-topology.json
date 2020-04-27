@@ -4,30 +4,7 @@
       "name": "svc-a",
       "namespace": "my-ns",
       "selector": {},
-      "annotations": {
-        "maesh.containo.us/traffic-type": "tcp"
-      },
-      "ports": [
-        {
-          "name": "port-8080",
-          "protocol": "TCP",
-          "port": 8080,
-          "targetPort": 8080
-        }
-      ],
-      "clusterIp": "10.10.14.1",
-      "pods": [
-        "pod-a1@my-ns",
-        "pod-a2@my-ns"
-      ]
-    },
-    "svc-b@my-ns": {
-      "name": "svc-b",
-      "namespace": "my-ns",
-      "selector": {},
-      "annotations": {
-        "maesh.containo.us/traffic-type": "udp"
-      },
+      "annotations": {},
       "ports": [
         {
           "name": "port-8080",

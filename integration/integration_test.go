@@ -624,6 +624,33 @@ func (s *BaseSuite) checkTCPServiceLoadBalancer(c *check.C, config *dynamic.Conf
 	}
 }
 
+func (s *BaseSuite) checkUDPServiceLoadBalancer(c *check.C, config *dynamic.Configuration, svc *corev1.Service, pods []*corev1.Pod) {
+	for _, port := range svc.Spec.Ports {
+		svcKey := fmt.Sprintf("%s-%s-%d", svc.Namespace, svc.Name, port.Port)
+
+		service := config.UDP.Services[svcKey]
+		c.Assert(service, checker.NotNil)
+
+		c.Assert(service.LoadBalancer.Servers, checker.HasLen, len(pods))
+
+		for _, pod := range pods {
+			wantURL := fmt.Sprintf("%s:%d", pod.Status.PodIP, port.TargetPort.IntVal)
+			c.Logf("Checking if UDP service %q loadbalancer contains an URL for pod %q: %s", svcKey, pod.Name, wantURL)
+
+			var found bool
+
+			for _, server := range service.LoadBalancer.Servers {
+				if wantURL == server.Address {
+					found = true
+					break
+				}
+			}
+
+			c.Assert(found, checker.True)
+		}
+	}
+}
+
 func (s *BaseSuite) checkTrafficTargetLoadBalancer(c *check.C, config *dynamic.Configuration, tt *access.TrafficTarget, svc *corev1.Service, pods []*corev1.Pod) {
 	for _, port := range svc.Spec.Ports {
 		svcKey := fmt.Sprintf("%s-%s-%s-%d-traffic-target", svc.Namespace, svc.Name, tt.Name, port.Port)
