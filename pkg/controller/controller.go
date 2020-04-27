@@ -35,8 +35,8 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
-// TCPPortMapper is capable of storing and retrieving a TCP port mapping for a given service.
-type TCPPortMapper interface {
+// PortMapper is capable of storing and retrieving a port mapping for a given service.
+type PortMapper interface {
 	Find(svc k8s.ServiceWithPort) (int32, bool)
 	Add(svc *k8s.ServiceWithPort) (int32, error)
 	Remove(svc k8s.ServiceWithPort) (int32, error)
@@ -59,6 +59,8 @@ type Config struct {
 	APIHost          string
 	MinTCPPort       int32
 	MaxTCPPort       int32
+	MinUDPPort       int32
+	MaxUDPPort       int32
 	MinHTTPPort      int32
 	MaxHTTPPort      int32
 }
@@ -71,7 +73,8 @@ type Controller struct {
 	configRefreshChan chan string
 	provider          *provider.Provider
 	ignored           k8s.IgnoreWrapper
-	tcpStateTable     TCPPortMapper
+	tcpStateTable     PortMapper
+	udpStateTable     PortMapper
 	lastConfiguration safe.Safe
 	api               api.Interface
 	deployLog         deploylog.Interface
@@ -104,7 +107,12 @@ func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger
 	ignored.AddIgnoredNamespace(metav1.NamespaceSystem)
 	ignored.AddIgnoredApps("maesh", "jaeger")
 
-	tcpStateTable, err := k8s.NewTCPPortMapping(clients.GetKubernetesClient(), cfg.Namespace, k8s.TCPStateConfigMapName, cfg.MinTCPPort, cfg.MaxTCPPort)
+	tcpStateTable, err := k8s.NewPortMapping(clients.GetKubernetesClient(), cfg.Namespace, k8s.TCPStateConfigMapName, cfg.MinTCPPort, cfg.MaxTCPPort)
+	if err != nil {
+		return nil, err
+	}
+
+	udpStateTable, err := k8s.NewPortMapping(clients.GetKubernetesClient(), cfg.Namespace, k8s.UDPStateConfigMapName, cfg.MinUDPPort, cfg.MaxUDPPort)
 	if err != nil {
 		return nil, err
 	}
@@ -115,6 +123,7 @@ func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger
 		clients:       clients,
 		ignored:       ignored,
 		tcpStateTable: tcpStateTable,
+		udpStateTable: udpStateTable,
 	}
 
 	c.init()
@@ -128,7 +137,7 @@ func (c *Controller) init() {
 	c.splitFactory = splitInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSplitClient(), k8s.ResyncPeriod)
 
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
-	c.serviceManager = NewShadowServiceManager(c.logger, c.ServiceLister, c.cfg.Namespace, c.tcpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
+	c.serviceManager = NewShadowServiceManager(c.logger, c.ServiceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	c.configRefreshChan = make(chan string)
@@ -179,7 +188,7 @@ func (c *Controller) init() {
 		DefaultTrafficType: c.cfg.DefaultMode,
 		MaeshNamespace:     c.cfg.Namespace,
 	}
-	c.provider = provider.New(topologyBuilder, c.tcpStateTable, providerCfg, c.logger)
+	c.provider = provider.New(topologyBuilder, c.tcpStateTable, c.udpStateTable, providerCfg, c.logger)
 }
 
 // Run is the main entrypoint for the controller.

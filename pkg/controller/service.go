@@ -21,7 +21,8 @@ type ShadowServiceManager struct {
 	log           logrus.FieldLogger
 	lister        listers.ServiceLister
 	namespace     string
-	tcpStateTable TCPPortMapper
+	tcpStateTable PortMapper
+	udpStateTable PortMapper
 	defaultMode   string
 	minHTTPPort   int32
 	maxHTTPPort   int32
@@ -29,12 +30,13 @@ type ShadowServiceManager struct {
 }
 
 // NewShadowServiceManager returns new shadow service manager.
-func NewShadowServiceManager(log logrus.FieldLogger, lister listers.ServiceLister, namespace string, tcpStateTable TCPPortMapper, defaultMode string, minHTTPPort, maxHTTPPort int32, kubeClient kubernetes.Interface) *ShadowServiceManager {
+func NewShadowServiceManager(log logrus.FieldLogger, lister listers.ServiceLister, namespace string, tcpStateTable PortMapper, udpStateTable PortMapper, defaultMode string, minHTTPPort, maxHTTPPort int32, kubeClient kubernetes.Interface) *ShadowServiceManager {
 	return &ShadowServiceManager{
 		log:           log,
 		lister:        lister,
 		namespace:     namespace,
 		tcpStateTable: tcpStateTable,
+		udpStateTable: udpStateTable,
 		defaultMode:   defaultMode,
 		minHTTPPort:   minHTTPPort,
 		maxHTTPPort:   maxHTTPPort,
@@ -77,7 +79,7 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 
 	major, minor := parseKubernetesServerVersion(s.kubeClient)
 
-	// If the kuberentes server version is 1.17+, then use the topology key.
+	// If the kubernetes server version is 1.17+, then use the topology key.
 	if major == 1 && minor >= 17 {
 		svc.Spec.TopologyKeys = []string{"kubernetes.io/hostname", "*"}
 	}
@@ -143,7 +145,14 @@ func (s *ShadowServiceManager) Delete(userSvc *corev1.Service) error {
 }
 
 func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, newUserSvc *corev1.Service) {
-	if svcMode := s.getServiceMode(oldUserSvc); svcMode != k8s.ServiceTypeTCP {
+	var stateTable PortMapper
+
+	switch svcMode := s.getServiceMode(oldUserSvc); svcMode {
+	case k8s.ServiceTypeTCP:
+		stateTable = s.tcpStateTable
+	case k8s.ServiceTypeUDP:
+		stateTable = s.udpStateTable
+	default:
 		return
 	}
 
@@ -160,11 +169,12 @@ func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, ne
 		}
 
 		if !found {
-			_, err := s.tcpStateTable.Remove(k8s.ServiceWithPort{
+			_, err := stateTable.Remove(k8s.ServiceWithPort{
 				Namespace: oldUserSvc.Namespace,
 				Name:      oldUserSvc.Name,
 				Port:      old.Port,
 			})
+
 			if err != nil {
 				s.log.Warnf("Unable to remove port mapping for %s/%s on port %d", oldUserSvc.Namespace, oldUserSvc.Name, old.Port)
 			}
@@ -178,7 +188,7 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) []core
 	svcMode := s.getServiceMode(svc)
 
 	for i, sp := range svc.Spec.Ports {
-		if sp.Protocol != corev1.ProtocolTCP {
+		if !(svcMode == k8s.ServiceTypeUDP && sp.Protocol == corev1.ProtocolUDP) && !(svcMode != k8s.ServiceTypeUDP && sp.Protocol == corev1.ProtocolTCP) {
 			s.log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, svc.Namespace, svc.Name)
 			continue
 		}
@@ -208,7 +218,7 @@ func (s *ShadowServiceManager) getServiceMode(svc *corev1.Service) string {
 	return s.defaultMode
 }
 
-// userServiceToMeshServiceName converts a User service with a namespace to a mesh service name.
+// getShadowServiceName converts a User service with a namespace to a mesh service name.
 func (s *ShadowServiceManager) getShadowServiceName(name string, namespace string) string {
 	return fmt.Sprintf("%s-%s-6d61657368-%s", s.namespace, name, namespace)
 }
@@ -218,13 +228,15 @@ func (s *ShadowServiceManager) getTargetPort(svcMode string, portID int, name, n
 	case k8s.ServiceTypeHTTP:
 		return s.getHTTPPort(portID)
 	case k8s.ServiceTypeTCP:
-		return s.getTCPPort(name, namespace, port)
+		return s.getMappedPort(s.tcpStateTable, name, namespace, port)
+	case k8s.ServiceTypeUDP:
+		return s.getMappedPort(s.udpStateTable, name, namespace, port)
 	default:
 		return 0, errors.New("unknown service mode")
 	}
 }
 
-// GetHTTPPort returns the HTTP port associated with the given portId.
+// getHTTPPort returns the HTTP port associated with the given portID.
 func (s *ShadowServiceManager) getHTTPPort(portID int) (int32, error) {
 	if s.minHTTPPort+int32(portID) >= s.maxHTTPPort {
 		return 0, errors.New("unable to find an available HTTP port")
@@ -233,20 +245,20 @@ func (s *ShadowServiceManager) getHTTPPort(portID int) (int32, error) {
 	return s.minHTTPPort + int32(portID), nil
 }
 
-// GetTCPPort returns the TCP port associated with the given service information.
-func (s *ShadowServiceManager) getTCPPort(svcName, svcNamespace string, svcPort int32) (int32, error) {
+// getMappedPort returns the port associated with the given service information in the given port mapper.
+func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, svcName, svcNamespace string, svcPort int32) (int32, error) {
 	svc := k8s.ServiceWithPort{
 		Namespace: svcNamespace,
 		Name:      svcName,
 		Port:      svcPort,
 	}
-	if port, ok := s.tcpStateTable.Find(svc); ok {
+	if port, ok := stateTable.Find(svc); ok {
 		return port, nil
 	}
 
 	s.log.Debugf("No match found for %s/%s %d - Add a new port", svcName, svcNamespace, svcPort)
 
-	port, err := s.tcpStateTable.Add(&svc)
+	port, err := stateTable.Add(&svc)
 	if err != nil {
 		return 0, fmt.Errorf("unable to add service to the TCP state table: %w", err)
 	}

@@ -17,6 +17,7 @@ type MaeshConfiguration struct {
 	APIPort          int32    `description:"API port for the controller." export:"true"`
 	APIHost          string   `description:"API host for the controller to bind to." export:"true"`
 	LimitTCPPort     int32    `description:"Number of TCP ports allocated." export:"true"`
+	LimitUDPPort     int32    `description:"Number of UDP ports allocated." export:"true"`
 	LimitHTTPPort    int32    `description:"Number of HTTP ports allocated." export:"true"`
 }
 
@@ -33,6 +34,7 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 		APIPort:       9000,
 		APIHost:       "",
 		LimitTCPPort:  25,
+		LimitUDPPort:  25,
 		LimitHTTPPort: 10,
 	}
 }
