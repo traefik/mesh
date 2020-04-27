@@ -1,4 +1,8 @@
-### What does this PR do?
+## What does this PR do?
+
+This PR:
+
+-<!-- What does this PR do? -->
 
 Fixes <!-- #enter issue number here -->
 
@@ -10,7 +14,7 @@ Fixes <!-- #enter issue number here -->
 * Step 2
 * ...
 
-### Additional Notes
+## Additional Notes
 
 <!--
     You can add anything you want here, an explanation on the way you built your implementation,
