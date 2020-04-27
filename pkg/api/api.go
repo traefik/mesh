@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/containous/maesh/pkg/deploylog"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -33,7 +32,6 @@ type API struct {
 	lastConfiguration *safe.Safe
 	apiPort           int32
 	apiHost           string
-	deployLog         deploylog.Interface
 	meshNamespace     string
 	podLister         listers.PodLister
 }
@@ -45,14 +43,13 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, lastConfiguration *safe.Safe, deployLog deploylog.Interface, podLister listers.PodLister, meshNamespace string) *API {
+func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, lastConfiguration *safe.Safe, podLister listers.PodLister, meshNamespace string) *API {
 	a := &API{
 		log:               log,
 		readiness:         false,
 		lastConfiguration: lastConfiguration,
 		apiPort:           apiPort,
 		apiHost:           apiHost,
-		deployLog:         deployLog,
 		podLister:         podLister,
 		meshNamespace:     meshNamespace,
 	}
@@ -74,7 +71,6 @@ func (a *API) Init() error {
 	a.router.HandleFunc("/api/status/nodes", a.getMeshNodes)
 	a.router.HandleFunc("/api/status/node/{node}/configuration", a.getMeshNodeConfiguration)
 	a.router.HandleFunc("/api/status/readiness", a.getReadiness)
-	a.router.HandleFunc("/api/log/deployment", a.getDeployLog)
 
 	return nil
 }
@@ -118,23 +114,6 @@ func (a *API) getReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(a.readiness); err != nil {
-		a.log.Error(err)
-	}
-}
-
-// getDeployLog returns the current deploylog.
-func (a *API) getDeployLog(w http.ResponseWriter, r *http.Request) {
-	entries := a.deployLog.GetLog()
-
-	data, err := json.Marshal(entries)
-	if err != nil {
-		a.writeErrorResponse(w, fmt.Sprintf("unable to marshal deploy log entries: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	if _, err := w.Write(data); err != nil {
 		a.log.Error(err)
 	}
 }
