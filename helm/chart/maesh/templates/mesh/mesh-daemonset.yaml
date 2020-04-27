@@ -73,8 +73,9 @@ spec:
             - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" $port $port }}
             - {{ printf "\"--entryPoints.tcp-%d.forwardedHeaders.insecure=true\"" $port }}
             {{- end }}
-            - "--providers.rest"
-            - "--providers.rest.insecure"
+            - "--providers.http"
+            - {{ printf "--providers.http.endpoint=http://maesh-controller.%s.svc.%s:9000/api/configuration/current" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
+            - "--providers.http.pollInterval=100ms"
             {{- if .Values.tracing.jaeger.enabled }}
               {{- if .Values.tracing.jaeger.localagenthostport }}
             - "--tracing.jaeger.localagenthostport={{ .Values.tracing.jaeger.localagenthostport }}"
