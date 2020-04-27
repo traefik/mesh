@@ -76,8 +76,9 @@ spec:
             {{- range $i, $port := untilStep 15000 ((add (.Values.limits.udp|int) 15000)|int) 1 }}
             - {{ printf "\"--entryPoints.udp-%d.address=:%d/udp\"" $port $port }}
             {{- end }}
-            - "--providers.rest"
-            - "--providers.rest.insecure"
+            - "--providers.http"
+            - {{ printf "--providers.http.endpoint=http://maesh-controller.%s.svc.%s:9000/api/configuration/current" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
+            - "--providers.http.pollInterval=100ms"
             {{- if .Values.tracing.jaeger.enabled }}
               {{- if .Values.tracing.jaeger.localagenthostport }}
             - "--tracing.jaeger.localagenthostport={{ .Values.tracing.jaeger.localagenthostport }}"
