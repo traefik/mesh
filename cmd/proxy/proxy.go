@@ -139,10 +139,12 @@ func setupServer(maeshStaticConfiguration *static.Configuration) (*server.Server
 		return nil, err
 	}
 
-	// Adds HTTP provider.
-	err = providerAggregator.AddProvider(maeshStaticConfiguration.Providers.HTTP)
-	if err != nil {
-		return nil, err
+	if maeshStaticConfiguration.Providers.HTTP != nil {
+		// Adds HTTP provider.
+		err = providerAggregator.AddProvider(maeshStaticConfiguration.Providers.HTTP)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	tlsManager := traefiktls.NewManager()
