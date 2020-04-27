@@ -1,38 +1,16 @@
 package static
 
 import (
-	"fmt"
-	"time"
-
 	httpProvider "github.com/containous/maesh/pkg/proxy/provider/http"
 	traefikStatic "github.com/containous/traefik/v2/pkg/config/static"
 	"github.com/containous/traefik/v2/pkg/ping"
-	"github.com/containous/traefik/v2/pkg/provider/consulcatalog"
-	"github.com/containous/traefik/v2/pkg/provider/docker"
 	"github.com/containous/traefik/v2/pkg/provider/file"
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd"
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/ingress"
-	"github.com/containous/traefik/v2/pkg/provider/kv/consul"
-	"github.com/containous/traefik/v2/pkg/provider/kv/etcd"
-	"github.com/containous/traefik/v2/pkg/provider/kv/redis"
-	"github.com/containous/traefik/v2/pkg/provider/kv/zk"
-	"github.com/containous/traefik/v2/pkg/provider/marathon"
-	"github.com/containous/traefik/v2/pkg/provider/rancher"
 	"github.com/containous/traefik/v2/pkg/provider/rest"
 	"github.com/containous/traefik/v2/pkg/types"
 )
 
-const (
-	// DefaultInternalEntryPointName the name of the default internal entry point
-	DefaultInternalEntryPointName = "traefik"
-
-	// DefaultGraceTimeout controls how long Traefik serves pending requests
-	// prior to shutting down.
-	DefaultGraceTimeout = 10 * time.Second
-
-	// DefaultIdleTimeout before closing an idle connection.
-	DefaultIdleTimeout = 180 * time.Second
-)
+// DefaultInternalEntryPointName the name of the default internal entry point
+const DefaultInternalEntryPointName = "traefik"
 
 // Configuration is the static configuration
 type Configuration struct {
@@ -59,20 +37,9 @@ type Configuration struct {
 type Providers struct {
 	ProvidersThrottleDuration types.Duration `description:"Backends throttle duration: minimum duration between 2 events from providers before applying a new configuration. It avoids unnecessary reloads if multiples events are sent in a short amount of time." json:"providersThrottleDuration,omitempty" toml:"providersThrottleDuration,omitempty" yaml:"providersThrottleDuration,omitempty" export:"true"`
 
-	Docker            *docker.Provider        `description:"Enable Docker backend with default settings." json:"docker,omitempty" toml:"docker,omitempty" yaml:"docker,omitempty" export:"true" label:"allowEmpty"`
-	File              *file.Provider          `description:"Enable File backend with default settings." json:"file,omitempty" toml:"file,omitempty" yaml:"file,omitempty" export:"true"`
-	Marathon          *marathon.Provider      `description:"Enable Marathon backend with default settings." json:"marathon,omitempty" toml:"marathon,omitempty" yaml:"marathon,omitempty" export:"true" label:"allowEmpty"`
-	KubernetesIngress *ingress.Provider       `description:"Enable Kubernetes backend with default settings." json:"kubernetesIngress,omitempty" toml:"kubernetesIngress,omitempty" yaml:"kubernetesIngress,omitempty" export:"true" label:"allowEmpty"`
-	KubernetesCRD     *crd.Provider           `description:"Enable Kubernetes backend with default settings." json:"kubernetesCRD,omitempty" toml:"kubernetesCRD,omitempty" yaml:"kubernetesCRD,omitempty" export:"true" label:"allowEmpty"`
-	Rest              *rest.Provider          `description:"Enable Rest backend with default settings." json:"rest,omitempty" toml:"rest,omitempty" yaml:"rest,omitempty" export:"true" label:"allowEmpty"`
-	Rancher           *rancher.Provider       `description:"Enable Rancher backend with default settings." json:"rancher,omitempty" toml:"rancher,omitempty" yaml:"rancher,omitempty" export:"true" label:"allowEmpty"`
-	ConsulCatalog     *consulcatalog.Provider `description:"Enable ConsulCatalog backend with default settings." json:"consulCatalog,omitempty" toml:"consulCatalog,omitempty" yaml:"consulCatalog,omitempty"`
-
-	Consul    *consul.Provider       `description:"Enable Consul backend with default settings." json:"consul,omitempty" toml:"consul,omitempty" yaml:"consul,omitempty" export:"true" label:"allowEmpty"`
-	Etcd      *etcd.Provider         `description:"Enable Etcd backend with default settings." json:"etcd,omitempty" toml:"etcd,omitempty" yaml:"etcd,omitempty" export:"true" label:"allowEmpty"`
-	ZooKeeper *zk.Provider           `description:"Enable ZooKeeper backend with default settings." json:"zooKeeper,omitempty" toml:"zooKeeper,omitempty" yaml:"zooKeeper,omitempty" export:"true" label:"allowEmpty"`
-	Redis     *redis.Provider        `description:"Enable Redis backend with default settings." json:"redis,omitempty" toml:"redis,omitempty" yaml:"redis,omitempty" export:"true" label:"allowEmpty"`
-	HTTP      *httpProvider.Provider `description:"Enable HTTP backend with default settings." json:"http,omitempty" toml:"http,omitempty" yaml:"http,omitempty" export:"true" label:"allowEmpty"`
+	File *file.Provider         `description:"Enable File backend with default settings." json:"file,omitempty" toml:"file,omitempty" yaml:"file,omitempty" export:"true"`
+	Rest *rest.Provider         `description:"Enable Rest backend with default settings." json:"rest,omitempty" toml:"rest,omitempty" yaml:"rest,omitempty" export:"true" label:"allowEmpty"`
+	HTTP *httpProvider.Provider `description:"Enable HTTP backend with default settings." json:"http,omitempty" toml:"http,omitempty" yaml:"http,omitempty" export:"true" label:"allowEmpty"`
 }
 
 // SetEffectiveConfiguration adds missing configuration parameters derived from existing ones.
@@ -99,40 +66,25 @@ func (c *Configuration) SetEffectiveConfiguration() {
 	}
 }
 
-// ValidateConfiguration validate that configuration is coherent
-func (c *Configuration) ValidateConfiguration() error {
-	var acmeEmail string
-
-	for name, resolver := range c.CertificatesResolvers {
-		if resolver.ACME == nil {
-			continue
-		}
-
-		if len(resolver.ACME.Storage) == 0 {
-			return fmt.Errorf("unable to initialize certificates resolver %q with no storage location for the certificates", name)
-		}
-
-		if acmeEmail != "" && resolver.ACME.Email != acmeEmail {
-			return fmt.Errorf("unable to initialize certificates resolver %q, all the acme resolvers must use the same email", name)
-		}
-
-		acmeEmail = resolver.ACME.Email
-	}
-
-	return nil
-}
-
 // ToTraefikConfig returns a Traefik compatable configuration for use in the proxy code without affecting compatibility.
 func (c *Configuration) ToTraefikConfig() *traefikStatic.Configuration {
 	return &traefikStatic.Configuration{
-		Global:      c.Global,
-		EntryPoints: c.EntryPoints,
+		Global:           c.Global,
+		ServersTransport: c.ServersTransport,
+		EntryPoints:      c.EntryPoints,
 		Providers: &traefikStatic.Providers{
 			ProvidersThrottleDuration: c.Providers.ProvidersThrottleDuration,
 			// These are the two providers that we would provide configuration for at this time.
 			File: c.Providers.File,
 			Rest: c.Providers.Rest,
 		},
-		ServersTransport: c.ServersTransport,
+		API:                   c.API,
+		Metrics:               c.Metrics,
+		Ping:                  c.Ping,
+		Log:                   c.Log,
+		AccessLog:             c.AccessLog,
+		Tracing:               c.Tracing,
+		HostResolver:          c.HostResolver,
+		CertificatesResolvers: c.CertificatesResolvers,
 	}
 }
