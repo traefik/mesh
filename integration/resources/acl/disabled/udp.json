@@ -7,14 +7,6 @@
         ],
         "service": "readiness",
         "rule": "Path(`/ping`)"
-      },
-      "test-server-8080": {
-        "entryPoints": [
-          "http-5000"
-        ],
-        "service": "test-server-8080",
-        "rule": "Host(`server.test.maesh`) || Host(`10.43.244.152`)",
-        "priority": 1001
       }
     },
     "services": {
@@ -32,16 +24,6 @@
           ],
           "passHostHeader": true
         }
-      },
-      "test-server-8080": {
-        "loadBalancer": {
-          "servers": [
-            {
-              "url": "http://10.42.1.2:80"
-            }
-          ],
-          "passHostHeader": true
-        }
       }
     },
     "middlewares": {
@@ -55,5 +37,25 @@
     }
   },
   "tcp": {},
-  "udp": {}
+  "udp": {
+    "routers": {
+      "test-server-8080": {
+        "entryPoints": [
+          "udp-15000"
+        ],
+        "service": "test-server-8080"
+      }
+    },
+    "services": {
+      "test-server-8080": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "address": "10.42.1.5:8080"
+            }
+          ]
+        }
+      }
+    }
+  }
 }
