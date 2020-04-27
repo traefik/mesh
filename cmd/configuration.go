@@ -1,6 +1,13 @@
 package cmd
 
-import "os"
+import (
+	"os"
+	"time"
+
+	"github.com/containous/maesh/pkg/config/static"
+	traefikStatic "github.com/containous/traefik/v2/pkg/config/static"
+	"github.com/containous/traefik/v2/pkg/types"
+)
 
 // MaeshConfiguration wraps the static configuration and extra parameters.
 type MaeshConfiguration struct {
@@ -56,5 +63,29 @@ func NewPrepareConfig() *PrepareConfig {
 		Namespace:     "maesh",
 		ClusterDomain: "cluster.local",
 		SMI:           false,
+	}
+}
+
+// ProxyConfiguration wraps the static configuration and extra parameters for proxy nodes.
+type ProxyConfiguration struct {
+	// ConfigFile is the path to the configuration file.
+	static.Configuration `export:"true"`
+}
+
+// NewProxyConfiguration creates a ProxyConfiguration with default values.
+func NewProxyConfiguration() *ProxyConfiguration {
+	return &ProxyConfiguration{
+		Configuration: static.Configuration{
+			Global: &traefikStatic.Global{
+				CheckNewVersion: true,
+			},
+			EntryPoints: make(traefikStatic.EntryPoints),
+			Providers: &static.Providers{
+				ProvidersThrottleDuration: types.Duration(2 * time.Second),
+			},
+			ServersTransport: &traefikStatic.ServersTransport{
+				MaxIdleConnsPerHost: 200,
+			},
+		},
 	}
 }
