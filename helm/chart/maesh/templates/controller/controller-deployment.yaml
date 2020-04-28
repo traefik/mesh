@@ -73,9 +73,6 @@ spec:
             {{- if .Values.acl }}
             - "--acl"
             {{- end }}
-            {{- if .Values.smi.enable }}
-            - "--smi"
-            {{- end }}
             - "--namespace=$(POD_NAMESPACE)"
             {{- if .Values.controller.ignoreNamespaces }}
             - {{ include "maesh.controllerIgnoreNamespaces" . | quote }}
@@ -119,9 +116,6 @@ spec:
             - "prepare"
             {{- if .Values.controller.logging.debug }}
             - "--debug"
-            {{- end }}
-            {{- if .Values.smi.enable }}
-            - "--smi"
             {{- end }}
             {{- if .Values.acl }}
             - "--acl"
