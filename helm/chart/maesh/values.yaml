@@ -142,9 +142,6 @@ metrics:
 
 acl: false
 
-smi:
-  enable: false
-
 limits:
   http: 10
   tcp: 25
