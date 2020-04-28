@@ -38,7 +38,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 5000,
 			},
 			udpStateTable: map[mk8s.ServiceWithPort]int32{
-				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 10000,
+				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 15000,
 			},
 			topology:   "fixtures/annotations-traffic-type-topology.json",
 			wantConfig: "fixtures/annotations-traffic-type-config.json",
@@ -72,7 +72,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 			acl:                false,
 			defaultTrafficType: "udp",
 			udpStateTable: map[mk8s.ServiceWithPort]int32{
-				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 10000,
+				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 15000,
 			},
 			topology:   "fixtures/acl-disabled-udp-basic-topology.json",
 			wantConfig: "fixtures/acl-disabled-udp-basic-config.json",

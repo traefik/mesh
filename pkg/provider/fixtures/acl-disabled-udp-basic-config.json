@@ -41,7 +41,7 @@
     "routers": {
       "my-ns-svc-a-8080": {
         "entryPoints": [
-          "udp-10000"
+          "udp-15000"
         ],
         "service": "my-ns-svc-a-8080"
       }
