@@ -42,6 +42,11 @@ type TCPPortMapper interface {
 	Remove(svc k8s.ServiceWithPort) (int32, error)
 }
 
+// TopologyBuilder builds Topologies.
+type TopologyBuilder interface {
+	Build(ignoredResources k8s.IgnoreWrapper) (*topology.Topology, error)
+}
+
 // ServiceManager is capable of managing kubernetes services.
 type ServiceManager interface {
 	Create(userSvc *corev1.Service) error
@@ -72,6 +77,7 @@ type Controller struct {
 	provider          *provider.Provider
 	ignored           k8s.IgnoreWrapper
 	tcpStateTable     TCPPortMapper
+	topologyBuilder   TopologyBuilder
 	lastConfiguration safe.Safe
 	api               api.Interface
 	deployLog         deploylog.Interface
@@ -161,7 +167,7 @@ func (c *Controller) init() {
 	c.deployLog = deploylog.NewDeployLog(c.logger, 1000)
 	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.cfg.Namespace)
 
-	topologyBuilder := &topology.Builder{
+	c.topologyBuilder = &topology.Builder{
 		ServiceLister:        c.ServiceLister,
 		EndpointsLister:      c.EndpointsLister,
 		PodLister:            c.PodLister,
@@ -171,6 +177,7 @@ func (c *Controller) init() {
 		TCPRoutesLister:      c.TCPRouteLister,
 		Logger:               c.logger,
 	}
+
 	providerCfg := provider.Config{
 		IgnoredResources:   c.ignored,
 		MinHTTPPort:        c.cfg.MinHTTPPort,
@@ -179,12 +186,11 @@ func (c *Controller) init() {
 		DefaultTrafficType: c.cfg.DefaultMode,
 		MaeshNamespace:     c.cfg.Namespace,
 	}
-	c.provider = provider.New(topologyBuilder, c.tcpStateTable, providerCfg, c.logger)
+	c.provider = provider.New(c.tcpStateTable, providerCfg, c.logger)
 }
 
 // Run is the main entrypoint for the controller.
 func (c *Controller) Run(stopCh <-chan struct{}) error {
-	var err error
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
@@ -196,9 +202,10 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Create the mesh services here to ensure that they exist.
 	c.logger.Info("Creating initial mesh services")
 
-	if err = c.createMeshServices(); err != nil {
+	if err := c.createMeshServices(); err != nil {
 		c.logger.Errorf("could not create mesh services: %v", err)
 	}
+
 	// Start the api, and enable the readiness endpoint.
 	c.api.Start()
 
@@ -210,11 +217,13 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 			return nil
 		case message := <-c.configRefreshChan:
 			// Reload the configuration.
-			conf, confErr := c.provider.BuildConfig()
-			if confErr != nil {
-				c.logger.Errorf("Unable to build dynamic configuration: %v", confErr)
+			topo, err := c.topologyBuilder.Build(c.ignored)
+			if err != nil {
+				c.logger.Errorf("Unable to build dynamic configuration: %v", err)
 				continue
 			}
+
+			conf := c.provider.BuildConfig(topo)
 
 			if message == k8s.ConfigMessageChanForce || !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
 				c.lastConfiguration.Set(conf)

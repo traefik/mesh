@@ -14,19 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type topologyBuilderMock func() (*topology.Topology, error)
-
-func (m topologyBuilderMock) Build(_ mk8s.IgnoreWrapper) (*topology.Topology, error) {
-	return m()
-}
-
 type tcpStateTableMock func(svcPort mk8s.ServiceWithPort) (int32, bool)
 
 func (t tcpStateTableMock) Find(svcPort mk8s.ServiceWithPort) (int32, bool) {
 	return t(svcPort)
 }
 
-func TestProvider(t *testing.T) {
+func TestProvider_BuildConfig(t *testing.T) {
 	tests := []struct {
 		desc               string
 		acl                bool
@@ -120,9 +114,7 @@ func TestProvider(t *testing.T) {
 				DefaultTrafficType: defaultTrafficType,
 				MaeshNamespace:     "maesh",
 			}
-			builder := func() (*topology.Topology, error) {
-				return loadTopology(test.topology)
-			}
+
 			tcpStateTable := func(port mk8s.ServiceWithPort) (int32, bool) {
 				if test.tcpStateTable == nil {
 					return 0, false
@@ -131,10 +123,13 @@ func TestProvider(t *testing.T) {
 				p, ok := test.tcpStateTable[port]
 				return p, ok
 			}
-			p := provider.New(topologyBuilderMock(builder), tcpStateTableMock(tcpStateTable), cfg, logger)
 
-			got, err := p.BuildConfig()
+			p := provider.New(tcpStateTableMock(tcpStateTable), cfg, logger)
+
+			topo, err := loadTopology(test.topology)
 			require.NoError(t, err)
+
+			got := p.BuildConfig(topo)
 
 			assertConfig(t, test.wantConfig, got)
 		})
