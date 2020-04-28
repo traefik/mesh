@@ -75,7 +75,7 @@ type Controller struct {
 	serviceManager    ServiceManager
 	configRefreshChan chan string
 	provider          *provider.Provider
-	ignored           k8s.IgnoreWrapper
+	ignoredResources  k8s.IgnoreWrapper
 	tcpStateTable     TCPPortMapper
 	topologyBuilder   TopologyBuilder
 	lastConfiguration safe.Safe
@@ -100,15 +100,15 @@ type Controller struct {
 // NewMeshController is used to build the informers and other required components of the mesh controller,
 // and return an initialized mesh controller object.
 func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger) (*Controller, error) {
-	ignored := k8s.NewIgnored()
+	ignoredResources := k8s.NewIgnored()
 
 	for _, ns := range cfg.IgnoreNamespaces {
-		ignored.AddIgnoredNamespace(ns)
+		ignoredResources.AddIgnoredNamespace(ns)
 	}
 
-	ignored.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
-	ignored.AddIgnoredNamespace(metav1.NamespaceSystem)
-	ignored.AddIgnoredApps("maesh", "jaeger")
+	ignoredResources.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
+	ignoredResources.AddIgnoredNamespace(metav1.NamespaceSystem)
+	ignoredResources.AddIgnoredApps("maesh", "jaeger")
 
 	tcpStateTable, err := k8s.NewTCPPortMapping(clients.GetKubernetesClient(), cfg.Namespace, k8s.TCPStateConfigMapName, cfg.MinTCPPort, cfg.MaxTCPPort)
 	if err != nil {
@@ -116,11 +116,11 @@ func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger
 	}
 
 	c := &Controller{
-		logger:        logger,
-		cfg:           cfg,
-		clients:       clients,
-		ignored:       ignored,
-		tcpStateTable: tcpStateTable,
+		logger:           logger,
+		cfg:              cfg,
+		clients:          clients,
+		ignoredResources: ignoredResources,
+		tcpStateTable:    tcpStateTable,
 	}
 
 	c.init()
@@ -138,7 +138,7 @@ func (c *Controller) init() {
 
 	// configRefreshChan is used to trigger configuration refreshes and deploys.
 	c.configRefreshChan = make(chan string)
-	c.handler = NewHandler(c.logger, c.ignored, c.serviceManager, c.configRefreshChan)
+	c.handler = NewHandler(c.logger, c.ignoredResources, c.serviceManager, c.configRefreshChan)
 
 	// Create listers and register the event handler to informers that are not ACL related.
 	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
@@ -179,7 +179,7 @@ func (c *Controller) init() {
 	}
 
 	providerCfg := provider.Config{
-		IgnoredResources:   c.ignored,
+		IgnoredResources:   c.ignoredResources,
 		MinHTTPPort:        c.cfg.MinHTTPPort,
 		MaxHTTPPort:        c.cfg.MaxHTTPPort,
 		ACL:                c.cfg.ACLEnabled,
@@ -217,7 +217,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 			return nil
 		case message := <-c.configRefreshChan:
 			// Reload the configuration.
-			topo, err := c.topologyBuilder.Build(c.ignored)
+			topo, err := c.topologyBuilder.Build(c.ignoredResources)
 			if err != nil {
 				c.logger.Errorf("Unable to build dynamic configuration: %v", err)
 				continue
@@ -302,7 +302,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 }
 
 func (c *Controller) createMeshServices() error {
-	sel, err := c.ignored.LabelSelector()
+	sel, err := c.ignoredResources.LabelSelector()
 	if err != nil {
 		return fmt.Errorf("unable to build label selectors: %w", err)
 	}
@@ -315,7 +315,7 @@ func (c *Controller) createMeshServices() error {
 	}
 
 	for _, service := range svcs {
-		if c.ignored.IsIgnored(service.ObjectMeta) {
+		if c.ignoredResources.IsIgnored(service.ObjectMeta) {
 			continue
 		}
 
