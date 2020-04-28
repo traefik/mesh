@@ -116,6 +116,8 @@ type Service struct {
 	TrafficSplits []Key `json:"trafficSplits,omitempty"`
 	// List of TrafficSplit mentioning this service as a backend.
 	BackendOf []Key `json:"backendOf,omitempty"`
+
+	Err error
 }
 
 // ServiceTrafficTarget represents a TrafficTarget applied a on Service. TrafficTargets have a Destination service
@@ -130,6 +132,8 @@ type ServiceTrafficTarget struct {
 	Sources     []ServiceTrafficTargetSource    `json:"sources,omitempty"`
 	Destination ServiceTrafficTargetDestination `json:"destination"`
 	Specs       []TrafficSpec                   `json:"specs,omitempty"`
+
+	Err error
 }
 
 // ServiceTrafficTargetSource represents a source of a ServiceTrafficTarget. In the SMI specification, a TrafficTarget
@@ -182,6 +186,8 @@ type TrafficSplit struct {
 
 	// List of Pods that are explicitly allowed to pass through the TrafficSplit.
 	Incoming []Key `json:"incoming,omitempty"`
+
+	Err error
 }
 
 // TrafficSplitBackend is a backend of a TrafficSplit.

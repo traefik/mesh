@@ -15,13 +15,13 @@ import (
 	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
 	accessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
 	accessfake "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
-	accessInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
+	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	specsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
 	specfake "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned/fake"
-	specsInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
+	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	splitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	splitfake "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned/fake"
-	splitInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
+	splitinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -485,9 +485,9 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 	podLister := k8sFactory.Core().V1().Pods().Lister()
 	epLister := k8sFactory.Core().V1().Endpoints().Lister()
 
-	accessFactory := accessInformer.NewSharedInformerFactoryWithOptions(smiAccessClient, mk8s.ResyncPeriod)
-	splitFactory := splitInformer.NewSharedInformerFactoryWithOptions(smiSplitClient, mk8s.ResyncPeriod)
-	specsFactory := specsInformer.NewSharedInformerFactoryWithOptions(smiSpecClient, mk8s.ResyncPeriod)
+	accessFactory := accessinformer.NewSharedInformerFactoryWithOptions(smiAccessClient, mk8s.ResyncPeriod)
+	splitFactory := splitinformer.NewSharedInformerFactoryWithOptions(smiSplitClient, mk8s.ResyncPeriod)
+	specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(smiSpecClient, mk8s.ResyncPeriod)
 
 	trafficTargetLister := accessFactory.Access().V1alpha1().TrafficTargets().Lister()
 	trafficSplitLister := splitFactory.Split().V1alpha2().TrafficSplits().Lister()
