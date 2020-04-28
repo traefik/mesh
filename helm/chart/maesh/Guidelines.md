@@ -13,7 +13,7 @@ This allows minimal configuration, and ease of extension.
 
 ```yaml
 image:
-  name: store/containous/traefikee
+  name: containous/maesh
 ```
 
 This feature is critical, and therefore is defined clearly in the `values.yaml` file.
