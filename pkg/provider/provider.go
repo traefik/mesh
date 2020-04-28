@@ -13,11 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// TopologyBuilder builds Topologies.
-type TopologyBuilder interface {
-	Build(ignoredResources k8s.IgnoreWrapper) (*topology.Topology, error)
-}
-
 // TCPPortFinder finds TCP port mappings.
 type TCPPortFinder interface {
 	Find(svc k8s.ServiceWithPort) (int32, bool)
@@ -52,7 +47,6 @@ type Config struct {
 type Provider struct {
 	config Config
 
-	topologyBuilder        TopologyBuilder
 	tcpStateTable          TCPPortFinder
 	buildServiceMiddleware MiddlewareBuilder
 
@@ -60,10 +54,9 @@ type Provider struct {
 }
 
 // New creates a new Provider.
-func New(topologyBuilder TopologyBuilder, tcpStateTable TCPPortFinder, cfg Config, logger logrus.FieldLogger) *Provider {
+func New(tcpStateTable TCPPortFinder, cfg Config, logger logrus.FieldLogger) *Provider {
 	return &Provider{
 		config:                 cfg,
-		topologyBuilder:        topologyBuilder,
 		tcpStateTable:          tcpStateTable,
 		logger:                 logger,
 		buildServiceMiddleware: buildMiddlewareFromAnnotations,
@@ -71,13 +64,8 @@ func New(topologyBuilder TopologyBuilder, tcpStateTable TCPPortFinder, cfg Confi
 }
 
 // BuildConfig builds a dynamic configuration.
-func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
+func (p *Provider) BuildConfig(t *topology.Topology) *dynamic.Configuration {
 	cfg := buildDefaultDynamicConfig()
-
-	t, err := p.topologyBuilder.Build(p.config.IgnoredResources)
-	if err != nil {
-		return nil, fmt.Errorf("unable to build topology: %w", err)
-	}
 
 	for svcKey, svc := range t.Services {
 		if err := p.buildConfigForService(t, cfg, svc); err != nil {
@@ -85,7 +73,7 @@ func (p *Provider) BuildConfig() (*dynamic.Configuration, error) {
 		}
 	}
 
-	return cfg, nil
+	return cfg
 }
 
 // buildConfigForService builds the dynamic configuration for the given service.
