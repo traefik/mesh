@@ -13,8 +13,8 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-// TCPPortMapping is a TCPPortMapper backed by a Kubernetes ConfigMap.
-type TCPPortMapping struct {
+// PortMapping is a PortMapper backed by a Kubernetes ConfigMap.
+type PortMapping struct {
 	mu    sync.RWMutex
 	table map[int32]*ServiceWithPort
 
@@ -26,9 +26,9 @@ type TCPPortMapping struct {
 	cfgMapName      string
 }
 
-// NewTCPPortMapping creates a new TCPPortMapping instance.
-func NewTCPPortMapping(client kubernetes.Interface, cfgMapNamespace, cfgMapName string, minPort, maxPort int32) (*TCPPortMapping, error) {
-	m := &TCPPortMapping{
+// NewPortMapping creates a new PortMapping instance.
+func NewPortMapping(client kubernetes.Interface, cfgMapNamespace, cfgMapName string, minPort, maxPort int32) (*PortMapping, error) {
+	m := &PortMapping{
 		minPort:         minPort,
 		maxPort:         maxPort,
 		table:           make(map[int32]*ServiceWithPort),
@@ -45,7 +45,7 @@ func NewTCPPortMapping(client kubernetes.Interface, cfgMapNamespace, cfgMapName 
 }
 
 // Find searches for the port which is associated with the given ServiceWithPort.
-func (m *TCPPortMapping) Find(svc ServiceWithPort) (int32, bool) {
+func (m *PortMapping) Find(svc ServiceWithPort) (int32, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -59,7 +59,7 @@ func (m *TCPPortMapping) Find(svc ServiceWithPort) (int32, bool) {
 }
 
 // Get returns the ServiceWithPort associated to the given port.
-func (m *TCPPortMapping) Get(srcPort int32) *ServiceWithPort {
+func (m *PortMapping) Get(srcPort int32) *ServiceWithPort {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -68,7 +68,7 @@ func (m *TCPPortMapping) Get(srcPort int32) *ServiceWithPort {
 
 // Add adds a new mapping between the given ServiceWithPort and the first port available in the range defined
 // within minPort and maxPort. If there's no port left, an error will be returned.
-func (m *TCPPortMapping) Add(svc *ServiceWithPort) (int32, error) {
+func (m *PortMapping) Add(svc *ServiceWithPort) (int32, error) {
 	for i := m.minPort; i < m.maxPort+1; i++ {
 		// Skip until an available port is found
 		if _, exists := m.table[i]; exists {
@@ -83,7 +83,7 @@ func (m *TCPPortMapping) Add(svc *ServiceWithPort) (int32, error) {
 			// If the state can't be saved, we are going to have a mismatch between the local table and the ConfigMap.
 			// By not undoing the assignment on the local table we allow the state to converge in future calls to Add,
 			// making it more robust to temporary failure.
-			return 0, fmt.Errorf("unable to save TCP port mapping: %w", err)
+			return 0, fmt.Errorf("unable to save port mapping: %w", err)
 		}
 
 		return i, nil
@@ -93,7 +93,7 @@ func (m *TCPPortMapping) Add(svc *ServiceWithPort) (int32, error) {
 }
 
 // Remove removes the mapping associated with the given ServiceWithPort.
-func (m *TCPPortMapping) Remove(svc ServiceWithPort) (int32, error) {
+func (m *PortMapping) Remove(svc ServiceWithPort) (int32, error) {
 	port, ok := m.Find(svc)
 	if !ok {
 		return 0, fmt.Errorf("unable to find port mapping for service %s/%s on port %d", svc.Namespace, svc.Name, svc.Port)
@@ -104,13 +104,13 @@ func (m *TCPPortMapping) Remove(svc ServiceWithPort) (int32, error) {
 	m.mu.Unlock()
 
 	if err := m.saveState(); err != nil {
-		return 0, fmt.Errorf("unable to save TCP port mapping: %w", err)
+		return 0, fmt.Errorf("unable to save port mapping: %w", err)
 	}
 
 	return port, nil
 }
 
-func (m *TCPPortMapping) loadState() error {
+func (m *PortMapping) loadState() error {
 	cfg, err := m.client.CoreV1().ConfigMaps(m.cfgMapNamespace).Get(m.cfgMapName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("unable to load state from ConfigMap %q in namespace %q: %w", m.cfgMapName, m.cfgMapNamespace, err)
@@ -138,7 +138,7 @@ func (m *TCPPortMapping) loadState() error {
 	return nil
 }
 
-func (m *TCPPortMapping) saveState() error {
+func (m *PortMapping) saveState() error {
 	cfg, err := m.client.CoreV1().ConfigMaps(m.cfgMapNamespace).Get(m.cfgMapName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -146,10 +146,7 @@ func (m *TCPPortMapping) saveState() error {
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cpy := cfg.DeepCopy()
-
-		if cpy.Data == nil {
-			cpy.Data = make(map[string]string)
-		}
+		cpy.Data = make(map[string]string)
 
 		m.mu.RLock()
 		defer m.mu.RUnlock()

@@ -20,9 +20,9 @@ func (m topologyBuilderMock) Build(_ mk8s.IgnoreWrapper) (*topology.Topology, er
 	return m()
 }
 
-type tcpStateTableMock func(svcPort mk8s.ServiceWithPort) (int32, bool)
+type stateTableMock func(svcPort mk8s.ServiceWithPort) (int32, bool)
 
-func (t tcpStateTableMock) Find(svcPort mk8s.ServiceWithPort) (int32, bool) {
+func (t stateTableMock) Find(svcPort mk8s.ServiceWithPort) (int32, bool) {
 	return t(svcPort)
 }
 
@@ -32,6 +32,7 @@ func TestProvider(t *testing.T) {
 		acl                bool
 		defaultTrafficType string
 		tcpStateTable      map[mk8s.ServiceWithPort]int32
+		udpStateTable      map[mk8s.ServiceWithPort]int32
 		topology           string
 		wantConfig         string
 	}{
@@ -41,6 +42,9 @@ func TestProvider(t *testing.T) {
 			defaultTrafficType: "http",
 			tcpStateTable: map[mk8s.ServiceWithPort]int32{
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 5000,
+			},
+			udpStateTable: map[mk8s.ServiceWithPort]int32{
+				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 15000,
 			},
 			topology:   "fixtures/annotations-traffic-type-topology.json",
 			wantConfig: "fixtures/annotations-traffic-type-config.json",
@@ -68,6 +72,16 @@ func TestProvider(t *testing.T) {
 			},
 			topology:   "fixtures/acl-disabled-tcp-basic-topology.json",
 			wantConfig: "fixtures/acl-disabled-tcp-basic-config.json",
+		},
+		{
+			desc:               "ACL disabled: basic UDP service",
+			acl:                false,
+			defaultTrafficType: "udp",
+			udpStateTable: map[mk8s.ServiceWithPort]int32{
+				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 15000,
+			},
+			topology:   "fixtures/acl-disabled-udp-basic-topology.json",
+			wantConfig: "fixtures/acl-disabled-udp-basic-config.json",
 		},
 		{
 			desc:               "ACL disabled: HTTP service with traffic-split",
@@ -131,7 +145,16 @@ func TestProvider(t *testing.T) {
 				p, ok := test.tcpStateTable[port]
 				return p, ok
 			}
-			p := provider.New(topologyBuilderMock(builder), tcpStateTableMock(tcpStateTable), cfg, logger)
+			udpStateTable := func(port mk8s.ServiceWithPort) (int32, bool) {
+				if test.udpStateTable == nil {
+					return 0, false
+				}
+
+				p, ok := test.udpStateTable[port]
+				return p, ok
+			}
+
+			p := provider.New(topologyBuilderMock(builder), stateTableMock(tcpStateTable), stateTableMock(udpStateTable), cfg, logger)
 
 			got, err := p.BuildConfig()
 			require.NoError(t, err)
