@@ -12,9 +12,9 @@ import (
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/google/uuid"
-	accessInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
-	specsInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
-	splitInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
+	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
+	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
+	splitinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -386,7 +386,7 @@ func (p *Prepare) StartInformers(acl bool) error {
 		}
 	}
 
-	splitFactory := splitInformer.NewSharedInformerFactoryWithOptions(p.client.GetSplitClient(), k8s.ResyncPeriod)
+	splitFactory := splitinformer.NewSharedInformerFactoryWithOptions(p.client.GetSplitClient(), k8s.ResyncPeriod)
 	splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	splitFactory.Start(stopCh)
 
@@ -398,7 +398,7 @@ func (p *Prepare) StartInformers(acl bool) error {
 
 	if acl {
 		// Create new SharedInformerFactories, and register the event handler to informers.
-		accessFactory := accessInformer.NewSharedInformerFactoryWithOptions(p.client.GetAccessClient(), k8s.ResyncPeriod)
+		accessFactory := accessinformer.NewSharedInformerFactoryWithOptions(p.client.GetAccessClient(), k8s.ResyncPeriod)
 		accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 		accessFactory.Start(stopCh)
 
@@ -408,7 +408,7 @@ func (p *Prepare) StartInformers(acl bool) error {
 			}
 		}
 
-		specsFactory := specsInformer.NewSharedInformerFactoryWithOptions(p.client.GetSpecsClient(), k8s.ResyncPeriod)
+		specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(p.client.GetSpecsClient(), k8s.ResyncPeriod)
 		specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 		specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 		specsFactory.Start(stopCh)
