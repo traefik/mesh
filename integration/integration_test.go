@@ -336,15 +336,10 @@ func (s *BaseSuite) createRequiredNamespaces(c *check.C) {
 	s.kubectlCommand(c, "create", "namespace", testNamespace)
 }
 
-func (s *BaseSuite) installHelmMaesh(c *check.C, smi bool, kubeDNS bool, acl bool) error {
+func (s *BaseSuite) installHelmMaesh(c *check.C, acl bool, kubeDNS bool) error {
 	c.Log("Installing Maesh via helm...")
 	// Install the helm chart.
 	argSlice := []string{"install", "powpow", "../helm/chart/maesh", "--values", "resources/values.yaml", "--namespace", maeshNamespace}
-
-	if smi {
-		// Skip CRD installation as they are installed as part of the SMI test suite setup.
-		argSlice = append(argSlice, "--set", "smi.enable=true", "--skip-crds")
-	}
 
 	if kubeDNS {
 		argSlice = append(argSlice, "--set", "kubedns=true")
