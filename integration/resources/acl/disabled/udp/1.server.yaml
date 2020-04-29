@@ -7,10 +7,13 @@ metadata:
     app: server
 spec:
   containers:
-  - name: server
-    image: containous/whoamitcp:v0.0.2
-    imagePullPolicy: Always
-
+    - name: server
+      image: containous/whoamiudp:v0.0.1
+      imagePullPolicy: Always
+      ports:
+        - name: udp
+          protocol: UDP
+          containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -21,11 +24,12 @@ metadata:
     app: server
     plop: cool
   annotations:
-    maesh.containo.us/traffic-type: tcp
+    maesh.containo.us/traffic-type: udp
 spec:
   type: ClusterIP
   ports:
-    - port: 8080
-      name: server
+    - name: server
+      protocol: UDP
+      port: 8080
   selector:
     app: server

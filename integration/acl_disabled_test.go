@@ -13,12 +13,13 @@ func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 	requiredImages := []string{
 		"containous/maesh:latest",
 		"containous/whoami:v1.0.1",
-		"containous/whoamitcp",
+		"containous/whoamitcp:v0.0.2",
+		"containous/whoamiudp:v0.0.1",
 		"coredns/coredns:1.6.3",
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
-	s.createResources(c, "resources/tcp-state-table/")
+	s.createResources(c, "resources/state-table/")
 	s.createResources(c, "resources/smi/crds/")
 }
 
@@ -69,6 +70,28 @@ func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
 
 	s.checkHTTPReadinessService(c, config)
 	s.checkTCPServiceLoadBalancer(c, config, serverSvc, []*corev1.Pod{serverPod})
+}
+
+func (s *ACLDisabledSuite) TestUDPService(c *check.C) {
+	s.createResources(c, "resources/acl/disabled/udp")
+	defer s.deleteResources(c, "resources/acl/disabled/udp")
+	defer s.deleteShadowServices(c)
+
+	s.waitForPods(c, []string{"server"})
+
+	cmd := s.startMaeshBinaryCmd(c, false, false)
+	err := cmd.Start()
+
+	c.Assert(err, checker.IsNil)
+	defer s.stopMaeshBinary(c, cmd.Process)
+
+	config := s.testConfigurationWithReturn(c, "resources/acl/disabled/udp.json")
+
+	serverSvc := s.getService(c, "server")
+	serverPod := s.getPod(c, "server")
+
+	s.checkHTTPReadinessService(c, config)
+	s.checkUDPServiceLoadBalancer(c, config, serverSvc, []*corev1.Pod{serverPod})
 }
 
 func (s *ACLDisabledSuite) TestSplitTraffic(c *check.C) {

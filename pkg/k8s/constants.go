@@ -35,6 +35,8 @@ const (
 	ServiceTypeHTTP string = "http"
 	// ServiceTypeTCP TCP service type.
 	ServiceTypeTCP string = "tcp"
+	// ServiceTypeUDP UDP service type.
+	ServiceTypeUDP string = "udp"
 
 	// SchemeHTTP HTTP scheme.
 	SchemeHTTP string = "http"
@@ -43,11 +45,10 @@ const (
 	// SchemeHTTPS HTTPS scheme.
 	SchemeHTTPS string = "https"
 
-	// BlockAllMiddlewareKey block all middleware name.
-	BlockAllMiddlewareKey string = "smi-block-all-middleware"
-
 	// TCPStateConfigMapName TCP config map name.
 	TCPStateConfigMapName string = "tcp-state-table"
+	// UDPStateConfigMapName UDP config map name.
+	UDPStateConfigMapName string = "udp-state-table"
 
 	// ConfigMessageChanRebuild rebuild.
 	ConfigMessageChanRebuild string = "rebuild"
