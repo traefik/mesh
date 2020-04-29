@@ -8,7 +8,7 @@ metadata:
 spec:
   containers:
     - name: server
-      image: containous/whoamiudp:dev
+      image: containous/whoamiudp:v0.0.1
       imagePullPolicy: Always
       ports:
         - name: udp
