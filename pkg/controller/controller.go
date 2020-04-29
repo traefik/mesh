@@ -129,7 +129,7 @@ func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger
 		clients:          clients,
 		ignoredResources: ignoredResources,
 		tcpStateTable:    tcpStateTable,
-		udpStateTable: udpStateTable,
+		udpStateTable:    udpStateTable,
 	}
 
 	c.init()
