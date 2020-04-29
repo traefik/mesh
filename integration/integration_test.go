@@ -62,7 +62,8 @@ func Test(t *testing.T) {
 
 	images = append(images, image{"containous/maesh:latest", false})
 	images = append(images, image{"containous/whoami:v1.0.1", true})
-	images = append(images, image{"containous/whoamitcp", true})
+	images = append(images, image{"containous/whoamitcp:v0.0.2", true})
+	images = append(images, image{"containous/whoamiudp:v0.0.1", true})
 	images = append(images, image{"coredns/coredns:1.2.6", true})
 	images = append(images, image{"coredns/coredns:1.3.1", true})
 	images = append(images, image{"coredns/coredns:1.4.0", true})
@@ -609,6 +610,33 @@ func (s *BaseSuite) checkTCPServiceLoadBalancer(c *check.C, config *dynamic.Conf
 		for _, pod := range pods {
 			wantURL := fmt.Sprintf("%s:%d", pod.Status.PodIP, port.TargetPort.IntVal)
 			c.Logf("Checking if TCP service %q loadbalancer contains an URL for pod %q: %s", svcKey, pod.Name, wantURL)
+
+			var found bool
+
+			for _, server := range service.LoadBalancer.Servers {
+				if wantURL == server.Address {
+					found = true
+					break
+				}
+			}
+
+			c.Assert(found, checker.True)
+		}
+	}
+}
+
+func (s *BaseSuite) checkUDPServiceLoadBalancer(c *check.C, config *dynamic.Configuration, svc *corev1.Service, pods []*corev1.Pod) {
+	for _, port := range svc.Spec.Ports {
+		svcKey := fmt.Sprintf("%s-%s-%d", svc.Namespace, svc.Name, port.Port)
+
+		service := config.UDP.Services[svcKey]
+		c.Assert(service, checker.NotNil)
+
+		c.Assert(service.LoadBalancer.Servers, checker.HasLen, len(pods))
+
+		for _, pod := range pods {
+			wantURL := fmt.Sprintf("%s:%d", pod.Status.PodIP, port.TargetPort.IntVal)
+			c.Logf("Checking if UDP service %q loadbalancer contains an URL for pod %q: %s", svcKey, pod.Name, wantURL)
 
 			var found bool
 

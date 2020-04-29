@@ -36,30 +36,26 @@
       }
     }
   },
-  "tcp": {
+  "tcp": {},
+  "udp": {
     "routers": {
-      "my-ns-svc-a-8080": {
+      "test-server-8080": {
         "entryPoints": [
-          "tcp-5000"
+          "udp-15000"
         ],
-        "service": "my-ns-svc-a-8080",
-        "rule": "HostSNI(`*`)"
+        "service": "test-server-8080"
       }
     },
     "services": {
-      "my-ns-svc-a-8080": {
+      "test-server-8080": {
         "loadBalancer": {
           "servers": [
             {
-              "address": "10.10.2.1:8080"
-            },
-            {
-              "address": "10.10.2.2:8080"
+              "address": "10.42.1.5:8080"
             }
           ]
         }
       }
     }
-  },
-  "udp": {}
+  }
 }
