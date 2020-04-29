@@ -16,6 +16,8 @@ const (
 	maxHTTPPort          = int32(5005)
 	minTCPPort           = int32(10000)
 	maxTCPPort           = int32(10005)
+	minUDPPort           = int32(15000)
+	maxUDPPort           = int32(15005)
 )
 
 func TestNewController(t *testing.T) {
@@ -35,10 +37,12 @@ func TestNewController(t *testing.T) {
 		Namespace:        meshNamespace,
 		IgnoreNamespaces: []string{},
 		APIPort:          9000,
-		MinTCPPort:       minTCPPort,
-		MaxTCPPort:       maxTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,
+		MinTCPPort:       minTCPPort,
+		MaxTCPPort:       maxTCPPort,
+		MinUDPPort:       minUDPPort,
+		MaxUDPPort:       maxUDPPort,
 	}, log)
 	assert.NoError(t, err)
 	assert.NotNil(t, controller)
@@ -61,10 +65,12 @@ func TestNewControllerWithSMI(t *testing.T) {
 		Namespace:        meshNamespace,
 		IgnoreNamespaces: []string{},
 		APIPort:          9000,
-		MinTCPPort:       minTCPPort,
-		MaxTCPPort:       maxTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,
+		MinTCPPort:       minTCPPort,
+		MaxTCPPort:       maxTCPPort,
+		MinUDPPort:       minUDPPort,
+		MaxUDPPort:       maxUDPPort,
 	}, log)
 	assert.NoError(t, err)
 	assert.NotNil(t, controller)

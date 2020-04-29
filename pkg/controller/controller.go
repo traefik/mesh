@@ -62,12 +62,12 @@ type Config struct {
 	IgnoreNamespaces []string
 	APIPort          int32
 	APIHost          string
+	MinHTTPPort      int32
+	MaxHTTPPort      int32
 	MinTCPPort       int32
 	MaxTCPPort       int32
 	MinUDPPort       int32
 	MaxUDPPort       int32
-	MinHTTPPort      int32
-	MaxHTTPPort      int32
 }
 
 // Controller hold controller configuration.

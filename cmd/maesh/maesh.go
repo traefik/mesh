@@ -103,12 +103,12 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		IgnoreNamespaces: iConfig.IgnoreNamespaces,
 		APIPort:          iConfig.APIPort,
 		APIHost:          iConfig.APIHost,
+		MinHTTPPort:      minHTTPPort,
+		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
 		MinTCPPort:       minTCPPort,
 		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       minUDPPort + iConfig.LimitUDPPort,
-		MinHTTPPort:      minHTTPPort,
-		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
 	}, log)
 	if err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)

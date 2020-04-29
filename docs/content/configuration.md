@@ -45,7 +45,7 @@ The traffic type can be configured by using the following annotation:
 maesh.containo.us/traffic-type: "http"
 ```
 
-This annotation can be set to either `http`, `tcp` or `udp` and will specify the mode for that service operation.
+This annotation can be set to either `http`, `tcp` or `udp` and will specifies the mode for that service operation.
 If this annotation is not present, the mesh service will operate in the default mode specified in the static configuration.
 
 !!! Info
