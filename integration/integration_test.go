@@ -62,8 +62,8 @@ func Test(t *testing.T) {
 
 	images = append(images, image{"containous/maesh:latest", false})
 	images = append(images, image{"containous/whoami:v1.0.1", true})
-	images = append(images, image{"containous/whoamitcp", true})
-	images = append(images, image{"containous/whoamiudp:dev", true})
+	images = append(images, image{"containous/whoamitcp:v0.0.2", true})
+	images = append(images, image{"containous/whoamiudp:v0.0.1", true})
 	images = append(images, image{"coredns/coredns:1.2.6", true})
 	images = append(images, image{"coredns/coredns:1.3.1", true})
 	images = append(images, image{"coredns/coredns:1.4.0", true})

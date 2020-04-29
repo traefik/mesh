@@ -8,7 +8,7 @@ metadata:
 spec:
   containers:
   - name: server
-    image: containous/whoamitcp
+    image: containous/whoamitcp:v0.0.2
     imagePullPolicy: Always
 
 ---
