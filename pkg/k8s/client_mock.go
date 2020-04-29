@@ -11,8 +11,8 @@ import (
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
-	accessClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
-	fakeAccessClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
+	accessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	fakeaccessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
 	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
 	specsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
@@ -61,7 +61,7 @@ func init() {
 // ClientMock holds mock client.
 type ClientMock struct {
 	kubeClient   *fakekubeclient.Clientset
-	accessClient *fakeAccessClient.Clientset
+	accessClient *fakeaccessclient.Clientset
 	specsClient  *fakespecsclient.Clientset
 	splitClient  *fakesplitclient.Clientset
 
@@ -119,7 +119,7 @@ func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 	}
 
 	if smi {
-		c.accessClient = fakeAccessClient.NewSimpleClientset(filterObjectsByKind(k8sObjects, AccessObjectKinds)...)
+		c.accessClient = fakeaccessclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, AccessObjectKinds)...)
 		c.specsClient = fakespecsclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SpecsObjectKinds)...)
 		c.splitClient = fakesplitclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SplitObjectKinds)...)
 
@@ -175,7 +175,7 @@ func (c *ClientMock) GetKubernetesClient() kubeclient.Interface {
 }
 
 // GetAccessClient is used to get the SMI Access clientset.
-func (c *ClientMock) GetAccessClient() accessClient.Interface {
+func (c *ClientMock) GetAccessClient() accessclient.Interface {
 	return c.accessClient
 }
 
