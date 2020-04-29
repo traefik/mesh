@@ -92,9 +92,11 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 	specs, err := b.buildTrafficTargetSpecs(res, tt)
 	if err != nil {
-		err = fmt.Errorf("unable to build spec for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
-		newTrafficTargetWithErr(topology, tt, sources, err)
-		b.Logger.Errorf("Error building topology: %v", err)
+		err = fmt.Errorf("unable to build spec: %v", err)
+		setTrafficTargetWithErr(topology, tt, sources, err)
+		b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
+
+		return
 	}
 
 	for svcKey, pods := range res.PodsBySvcBySa[destSaKey] {
@@ -105,9 +107,11 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 		svc, ok := topology.Services[svcKey]
 		if !ok {
-			err = fmt.Errorf("unable to find Service %q for TrafficTarget %q", svcKey, Key{tt.Name, tt.Namespace})
-			newTrafficTargetWithErr(topology, tt, sources, err)
-			b.Logger.Errorf("Error building topology: %v", err)
+			err = fmt.Errorf("unable to find Service %q", svcKey)
+			setTrafficTargetWithErr(topology, tt, sources, err)
+			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
+
+			return
 		}
 
 		var destPods []Key
@@ -124,9 +128,11 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 		// Find out which ports can be used on the destination service.
 		destPorts, err := b.getTrafficTargetDestinationPorts(svc, tt)
 		if err != nil {
-			err = fmt.Errorf("unable to find destination ports on Service %q for TrafficTarget %q : %w", svcKey, Key{tt.Name, tt.Namespace}, err)
-			newTrafficTargetWithErr(topology, tt, sources, err)
-			b.Logger.Errorf("Error building topology: %v", err)
+			err = fmt.Errorf("unable to find destination ports on Service %q: %w", svcKey, err)
+			setTrafficTargetWithErr(topology, tt, sources, err)
+			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
+
+			return
 		}
 
 		// Create the ServiceTrafficTarget for the given service.
@@ -170,7 +176,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 	}
 }
 
-func newTrafficTargetWithErr(topology *Topology, tt *access.TrafficTarget, sources []ServiceTrafficTargetSource, err error) {
+func setTrafficTargetWithErr(topology *Topology, tt *access.TrafficTarget, sources []ServiceTrafficTargetSource, err error) {
 	svcTTKey := ServiceTrafficTargetKey{
 		TrafficTarget: Key{tt.Name, tt.Namespace},
 	}
@@ -194,9 +200,11 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 
 	svc, ok := topology.Services[svcKey]
 	if !ok {
-		err := fmt.Errorf("unable to find root Service %q for TrafficSplit %q", svcKey, tsKey)
-		newTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
-		b.Logger.Errorf("Error building topology: %v", err)
+		err := fmt.Errorf("unable to find root Service %q", svcKey)
+		setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
+		b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+
+		return
 	}
 
 	backends := make([]TrafficSplitBackend, len(trafficSplit.Spec.Backends))
@@ -206,9 +214,11 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 
 		backendSvc, ok := topology.Services[backendSvcKey]
 		if !ok {
-			err := fmt.Errorf("unable to find backend Service %q for TrafficSplit %q", backendSvcKey, tsKey)
-			newTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
-			b.Logger.Errorf("Error building topology: %v", err)
+			err := fmt.Errorf("unable to find backend Service %q", backendSvcKey)
+			setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
+			b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+
+			return
 		}
 
 		// As required by the SMI specification, backends must expose at least the same ports as the Service on
@@ -224,9 +234,11 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 			}
 
 			if !portFound {
-				err := fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend for TrafficSplit %q", svcPort.Port, backendSvcKey, tsKey)
-				newTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
-				b.Logger.Errorf("Error building topology: %v", err)
+				err := fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend", svcPort.Port, backendSvcKey)
+				setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
+				b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+
+				return
 			}
 		}
 
@@ -248,7 +260,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 	svc.TrafficSplits = append(svc.TrafficSplits, tsKey)
 }
 
-func newTrafficSplitWithErr(topology *Topology, trafficSplit *split.TrafficSplit, svcKey Key, err error) {
+func setTrafficSplitWithErr(topology *Topology, trafficSplit *split.TrafficSplit, svcKey Key, err error) {
 	tsKey := Key{trafficSplit.Name, trafficSplit.Namespace}
 
 	topology.TrafficSplits[tsKey] = &TrafficSplit{
@@ -269,10 +281,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 		for _, tsKey := range svc.TrafficSplits {
 			ts, ok := topology.TrafficSplits[tsKey]
 			if !ok {
-				err := fmt.Errorf("unable to find TrafficSplit %q", tsKey)
-				ts.Err = err
-				b.Logger.Errorf("Error building topology: %v", err)
-
+				b.Logger.Errorf("Unable to find TrafficSplit %q", tsKey)
 				continue
 			}
 
@@ -280,9 +289,8 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 			if err != nil {
 				loopDetected[svc] = append(loopDetected[svc], tsKey)
 
-				err = fmt.Errorf("unable to get incoming pods for TrafficSplit %q: %v", tsKey, err)
-				ts.Err = err
-				b.Logger.Errorf("Error building topology: %v", err)
+				ts.Err = fmt.Errorf("unable to get incoming pods: %v", err)
+				b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, ts.Err)
 
 				continue
 			}
