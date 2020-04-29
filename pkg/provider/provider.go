@@ -55,7 +55,7 @@ type Provider struct {
 }
 
 // New creates a new Provider.
-func New(tcpStateTable PortFinder, udpStateTable PortFinder, cfg Config, logger logrus.FieldLogger) *Provider {
+func New(tcpStateTable, udpStateTable PortFinder, cfg Config, logger logrus.FieldLogger) *Provider {
 	return &Provider{
 		config:                 cfg,
 		tcpStateTable:          tcpStateTable,
@@ -343,8 +343,13 @@ func (p *Provider) buildTCPServiceAndRoutersForTrafficSplit(cfg *dynamic.Configu
 	tcpRule := buildTCPRouterRule()
 
 	for _, svcPort := range tsSvc.Ports {
-		backendSvcs := make([]dynamic.TCPWRRService, len(ts.Backends))
+		entrypoint, err := p.buildTCPEntrypoint(tsSvc, svcPort.Port)
+		if err != nil {
+			p.logger.Errorf("Unable to build TCP entrypoint for TrafficTarget %q and port %d: %v", tsKey, svcPort.Port, err)
+			continue
+		}
 
+		backendSvcs := make([]dynamic.TCPWRRService, len(ts.Backends))
 		for i, backend := range ts.Backends {
 			backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)
 			cfg.TCP.Services[backendSvcKey] = buildTCPSplitTrafficBackendService(backend, svcPort.TargetPort.IntVal)
@@ -352,12 +357,6 @@ func (p *Provider) buildTCPServiceAndRoutersForTrafficSplit(cfg *dynamic.Configu
 				Name:   backendSvcKey,
 				Weight: getIntRef(backend.Weight),
 			}
-		}
-
-		entrypoint, err := p.buildTCPEntrypoint(tsSvc, svcPort.Port)
-		if err != nil {
-			p.logger.Errorf("Unable to build TCP entrypoint for TrafficTarget %q and port %d: %v", tsKey, svcPort.Port, err)
-			continue
 		}
 
 		key := getServiceRouterKeyFromService(tsSvc, svcPort.Port)
@@ -368,8 +367,13 @@ func (p *Provider) buildTCPServiceAndRoutersForTrafficSplit(cfg *dynamic.Configu
 
 func (p *Provider) buildUDPServiceAndRoutersForTrafficSplit(cfg *dynamic.Configuration, tsKey topology.Key, ts *topology.TrafficSplit, tsSvc *topology.Service) {
 	for _, svcPort := range tsSvc.Ports {
-		backendSvcs := make([]dynamic.UDPWRRService, len(ts.Backends))
+		entrypoint, err := p.buildUDPEntrypoint(tsSvc, svcPort.Port)
+		if err != nil {
+			p.logger.Errorf("Unable to build UDP entrypoint for TrafficTarget %q and port %d: %v", tsKey, svcPort.Port, err)
+			continue
+		}
 
+		backendSvcs := make([]dynamic.UDPWRRService, len(ts.Backends))
 		for i, backend := range ts.Backends {
 			backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)
 			cfg.UDP.Services[backendSvcKey] = buildUDPSplitTrafficBackendService(backend, svcPort.TargetPort.IntVal)
@@ -377,12 +381,6 @@ func (p *Provider) buildUDPServiceAndRoutersForTrafficSplit(cfg *dynamic.Configu
 				Name:   backendSvcKey,
 				Weight: getIntRef(backend.Weight),
 			}
-		}
-
-		entrypoint, err := p.buildUDPEntrypoint(tsSvc, svcPort.Port)
-		if err != nil {
-			p.logger.Errorf("Unable to build UDP entrypoint for TrafficTarget %q and port %d: %v", tsKey, svcPort.Port, err)
-			continue
 		}
 
 		key := getServiceRouterKeyFromService(tsSvc, svcPort.Port)
