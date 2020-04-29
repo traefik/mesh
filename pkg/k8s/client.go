@@ -3,21 +3,21 @@ package k8s
 import (
 	"fmt"
 
-	accessClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
-	specsClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
-	splitClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
+	accessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	specsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
+	splitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	kubeClient "k8s.io/client-go/kubernetes"
+	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Client is an interface for the various resource controllers.
 type Client interface {
-	GetKubernetesClient() kubeClient.Interface
-	GetAccessClient() accessClient.Interface
-	GetSpecsClient() specsClient.Interface
-	GetSplitClient() splitClient.Interface
+	GetKubernetesClient() kubeclient.Interface
+	GetAccessClient() accessclient.Interface
+	GetSpecsClient() specsclient.Interface
+	GetSplitClient() splitclient.Interface
 }
 
 // Ensure the client wrapper fits the Client interface
@@ -25,10 +25,10 @@ var _ Client = (*ClientWrapper)(nil)
 
 // ClientWrapper holds the clients for the various resource controllers.
 type ClientWrapper struct {
-	kubeClient   *kubeClient.Clientset
-	accessClient *accessClient.Clientset
-	specsClient  *specsClient.Clientset
-	splitClient  *splitClient.Clientset
+	kubeClient   *kubeclient.Clientset
+	accessClient *accessclient.Clientset
+	specsClient  *specsclient.Clientset
+	splitClient  *splitclient.Clientset
 }
 
 // NewClient creates and returns a ClientWrapper that satisfies the Client interface.
@@ -67,30 +67,30 @@ func NewClient(log logrus.FieldLogger, url string, kubeConfig string) (Client, e
 }
 
 // GetKubernetesClient is used to get the kubernetes clientset.
-func (w *ClientWrapper) GetKubernetesClient() kubeClient.Interface {
+func (w *ClientWrapper) GetKubernetesClient() kubeclient.Interface {
 	return w.kubeClient
 }
 
 // GetAccessClient is used to get the SMI Access clientset.
-func (w *ClientWrapper) GetAccessClient() accessClient.Interface {
+func (w *ClientWrapper) GetAccessClient() accessclient.Interface {
 	return w.accessClient
 }
 
 // GetSpecsClient is used to get the SMI Specs clientset.
-func (w *ClientWrapper) GetSpecsClient() specsClient.Interface {
+func (w *ClientWrapper) GetSpecsClient() specsclient.Interface {
 	return w.specsClient
 }
 
 // GetSplitClient is used to get the SMI Split clientset.
-func (w *ClientWrapper) GetSplitClient() splitClient.Interface {
+func (w *ClientWrapper) GetSplitClient() splitclient.Interface {
 	return w.splitClient
 }
 
 // buildClient returns a useable kubernetes client.
-func buildKubernetesClient(log logrus.FieldLogger, config *rest.Config) (*kubeClient.Clientset, error) {
+func buildKubernetesClient(log logrus.FieldLogger, config *rest.Config) (*kubeclient.Clientset, error) {
 	log.Debugln("Building Kubernetes Client...")
 
-	client, err := kubeClient.NewForConfig(config)
+	client, err := kubeclient.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create kubernetes client: %v", err)
 	}
@@ -99,10 +99,10 @@ func buildKubernetesClient(log logrus.FieldLogger, config *rest.Config) (*kubeCl
 }
 
 // buildSmiAccessClient returns a client to manage SMI Access objects.
-func buildSmiAccessClient(log logrus.FieldLogger, config *rest.Config) (*accessClient.Clientset, error) {
+func buildSmiAccessClient(log logrus.FieldLogger, config *rest.Config) (*accessclient.Clientset, error) {
 	log.Debugln("Building SMI Access Client...")
 
-	client, err := accessClient.NewForConfig(config)
+	client, err := accessclient.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Access Client: %v", err)
 	}
@@ -111,10 +111,10 @@ func buildSmiAccessClient(log logrus.FieldLogger, config *rest.Config) (*accessC
 }
 
 // buildSmiSpecsClient returns a client to manage SMI Specs objects.
-func buildSmiSpecsClient(log logrus.FieldLogger, config *rest.Config) (*specsClient.Clientset, error) {
+func buildSmiSpecsClient(log logrus.FieldLogger, config *rest.Config) (*specsclient.Clientset, error) {
 	log.Debugln("Building SMI Specs Client...")
 
-	client, err := specsClient.NewForConfig(config)
+	client, err := specsclient.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Specs Client: %v", err)
 	}
@@ -123,10 +123,10 @@ func buildSmiSpecsClient(log logrus.FieldLogger, config *rest.Config) (*specsCli
 }
 
 // buildSmiSplitClient returns a client to manage SMI Split objects.
-func buildSmiSplitClient(log logrus.FieldLogger, config *rest.Config) (*splitClient.Clientset, error) {
+func buildSmiSplitClient(log logrus.FieldLogger, config *rest.Config) (*splitclient.Clientset, error) {
 	log.Debugln("Building SMI Split Client...")
 
-	client, err := splitClient.NewForConfig(config)
+	client, err := splitclient.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create SMI Split Client: %v", err)
 	}

@@ -11,22 +11,22 @@ import (
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
-	accessClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
-	fakeAccessClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
-	accessInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
-	accessLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
-	specsClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
-	fakeSpecsClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned/fake"
-	specsInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
-	specsLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
-	splitClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
-	fakeSplitClient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned/fake"
-	splitInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
-	splitLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
+	accessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
+	fakeaccessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
+	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
+	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
+	specsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
+	fakespecsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned/fake"
+	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
+	specslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
+	splitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
+	fakesplitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned/fake"
+	splitinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
+	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
-	kubeClient "k8s.io/client-go/kubernetes"
-	fakeKubeClient "k8s.io/client-go/kubernetes/fake"
+	kubeclient "k8s.io/client-go/kubernetes"
+	fakekubeclient "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -60,24 +60,24 @@ func init() {
 
 // ClientMock holds mock client.
 type ClientMock struct {
-	kubeClient   *fakeKubeClient.Clientset
-	accessClient *fakeAccessClient.Clientset
-	specsClient  *fakeSpecsClient.Clientset
-	splitClient  *fakeSplitClient.Clientset
+	kubeClient   *fakekubeclient.Clientset
+	accessClient *fakeaccessclient.Clientset
+	specsClient  *fakespecsclient.Clientset
+	splitClient  *fakesplitclient.Clientset
 
 	informerFactory       informers.SharedInformerFactory
-	accessInformerFactory accessInformer.SharedInformerFactory
-	specsInformerFactory  specsInformer.SharedInformerFactory
-	splitInformerFactory  splitInformer.SharedInformerFactory
+	accessInformerFactory accessinformer.SharedInformerFactory
+	specsInformerFactory  specsinformer.SharedInformerFactory
+	splitInformerFactory  splitinformer.SharedInformerFactory
 
 	PodLister            listers.PodLister
 	ServiceLister        listers.ServiceLister
 	EndpointsLister      listers.EndpointsLister
 	NamespaceLister      listers.NamespaceLister
-	TrafficTargetLister  accessLister.TrafficTargetLister
-	HTTPRouteGroupLister specsLister.HTTPRouteGroupLister
-	TCPRouteLister       specsLister.TCPRouteLister
-	TrafficSplitLister   splitLister.TrafficSplitLister
+	TrafficTargetLister  accesslister.TrafficTargetLister
+	HTTPRouteGroupLister specslister.HTTPRouteGroupLister
+	TCPRouteLister       specslister.TCPRouteLister
+	TrafficSplitLister   splitlister.TrafficSplitLister
 }
 
 // NewClientMock create a new client mock.
@@ -90,7 +90,7 @@ func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 	k8sObjects := MustParseYaml(yamlContent)
 	c := &ClientMock{}
 
-	c.kubeClient = fakeKubeClient.NewSimpleClientset(filterObjectsByKind(k8sObjects, CoreObjectKinds)...)
+	c.kubeClient = fakekubeclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, CoreObjectKinds)...)
 
 	c.informerFactory = informers.NewSharedInformerFactory(c.kubeClient, 0)
 
@@ -119,13 +119,13 @@ func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 	}
 
 	if smi {
-		c.accessClient = fakeAccessClient.NewSimpleClientset(filterObjectsByKind(k8sObjects, AccessObjectKinds)...)
-		c.specsClient = fakeSpecsClient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SpecsObjectKinds)...)
-		c.splitClient = fakeSplitClient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SplitObjectKinds)...)
+		c.accessClient = fakeaccessclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, AccessObjectKinds)...)
+		c.specsClient = fakespecsclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SpecsObjectKinds)...)
+		c.splitClient = fakesplitclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SplitObjectKinds)...)
 
-		c.accessInformerFactory = accessInformer.NewSharedInformerFactory(c.accessClient, 0)
-		c.specsInformerFactory = specsInformer.NewSharedInformerFactory(c.specsClient, 0)
-		c.splitInformerFactory = splitInformer.NewSharedInformerFactory(c.splitClient, 0)
+		c.accessInformerFactory = accessinformer.NewSharedInformerFactory(c.accessClient, 0)
+		c.specsInformerFactory = specsinformer.NewSharedInformerFactory(c.specsClient, 0)
+		c.splitInformerFactory = splitinformer.NewSharedInformerFactory(c.splitClient, 0)
 
 		trafficTargetInformer := c.accessInformerFactory.Access().V1alpha1().TrafficTargets().Informer()
 		httpRouteGroupInformer := c.specsInformerFactory.Specs().V1alpha1().HTTPRouteGroups().Informer()
@@ -170,22 +170,22 @@ func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 }
 
 // GetKubernetesClient is used to get the kubernetes clientset.
-func (c *ClientMock) GetKubernetesClient() kubeClient.Interface {
+func (c *ClientMock) GetKubernetesClient() kubeclient.Interface {
 	return c.kubeClient
 }
 
 // GetAccessClient is used to get the SMI Access clientset.
-func (c *ClientMock) GetAccessClient() accessClient.Interface {
+func (c *ClientMock) GetAccessClient() accessclient.Interface {
 	return c.accessClient
 }
 
 // GetSpecsClient is used to get the SMI Specs clientset.
-func (c *ClientMock) GetSpecsClient() specsClient.Interface {
+func (c *ClientMock) GetSpecsClient() specsclient.Interface {
 	return c.specsClient
 }
 
 // GetSplitClient is used to get the SMI Split clientset.
-func (c *ClientMock) GetSplitClient() splitClient.Interface {
+func (c *ClientMock) GetSplitClient() splitclient.Interface {
 	return c.splitClient
 }
 

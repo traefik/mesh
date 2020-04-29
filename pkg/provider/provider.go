@@ -69,7 +69,8 @@ func (p *Provider) BuildConfig(t *topology.Topology) *dynamic.Configuration {
 
 	for svcKey, svc := range t.Services {
 		if err := p.buildConfigForService(t, cfg, svc); err != nil {
-			p.logger.Errorf("Unable to build config for service %q: %w", svcKey, err)
+			svc.Err = err
+			p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, err)
 		}
 	}
 
@@ -80,7 +81,7 @@ func (p *Provider) BuildConfig(t *topology.Topology) *dynamic.Configuration {
 func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service) error {
 	trafficType, err := p.getTrafficTypeAnnotation(svc)
 	if err != nil {
-		return fmt.Errorf("unable to evaluate traffic-type annotation: %w", err)
+		return fmt.Errorf("unable to evaluate traffic type annotation: %w", err)
 	}
 
 	scheme, err := getSchemeAnnotation(svc)
@@ -113,7 +114,9 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 
 		for _, ttKey := range svc.TrafficTargets {
 			if err := p.buildServicesAndRoutersForTrafficTarget(t, cfg, ttKey, scheme, trafficType, middlewares); err != nil {
-				p.logger.Errorf("Unable to build routers and services for traffic-target %q: %v", ttKey, err)
+				t.ServiceTrafficTargets[ttKey].Err = fmt.Errorf("unable to build routers and services: %v", err)
+				p.logger.Errorf("Error building dynamic configuration for TrafficTarget %q: %v", ttKey, t.ServiceTrafficTargets[ttKey].Err)
+
 				continue
 			}
 		}
@@ -126,7 +129,9 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 
 	for _, tsKey := range svc.TrafficSplits {
 		if err := p.buildServiceAndRoutersForTrafficSplit(t, cfg, tsKey, scheme, trafficType, middlewares); err != nil {
-			p.logger.Errorf("Unable to build routers and services for traffic-split %q: %v", tsKey, err)
+			t.TrafficSplits[tsKey].Err = fmt.Errorf("unable to build routers and services : %v", err)
+			p.logger.Errorf("Error building dynamic configuration for TrafficSplit %q: %v", tsKey, t.TrafficSplits[tsKey].Err)
+
 			continue
 		}
 	}
@@ -144,7 +149,9 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 		for portID, svcPort := range svc.Ports {
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP entrypoint for Service %q and port %d: %v", svcKey, svcPort.Port, err)
+				svc.Err = fmt.Errorf("unable to build HTTP entrypoint and port %d: %v", svcPort.Port, err)
+				p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, svc.Err)
+
 				continue
 			}
 
@@ -159,7 +166,9 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 		for _, svcPort := range svc.Ports {
 			entrypoint, err := p.buildTCPEntrypoint(svc, svcPort.Port)
 			if err != nil {
-				p.logger.Errorf("Unable to build TCP entrypoint for Service %q and port %d: %v", svcKey, svcPort.Port, err)
+				svc.Err = fmt.Errorf("unable to build TCP entrypoint  and port %d: %v", svcPort.Port, err)
+				p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, svc.Err)
+
 				continue
 			}
 
@@ -168,7 +177,7 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 			cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
 		}
 	default:
-		return fmt.Errorf("unknown traffic-type %q", trafficType)
+		return fmt.Errorf("unknown traffic type %q", trafficType)
 	}
 
 	return nil
@@ -196,7 +205,9 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 		for portID, svcPort := range tt.Destination.Ports {
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP entrypoint for TrafficTarget %q and port %d: %v", ttKey, svcPort.Port, err)
+				tt.Err = fmt.Errorf("unable to build HTTP entrypoint  and port %d: %v", svcPort.Port, err)
+				p.logger.Errorf("Error building dynamic configuration for TrafficTarget %q: %v", ttKey, tt.Err)
+
 				continue
 			}
 
@@ -232,7 +243,9 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 		for _, svcPort := range tt.Destination.Ports {
 			entrypoint, err := p.buildTCPEntrypoint(ttSvc, svcPort.Port)
 			if err != nil {
-				p.logger.Errorf("Unable to build TCP entrypoint for TrafficTarget %q and port %d: %v", ttKey, svcPort.Port, err)
+				tt.Err = fmt.Errorf("unable to build TCP entrypoint and port %d: %v", svcPort.Port, err)
+				p.logger.Errorf("Error building dynamic configuration for TrafficTarget %q: %v", ttKey, tt.Err)
+
 				continue
 			}
 
@@ -241,7 +254,7 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 			cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
 		}
 	default:
-		return fmt.Errorf("unknown traffic-type %q", trafficType)
+		return fmt.Errorf("unknown traffic type %q", trafficType)
 	}
 
 	return nil
@@ -275,13 +288,17 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, c
 		for portID, svcPort := range tsSvc.Ports {
 			backendSvcs, err := p.buildServicesForTrafficSplitBackends(t, cfg, ts, svcPort, scheme)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP backend services for TrafficSplit %q and port %d: %v", tsKey, svcPort.Port, err)
+				ts.Err = fmt.Errorf("unable to build HTTP backend services and port %d: %v", svcPort.Port, err)
+				p.logger.Errorf("Error building dynamic configuration for TrafficSplit %q: %v", tsKey, ts.Err)
+
 				continue
 			}
 
 			entrypoint, err := p.buildHTTPEntrypoint(portID)
 			if err != nil {
-				p.logger.Errorf("Unable to build HTTP entrypoint for TrafficSplit %q and port %d: %v", tsKey, svcPort.Port, err)
+				ts.Err = fmt.Errorf("unable to build HTTP entrypoint and port %d: %v", svcPort.Port, err)
+				p.logger.Errorf("Error building dynamic configuration for TrafficSplit %q: %v", tsKey, ts.Err)
+
 				continue
 			}
 
@@ -322,7 +339,9 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, c
 
 			entrypoint, err := p.buildTCPEntrypoint(tsSvc, svcPort.Port)
 			if err != nil {
-				p.logger.Errorf("Unable to build TCP entrypoint for TrafficTarget %q and port %d: %v", tsKey, svcPort.Port, err)
+				ts.Err = fmt.Errorf("unable to build TCP entrypoint and port %d: %v", svcPort.Port, err)
+				p.logger.Errorf("Error building dynamic configuration for TrafficSplit %q: %v", tsKey, ts.Err)
+
 				continue
 			}
 
@@ -332,7 +351,7 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, c
 		}
 
 	default:
-		return fmt.Errorf("unknown traffic-type %q", trafficType)
+		return fmt.Errorf("unknown traffic type %q", trafficType)
 	}
 
 	return nil
@@ -371,7 +390,9 @@ func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topolog
 		entrypoint, err := p.buildHTTPEntrypoint(portID)
 		if err != nil {
 			svcKey := topology.Key{Name: svc.Name, Namespace: svc.Namespace}
-			p.logger.Errorf("unable to build HTTP entrypoint for Service %q and port %d: %w", svcKey, svcPort.Port, err)
+
+			svc.Err = fmt.Errorf("unable to build HTTP entrypoint and port %d: %w", svcPort.Port, err)
+			p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, svc.Err)
 
 			continue
 		}
@@ -418,7 +439,7 @@ func (p *Provider) getTrafficTypeAnnotation(svc *topology.Service) (string, erro
 	}
 
 	if trafficType != k8s.ServiceTypeHTTP && trafficType != k8s.ServiceTypeTCP {
-		return "", fmt.Errorf("traffic-type annotation references an unsupported traffic type %q", trafficType)
+		return "", fmt.Errorf("traffic type annotation references an unsupported traffic type %q", trafficType)
 	}
 
 	return trafficType, nil

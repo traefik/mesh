@@ -18,12 +18,12 @@ import (
 	"github.com/containous/maesh/pkg/topology"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/containous/traefik/v2/pkg/safe"
-	accessInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
-	accessLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
-	specsInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
-	specsLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
-	splitInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
-	splitLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
+	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
+	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
+	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
+	specslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
+	splitinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
+	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
@@ -85,16 +85,16 @@ type Controller struct {
 
 	clients              k8s.Client
 	kubernetesFactory    informers.SharedInformerFactory
-	accessFactory        accessInformer.SharedInformerFactory
-	specsFactory         specsInformer.SharedInformerFactory
-	splitFactory         splitInformer.SharedInformerFactory
+	accessFactory        accessinformer.SharedInformerFactory
+	specsFactory         specsinformer.SharedInformerFactory
+	splitFactory         splitinformer.SharedInformerFactory
 	PodLister            listers.PodLister
 	ServiceLister        listers.ServiceLister
 	EndpointsLister      listers.EndpointsLister
-	TrafficTargetLister  accessLister.TrafficTargetLister
-	HTTPRouteGroupLister specsLister.HTTPRouteGroupLister
-	TCPRouteLister       specsLister.TCPRouteLister
-	TrafficSplitLister   splitLister.TrafficSplitLister
+	TrafficTargetLister  accesslister.TrafficTargetLister
+	HTTPRouteGroupLister specslister.HTTPRouteGroupLister
+	TCPRouteLister       specslister.TCPRouteLister
+	TrafficSplitLister   splitlister.TrafficSplitLister
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
@@ -131,7 +131,7 @@ func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger
 func (c *Controller) init() {
 	// Create SharedInformers for non-ACL related resources.
 	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.GetKubernetesClient(), k8s.ResyncPeriod)
-	c.splitFactory = splitInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSplitClient(), k8s.ResyncPeriod)
+	c.splitFactory = splitinformer.NewSharedInformerFactoryWithOptions(c.clients.GetSplitClient(), k8s.ResyncPeriod)
 
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
 	c.serviceManager = NewShadowServiceManager(c.logger, c.ServiceLister, c.cfg.Namespace, c.tcpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
@@ -152,8 +152,8 @@ func (c *Controller) init() {
 
 	// Create SharedInformers, listers and register the event handler for ACL related resources.
 	if c.cfg.ACLEnabled {
-		c.accessFactory = accessInformer.NewSharedInformerFactoryWithOptions(c.clients.GetAccessClient(), k8s.ResyncPeriod)
-		c.specsFactory = specsInformer.NewSharedInformerFactoryWithOptions(c.clients.GetSpecsClient(), k8s.ResyncPeriod)
+		c.accessFactory = accessinformer.NewSharedInformerFactoryWithOptions(c.clients.GetAccessClient(), k8s.ResyncPeriod)
+		c.specsFactory = specsinformer.NewSharedInformerFactoryWithOptions(c.clients.GetSpecsClient(), k8s.ResyncPeriod)
 
 		c.TrafficTargetLister = c.accessFactory.Access().V1alpha1().TrafficTargets().Lister()
 		c.HTTPRouteGroupLister = c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
