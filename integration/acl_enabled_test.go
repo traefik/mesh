@@ -19,7 +19,7 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
-	err := s.installHelmMaesh(c, false, false, true)
+	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
 }

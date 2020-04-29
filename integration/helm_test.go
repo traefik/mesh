@@ -24,7 +24,7 @@ func (s *HelmSuite) TearDownSuite(c *check.C) {
 }
 
 func (s *HelmSuite) TestACLDisabled(c *check.C) {
-	err := s.installHelmMaesh(c, false, false, false)
+	err := s.installHelmMaesh(c, false, false)
 	c.Assert(err, checker.IsNil)
 
 	defer s.unInstallHelmMaesh(c)
@@ -33,16 +33,7 @@ func (s *HelmSuite) TestACLDisabled(c *check.C) {
 }
 
 func (s *HelmSuite) TestACLEnabled(c *check.C) {
-	err := s.installHelmMaesh(c, false, false, true)
-	c.Assert(err, checker.IsNil)
-
-	defer s.unInstallHelmMaesh(c)
-
-	s.waitForMaeshControllerStarted(c)
-}
-
-func (s *HelmSuite) TestSMIEnabled(c *check.C) {
-	err := s.installHelmMaesh(c, true, false, false)
+	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 
 	defer s.unInstallHelmMaesh(c)
