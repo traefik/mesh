@@ -10,7 +10,6 @@ import (
 
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/containous/traefik/v2/pkg/safe"
-	"github.com/containous/traefik/v2/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,8 +57,8 @@ func TestProvider_Provide(t *testing.T) {
 
 	provider := Provider{
 		Endpoint:     server.URL + "/endpoint",
-		PollTimeout:  types.Duration(1 * time.Second),
-		PollInterval: types.Duration(100 * time.Millisecond),
+		PollTimeout:  time.Duration(1 * time.Second),
+		PollInterval: time.Duration(100 * time.Millisecond),
 	}
 
 	assert.NoError(t, provider.Init())
