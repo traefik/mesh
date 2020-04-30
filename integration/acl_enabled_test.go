@@ -19,9 +19,14 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
+<<<<<<< HEAD
 	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 	s.waitForMaeshControllerStarted(c)
+=======
+	s.createResources(c, "resources/tcp-state-table/")
+	s.createResources(c, "resources/smi/crds/")
+>>>>>>> remove helm install
 }
 
 func (s *ACLEnabledSuite) TearDownSuite(c *check.C) {
