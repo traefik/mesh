@@ -22,7 +22,7 @@ find "${PATH_TO_SITE}" -type f -not -path "/app/site/theme/*" \
   --alt_ignore="/maesh-logo.png/" \
   --alt_ignore="/maesh-logo.svg/" \
   --http_status_ignore="0,500,501,503" \
-  --url_ignore="/fonts.gstatic.com/,/docs.mae.sh/" \
+  --url_ignore="/fonts.gstatic.com/,/docs.mae.sh/,/github.com\/containous\/maesh\/edit*/" \
   '{}' 1>/dev/null
 ## HTML-proofer options at https://github.com/gjtorikian/html-proofer#configuration
 
