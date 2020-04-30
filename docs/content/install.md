@@ -15,7 +15,7 @@ helm install maesh maesh/maesh
 
 ## Install from source
 
-!!! Note Supported Installations
+!!! Note "Supported Installations"
     Please be aware that the supported installation method is via Helm, using official releases.
     If you want to build/install/run Maesh from source, we may not be able to provide support.
     Installing from source is intended for development/contributing.
@@ -73,26 +73,11 @@ helm install maesh --namespace=maesh maesh/maesh --set acl=true
 Maesh supports the [SMI specification](https://smi-spec.io/) which defines a set of custom resources
 to provide a fine-grained control over instrumentation, routing and access control of east-west communications.
 
-!!! Note CRDs
-    Helm v3 automatically will install the CRDs in the `/crds` directory.
-    If you are re-installing into a cluster with the CRDs already present, Helm may print a warning.
-    If you do not want to install them, or want to avoid the warning during a re-install,
-    please use the new `--skip-crds` flag.
-    More information can be found on the [helm documentation](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
-
-## SMI Mode (Deprecated)
-
-Maesh supports the SMI specification which defines a set of custom resources to provide a fine-grained control over instrumentation, routing and access control of east-west communications.
-
-To enable SMI, install maesh in SMI mode by setting the smi.enable helm chart option to true.
-
-```bash
-helm install maesh --namespace=maesh maesh/maesh --set smi.enable=true`
-```
-
-The smi.enable option makes Maesh process SMI resources.
-
-!!! Note This option is deprecated. Please consider using `--acl` instead.
+!!! Note "CRDs"
+    Helm v3 will install automatically the CRDs in the `/crds` directory.
+    If you are (re)installing into a cluster with the CRDs already present, Helm may print a warning.
+    If you do not want to install them, or want to avoid the warning, use the new `--skip-crds` flag.
+    More information can be found in the [Helm documentation](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
 
 ## Platform recommendations
 

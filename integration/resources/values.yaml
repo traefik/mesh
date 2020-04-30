@@ -48,9 +48,6 @@ metrics:
   prometheus:
     enabled: false
 
-smi:
-  enable: false
-
 kubedns: false
 
 limits:
