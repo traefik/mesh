@@ -20,6 +20,9 @@ import (
 
 var _ provider.Provider = (*Provider)(nil)
 
+// providerName is the name of the provider for logging.
+const providerName = "http"
+
 // Provider is a provider.Provider implementation that queries an endpoint for a configuration.
 type Provider struct {
 	Endpoint     string         `description:"Load configuration from this endpoint." json:"endpoint" toml:"endpoint" yaml:"endpoint" export:"true"`
@@ -57,7 +60,7 @@ func (p *Provider) Init() error {
 // using the given configuration channel.
 func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.Pool) error {
 	pool.GoCtx(func(routineCtx context.Context) {
-		ctxLog := log.With(routineCtx, log.Str(log.ProviderName, "http"))
+		ctxLog := log.With(routineCtx, log.Str(log.ProviderName, providerName))
 		logger := log.FromContext(ctxLog)
 
 		operation := func() error {
@@ -65,7 +68,7 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 			ticker := time.NewTicker(time.Duration(p.PollInterval))
 
 			pool.GoCtx(func(ctx context.Context) {
-				ctx = log.With(ctx, log.Str(log.ProviderName, "http"))
+				ctx = log.With(ctx, log.Str(log.ProviderName, providerName))
 
 				defer close(errChan)
 				for {
@@ -78,10 +81,16 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 							return
 						}
 
-						configuration := p.buildConfiguration(ctx, data)
+						configuration := &dynamic.Configuration{}
+
+						if err := json.Unmarshal(data, configuration); err != nil {
+							log.FromContext(ctx).Errorf("Error parsing configuration %w", err)
+							return
+						}
+
 						if configuration != nil {
 							configurationChan <- dynamic.Message{
-								ProviderName:  "http",
+								ProviderName:  providerName,
 								Configuration: configuration,
 							}
 						}
@@ -111,54 +120,40 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 	return nil
 }
 
-// getDataFromEndpoint gets data from the configured provider endpoint, and returns the data.
-func (p *Provider) getDataFromEndpoint(ctx context.Context) ([]byte, error) {
-	b := []byte{}
-	req, err := http.NewRequest(http.MethodGet, p.Endpoint, bytes.NewBuffer(b))
-
+// getDataFromEndpoint returns data from the configured provider endpoint.
+func (p Provider) getDataFromEndpoint(ctx context.Context) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, p.Endpoint, &bytes.Buffer{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to create request: %w", err)
 	}
 
 	client := &http.Client{Timeout: time.Duration(p.PollTimeout)}
+
 	resp, err := client.Do(req)
-
-	if resp != nil {
-		defer resp.Body.Close()
-
-		var (
-			bodyData []byte
-			bodyErr  error
-		)
-
-		if bodyData, bodyErr = ioutil.ReadAll(resp.Body); bodyErr != nil {
-			return nil, fmt.Errorf("unable to read response body: %w", bodyErr)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("received non-ok response code: %d", resp.StatusCode)
-		}
-
-		log.FromContext(ctx).Debugf("Successfully received data from endpoint: %q", p.Endpoint)
-
-		return bodyData, nil
-	}
-
 	if err != nil {
-		return nil, fmt.Errorf("unable to get data from endpoint: %w", err)
+		return nil, fmt.Errorf("unable to get data from endpoint %q: %w", p.Endpoint, err)
 	}
 
-	return nil, fmt.Errorf("received no data from endpoint")
-}
-
-// buildConfiguration builds a configuration from the provided data.
-func (p *Provider) buildConfiguration(ctx context.Context, data []byte) *dynamic.Configuration {
-	configuration := &dynamic.Configuration{}
-
-	if err := json.Unmarshal(data, configuration); err != nil {
-		log.FromContext(ctx).Errorf("Error parsing configuration %w", err)
-		return nil
+	if resp == nil {
+		return nil, fmt.Errorf("received no data from endpoint")
 	}
 
-	return configuration
+	defer resp.Body.Close()
+
+	var (
+		bodyData []byte
+		bodyErr  error
+	)
+
+	if bodyData, bodyErr = ioutil.ReadAll(resp.Body); bodyErr != nil {
+		return nil, fmt.Errorf("unable to read response body: %w", bodyErr)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received non-ok response code: %d", resp.StatusCode)
+	}
+
+	log.FromContext(ctx).Debugf("Successfully received data from endpoint: %q", p.Endpoint)
+
+	return bodyData, nil
 }
