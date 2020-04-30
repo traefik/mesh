@@ -77,7 +77,8 @@ spec:
             - {{ printf "\"--entryPoints.udp-%d.address=:%d/udp\"" $port $port }}
             {{- end }}
             - {{ printf "--endpoint=http://maesh-controller.%s.svc.%s:9000/api/configuration/current" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
-            - "--pollInterval=100ms"
+            - "--pollInterval={{ .Values.mesh.pollInterval }}"
+            - "--pollTimeout={{ .Values.mesh.pollTimeout }}"
             {{- if .Values.tracing.jaeger.enabled }}
               {{- if .Values.tracing.jaeger.localagenthostport }}
             - "--tracing.jaeger.localagenthostport={{ .Values.tracing.jaeger.localagenthostport }}"

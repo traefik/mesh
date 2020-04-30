@@ -37,6 +37,8 @@ mesh:
       cpu: "100m"
   logging: INFO
   defaultMode: http
+  pollInterval: "1s"
+  pollTimeout: "1s"
   # Added so we can launch on nodes with restrictions
   nodeSelector: {}
   tolerations: []
