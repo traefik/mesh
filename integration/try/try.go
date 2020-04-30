@@ -74,6 +74,31 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 	return nil
 }
 
+// WaitReadyDaemonset wait until the daemonset is ready.
+func (t *Try) WaitReadyDaemonset(name string, namespace string, timeout time.Duration) error {
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
+
+	if err := backoff.Retry(safe.OperationWithRecover(func() error {
+		d, err := t.client.GetKubernetesClient().AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
+		if err != nil {
+			if kubeerror.IsNotFound(err) {
+				return fmt.Errorf("daemonset %q has not been yet created", name)
+			}
+
+			return fmt.Errorf("unable get the daemonset %q in namespace %q: %v", name, namespace, err)
+		}
+		if d.Status.NumberReady == d.Status.DesiredNumberScheduled {
+			return nil
+		}
+		return errors.New("daemonset not ready")
+	}), ebo); err != nil {
+		return fmt.Errorf("unable get the daemonset %q in namespace %q: %v", name, namespace, err)
+	}
+
+	return nil
+}
+
 // WaitUpdateDeployment waits until the deployment is successfully updated and ready.
 func (t *Try) WaitUpdateDeployment(deployment *appsv1.Deployment, timeout time.Duration) error {
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
