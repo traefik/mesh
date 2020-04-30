@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containous/maesh/cmd"
+	httpprovider "github.com/containous/maesh/pkg/proxy/provider/http"
 	"github.com/containous/maesh/pkg/version"
-	"github.com/containous/traefik/v2/cmd"
-	"github.com/containous/traefik/v2/cmd/healthcheck"
 	"github.com/containous/traefik/v2/pkg/cli"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/containous/traefik/v2/pkg/config/static"
@@ -28,28 +28,33 @@ import (
 	"github.com/containous/traefik/v2/pkg/server/service"
 	traefiktls "github.com/containous/traefik/v2/pkg/tls"
 	"github.com/containous/traefik/v2/pkg/types"
-	"github.com/coreos/go-systemd/daemon"
 	"github.com/sirupsen/logrus"
 	"github.com/vulcand/oxy/roundrobin"
 )
 
 // NewCmd builds a new Proxy command.
 func NewCmd(loaders []cli.ResourceLoader) *cli.Command {
-	tConfig := cmd.NewTraefikConfiguration()
+	proxyConfig := cmd.NewProxyConfiguration()
 
 	return &cli.Command{
 		Name:          "proxy",
 		Description:   `Proxy command.`,
-		Configuration: tConfig,
+		Configuration: proxyConfig,
 		Run: func(_ []string) error {
-			return runCmd(&tConfig.Configuration)
+			return runCmd(proxyConfig)
 		},
 		Resources: loaders,
 	}
 }
 
-func runCmd(staticConfiguration *static.Configuration) error {
-	configureLogging(staticConfiguration)
+func runCmd(proxyConfiguration *cmd.ProxyConfiguration) error {
+	proxyConfiguration.Configuration.SetEffectiveConfiguration()
+
+	if err := proxyConfiguration.Configuration.ValidateConfiguration(); err != nil {
+		return err
+	}
+
+	configureLogging(&proxyConfiguration.Configuration)
 
 	http.DefaultTransport.(*http.Transport).Proxy = http.ProxyFromEnvironment
 
@@ -57,66 +62,27 @@ func runCmd(staticConfiguration *static.Configuration) error {
 		log.WithoutContext().Errorf("Could not set round robin default weight: %v", err)
 	}
 
-	staticConfiguration.SetEffectiveConfiguration()
+	log.WithoutContext().Infof("Maesh proxy version %s built on %s", version.Version, version.Date)
 
-	if err := staticConfiguration.ValidateConfiguration(); err != nil {
+	jsonConf, err := json.Marshal(proxyConfiguration.Configuration)
+	if err != nil {
+		log.WithoutContext().Errorf("Could not marshal static configuration: %v", err)
+		log.WithoutContext().Debugf("Static configuration loaded [struct] %#v", proxyConfiguration.Configuration)
+
 		return err
 	}
 
-	log.WithoutContext().Infof("Maesh proxy version %s built on %s", version.Version, version.Date)
+	log.WithoutContext().Debugf("Static configuration loaded %s", string(jsonConf))
 
-	jsonConf, err := json.Marshal(staticConfiguration)
-	if err != nil {
-		log.WithoutContext().Errorf("Could not marshal static configuration: %v", err)
-		log.WithoutContext().Debugf("Static configuration loaded [struct] %#v", staticConfiguration)
-	} else {
-		log.WithoutContext().Debugf("Static configuration loaded %s", string(jsonConf))
-	}
-
-	svr, err := setupServer(staticConfiguration)
+	svr, err := setupServer(proxyConfiguration)
 	if err != nil {
 		return err
 	}
 
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	if staticConfiguration.Ping != nil {
-		staticConfiguration.Ping.WithContext(ctx)
-	}
-
 	svr.Start(ctx)
 	defer svr.Close()
-
-	sent, err := daemon.SdNotify(false, "READY=1")
-	if !sent && err != nil {
-		log.WithoutContext().Errorf("Failed to notify: %v", err)
-	}
-
-	t, err := daemon.SdWatchdogEnabled(false)
-	if err != nil {
-		log.WithoutContext().Errorf("Could not enable Watchdog: %v", err)
-	} else if t != 0 {
-		// Call SdNotify every time / 2 as specified by SdWatchdogEnabled doc.
-		t /= 2
-		log.WithoutContext().Infof("Watchdog activated with timer duration %s", t)
-		safe.Go(func() {
-			tick := time.NewTicker(t)
-			for range tick.C {
-				resp, errHealthCheck := healthcheck.Do(*staticConfiguration)
-				if resp != nil {
-					_ = resp.Body.Close()
-				}
-
-				if staticConfiguration.Ping == nil || errHealthCheck == nil {
-					if ok, _ := daemon.SdNotify(false, "WATCHDOG=1"); !ok {
-						log.WithoutContext().Error("Fail to tick watchdog")
-					}
-				} else {
-					log.WithoutContext().Error(errHealthCheck)
-				}
-			}
-		})
-	}
 
 	svr.Wait()
 	log.WithoutContext().Info("Shutting down")
@@ -124,23 +90,30 @@ func runCmd(staticConfiguration *static.Configuration) error {
 	return nil
 }
 
-func setupServer(staticConfiguration *static.Configuration) (*server.Server, error) {
-	providerAggregator := aggregator.NewProviderAggregator(*staticConfiguration.Providers)
+func setupServer(proxyConfiguration *cmd.ProxyConfiguration) (*server.Server, error) {
+	providerAggregator := aggregator.NewProviderAggregator(static.Providers{})
 
 	// Adds internal provider.
-	err := providerAggregator.AddProvider(traefik.New(*staticConfiguration))
+	err := providerAggregator.AddProvider(traefik.New(proxyConfiguration.Configuration))
+	if err != nil {
+		return nil, err
+	}
+
+	// Require the HTTP Provider to be configured.
+	err = providerAggregator.AddProvider(httpprovider.New(proxyConfiguration.Endpoint,
+		proxyConfiguration.PollInterval, proxyConfiguration.PollTimeout))
 	if err != nil {
 		return nil, err
 	}
 
 	tlsManager := traefiktls.NewManager()
 
-	serverEntryPointsTCP, err := server.NewTCPEntryPoints(staticConfiguration.EntryPoints)
+	serverEntryPointsTCP, err := server.NewTCPEntryPoints(proxyConfiguration.Configuration.EntryPoints)
 	if err != nil {
 		return nil, err
 	}
 
-	serverEntryPointsUDP, err := server.NewUDPEntryPoints(staticConfiguration.EntryPoints)
+	serverEntryPointsUDP, err := server.NewUDPEntryPoints(proxyConfiguration.Configuration.EntryPoints)
 	if err != nil {
 		return nil, err
 	}
@@ -148,15 +121,15 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 	ctx := context.Background()
 	routinesPool := safe.NewPool(ctx)
 
-	metricsRegistry := registerMetricClients(staticConfiguration.Metrics)
-	accessLog := setupAccessLog(staticConfiguration.AccessLog)
-	chainBuilder := middleware.NewChainBuilder(*staticConfiguration, metricsRegistry, accessLog)
-	managerFactory := service.NewManagerFactory(*staticConfiguration, routinesPool, metricsRegistry)
-	routerFactory := server.NewRouterFactory(*staticConfiguration, managerFactory, tlsManager, chainBuilder)
+	metricsRegistry := registerMetricClients(proxyConfiguration.Configuration.Metrics)
+	accessLog := setupAccessLog(proxyConfiguration.Configuration.AccessLog)
+	chainBuilder := middleware.NewChainBuilder(proxyConfiguration.Configuration, metricsRegistry, accessLog)
+	managerFactory := service.NewManagerFactory(proxyConfiguration.Configuration, routinesPool, metricsRegistry)
+	routerFactory := server.NewRouterFactory(proxyConfiguration.Configuration, managerFactory, tlsManager, chainBuilder)
 
 	var defaultEntryPoints []string
 
-	for name, cfg := range staticConfiguration.EntryPoints {
+	for name, cfg := range proxyConfiguration.Configuration.EntryPoints {
 		protocol, _ := cfg.GetProtocol()
 		if protocol != "udp" && name != static.DefaultInternalEntryPointName {
 			defaultEntryPoints = append(defaultEntryPoints, name)
@@ -168,7 +141,7 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 	watcher := server.NewConfigurationWatcher(
 		routinesPool,
 		providerAggregator,
-		time.Duration(staticConfiguration.Providers.ProvidersThrottleDuration),
+		time.Duration(proxyConfiguration.Configuration.Providers.ProvidersThrottleDuration),
 		defaultEntryPoints,
 	)
 
