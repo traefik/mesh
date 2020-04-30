@@ -1,23 +1,11 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: Bug Report
+about: Create a report to help us improve Maesh
 
 ---
 <!-- PLEASE FOLLOW THE ISSUE TEMPLATE TO HELP TRIAGE AND SUPPORT! -->
 
-### Do you want to request a *feature* or report a *bug*?
-
-<!--
-DO NOT FILE ISSUES FOR GENERAL SUPPORT QUESTIONS.
-
-The issue tracker is for reporting bugs and feature requests only.
-For end-user related support questions, please refer to one of the following:
-
-- the Traefik community forum: https://community.containo.us/
-
--->
-
-Bug
+## Bug Report
 
 
 ### What did you do?
