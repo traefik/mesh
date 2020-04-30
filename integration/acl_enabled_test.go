@@ -19,7 +19,7 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
-	s.createResources(c, "resources/tcp-state-table/")
+	s.createResources(c, "resources/state-table/")
 	s.createResources(c, "resources/smi/crds/")
 }
 
