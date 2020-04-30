@@ -4,8 +4,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/containous/maesh/pkg/config/static"
-	traefikStatic "github.com/containous/traefik/v2/pkg/config/static"
+	"github.com/containous/traefik/v2/pkg/config/static"
 	"github.com/containous/traefik/v2/pkg/types"
 )
 
@@ -46,7 +45,7 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 	}
 }
 
-// PrepareConfig .
+// PrepareConfig holds the configuration to prepare the cluster.
 type PrepareConfig struct {
 	KubeConfig    string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL     string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
@@ -70,22 +69,24 @@ func NewPrepareConfig() *PrepareConfig {
 
 // ProxyConfiguration wraps the static configuration and extra parameters for proxy nodes.
 type ProxyConfiguration struct {
-	// ConfigFile is the path to the configuration file.
 	static.Configuration `export:"true"`
+	Endpoint             string         `description:"Load configuration from this endpoint." json:"endpoint" toml:"endpoint" yaml:"endpoint" export:"true"`
+	PollInterval         types.Duration `description:"Polling interval for endpoint." json:"pollInterval,omitempty" toml:"pollInterval,omitempty" yaml:"pollInterval,omitempty"`
+	PollTimeout          types.Duration `description:"Polling timeout for endpoint." json:"pollTimeout,omitempty" toml:"pollTimeout,omitempty" yaml:"pollTimeout,omitempty"`
 }
 
 // NewProxyConfiguration creates a ProxyConfiguration with default values.
 func NewProxyConfiguration() *ProxyConfiguration {
 	return &ProxyConfiguration{
 		Configuration: static.Configuration{
-			Global: &traefikStatic.Global{
+			Global: &static.Global{
 				CheckNewVersion: false,
 			},
-			EntryPoints: make(traefikStatic.EntryPoints),
+			EntryPoints: make(static.EntryPoints),
 			Providers: &static.Providers{
 				ProvidersThrottleDuration: types.Duration(2 * time.Second),
 			},
-			ServersTransport: &traefikStatic.ServersTransport{
+			ServersTransport: &static.ServersTransport{
 				MaxIdleConnsPerHost: 200,
 			},
 		},

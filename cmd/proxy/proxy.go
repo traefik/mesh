@@ -12,10 +12,11 @@ import (
 	"time"
 
 	"github.com/containous/maesh/cmd"
-	"github.com/containous/maesh/pkg/config/static"
+	httpprovider "github.com/containous/maesh/pkg/proxy/provider/http"
 	"github.com/containous/maesh/pkg/version"
 	"github.com/containous/traefik/v2/pkg/cli"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/config/static"
 	"github.com/containous/traefik/v2/pkg/log"
 	"github.com/containous/traefik/v2/pkg/metrics"
 	"github.com/containous/traefik/v2/pkg/middlewares/accesslog"
@@ -40,20 +41,20 @@ func NewCmd(loaders []cli.ResourceLoader) *cli.Command {
 		Description:   `Proxy command.`,
 		Configuration: proxyConfig,
 		Run: func(_ []string) error {
-			return runCmd(&proxyConfig.Configuration)
+			return runCmd(proxyConfig)
 		},
 		Resources: loaders,
 	}
 }
 
-func runCmd(proxyStaticConfiguration *static.Configuration) error {
-	proxyStaticConfiguration.SetEffectiveConfiguration()
+func runCmd(proxyConfiguration *cmd.ProxyConfiguration) error {
+	proxyConfiguration.Configuration.SetEffectiveConfiguration()
 
-	if err := proxyStaticConfiguration.ValidateConfiguration(); err != nil {
+	if err := proxyConfiguration.Configuration.ValidateConfiguration(); err != nil {
 		return err
 	}
 
-	configureLogging(proxyStaticConfiguration)
+	configureLogging(&proxyConfiguration.Configuration)
 
 	http.DefaultTransport.(*http.Transport).Proxy = http.ProxyFromEnvironment
 
@@ -63,26 +64,22 @@ func runCmd(proxyStaticConfiguration *static.Configuration) error {
 
 	log.WithoutContext().Infof("Maesh proxy version %s built on %s", version.Version, version.Date)
 
-	jsonConf, err := json.Marshal(proxyStaticConfiguration)
+	jsonConf, err := json.Marshal(proxyConfiguration.Configuration)
 	if err != nil {
 		log.WithoutContext().Errorf("Could not marshal static configuration: %v", err)
-		log.WithoutContext().Debugf("Static configuration loaded [struct] %#v", proxyStaticConfiguration)
+		log.WithoutContext().Debugf("Static configuration loaded [struct] %#v", proxyConfiguration.Configuration)
 
 		return err
 	}
 
 	log.WithoutContext().Debugf("Static configuration loaded %s", string(jsonConf))
 
-	svr, err := setupServer(proxyStaticConfiguration)
+	svr, err := setupServer(proxyConfiguration)
 	if err != nil {
 		return err
 	}
 
 	ctx := cmd.ContextWithSignal(context.Background())
-
-	if proxyStaticConfiguration.Ping != nil {
-		proxyStaticConfiguration.Ping.WithContext(ctx)
-	}
 
 	svr.Start(ctx)
 	defer svr.Close()
@@ -93,33 +90,30 @@ func runCmd(proxyStaticConfiguration *static.Configuration) error {
 	return nil
 }
 
-func setupServer(maeshStaticConfiguration *static.Configuration) (*server.Server, error) {
-	traefikStaticConfiguration := maeshStaticConfiguration.ToTraefikConfig()
-
-	providerAggregator := aggregator.NewProviderAggregator(*traefikStaticConfiguration.Providers)
+func setupServer(proxyConfiguration *cmd.ProxyConfiguration) (*server.Server, error) {
+	providerAggregator := aggregator.NewProviderAggregator(static.Providers{})
 
 	// Adds internal provider.
-	err := providerAggregator.AddProvider(traefik.New(*traefikStaticConfiguration))
+	err := providerAggregator.AddProvider(traefik.New(proxyConfiguration.Configuration))
 	if err != nil {
 		return nil, err
 	}
 
-	if maeshStaticConfiguration.Providers.HTTP != nil {
-		// Adds HTTP provider.
-		err = providerAggregator.AddProvider(maeshStaticConfiguration.Providers.HTTP)
-		if err != nil {
-			return nil, err
-		}
+	// Require the HTTP Provider to be configured.
+	err = providerAggregator.AddProvider(httpprovider.New(proxyConfiguration.Endpoint,
+		proxyConfiguration.PollInterval, proxyConfiguration.PollTimeout))
+	if err != nil {
+		return nil, err
 	}
 
 	tlsManager := traefiktls.NewManager()
 
-	serverEntryPointsTCP, err := server.NewTCPEntryPoints(traefikStaticConfiguration.EntryPoints)
+	serverEntryPointsTCP, err := server.NewTCPEntryPoints(proxyConfiguration.Configuration.EntryPoints)
 	if err != nil {
 		return nil, err
 	}
 
-	serverEntryPointsUDP, err := server.NewUDPEntryPoints(traefikStaticConfiguration.EntryPoints)
+	serverEntryPointsUDP, err := server.NewUDPEntryPoints(proxyConfiguration.Configuration.EntryPoints)
 	if err != nil {
 		return nil, err
 	}
@@ -127,15 +121,15 @@ func setupServer(maeshStaticConfiguration *static.Configuration) (*server.Server
 	ctx := context.Background()
 	routinesPool := safe.NewPool(ctx)
 
-	metricsRegistry := registerMetricClients(traefikStaticConfiguration.Metrics)
-	accessLog := setupAccessLog(traefikStaticConfiguration.AccessLog)
-	chainBuilder := middleware.NewChainBuilder(*traefikStaticConfiguration, metricsRegistry, accessLog)
-	managerFactory := service.NewManagerFactory(*traefikStaticConfiguration, routinesPool, metricsRegistry)
-	routerFactory := server.NewRouterFactory(*traefikStaticConfiguration, managerFactory, tlsManager, chainBuilder)
+	metricsRegistry := registerMetricClients(proxyConfiguration.Configuration.Metrics)
+	accessLog := setupAccessLog(proxyConfiguration.Configuration.AccessLog)
+	chainBuilder := middleware.NewChainBuilder(proxyConfiguration.Configuration, metricsRegistry, accessLog)
+	managerFactory := service.NewManagerFactory(proxyConfiguration.Configuration, routinesPool, metricsRegistry)
+	routerFactory := server.NewRouterFactory(proxyConfiguration.Configuration, managerFactory, tlsManager, chainBuilder)
 
 	var defaultEntryPoints []string
 
-	for name, cfg := range traefikStaticConfiguration.EntryPoints {
+	for name, cfg := range proxyConfiguration.Configuration.EntryPoints {
 		protocol, _ := cfg.GetProtocol()
 		if protocol != "udp" && name != static.DefaultInternalEntryPointName {
 			defaultEntryPoints = append(defaultEntryPoints, name)
@@ -147,7 +141,7 @@ func setupServer(maeshStaticConfiguration *static.Configuration) (*server.Server
 	watcher := server.NewConfigurationWatcher(
 		routinesPool,
 		providerAggregator,
-		time.Duration(traefikStaticConfiguration.Providers.ProvidersThrottleDuration),
+		time.Duration(proxyConfiguration.Configuration.Providers.ProvidersThrottleDuration),
 		defaultEntryPoints,
 	)
 
