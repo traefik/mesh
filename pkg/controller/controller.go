@@ -1,22 +1,15 @@
 package controller
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"reflect"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/containous/maesh/pkg/api"
-	"github.com/containous/maesh/pkg/deploylog"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/provider"
 	"github.com/containous/maesh/pkg/topology"
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/containous/traefik/v2/pkg/safe"
 	accessInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	accessLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
@@ -25,11 +18,8 @@ import (
 	splitInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	splitLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	listers "k8s.io/client-go/listers/core/v1"
@@ -83,7 +73,6 @@ type Controller struct {
 	topologyBuilder   TopologyBuilder
 	lastConfiguration safe.Safe
 	api               api.Interface
-	deployLog         deploylog.Interface
 	logger            logrus.FieldLogger
 
 	clients              k8s.Client
@@ -173,8 +162,7 @@ func (c *Controller) init() {
 		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
 	}
 
-	c.deployLog = deploylog.NewDeployLog(c.logger, 1000)
-	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, &c.lastConfiguration, c.deployLog, c.PodLister, c.cfg.Namespace)
+	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, &c.lastConfiguration, c.PodLister, c.cfg.Namespace)
 
 	c.topologyBuilder = &topology.Builder{
 		ServiceLister:        c.ServiceLister,
@@ -238,11 +226,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 			if message == k8s.ConfigMessageChanForce || !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
 				c.lastConfiguration.Set(conf)
 
-				if deployErr := c.deployConfiguration(conf); deployErr != nil {
-					break
-				}
-
-				// Configuration successfully deployed, enable readiness in the api.
+				// Configuration successfully created, enable readiness in the api.
 				c.api.EnableReadiness()
 			}
 		case <-timer.C:
@@ -251,19 +235,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 				break
 			}
 
-			dynCfg, ok := rawCfg.(*dynamic.Configuration)
-			if !ok {
-				c.logger.Error("Received unexpected dynamic configuration, skipping")
-				break
-			}
-
-			c.logger.Debug("Deploying configuration to unready nodes")
-
-			if deployErr := c.deployConfigurationToUnreadyNodes(dynCfg); deployErr != nil {
-				break
-			}
-
-			// Configuration successfully deployed, enable readiness in the api.
+			// Configuration successfully created, enable readiness in the api.
 			c.api.EnableReadiness()
 		}
 	}
@@ -335,140 +307,6 @@ func (c *Controller) createMeshServices() error {
 			return fmt.Errorf("unable to create mesh service: %w", err)
 		}
 	}
-
-	return nil
-}
-
-// deployConfiguration deploys the configuration to the mesh pods.
-func (c *Controller) deployConfiguration(config *dynamic.Configuration) error {
-	sel := labels.Everything()
-
-	r, err := labels.NewRequirement("component", selection.Equals, []string{"maesh-mesh"})
-	if err != nil {
-		return err
-	}
-
-	sel = sel.Add(*r)
-
-	podList, err := c.PodLister.Pods(c.cfg.Namespace).List(sel)
-	if err != nil {
-		return fmt.Errorf("unable to get pods: %w", err)
-	}
-
-	if len(podList) == 0 {
-		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
-	}
-
-	if err := c.deployToPods(podList, config); err != nil {
-		return fmt.Errorf("error deploying configuration: %v", err)
-	}
-
-	return nil
-}
-
-// deployConfigurationToUnreadyNodes deploys the configuration to the mesh pods.
-func (c *Controller) deployConfigurationToUnreadyNodes(config *dynamic.Configuration) error {
-	sel := labels.Everything()
-
-	r, err := labels.NewRequirement("component", selection.Equals, []string{"maesh-mesh"})
-	if err != nil {
-		return err
-	}
-
-	sel = sel.Add(*r)
-
-	podList, err := c.PodLister.Pods(c.cfg.Namespace).List(sel)
-	if err != nil {
-		return fmt.Errorf("unable to get pods: %w", err)
-	}
-
-	if len(podList) == 0 {
-		return fmt.Errorf("unable to find any active mesh pods to deploy config : %+v", config)
-	}
-
-	var unreadyPods []*corev1.Pod
-
-	for _, pod := range podList {
-		for _, status := range pod.Status.ContainerStatuses {
-			if !status.Ready {
-				unreadyPods = append(unreadyPods, pod)
-				break
-			}
-		}
-	}
-
-	if err := c.deployToPods(unreadyPods, config); err != nil {
-		return fmt.Errorf("error deploying configuration: %v", err)
-	}
-
-	return nil
-}
-
-func (c *Controller) deployToPods(pods []*corev1.Pod, config *dynamic.Configuration) error {
-	var errg errgroup.Group
-
-	for _, p := range pods {
-		pod := p
-
-		c.logger.Debugf("Deploying to pod %s with IP %s", pod.Name, pod.Status.PodIP)
-
-		errg.Go(func() error {
-			b := backoff.NewExponentialBackOff()
-			b.MaxElapsedTime = 15 * time.Second
-
-			op := func() error {
-				return c.deployToPod(pod.Name, pod.Status.PodIP, config)
-			}
-
-			return backoff.Retry(safe.OperationWithRecover(op), b)
-		})
-	}
-
-	return errg.Wait()
-}
-
-func (c *Controller) deployToPod(name, ip string, config *dynamic.Configuration) error {
-	if name == "" || ip == "" {
-		// If there is no name or ip, then just return.
-		return fmt.Errorf("pod has no name or IP")
-	}
-
-	b, err := json.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("unable to marshal configuration: %v", err)
-	}
-
-	url := fmt.Sprintf("http://%s:8080/api/providers/rest", ip)
-
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(b))
-	if err != nil {
-		return fmt.Errorf("unable to create request: %v", err)
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-
-	if resp != nil {
-		defer resp.Body.Close()
-
-		if _, bodyErr := ioutil.ReadAll(resp.Body); bodyErr != nil {
-			c.deployLog.LogDeploy(time.Now(), name, ip, false, fmt.Sprintf("unable to read response body: %v", bodyErr))
-			return fmt.Errorf("unable to read response body: %v", bodyErr)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			c.deployLog.LogDeploy(time.Now(), name, ip, false, fmt.Sprintf("received non-ok response code: %d", resp.StatusCode))
-			return fmt.Errorf("received non-ok response code: %d", resp.StatusCode)
-		}
-	}
-
-	if err != nil {
-		c.deployLog.LogDeploy(time.Now(), name, ip, false, fmt.Sprintf("unable to deploy configuration: %v", err))
-		return fmt.Errorf("unable to deploy configuration: %v", err)
-	}
-
-	c.deployLog.LogDeploy(time.Now(), name, ip, true, "")
-	c.logger.Debugf("Successfully deployed configuration to pod (%s:%s)", name, ip)
 
 	return nil
 }
