@@ -311,6 +311,10 @@ func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
 }
 
+func (s *BaseSuite) waitForMaeshProxyStarted(c *check.C) {
+	c.Assert(s.try.WaitReadyDaemonset("maesh-mesh", maeshNamespace, 30*time.Second), checker.IsNil)
+}
+
 func (s *BaseSuite) waitForTools(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("tiny-tools", testNamespace, 30*time.Second), checker.IsNil)
 }
