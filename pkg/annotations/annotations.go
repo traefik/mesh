@@ -35,7 +35,7 @@ func GetTrafficType(defaultTrafficType string, annotations map[string]string) (s
 	}
 
 	if trafficType != ServiceTypeHTTP && trafficType != ServiceTypeTCP && trafficType != ServiceTypeUDP {
-		return "", fmt.Errorf("traffic-type annotation references an unsupported traffic type %q", trafficType)
+		return trafficType, fmt.Errorf("traffic-type annotation references an unsupported traffic type %q", trafficType)
 	}
 
 	return trafficType, nil
@@ -50,7 +50,7 @@ func GetScheme(annotations map[string]string) (string, error) {
 	}
 
 	if scheme != SchemeHTTP && scheme != SchemeH2c && scheme != SchemeHTTPS {
-		return "", fmt.Errorf("scheme annotation references an unknown scheme %q", scheme)
+		return scheme, fmt.Errorf("scheme annotation references an unknown scheme %q", scheme)
 	}
 
 	return scheme, nil

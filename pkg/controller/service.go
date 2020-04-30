@@ -167,9 +167,9 @@ func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, ne
 	}
 
 	switch trafficType {
-	case k8s.ServiceTypeTCP:
+	case annotations.ServiceTypeTCP:
 		stateTable = s.tcpStateTable
-	case k8s.ServiceTypeUDP:
+	case annotations.ServiceTypeUDP:
 		stateTable = s.udpStateTable
 	default:
 		return nil
@@ -212,7 +212,7 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) ([]cor
 	}
 
 	for i, sp := range svc.Spec.Ports {
-		if !(trafficType == k8s.ServiceTypeUDP && sp.Protocol == corev1.ProtocolUDP) && !(trafficType != k8s.ServiceTypeUDP && sp.Protocol == corev1.ProtocolTCP) {
+		if !(trafficType == annotations.ServiceTypeUDP && sp.Protocol == corev1.ProtocolUDP) && !(trafficType != annotations.ServiceTypeUDP && sp.Protocol == corev1.ProtocolTCP) {
 			s.log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, svc.Namespace, svc.Name)
 			continue
 		}
@@ -241,11 +241,11 @@ func (s *ShadowServiceManager) getShadowServiceName(name string, namespace strin
 
 func (s *ShadowServiceManager) getTargetPort(trafficType string, portID int, name, namespace string, port int32) (int32, error) {
 	switch trafficType {
-	case k8s.ServiceTypeHTTP:
+	case annotations.ServiceTypeHTTP:
 		return s.getHTTPPort(portID)
-	case k8s.ServiceTypeTCP:
+	case annotations.ServiceTypeTCP:
 		return s.getMappedPort(s.tcpStateTable, name, namespace, port)
-	case k8s.ServiceTypeUDP:
+	case annotations.ServiceTypeUDP:
 		return s.getMappedPort(s.udpStateTable, name, namespace, port)
 	default:
 		return 0, errors.New("unknown service mode")
