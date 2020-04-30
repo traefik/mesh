@@ -79,10 +79,6 @@ to provide a fine-grained control over instrumentation, routing and access contr
     If you do not want to install them, or want to avoid the warning, use the new `--skip-crds` flag.
     More information can be found in the [Helm documentation](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
 
-!!! Warning "SMI Mode (Deprecated)"
-    The SMI mode is deprecated, and you should consider the use of the backward compatible ACL mode described above. 
-    For that reason, the corresponding option `smi.enable`, has been removed from the Helm Chart (v2.0.0). 
-
 ## Platform recommendations
 
 Maesh works on Kubernetes environments that conforms to the global Kubernetes specification.
