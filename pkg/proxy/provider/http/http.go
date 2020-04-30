@@ -45,11 +45,11 @@ func (p *Provider) Init() error {
 	}
 
 	if p.PollInterval == 0 {
-		p.PollInterval = time.Duration(15 * time.Second)
+		p.PollInterval = 15 * time.Second
 	}
 
 	if p.PollTimeout == 0 {
-		p.PollTimeout = time.Duration(15 * time.Second)
+		p.PollTimeout = 15 * time.Second
 	}
 
 	p.httpClient = &http.Client{Timeout: p.PollTimeout}
