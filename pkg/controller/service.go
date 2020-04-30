@@ -81,7 +81,12 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 
 	// If the kubernetes server version is 1.17+, then use the topology key.
 	if major == 1 && minor >= 17 {
-		svc.Spec.TopologyKeys = []string{"kubernetes.io/hostname", "*"}
+		svc.Spec.TopologyKeys = []string{
+			"kubernetes.io/hostname",
+			"topology.kubernetes.io/zone",
+			"topology.kubernetes.io/region",
+			"*",
+		}
 	}
 
 	if _, err = s.kubeClient.CoreV1().Services(s.namespace).Create(svc); err != nil {
