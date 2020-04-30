@@ -9,10 +9,10 @@ import (
 	"github.com/containous/traefik/v2/pkg/types"
 )
 
-// DefaultInternalEntryPointName the name of the default internal entry point
+// DefaultInternalEntryPointName is the name of the default internal entry point
 const DefaultInternalEntryPointName = "traefik"
 
-// Configuration is the static configuration
+// Configuration is the Maesh proxy's static configuration
 type Configuration struct {
 	Global *traefikStatic.Global `description:"Global configuration options" json:"global,omitempty" toml:"global,omitempty" yaml:"global,omitempty" export:"true"`
 
@@ -64,6 +64,12 @@ func (c *Configuration) SetEffectiveConfiguration() {
 			c.EntryPoints[DefaultInternalEntryPointName] = ep
 		}
 	}
+}
+
+// ValidateConfiguration validate that configuration is coherent
+func (c *Configuration) ValidateConfiguration() error {
+	// This is a stub validator for now, it can be extended in the future if needed.
+	return nil
 }
 
 // ToTraefikConfig returns a Traefik compatable configuration for use in the proxy code without affecting compatibility.
