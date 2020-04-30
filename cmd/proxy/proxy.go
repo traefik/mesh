@@ -14,11 +14,8 @@ import (
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/pkg/config/static"
 	"github.com/containous/maesh/pkg/version"
-	traefikCmd "github.com/containous/traefik/v2/cmd"
-	"github.com/containous/traefik/v2/cmd/healthcheck"
 	"github.com/containous/traefik/v2/pkg/cli"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	traefikStatic "github.com/containous/traefik/v2/pkg/config/static"
 	"github.com/containous/traefik/v2/pkg/log"
 	"github.com/containous/traefik/v2/pkg/metrics"
 	"github.com/containous/traefik/v2/pkg/middlewares/accesslog"
@@ -30,7 +27,6 @@ import (
 	"github.com/containous/traefik/v2/pkg/server/service"
 	traefiktls "github.com/containous/traefik/v2/pkg/tls"
 	"github.com/containous/traefik/v2/pkg/types"
-	"github.com/coreos/go-systemd/daemon"
 	"github.com/sirupsen/logrus"
 	"github.com/vulcand/oxy/roundrobin"
 )
@@ -51,9 +47,13 @@ func NewCmd(loaders []cli.ResourceLoader) *cli.Command {
 }
 
 func runCmd(proxyStaticConfiguration *static.Configuration) error {
-	traefikStaticConfiguration := proxyStaticConfiguration.ToTraefikConfig()
+	proxyStaticConfiguration.SetEffectiveConfiguration()
 
-	configureLogging(traefikStaticConfiguration)
+	if err := proxyStaticConfiguration.ValidateConfiguration(); err != nil {
+		return err
+	}
+
+	configureLogging(proxyStaticConfiguration)
 
 	http.DefaultTransport.(*http.Transport).Proxy = http.ProxyFromEnvironment
 
@@ -61,66 +61,31 @@ func runCmd(proxyStaticConfiguration *static.Configuration) error {
 		log.WithoutContext().Errorf("Could not set round robin default weight: %v", err)
 	}
 
-	traefikStaticConfiguration.SetEffectiveConfiguration()
+	log.WithoutContext().Infof("Maesh proxy version %s built on %s", version.Version, version.Date)
 
-	if err := traefikStaticConfiguration.ValidateConfiguration(); err != nil {
+	jsonConf, err := json.Marshal(proxyStaticConfiguration)
+	if err != nil {
+		log.WithoutContext().Errorf("Could not marshal static configuration: %v", err)
+		log.WithoutContext().Debugf("Static configuration loaded [struct] %#v", proxyStaticConfiguration)
+
 		return err
 	}
 
-	log.WithoutContext().Infof("Maesh proxy version %s built on %s", version.Version, version.Date)
-
-	jsonConf, err := json.Marshal(traefikStaticConfiguration)
-	if err != nil {
-		log.WithoutContext().Errorf("Could not marshal static configuration: %v", err)
-		log.WithoutContext().Debugf("Static configuration loaded [struct] %#v", traefikStaticConfiguration)
-	} else {
-		log.WithoutContext().Debugf("Static configuration loaded %s", string(jsonConf))
-	}
+	log.WithoutContext().Debugf("Static configuration loaded %s", string(jsonConf))
 
 	svr, err := setupServer(proxyStaticConfiguration)
 	if err != nil {
 		return err
 	}
 
-	ctx := traefikCmd.ContextWithSignal(context.Background())
+	ctx := cmd.ContextWithSignal(context.Background())
 
-	if traefikStaticConfiguration.Ping != nil {
-		traefikStaticConfiguration.Ping.WithContext(ctx)
+	if proxyStaticConfiguration.Ping != nil {
+		proxyStaticConfiguration.Ping.WithContext(ctx)
 	}
 
 	svr.Start(ctx)
 	defer svr.Close()
-
-	sent, err := daemon.SdNotify(false, "READY=1")
-	if !sent && err != nil {
-		log.WithoutContext().Errorf("Failed to notify: %v", err)
-	}
-
-	t, err := daemon.SdWatchdogEnabled(false)
-	if err != nil {
-		log.WithoutContext().Errorf("Could not enable Watchdog: %v", err)
-	} else if t != 0 {
-		// Call SdNotify every time / 2 as specified by SdWatchdogEnabled doc.
-		t /= 2
-		log.WithoutContext().Infof("Watchdog activated with timer duration %s", t)
-		safe.Go(func() {
-			tick := time.NewTicker(t)
-			for range tick.C {
-				resp, errHealthCheck := healthcheck.Do(*traefikStaticConfiguration)
-				if resp != nil {
-					_ = resp.Body.Close()
-				}
-
-				if traefikStaticConfiguration.Ping == nil || errHealthCheck == nil {
-					if ok, _ := daemon.SdNotify(false, "WATCHDOG=1"); !ok {
-						log.WithoutContext().Error("Fail to tick watchdog")
-					}
-				} else {
-					log.WithoutContext().Error(errHealthCheck)
-				}
-			}
-		})
-	}
 
 	svr.Wait()
 	log.WithoutContext().Info("Shutting down")
@@ -278,7 +243,7 @@ func setupAccessLog(conf *types.AccessLog) *accesslog.Handler {
 	return accessLoggerMiddleware
 }
 
-func configureLogging(staticConfiguration *traefikStatic.Configuration) {
+func configureLogging(staticConfiguration *static.Configuration) {
 	// Configure default log flags.
 	stdlog.SetFlags(stdlog.Lshortfile | stdlog.LstdFlags)
 
