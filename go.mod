@@ -7,7 +7,6 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.112 // indirect
 	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/containous/traefik/v2 v2.2.0
-	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
