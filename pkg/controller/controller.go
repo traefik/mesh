@@ -10,7 +10,6 @@ import (
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/provider"
 	"github.com/containous/maesh/pkg/topology"
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/containous/traefik/v2/pkg/safe"
 	accessInformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	accessLister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
@@ -233,12 +232,6 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		case <-timer.C:
 			rawCfg := c.lastConfiguration.Get()
 			if rawCfg == nil {
-				break
-			}
-
-			_, ok := rawCfg.(*dynamic.Configuration)
-			if !ok {
-				c.logger.Error("Received unexpected dynamic configuration, skipping")
 				break
 			}
 

@@ -1,7 +1,6 @@
 package http
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,7 +14,6 @@ import (
 	"github.com/containous/traefik/v2/pkg/log"
 	"github.com/containous/traefik/v2/pkg/provider"
 	"github.com/containous/traefik/v2/pkg/safe"
-	"github.com/containous/traefik/v2/pkg/types"
 )
 
 var _ provider.Provider = (*Provider)(nil)
@@ -25,13 +23,14 @@ const providerName = "http"
 
 // Provider is a provider.Provider implementation that queries an endpoint for a configuration.
 type Provider struct {
-	Endpoint     string         `description:"Load configuration from this endpoint." json:"endpoint" toml:"endpoint" yaml:"endpoint" export:"true"`
-	PollInterval types.Duration `description:"Polling interval for endpoint." json:"pollInterval,omitempty" toml:"pollInterval,omitempty" yaml:"pollInterval,omitempty"`
-	PollTimeout  types.Duration `description:"Polling timeout for endpoint." json:"pollTimeout,omitempty" toml:"pollTimeout,omitempty" yaml:"pollTimeout,omitempty"`
+	Endpoint     string        `description:"Load configuration from this endpoint." json:"endpoint" toml:"endpoint" yaml:"endpoint" export:"true"`
+	PollInterval time.Duration `description:"Polling interval for endpoint." json:"pollInterval,omitempty" toml:"pollInterval,omitempty" yaml:"pollInterval,omitempty"`
+	PollTimeout  time.Duration `description:"Polling timeout for endpoint." json:"pollTimeout,omitempty" toml:"pollTimeout,omitempty" yaml:"pollTimeout,omitempty"`
+	httpClient   *http.Client
 }
 
 // New creates a new instance of the HTTP provider.
-func New(endpoint string, pollInterval types.Duration, pollTimeout types.Duration) *Provider {
+func New(endpoint string, pollInterval time.Duration, pollTimeout time.Duration) *Provider {
 	return &Provider{
 		Endpoint:     endpoint,
 		PollInterval: pollInterval,
@@ -46,12 +45,14 @@ func (p *Provider) Init() error {
 	}
 
 	if p.PollInterval == 0 {
-		p.PollInterval = types.Duration(15 * time.Second)
+		p.PollInterval = time.Duration(15 * time.Second)
 	}
 
 	if p.PollTimeout == 0 {
-		p.PollTimeout = types.Duration(15 * time.Second)
+		p.PollTimeout = time.Duration(15 * time.Second)
 	}
+
+	p.httpClient = &http.Client{Timeout: p.PollTimeout}
 
 	return nil
 }
@@ -65,7 +66,7 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 
 		operation := func() error {
 			errChan := make(chan error)
-			ticker := time.NewTicker(time.Duration(p.PollInterval))
+			ticker := time.NewTicker(p.PollInterval)
 
 			pool.GoCtx(func(ctx context.Context) {
 				ctx = log.With(ctx, log.Str(log.ProviderName, providerName))
@@ -122,14 +123,7 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 
 // getDataFromEndpoint returns data from the configured provider endpoint.
 func (p Provider) getDataFromEndpoint(ctx context.Context) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, p.Endpoint, &bytes.Buffer{})
-	if err != nil {
-		return nil, fmt.Errorf("unable to create request: %w", err)
-	}
-
-	client := &http.Client{Timeout: time.Duration(p.PollTimeout)}
-
-	resp, err := client.Do(req)
+	resp, err := p.httpClient.Get(p.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get data from endpoint %q: %w", p.Endpoint, err)
 	}
@@ -140,13 +134,10 @@ func (p Provider) getDataFromEndpoint(ctx context.Context) ([]byte, error) {
 
 	defer resp.Body.Close()
 
-	var (
-		bodyData []byte
-		bodyErr  error
-	)
+	var data []byte
 
-	if bodyData, bodyErr = ioutil.ReadAll(resp.Body); bodyErr != nil {
-		return nil, fmt.Errorf("unable to read response body: %w", bodyErr)
+	if data, err = ioutil.ReadAll(resp.Body); err != nil {
+		return nil, fmt.Errorf("unable to read response body: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -155,5 +146,5 @@ func (p Provider) getDataFromEndpoint(ctx context.Context) ([]byte, error) {
 
 	log.FromContext(ctx).Debugf("Successfully received data from endpoint: %q", p.Endpoint)
 
-	return bodyData, nil
+	return data, nil
 }

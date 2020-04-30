@@ -15,4 +15,3 @@ spec:
       targetPort: api
   selector:
     component: controller
-  
