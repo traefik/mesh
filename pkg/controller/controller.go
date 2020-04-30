@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/containous/maesh/pkg/annotations"
 	"github.com/containous/maesh/pkg/api"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/provider"
@@ -184,7 +185,7 @@ func (c *Controller) init() {
 		MaeshNamespace:     c.cfg.Namespace,
 	}
 
-	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, providerCfg, c.logger)
+	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddleware, providerCfg, c.logger)
 }
 
 // Run is the main entrypoint for the controller.

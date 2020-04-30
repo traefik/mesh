@@ -6,12 +6,16 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/containous/maesh/pkg/annotations"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/topology"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
+
+// MiddlewareBuilder is capable of building a middleware from service annotations.
+type MiddlewareBuilder func(annotations map[string]string) (*dynamic.Middleware, error)
 
 // PortFinder finds service port mappings.
 type PortFinder interface {
@@ -55,13 +59,13 @@ type Provider struct {
 }
 
 // New creates a new Provider.
-func New(tcpStateTable, udpStateTable PortFinder, cfg Config, logger logrus.FieldLogger) *Provider {
+func New(tcpStateTable, udpStateTable PortFinder, middlewareBuilder MiddlewareBuilder, cfg Config, logger logrus.FieldLogger) *Provider {
 	return &Provider{
 		config:                 cfg,
 		tcpStateTable:          tcpStateTable,
 		udpStateTable:          udpStateTable,
 		logger:                 logger,
-		buildServiceMiddleware: buildMiddlewareFromAnnotations,
+		buildServiceMiddleware: middlewareBuilder,
 	}
 }
 
@@ -82,12 +86,12 @@ func (p *Provider) BuildConfig(t *topology.Topology) *dynamic.Configuration {
 
 // buildConfigForService builds the dynamic configuration for the given service.
 func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service) error {
-	trafficType, err := p.getTrafficTypeAnnotation(svc)
+	trafficType, err := annotations.GetTrafficType(p.config.DefaultTrafficType, svc.Annotations)
 	if err != nil {
 		return fmt.Errorf("unable to evaluate traffic-type annotation: %w", err)
 	}
 
-	scheme, err := getSchemeAnnotation(svc)
+	scheme, err := annotations.GetScheme(svc.Annotations)
 	if err != nil {
 		return fmt.Errorf("unable to evaluate scheme annotation: %w", err)
 	}
@@ -95,8 +99,8 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 	var middlewares []string
 
 	// Middlewares are currently supported only for HTTP services.
-	if trafficType == k8s.ServiceTypeHTTP {
-		middleware, err := p.buildServiceMiddleware(svc)
+	if trafficType == annotations.ServiceTypeHTTP {
+		middleware, err := p.buildServiceMiddleware(svc.Annotations)
 		if err != nil {
 			return fmt.Errorf("unable to build middlewares: %w", err)
 		}
@@ -111,7 +115,7 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 
 	// When ACL mode is on, all traffic must be forbidden unless explicitly authorized via a TrafficTarget.
 	if p.config.ACL {
-		if trafficType == k8s.ServiceTypeHTTP {
+		if trafficType == annotations.ServiceTypeHTTP {
 			p.buildBlockAllRouters(cfg, svc)
 		}
 
@@ -148,7 +152,7 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 	svcKey := topology.Key{Name: svc.Name, Namespace: svc.Namespace}
 
 	switch trafficType {
-	case k8s.ServiceTypeHTTP:
+	case annotations.ServiceTypeHTTP:
 		httpRule := buildHTTPRuleFromService(svc)
 
 		for portID, svcPort := range svc.Ports {
@@ -166,7 +170,7 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 			cfg.HTTP.Routers[key] = buildHTTPRouter(httpRule, entrypoint, middlewares, key, priorityService)
 		}
 
-	case k8s.ServiceTypeTCP:
+	case annotations.ServiceTypeTCP:
 		rule := buildTCPRouterRule()
 
 		for _, svcPort := range svc.Ports {
@@ -184,7 +188,7 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 			cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
 		}
 
-	case k8s.ServiceTypeUDP:
+	case annotations.ServiceTypeUDP:
 		for _, svcPort := range svc.Ports {
 			entrypoint, err := p.buildUDPEntrypoint(svc, svcPort.Port)
 			if err != nil {
@@ -219,7 +223,7 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 	}
 
 	switch trafficType {
-	case k8s.ServiceTypeHTTP:
+	case annotations.ServiceTypeHTTP:
 		whitelistDirect := p.buildWhitelistMiddlewareFromTrafficTargetDirect(t, tt)
 		whitelistDirectKey := getWhitelistMiddlewareKeyFromTrafficTargetDirect(tt)
 		cfg.HTTP.Middlewares[whitelistDirectKey] = whitelistDirect
@@ -258,7 +262,7 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 				cfg.HTTP.Routers[indirectRtrKey] = buildHTTPRouter(rule, entrypoint, rtrMiddlewares, svcKey, priorityTrafficTargetIndirect)
 			}
 		}
-	case k8s.ServiceTypeTCP:
+	case annotations.ServiceTypeTCP:
 		if !hasTrafficTargetSpecTCPRoute(tt) {
 			return nil
 		}
@@ -298,13 +302,13 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, c
 	}
 
 	switch trafficType {
-	case k8s.ServiceTypeHTTP:
+	case annotations.ServiceTypeHTTP:
 		p.buildHTTPServiceAndRoutersForTrafficSplit(t, cfg, tsKey, scheme, ts, tsSvc, middlewares)
 
-	case k8s.ServiceTypeTCP:
+	case annotations.ServiceTypeTCP:
 		p.buildTCPServiceAndRoutersForTrafficSplit(cfg, tsKey, ts, tsSvc)
 
-	case k8s.ServiceTypeUDP:
+	case annotations.ServiceTypeUDP:
 		p.buildUDPServiceAndRoutersForTrafficSplit(cfg, tsKey, ts, tsSvc)
 
 	default:
@@ -514,20 +518,6 @@ func (p Provider) buildUDPEntrypoint(svc *topology.Service, port int32) (string,
 	return fmt.Sprintf("udp-%d", meshPort), nil
 }
 
-func (p *Provider) getTrafficTypeAnnotation(svc *topology.Service) (string, error) {
-	trafficType, ok := svc.Annotations[k8s.AnnotationServiceType]
-
-	if !ok {
-		return p.config.DefaultTrafficType, nil
-	}
-
-	if trafficType != k8s.ServiceTypeHTTP && trafficType != k8s.ServiceTypeTCP && trafficType != k8s.ServiceTypeUDP {
-		return "", fmt.Errorf("traffic-type annotation references an unsupported traffic type %q", trafficType)
-	}
-
-	return trafficType, nil
-}
-
 func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topology.Service, scheme string, port int32) *dynamic.Service {
 	var servers []dynamic.Server
 
@@ -714,20 +704,6 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficSplitIndirect(t *topology.
 	}
 
 	return whitelist
-}
-
-func getSchemeAnnotation(svc *topology.Service) (string, error) {
-	scheme, ok := svc.Annotations[k8s.AnnotationScheme]
-
-	if !ok {
-		return k8s.SchemeHTTP, nil
-	}
-
-	if scheme != k8s.SchemeHTTP && scheme != k8s.SchemeH2c && scheme != k8s.SchemeHTTPS {
-		return "", fmt.Errorf("scheme annotation references an unknown scheme %q", scheme)
-	}
-
-	return scheme, nil
 }
 
 func buildHTTPServiceFromTrafficSplit(backendSvc []dynamic.WRRService) *dynamic.Service {
