@@ -177,10 +177,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 }
 
 func setTrafficTargetWithErr(topology *Topology, tt *access.TrafficTarget, sources []ServiceTrafficTargetSource, err error) {
-	svcTTKey := ServiceTrafficTargetKey{
-		TrafficTarget: Key{tt.Name, tt.Namespace},
-	}
-	topology.ServiceTrafficTargets[svcTTKey] = &ServiceTrafficTarget{
+	stt := &ServiceTrafficTarget{
 		Name:      tt.Name,
 		Namespace: tt.Namespace,
 		Sources:   sources,
@@ -188,8 +185,11 @@ func setTrafficTargetWithErr(topology *Topology, tt *access.TrafficTarget, sourc
 			ServiceAccount: tt.Destination.Name,
 			Namespace:      tt.Destination.Namespace,
 		},
-		Err: err,
 	}
+	stt.AddError(err)
+
+	svcTTKey := ServiceTrafficTargetKey{TrafficTarget: Key{tt.Name, tt.Namespace}}
+	topology.ServiceTrafficTargets[svcTTKey] = stt
 }
 
 // evaluateTrafficSplit evaluates the given traffic-split. If the traffic-split targets a known Service, a new TrafficSplit
@@ -261,14 +261,15 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 }
 
 func setTrafficSplitWithErr(topology *Topology, trafficSplit *split.TrafficSplit, svcKey Key, err error) {
-	tsKey := Key{trafficSplit.Name, trafficSplit.Namespace}
-
-	topology.TrafficSplits[tsKey] = &TrafficSplit{
+	ts := &TrafficSplit{
 		Name:      trafficSplit.Name,
 		Namespace: trafficSplit.Namespace,
 		Service:   svcKey,
-		Err:       err,
 	}
+	ts.AddError(err)
+
+	tsKey := Key{trafficSplit.Name, trafficSplit.Namespace}
+	topology.TrafficSplits[tsKey] = ts
 }
 
 // populateTrafficSplitsAuthorizedIncomingTraffic computes the list of pods allowed to access a traffic-split. As
@@ -289,8 +290,9 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 			if err != nil {
 				loopDetected[svc] = append(loopDetected[svc], tsKey)
 
-				ts.Err = fmt.Errorf("unable to get incoming pods: %v", err)
-				b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, ts.Err)
+				err = fmt.Errorf("unable to get incoming pods: %v", err)
+				ts.AddError(err)
+				b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
 
 				continue
 			}
