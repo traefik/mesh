@@ -57,8 +57,8 @@ func TestProvider_Provide(t *testing.T) {
 
 	provider := Provider{
 		Endpoint:     server.URL + "/endpoint",
-		PollTimeout:  time.Duration(1 * time.Second),
-		PollInterval: time.Duration(100 * time.Millisecond),
+		PollTimeout:  1 * time.Second,
+		PollInterval: 100 * time.Millisecond,
 	}
 
 	assert.NoError(t, provider.Init())
