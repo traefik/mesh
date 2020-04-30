@@ -26,6 +26,7 @@ const (
 	annotationScheme      = baseAnnotation + "scheme"
 )
 
+// GetTrafficType returns the value of the traffic-type annotation.
 func GetTrafficType(defaultTrafficType string, annotations map[string]string) (string, error) {
 	trafficType, ok := annotations[annotationServiceType]
 
@@ -40,6 +41,7 @@ func GetTrafficType(defaultTrafficType string, annotations map[string]string) (s
 	return trafficType, nil
 }
 
+// GetScheme returns the value of the scheme annotation.
 func GetScheme(annotations map[string]string) (string, error) {
 	scheme, ok := annotations[annotationScheme]
 
