@@ -3,11 +3,12 @@
 </p>
 
 
-[![Build Status](https://containous.semaphoreci.com/badges/maesh/branches/master.svg?style=shields)](https://containous.semaphoreci.com/projects/maesh)
+[![Travis CI Build Status](https://travis-ci.com/containous/maesh.svg?branch=master)](https://travis-ci.com/containous/maesh)
+[![Semaphore CI Build Status](https://containous.semaphoreci.com/badges/maesh/branches/master.svg?style=shields)](https://containous.semaphoreci.com/projects/maesh)
 [![Docs](https://img.shields.io/badge/docs-current-brightgreen.svg)](https://docs.mae.sh)
+[![Go Report Card](https://goreportcard.com/badge/github.com/containous/maesh)](https://goreportcard.com/report/github.com/containous/maesh)
+[![Release](https://img.shields.io/github/tag-date/containous/maesh.svg)](https://github.com/containous/maesh/releases)
 [![GitHub](https://img.shields.io/github/license/containous/maesh)](https://github.com/containous/maesh/blob/master/LICENSE)
-[![release](https://img.shields.io/github/tag-date/containous/maesh.svg)](https://github.com/containous/maesh/releases)
-[![Build Status](https://travis-ci.com/containous/maesh.svg?branch=master)](https://travis-ci.com/containous/maesh)
 [![Discourse status](https://img.shields.io/discourse/https/community.containo.us/status?label=Community&style=social)](https://community.containo.us/c/maesh)
 
 ## Maesh: Simpler Service Mesh
