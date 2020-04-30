@@ -73,6 +73,9 @@ spec:
             - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" $port $port }}
             - {{ printf "\"--entryPoints.tcp-%d.forwardedHeaders.insecure=true\"" $port }}
             {{- end }}
+            {{- range $i, $port := untilStep 15000 ((add (.Values.limits.udp|int) 15000)|int) 1 }}
+            - {{ printf "\"--entryPoints.udp-%d.address=:%d/udp\"" $port $port }}
+            {{- end }}
             - "--providers.rest"
             - "--providers.rest.insecure"
             {{- if .Values.tracing.jaeger.enabled }}

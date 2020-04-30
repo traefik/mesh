@@ -13,7 +13,7 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	requiredImages := []string{
 		"containous/maesh:latest",
 		"containous/whoami:v1.0.1",
-		"containous/whoamitcp",
+		"containous/whoamitcp:v0.0.2",
 		"coredns/coredns:1.6.3",
 		"giantswarm/tiny-tools:3.9",
 	}

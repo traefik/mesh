@@ -83,6 +83,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 
 	minHTTPPort := int32(5000)
 	minTCPPort := int32(10000)
+	minUDPPort := int32(15000)
 
 	if iConfig.SMI {
 		log.Warnf("SMI mode is deprecated, please consider using --acl instead")
@@ -102,10 +103,12 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		IgnoreNamespaces: iConfig.IgnoreNamespaces,
 		APIPort:          iConfig.APIPort,
 		APIHost:          iConfig.APIHost,
-		MinTCPPort:       minTCPPort,
-		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
+		MinTCPPort:       minTCPPort,
+		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
+		MinUDPPort:       minUDPPort,
+		MaxUDPPort:       minUDPPort + iConfig.LimitUDPPort,
 	}, log)
 	if err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)

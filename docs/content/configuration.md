@@ -45,9 +45,14 @@ The traffic type can be configured by using the following annotation:
 maesh.containo.us/traffic-type: "http"
 ```
 
-This annotation can be set to either `http` or `tcp`, and will specify the mode for that service operation.
+This annotation can be set to either `http`, `tcp` or `udp` and will specifies the mode for that service operation.
 If this annotation is not present, the mesh service will operate in the default mode specified in the static configuration.
 
+!!! Info
+    For now, the `udp` traffic type does not work when ACL mode is enabled. In ACL mode, all traffic is forbidden unless it
+    is explicitly allowed with a [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md) and
+    unfortunately the SMI specification does not yet define a [Traffic Spec](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-specs.md) for `UDP`.
+    
 #### Scheme
 
 The scheme used to define custom scheme for request:
