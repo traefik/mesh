@@ -45,8 +45,8 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 	}
 }
 
-// PrepareConfig holds the configuration to prepare the cluster.
-type PrepareConfig struct {
+// PrepareConfiguration holds the configuration to prepare the cluster.
+type PrepareConfiguration struct {
 	KubeConfig    string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL     string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	Debug         bool   `description:"Debug mode." export:"true"`
@@ -56,9 +56,9 @@ type PrepareConfig struct {
 	ACL           bool   `description:"Enable ACL mode." export:"true"`
 }
 
-// NewPrepareConfig creates PrepareConfig.
-func NewPrepareConfig() *PrepareConfig {
-	return &PrepareConfig{
+// NewPrepareConfiguration creates a PrepareConfiguration with default values.
+func NewPrepareConfiguration() *PrepareConfiguration {
+	return &PrepareConfiguration{
 		KubeConfig:    os.Getenv("KUBECONFIG"),
 		Debug:         false,
 		Namespace:     "maesh",
