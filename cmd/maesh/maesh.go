@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/containous/maesh/cmd"
+	"github.com/containous/maesh/cmd/cleanup"
 	"github.com/containous/maesh/cmd/prepare"
 	"github.com/containous/maesh/cmd/proxy"
 	"github.com/containous/maesh/cmd/version"
@@ -33,6 +34,12 @@ func main() {
 
 	pConfig := cmd.NewPrepareConfig()
 	if err := cmdMaesh.AddCommand(prepare.NewCmd(pConfig, loaders)); err != nil {
+		stdlog.Println(err)
+		os.Exit(1)
+	}
+
+	cConfig := cmd.NewCleanupConfiguration()
+	if err := cmdMaesh.AddCommand(cleanup.NewCmd(cConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
