@@ -30,6 +30,7 @@ func (s *HelmSuite) TestACLDisabled(c *check.C) {
 	defer s.unInstallHelmMaesh(c)
 
 	s.waitForMaeshControllerStarted(c)
+	s.waitForMaeshProxyStarted(c)
 }
 
 func (s *HelmSuite) TestACLEnabled(c *check.C) {
@@ -39,4 +40,5 @@ func (s *HelmSuite) TestACLEnabled(c *check.C) {
 	defer s.unInstallHelmMaesh(c)
 
 	s.waitForMaeshControllerStarted(c)
+	s.waitForMaeshProxyStarted(c)
 }
