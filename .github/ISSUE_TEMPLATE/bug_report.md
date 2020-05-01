@@ -1,8 +1,8 @@
 ---
 name: Bug Report
 about: Create a report to help us improve Maesh
-
 ---
+
 <!-- PLEASE FOLLOW THE ISSUE TEMPLATE TO HELP TRIAGE AND SUPPORT! -->
 
 ## Bug Report
@@ -11,7 +11,6 @@ about: Create a report to help us improve Maesh
 ### What did you do?
 
 <!--
-
 HOW TO WRITE A GOOD BUG REPORT?
 
 - Respect the issue template as much as possible.
@@ -20,7 +19,6 @@ HOW TO WRITE A GOOD BUG REPORT?
 - The context should lead to something, an idea or a problem that you’re facing.
 - Remain clear and concise.
 - Format your messages to help the reader focus on what matters and understand the structure of your message, use Markdown syntax https://help.github.com/articles/github-flavored-markdown
-
 -->
 
 ### What did you expect to see?
