@@ -64,15 +64,17 @@ func runCmd(proxyConfiguration *cmd.ProxyConfiguration) error {
 
 	log.WithoutContext().Infof("Maesh proxy version %s built on %s", version.Version, version.Date)
 
-	jsonConf, err := json.Marshal(proxyConfiguration.Configuration)
-	if err != nil {
-		log.WithoutContext().Errorf("Could not marshal static configuration: %v", err)
-		log.WithoutContext().Debugf("Static configuration loaded [struct] %#v", proxyConfiguration.Configuration)
+	if proxyConfiguration.Configuration.Log.Level == "DEBUG" {
+		jsonConf, err := json.Marshal(proxyConfiguration.Configuration)
+		if err != nil {
+			log.WithoutContext().Errorf("Could not marshal static configuration: %v", err)
+			log.WithoutContext().Debugf("Static configuration loaded [struct] %#v", proxyConfiguration.Configuration)
 
-		return err
+			return err
+		}
+
+		log.WithoutContext().Debugf("Static configuration loaded %s", string(jsonConf))
 	}
-
-	log.WithoutContext().Debugf("Static configuration loaded %s", string(jsonConf))
 
 	svr, err := setupServer(proxyConfiguration)
 	if err != nil {
@@ -80,6 +82,10 @@ func runCmd(proxyConfiguration *cmd.ProxyConfiguration) error {
 	}
 
 	ctx := cmd.ContextWithSignal(context.Background())
+
+	if proxyConfiguration.Configuration.Ping != nil {
+		proxyConfiguration.Configuration.Ping.WithContext(ctx)
+	}
 
 	svr.Start(ctx)
 	defer svr.Close()
