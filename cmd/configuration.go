@@ -60,3 +60,20 @@ func NewPrepareConfig() *PrepareConfig {
 		SMI:           false,
 	}
 }
+
+// CleanupConfiguration holds the configuration for the cleanup command.
+type CleanupConfiguration struct {
+	KubeConfig string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
+	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
+	Debug      bool   `description:"Debug mode." export:"true"`
+	Namespace  string `description:"The namespace that maesh is installed in." export:"true"`
+}
+
+// NewCleanupConfiguration creates CleanupConfiguration.
+func NewCleanupConfiguration() *CleanupConfiguration {
+	return &CleanupConfiguration{
+		KubeConfig: os.Getenv("KUBECONFIG"),
+		Debug:      false,
+		Namespace:  "maesh",
+	}
+}
