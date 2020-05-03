@@ -84,10 +84,6 @@ spec:
             - "--limitHTTPPort={{ .Values.limits.http }}"
             {{- end }}
           env:
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
