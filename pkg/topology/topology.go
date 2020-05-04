@@ -38,6 +38,19 @@ func (k *Key) UnmarshalText(data []byte) error {
 	return nil
 }
 
+// UnmarshalJSON implements the `json.Unmarshaler` interface.
+// This is a temporary workaround for the bug described in this
+// issue: https://github.com/golang/go/issues/38771.
+func (k *Key) UnmarshalJSON(data []byte) error {
+	if len(data) < 2 {
+		return nil
+	}
+
+	data = data[1 : len(data)-1]
+
+	return k.UnmarshalText(data)
+}
+
 // ServiceTrafficTargetKey references a TrafficTarget applied on a Service.
 type ServiceTrafficTargetKey struct {
 	Service       Key
@@ -116,6 +129,13 @@ type Service struct {
 	TrafficSplits []Key `json:"trafficSplits,omitempty"`
 	// List of TrafficSplit mentioning this service as a backend.
 	BackendOf []Key `json:"backendOf,omitempty"`
+
+	Errors []string `json:"errors"`
+}
+
+// AddError adds the given error to this Service.
+func (s *Service) AddError(err error) {
+	s.Errors = append(s.Errors, err.Error())
 }
 
 // ServiceTrafficTarget represents a TrafficTarget applied a on Service. TrafficTargets have a Destination service
@@ -130,6 +150,13 @@ type ServiceTrafficTarget struct {
 	Sources     []ServiceTrafficTargetSource    `json:"sources,omitempty"`
 	Destination ServiceTrafficTargetDestination `json:"destination"`
 	Specs       []TrafficSpec                   `json:"specs,omitempty"`
+
+	Errors []string `json:"errors"`
+}
+
+// AddError adds the given error to this ServiceTrafficTarget.
+func (tt *ServiceTrafficTarget) AddError(err error) {
+	tt.Errors = append(tt.Errors, err.Error())
 }
 
 // ServiceTrafficTargetSource represents a source of a ServiceTrafficTarget. In the SMI specification, a TrafficTarget
@@ -182,6 +209,13 @@ type TrafficSplit struct {
 
 	// List of Pods that are explicitly allowed to pass through the TrafficSplit.
 	Incoming []Key `json:"incoming,omitempty"`
+
+	Errors []string `json:"errors"`
+}
+
+// AddError adds the given error to this TrafficSplit.
+func (ts *TrafficSplit) AddError(err error) {
+	ts.Errors = append(ts.Errors, err.Error())
 }
 
 // TrafficSplitBackend is a backend of a TrafficSplit.
