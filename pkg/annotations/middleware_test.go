@@ -11,21 +11,24 @@ func TestBuildMiddleware(t *testing.T) {
 	tests := []struct {
 		desc        string
 		annotations map[string]string
-		want        *dynamic.Middleware
+		want        map[string]*dynamic.Middleware
 		err         bool
 	}{
 		{
 			desc:        "nil when no middleware have been created",
 			annotations: map[string]string{},
+			want:        map[string]*dynamic.Middleware{},
 		},
 		{
 			desc: "retry-attempts annotation is valid",
 			annotations: map[string]string{
 				"maesh.containo.us/retry-attempts": "5",
 			},
-			want: &dynamic.Middleware{
-				Retry: &dynamic.Retry{
-					Attempts: 5,
+			want: map[string]*dynamic.Middleware{
+				"retry": {
+					Retry: &dynamic.Retry{
+						Attempts: 5,
+					},
 				},
 			},
 		},
@@ -41,9 +44,11 @@ func TestBuildMiddleware(t *testing.T) {
 			annotations: map[string]string{
 				"maesh.containo.us/circuit-breaker-expression": "LatencyAtQuantileMS(50.0) > 100",
 			},
-			want: &dynamic.Middleware{
-				CircuitBreaker: &dynamic.CircuitBreaker{
-					Expression: "LatencyAtQuantileMS(50.0) > 100",
+			want: map[string]*dynamic.Middleware{
+				"circuit-breaker": {
+					CircuitBreaker: &dynamic.CircuitBreaker{
+						Expression: "LatencyAtQuantileMS(50.0) > 100",
+					},
 				},
 			},
 		},
@@ -53,10 +58,12 @@ func TestBuildMiddleware(t *testing.T) {
 				"maesh.containo.us/ratelimit-average": "200",
 				"maesh.containo.us/ratelimit-burst":   "100",
 			},
-			want: &dynamic.Middleware{
-				RateLimit: &dynamic.RateLimit{
-					Average: 200,
-					Burst:   100,
+			want: map[string]*dynamic.Middleware{
+				"rate-limit": {
+					RateLimit: &dynamic.RateLimit{
+						Average: 200,
+						Burst:   100,
+					},
 				},
 			},
 		},
@@ -81,12 +88,14 @@ func TestBuildMiddleware(t *testing.T) {
 			annotations: map[string]string{
 				"maesh.containo.us/ratelimit-average": "200",
 			},
+			want: map[string]*dynamic.Middleware{},
 		},
 		{
 			desc: "ratelimit-burst is set but ratelimit-average is not",
 			annotations: map[string]string{
 				"maesh.containo.us/ratelimit-burst": "200",
 			},
+			want: map[string]*dynamic.Middleware{},
 		},
 		{
 			desc: "multiple middlewares",
@@ -96,16 +105,22 @@ func TestBuildMiddleware(t *testing.T) {
 				"maesh.containo.us/ratelimit-burst":            "100",
 				"maesh.containo.us/circuit-breaker-expression": "LatencyAtQuantileMS(50.0) > 100",
 			},
-			want: &dynamic.Middleware{
-				Retry: &dynamic.Retry{
-					Attempts: 5,
+			want: map[string]*dynamic.Middleware{
+				"retry": {
+					Retry: &dynamic.Retry{
+						Attempts: 5,
+					},
 				},
-				RateLimit: &dynamic.RateLimit{
-					Average: 200,
-					Burst:   100,
+				"rate-limit": {
+					RateLimit: &dynamic.RateLimit{
+						Average: 200,
+						Burst:   100,
+					},
 				},
-				CircuitBreaker: &dynamic.CircuitBreaker{
-					Expression: "LatencyAtQuantileMS(50.0) > 100",
+				"circuit-breaker": {
+					CircuitBreaker: &dynamic.CircuitBreaker{
+						Expression: "LatencyAtQuantileMS(50.0) > 100",
+					},
 				},
 			},
 		},
@@ -113,7 +128,7 @@ func TestBuildMiddleware(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			got, err := BuildMiddleware(test.annotations)
+			got, err := BuildMiddlewares(test.annotations)
 			if test.err {
 				assert.Error(t, err)
 			} else {

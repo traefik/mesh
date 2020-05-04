@@ -15,7 +15,7 @@ import (
 )
 
 // MiddlewareBuilder is capable of building a middleware from service annotations.
-type MiddlewareBuilder func(annotations map[string]string) (*dynamic.Middleware, error)
+type MiddlewareBuilder func(annotations map[string]string) (map[string]*dynamic.Middleware, error)
 
 // PortFinder finds service port mappings.
 type PortFinder interface {
@@ -96,20 +96,20 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 		return fmt.Errorf("unable to evaluate scheme annotation: %w", err)
 	}
 
-	var middlewares []string
+	var middlewareKeys []string
 
 	// Middlewares are currently supported only for HTTP services.
 	if trafficType == annotations.ServiceTypeHTTP {
-		middleware, err := p.buildServiceMiddleware(svc.Annotations)
+		middlewares, err := p.buildServiceMiddleware(svc.Annotations)
 		if err != nil {
 			return fmt.Errorf("unable to build middlewares: %w", err)
 		}
 
-		if middleware != nil {
-			middlewareKey := getMiddlewareKey(svc)
+		for name, middleware := range middlewares {
+			middlewareKey := getMiddlewareKey(svc, name)
 			cfg.HTTP.Middlewares[middlewareKey] = middleware
 
-			middlewares = append(middlewares, middlewareKey)
+			middlewareKeys = append(middlewareKeys, middlewareKey)
 		}
 	}
 
@@ -120,7 +120,7 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 		}
 
 		for _, ttKey := range svc.TrafficTargets {
-			if err := p.buildServicesAndRoutersForTrafficTarget(t, cfg, ttKey, scheme, trafficType, middlewares); err != nil {
+			if err := p.buildServicesAndRoutersForTrafficTarget(t, cfg, ttKey, scheme, trafficType, middlewareKeys); err != nil {
 				err = fmt.Errorf("unable to build routers and services: %v", err)
 				t.ServiceTrafficTargets[ttKey].AddError(err)
 				p.logger.Errorf("Error building dynamic configuration for TrafficTarget %q: %v", ttKey, err)
@@ -129,14 +129,14 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 			}
 		}
 	} else {
-		err := p.buildServicesAndRoutersForService(t, cfg, svc, scheme, trafficType, middlewares)
+		err := p.buildServicesAndRoutersForService(t, cfg, svc, scheme, trafficType, middlewareKeys)
 		if err != nil {
 			return fmt.Errorf("unable to build routers and services: %w", err)
 		}
 	}
 
 	for _, tsKey := range svc.TrafficSplits {
-		if err := p.buildServiceAndRoutersForTrafficSplit(t, cfg, tsKey, scheme, trafficType, middlewares); err != nil {
+		if err := p.buildServiceAndRoutersForTrafficSplit(t, cfg, tsKey, scheme, trafficType, middlewareKeys); err != nil {
 			err = fmt.Errorf("unable to build routers and services : %v", err)
 			t.TrafficSplits[tsKey].AddError(err)
 			p.logger.Errorf("Error building dynamic configuration for TrafficSplit %q: %v", tsKey, err)

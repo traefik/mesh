@@ -185,7 +185,7 @@ func (c *Controller) init() {
 		MaeshNamespace:     c.cfg.Namespace,
 	}
 
-	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddleware, providerCfg, c.logger)
+	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddlewares, providerCfg, c.logger)
 }
 
 // Run is the main entrypoint for the controller.

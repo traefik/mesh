@@ -145,7 +145,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 				p, ok := test.udpStateTable[port]
 				return p, ok
 			}
-			middlewareBuilder := func(a map[string]string) (*dynamic.Middleware, error) {
+			middlewareBuilder := func(a map[string]string) (map[string]*dynamic.Middleware, error) {
 				return nil, nil
 			}
 
