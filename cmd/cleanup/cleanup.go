@@ -15,7 +15,7 @@ import (
 func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name:          "cleanup",
-		Description:   `Cleanup command.`,
+		Description:   `Removes Maesh shadow services from a Kubernetes cluster.`,
 		Configuration: cConfig,
 		Run: func(_ []string) error {
 			return cleanupCommand(cConfig)
@@ -40,13 +40,12 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 
 	clients, err := k8s.NewClient(log, cConfig.MasterURL, cConfig.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("error building clients: %v", err)
+		return fmt.Errorf("error building clients: %wß", err)
 	}
 
 	c := cleanup.NewCleanup(log, clients)
 
-	err = c.CleanShadowServices()
-	if err != nil {
+	if err := c.CleanShadowServices(); err != nil {
 		return fmt.Errorf("error encountered during cluster cleanup: %w", err)
 	}
 
