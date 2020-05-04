@@ -212,9 +212,8 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) ([]cor
 	}
 
 	for i, sp := range svc.Spec.Ports {
-		if !(trafficType == annotations.ServiceTypeUDP && sp.Protocol == corev1.ProtocolUDP) && !(trafficType != annotations.ServiceTypeUDP && sp.Protocol == corev1.ProtocolTCP) {
-			s.log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, svc.Namespace, svc.Name)
-			continue
+		if !isPortSuitable(trafficType, sp) {
+			s.log.Warnf("Unsupported port type %q on %q service %s/%s, skipping port %q", sp.Protocol, trafficType, svc.Namespace, svc.Name, sp.Name)
 		}
 
 		targetPort, err := s.getTargetPort(trafficType, i, svc.Name, svc.Namespace, sp.Port)
@@ -282,6 +281,14 @@ func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, svcName, svc
 	s.log.Debugf("Service %s/%s %d as been assigned port %d", svcName, svcNamespace, svcPort, port)
 
 	return port, nil
+}
+
+func isPortSuitable(trafficType string, sp corev1.ServicePort) bool {
+	if trafficType == annotations.ServiceTypeUDP {
+		return sp.Protocol == corev1.ProtocolUDP
+	}
+
+	return sp.Protocol == corev1.ProtocolTCP
 }
 
 func parseKubernetesServerVersion(kubeClient kubernetes.Interface) (major, minor int) {

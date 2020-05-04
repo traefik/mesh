@@ -14,8 +14,8 @@ const (
 
 	// SchemeHTTP HTTP scheme.
 	SchemeHTTP string = "http"
-	// SchemeH2c h2c scheme.
-	SchemeH2c string = "h2c"
+	// SchemeH2C h2c scheme.
+	SchemeH2C string = "h2c"
 	// SchemeHTTPS HTTPS scheme.
 	SchemeHTTPS string = "https"
 )
@@ -29,12 +29,15 @@ const (
 // GetTrafficType returns the value of the traffic-type annotation.
 func GetTrafficType(defaultTrafficType string, annotations map[string]string) (string, error) {
 	trafficType, ok := annotations[annotationServiceType]
-
 	if !ok {
 		return defaultTrafficType, nil
 	}
 
-	if trafficType != ServiceTypeHTTP && trafficType != ServiceTypeTCP && trafficType != ServiceTypeUDP {
+	switch trafficType {
+	case ServiceTypeHTTP:
+	case ServiceTypeTCP:
+	case ServiceTypeUDP:
+	default:
 		return trafficType, fmt.Errorf("traffic-type annotation references an unsupported traffic type %q", trafficType)
 	}
 
@@ -44,14 +47,19 @@ func GetTrafficType(defaultTrafficType string, annotations map[string]string) (s
 // GetScheme returns the value of the scheme annotation.
 func GetScheme(annotations map[string]string) (string, error) {
 	scheme, ok := annotations[annotationScheme]
-
 	if !ok {
 		return SchemeHTTP, nil
 	}
 
-	if scheme != SchemeHTTP && scheme != SchemeH2c && scheme != SchemeHTTPS {
+	switch scheme {
+	case SchemeHTTP:
+	case SchemeH2C:
+	case SchemeHTTPS:
+	default:
 		return scheme, fmt.Errorf("scheme annotation references an unknown scheme %q", scheme)
 	}
 
 	return scheme, nil
 }
+
+//func GetRetryAttempts(annotations map[string]string)
