@@ -50,5 +50,4 @@ func TestCleanShadowServices(t *testing.T) {
 	srv, err := clientMock.GetKubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{})
 	assert.NoError(t, err)
 	assert.Len(t, srv.Items, 1)
-
 }
