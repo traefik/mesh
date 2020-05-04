@@ -31,7 +31,7 @@ func main() {
 		},
 	}
 
-	pConfig := cmd.NewPrepareConfig()
+	pConfig := cmd.NewPrepareConfiguration()
 	if err := cmdMaesh.AddCommand(prepare.NewCmd(pConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
