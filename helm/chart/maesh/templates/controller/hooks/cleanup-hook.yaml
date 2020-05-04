@@ -1,0 +1,46 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: maesh-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name | quote}}
+    chart: {{ include "maesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote}}
+    heritage: {{ .Release.Service | quote}}
+  annotations:
+    "helm.sh/hook": "pre-delete"
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 30
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name | quote}}
+        component: cleanup
+        release: {{ .Release.Name | quote}}
+    spec:
+      serviceAccountName: maesh-controller
+      restartPolicy: Never
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      {{- end }}
+      containers:
+        - name: maesh-cleanup
+          image: {{ include "maesh.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          args:
+            - "cleanup"
+            {{- if .Values.controller.logging.debug }}
+            - "--debug"
+            {{- end }}
+            - "--namespace={{ .Release.Namespace }}"
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
