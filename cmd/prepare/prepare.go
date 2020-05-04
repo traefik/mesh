@@ -12,7 +12,7 @@ import (
 )
 
 // NewCmd builds a new Prepare command.
-func NewCmd(pConfig *cmd.PrepareConfig, loaders []cli.ResourceLoader) *cli.Command {
+func NewCmd(pConfig *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name:          "prepare",
 		Description:   `Prepare command.`,
@@ -24,7 +24,7 @@ func NewCmd(pConfig *cmd.PrepareConfig, loaders []cli.ResourceLoader) *cli.Comma
 	}
 }
 
-func prepareCommand(pConfig *cmd.PrepareConfig) error {
+func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)

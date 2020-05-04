@@ -29,6 +29,8 @@ mesh:
       cpu: "100m"
   logging: ERROR
   defaultMode: http
+  pollInterval: "100ms"
+  pollTimeout: "100ms"
 
 #
 # Tracing configuration
