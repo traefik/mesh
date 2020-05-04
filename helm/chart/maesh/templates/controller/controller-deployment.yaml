@@ -87,10 +87,6 @@ spec:
             - "--limitUDPPort={{ .Values.limits.udp }}"
             {{- end }}
           env:
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
