@@ -38,6 +38,19 @@ func (k *Key) UnmarshalText(data []byte) error {
 	return nil
 }
 
+// UnmarshalJSON implements the `json.Unmarshaler` interface.
+// This is a temporary workaround for the bug described in this
+// issue: https://github.com/golang/go/issues/38771.
+func (k *Key) UnmarshalJSON(data []byte) error {
+	if len(data) < 2 {
+		return nil
+	}
+
+	data = data[1 : len(data)-1]
+
+	return k.UnmarshalText(data)
+}
+
 // ServiceTrafficTargetKey references a TrafficTarget applied on a Service.
 type ServiceTrafficTargetKey struct {
 	Service       Key
@@ -117,7 +130,7 @@ type Service struct {
 	// List of TrafficSplit mentioning this service as a backend.
 	BackendOf []Key `json:"backendOf,omitempty"`
 
-	Errors []string
+	Errors []string `json:"errors"`
 }
 
 // AddError adds the given error to this Service.
@@ -138,7 +151,7 @@ type ServiceTrafficTarget struct {
 	Destination ServiceTrafficTargetDestination `json:"destination"`
 	Specs       []TrafficSpec                   `json:"specs,omitempty"`
 
-	Errors []string
+	Errors []string `json:"errors"`
 }
 
 // AddError adds the given error to this ServiceTrafficTarget.
@@ -197,7 +210,7 @@ type TrafficSplit struct {
 	// List of Pods that are explicitly allowed to pass through the TrafficSplit.
 	Incoming []Key `json:"incoming,omitempty"`
 
-	Errors []string
+	Errors []string `json:"errors"`
 }
 
 // AddError adds the given error to this TrafficSplit.
