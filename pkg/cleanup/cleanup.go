@@ -6,14 +6,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Cleaner is an interface for the cleanup methods.
-type Cleaner interface {
-	CleanShadowServices() error
-}
-
-// Ensure the Prepare fits the Preparer interface
-var _ Cleaner = (*Cleanup)(nil)
-
 // Cleanup holds the clients for the various resource controllers.
 type Cleanup struct {
 	client k8s.Client
@@ -21,7 +13,7 @@ type Cleanup struct {
 }
 
 // NewCleanup returns an initialized cleanup object.
-func NewCleanup(log logrus.FieldLogger, client k8s.Client) Cleaner {
+func NewCleanup(log logrus.FieldLogger, client k8s.Client) *Cleanup {
 	return &Cleanup{
 		client: client,
 		log:    log,
@@ -33,11 +25,6 @@ func (c *Cleanup) CleanShadowServices() error {
 	serviceList, err := c.client.GetKubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{
 		LabelSelector: "app=maesh",
 	})
-	if len(serviceList.Items) == 0 {
-		// No services found, return without error.
-		return nil
-	}
-
 	if err != nil {
 		return err
 	}
