@@ -37,12 +37,7 @@ spec:
             {{- if .Values.controller.logging.debug }}
             - "--debug"
             {{- end }}
-            - "--namespace=$(POD_NAMESPACE)"
-          env:
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+            - "--namespace={{ .Release.Namespace }}"
           securityContext:
             capabilities:
               drop:
