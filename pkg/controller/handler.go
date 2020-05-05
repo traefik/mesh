@@ -6,6 +6,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// configMessageChanRebuild rebuild.
+const configMessageChanRebuild = "rebuild"
+
 // Handler is an implementation of a ResourceEventHandler.
 type Handler struct {
 	log               logrus.FieldLogger
@@ -45,7 +48,7 @@ func (h *Handler) OnAdd(obj interface{}) {
 	}
 
 	// Trigger a configuration rebuild.
-	h.configRefreshChan <- k8s.ConfigMessageChanRebuild
+	h.configRefreshChan <- configMessageChanRebuild
 }
 
 // OnUpdate executed when an object is updated.
@@ -82,14 +85,10 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 		}
 
 		h.log.Debugf("MeshControllerHandler ObjectUpdated with type: *corev1.Pod: %s/%s", obj.Namespace, obj.Name)
-		// Since this is a mesh pod update, trigger a force deploy.
-		h.configRefreshChan <- k8s.ConfigMessageChanForce
-
-		return
 	}
 
 	// Trigger a configuration rebuild.
-	h.configRefreshChan <- k8s.ConfigMessageChanRebuild
+	h.configRefreshChan <- configMessageChanRebuild
 }
 
 // OnDelete executed when an object is deleted.
@@ -118,5 +117,5 @@ func (h *Handler) OnDelete(obj interface{}) {
 	}
 
 	// Trigger a configuration rebuild.
-	h.configRefreshChan <- k8s.ConfigMessageChanRebuild
+	h.configRefreshChan <- configMessageChanRebuild
 }
