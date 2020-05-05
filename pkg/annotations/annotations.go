@@ -47,7 +47,7 @@ func GetTrafficType(defaultTrafficType string, annotations map[string]string) (s
 	case ServiceTypeTCP:
 	case ServiceTypeUDP:
 	default:
-		return trafficType, fmt.Errorf("annotation %q references an unsupported traffic type %q", annotationServiceType, trafficType)
+		return trafficType, fmt.Errorf("unsupported traffic type %q: %q", annotationServiceType, trafficType)
 	}
 
 	return trafficType, nil
@@ -65,7 +65,7 @@ func GetScheme(annotations map[string]string) (string, error) {
 	case SchemeH2C:
 	case SchemeHTTPS:
 	default:
-		return scheme, fmt.Errorf("annotation %q references an unknown scheme %q", annotationScheme, scheme)
+		return scheme, fmt.Errorf("unsupported scheme %q: %q", annotationScheme, scheme)
 	}
 
 	return scheme, nil

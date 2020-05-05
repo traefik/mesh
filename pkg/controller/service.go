@@ -213,7 +213,7 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) ([]cor
 
 	trafficType, err := annotations.GetTrafficType(s.defaultTrafficType, svc.Annotations)
 	if err != nil {
-		return []corev1.ServicePort{}, fmt.Errorf("unable to get service traffic-type: %w", err)
+		return nil, fmt.Errorf("unable to get service traffic-type: %w", err)
 	}
 
 	for i, sp := range svc.Spec.Ports {
@@ -293,7 +293,11 @@ func isPortSuitable(trafficType string, sp corev1.ServicePort) bool {
 		return sp.Protocol == corev1.ProtocolUDP
 	}
 
-	return sp.Protocol == corev1.ProtocolTCP
+	if trafficType == annotations.ServiceTypeTCP || trafficType == annotations.ServiceTypeHTTP {
+		return sp.Protocol == corev1.ProtocolTCP
+	}
+
+	return false
 }
 
 func parseKubernetesServerVersion(kubeClient kubernetes.Interface) (major, minor int) {
