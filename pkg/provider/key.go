@@ -11,8 +11,8 @@ const (
 	blockAllServiceKey    = "block-all-service"
 )
 
-func getMiddlewareKey(svc *topology.Service) string {
-	return fmt.Sprintf("%s-%s", svc.Namespace, svc.Name)
+func getMiddlewareKey(svc *topology.Service, name string) string {
+	return fmt.Sprintf("%s-%s-%s", svc.Namespace, svc.Name, name)
 }
 
 func getServiceRouterKeyFromService(svc *topology.Service, port int32) string {
