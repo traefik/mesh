@@ -1,4 +1,70 @@
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: maesh-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name | quote}}
+    chart: {{ include "maesh.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  annotations:
+    "helm.sh/hook": "post-delete"
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
+    
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: maesh-cleanup-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name | quote}}
+    chart: {{ include "maesh.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  annotations:
+    "helm.sh/hook": "post-delete"
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+      - delete
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: maesh-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name | quote}}
+    chart: {{ include "maesh.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  annotations:
+    "helm.sh/hook": "post-delete"
+    "helm.sh/hook-weight": "15"
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: maesh-cleanup-role
+subjects:
+- kind: ServiceAccount
+  name: maesh-cleanup
+  namespace: {{ .Release.Namespace }}
+
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -10,7 +76,8 @@ metadata:
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
   annotations:
-    "helm.sh/hook": "pre-delete"
+    "helm.sh/hook": "post-delete"
+    "helm.sh/hook-weight": "20"
     "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
 spec:
   backoffLimit: 0
@@ -22,7 +89,7 @@ spec:
         component: cleanup
         release: {{ .Release.Name | quote}}
     spec:
-      serviceAccountName: maesh-controller
+      serviceAccountName: maesh-cleanup
       restartPolicy: Never
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:

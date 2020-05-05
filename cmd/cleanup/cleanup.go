@@ -45,7 +45,7 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 
 	c := cleanup.NewCleanup(log, clients)
 
-	if err := c.CleanShadowServices(); err != nil {
+	if err := c.CleanShadowServices(cConfig.Namespace); err != nil {
 		return fmt.Errorf("error encountered during cluster cleanup: %w", err)
 	}
 
