@@ -1,0 +1,61 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test1
+  namespace: maesh
+  labels:
+    app: maesh
+    type: shadow
+spec:
+  selector:
+    app: test
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test2
+  namespace: maesh
+  labels:
+    app: maesh
+    type: shadow
+spec:
+  selector:
+    app: test
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test3
+  namespace: maesh
+spec:
+  selector:
+    app: test
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test4
+  namespace: default
+spec:
+  selector:
+    app: test
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080      
