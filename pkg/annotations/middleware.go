@@ -7,11 +7,10 @@ import (
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 )
 
-type middlewareBuilder func(annotations map[string]string) (*dynamic.Middleware, string, error)
+type middlewareBuilder func(annotations map[string]string) (middleware *dynamic.Middleware, name string, err error)
 
 // BuildMiddlewares builds middlewares from the given annotations.
 func BuildMiddlewares(annotations map[string]string) (map[string]*dynamic.Middleware, error) {
-
 	builders := []middlewareBuilder{
 		buildRetryMiddleware,
 		buildRateLimitMiddleware,
@@ -34,28 +33,30 @@ func BuildMiddlewares(annotations map[string]string) (map[string]*dynamic.Middle
 	return middlewares, nil
 }
 
-func buildRetryMiddleware(annotations map[string]string) (*dynamic.Middleware, string, error) {
-	retryAttempts, errRetryAttempts := GetRetryAttempts(annotations)
-	if errRetryAttempts != nil {
-		if errRetryAttempts == ErrNotFound {
+func buildRetryMiddleware(annotations map[string]string) (middleware *dynamic.Middleware, name string, err error) {
+	var retryAttempts int
+
+	retryAttempts, err = GetRetryAttempts(annotations)
+	if err != nil {
+		if err == ErrNotFound {
 			return nil, "", nil
 		}
 
-		return nil, "", fmt.Errorf("unable to build retry middleware: %w", errRetryAttempts)
+		return nil, "", fmt.Errorf("unable to build retry middleware: %w", err)
 	}
 
-	middleware := &dynamic.Middleware{
+	name = "retry"
+	middleware = &dynamic.Middleware{
 		Retry: &dynamic.Retry{Attempts: retryAttempts},
 	}
 
-	return middleware, "retry", nil
+	return middleware, name, nil
 }
 
-func buildRateLimitMiddleware(annotations map[string]string) (*dynamic.Middleware, string, error) {
+func buildRateLimitMiddleware(annotations map[string]string) (middleware *dynamic.Middleware, name string, err error) {
 	var (
 		rateLimitBurst   int
 		rateLimitAverage int
-		err              error
 	)
 
 	rateLimitBurst, err = GetRateLimitBurst(annotations)
@@ -76,31 +77,35 @@ func buildRateLimitMiddleware(annotations map[string]string) (*dynamic.Middlewar
 		return nil, "", errors.New("unable to build rate-limit middleware: burst and average must be greater than 0")
 	}
 
-	middleware := &dynamic.Middleware{
+	name = "rate-limit"
+	middleware = &dynamic.Middleware{
 		RateLimit: &dynamic.RateLimit{
 			Burst:   int64(rateLimitBurst),
 			Average: int64(rateLimitAverage),
 		},
 	}
 
-	return middleware, "rate-limit", nil
+	return middleware, name, nil
 }
 
-func buildCircuitBreakerMiddleware(annotations map[string]string) (*dynamic.Middleware, string, error) {
-	circuitBreakerExpression, errCircuitBreakerExpression := GetCircuitBreakerExpression(annotations)
-	if errCircuitBreakerExpression != nil {
-		if errCircuitBreakerExpression == ErrNotFound {
+func buildCircuitBreakerMiddleware(annotations map[string]string) (middleware *dynamic.Middleware, name string, err error) {
+	var circuitBreakerExpression string
+
+	circuitBreakerExpression, err = GetCircuitBreakerExpression(annotations)
+	if err != nil {
+		if err == ErrNotFound {
 			return nil, "", nil
 		}
 
-		return nil, "", fmt.Errorf("unable to build circuit-breaker middleware: %w", errCircuitBreakerExpression)
+		return nil, "", fmt.Errorf("unable to build circuit-breaker middleware: %w", err)
 	}
 
-	middleware := &dynamic.Middleware{
+	name = "circuit-breaker"
+	middleware = &dynamic.Middleware{
 		CircuitBreaker: &dynamic.CircuitBreaker{
 			Expression: circuitBreakerExpression,
 		},
 	}
 
-	return middleware, "circuit-breaker", nil
+	return middleware, name, nil
 }
