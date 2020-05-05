@@ -16,25 +16,12 @@ type Handler struct {
 
 // NewHandler creates a handler.
 func NewHandler(log logrus.FieldLogger, ignored k8s.IgnoreWrapper, serviceManager ServiceManager, configRefreshChan chan string) *Handler {
-	h := &Handler{
+	return &Handler{
 		log:               log,
 		ignored:           ignored,
 		configRefreshChan: configRefreshChan,
 		serviceManager:    serviceManager,
 	}
-
-	if err := h.Init(); err != nil {
-		log.Errorln("Could not initialize MeshControllerHandler")
-	}
-
-	return h
-}
-
-// Init handles any handler initialization.
-func (h *Handler) Init() error {
-	h.log.Debugln("MeshControllerHandler.Init")
-
-	return nil
 }
 
 // OnAdd executed when an object is added.
