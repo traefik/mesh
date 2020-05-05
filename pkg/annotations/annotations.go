@@ -47,7 +47,7 @@ func GetTrafficType(defaultTrafficType string, annotations map[string]string) (s
 	case ServiceTypeTCP:
 	case ServiceTypeUDP:
 	default:
-		return trafficType, fmt.Errorf("%q annotation references an unsupported traffic type %q", annotationServiceType, trafficType)
+		return trafficType, fmt.Errorf("annotation %q references an unsupported traffic type %q", annotationServiceType, trafficType)
 	}
 
 	return trafficType, nil
@@ -65,7 +65,7 @@ func GetScheme(annotations map[string]string) (string, error) {
 	case SchemeH2C:
 	case SchemeHTTPS:
 	default:
-		return scheme, fmt.Errorf("%q annotation references an unknown scheme %q", annotationScheme, scheme)
+		return scheme, fmt.Errorf("annotation %q references an unknown scheme %q", annotationScheme, scheme)
 	}
 
 	return scheme, nil
@@ -80,7 +80,7 @@ func GetRetryAttempts(annotations map[string]string) (int, error) {
 
 	attempts, err := strconv.Atoi(retryAttempts)
 	if err != nil {
-		return 0, fmt.Errorf("invalid %q value: %w", annotationRetryAttempts, err)
+		return 0, fmt.Errorf("invalid value %q: %w", annotationRetryAttempts, err)
 	}
 
 	return attempts, nil
@@ -105,7 +105,7 @@ func GetRateLimitBurst(annotations map[string]string) (int, error) {
 
 	burst, err := strconv.Atoi(rateLimitBurst)
 	if err != nil {
-		return 0, fmt.Errorf("invalid %q value: %w", annotationRateLimitBurst, err)
+		return 0, fmt.Errorf("invalid value %q: %w", annotationRateLimitBurst, err)
 	}
 
 	return burst, nil
@@ -120,7 +120,7 @@ func GetRateLimitAverage(annotations map[string]string) (int, error) {
 
 	average, err := strconv.Atoi(rateLimitAverage)
 	if err != nil {
-		return 0, fmt.Errorf("invalid %q value: %w", annotationRateLimitAverage, err)
+		return 0, fmt.Errorf("invalid value %q: %w", annotationRateLimitAverage, err)
 	}
 
 	return average, nil
