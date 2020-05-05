@@ -145,8 +145,11 @@ func TestProvider_BuildConfig(t *testing.T) {
 				p, ok := test.udpStateTable[port]
 				return p, ok
 			}
+			middlewareBuilder := func(a map[string]string) (map[string]*dynamic.Middleware, error) {
+				return nil, nil
+			}
 
-			p := provider.New(stateTableMock(tcpStateTable), stateTableMock(udpStateTable), cfg, logger)
+			p := provider.New(stateTableMock(tcpStateTable), stateTableMock(udpStateTable), middlewareBuilder, cfg, logger)
 
 			topo, err := loadTopology(test.topology)
 			require.NoError(t, err)
