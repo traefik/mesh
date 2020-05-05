@@ -21,9 +21,9 @@ func NewCleanup(log logrus.FieldLogger, client k8s.Client) *Cleanup {
 }
 
 // CleanShadowServices deletes all shadow services from the cluster.
-func (c *Cleanup) CleanShadowServices() error {
-	serviceList, err := c.client.GetKubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{
-		LabelSelector: "app=maesh",
+func (c *Cleanup) CleanShadowServices(namespace string) error {
+	serviceList, err := c.client.GetKubernetesClient().CoreV1().Services(namespace).List(metav1.ListOptions{
+		LabelSelector: "app=maesh,type=shadow",
 	})
 	if err != nil {
 		return err
