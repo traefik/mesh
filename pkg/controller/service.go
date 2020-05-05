@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/containous/maesh/pkg/annotations"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -18,29 +19,29 @@ import (
 
 // ShadowServiceManager manages shadow services.
 type ShadowServiceManager struct {
-	log           logrus.FieldLogger
-	lister        listers.ServiceLister
-	namespace     string
-	tcpStateTable PortMapper
-	udpStateTable PortMapper
-	defaultMode   string
-	minHTTPPort   int32
-	maxHTTPPort   int32
-	kubeClient    kubernetes.Interface
+	log                logrus.FieldLogger
+	lister             listers.ServiceLister
+	namespace          string
+	tcpStateTable      PortMapper
+	udpStateTable      PortMapper
+	defaultTrafficType string
+	minHTTPPort        int32
+	maxHTTPPort        int32
+	kubeClient         kubernetes.Interface
 }
 
 // NewShadowServiceManager returns new shadow service manager.
-func NewShadowServiceManager(log logrus.FieldLogger, lister listers.ServiceLister, namespace string, tcpStateTable PortMapper, udpStateTable PortMapper, defaultMode string, minHTTPPort, maxHTTPPort int32, kubeClient kubernetes.Interface) *ShadowServiceManager {
+func NewShadowServiceManager(log logrus.FieldLogger, lister listers.ServiceLister, namespace string, tcpStateTable PortMapper, udpStateTable PortMapper, defaultTrafficType string, minHTTPPort, maxHTTPPort int32, kubeClient kubernetes.Interface) *ShadowServiceManager {
 	return &ShadowServiceManager{
-		log:           log,
-		lister:        lister,
-		namespace:     namespace,
-		tcpStateTable: tcpStateTable,
-		udpStateTable: udpStateTable,
-		defaultMode:   defaultMode,
-		minHTTPPort:   minHTTPPort,
-		maxHTTPPort:   maxHTTPPort,
-		kubeClient:    kubeClient,
+		log:                log,
+		lister:             lister,
+		namespace:          namespace,
+		tcpStateTable:      tcpStateTable,
+		udpStateTable:      udpStateTable,
+		defaultTrafficType: defaultTrafficType,
+		minHTTPPort:        minHTTPPort,
+		maxHTTPPort:        maxHTTPPort,
+		kubeClient:         kubeClient,
 	}
 }
 
@@ -59,7 +60,10 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 		return fmt.Errorf("unable to get shadow service %q: %w", name, err)
 	}
 
-	ports := s.getShadowServicePorts(userSvc)
+	ports, err := s.getShadowServicePorts(userSvc)
+	if err != nil {
+		return fmt.Errorf("unable to get ports for service %s/%s: %w", userSvc.Namespace, userSvc.Name, err)
+	}
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -100,7 +104,15 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 func (s *ShadowServiceManager) Update(oldUserSvc *corev1.Service, newUserSvc *corev1.Service) (*corev1.Service, error) {
 	name := s.getShadowServiceName(newUserSvc.Name, newUserSvc.Namespace)
 
-	s.cleanupPortMapping(oldUserSvc, newUserSvc)
+	ports, err := s.getShadowServicePorts(newUserSvc)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get ports for service %s/%s: %w", newUserSvc.Namespace, newUserSvc.Name, err)
+	}
+
+	err = s.cleanupPortMapping(oldUserSvc, newUserSvc)
+	if err != nil {
+		return nil, fmt.Errorf("unable to cleanup port mapping for service %s/%s: %w", oldUserSvc.Namespace, oldUserSvc.Name, err)
+	}
 
 	var updatedSvc *corev1.Service
 
@@ -111,7 +123,7 @@ func (s *ShadowServiceManager) Update(oldUserSvc *corev1.Service, newUserSvc *co
 		}
 
 		newSvc := svc.DeepCopy()
-		newSvc.Spec.Ports = s.getShadowServicePorts(newUserSvc)
+		newSvc.Spec.Ports = ports
 
 		if updatedSvc, err = s.kubeClient.CoreV1().Services(s.namespace).Update(newSvc); err != nil {
 			return fmt.Errorf("unable to update kubernetes service: %w", err)
@@ -133,7 +145,9 @@ func (s *ShadowServiceManager) Update(oldUserSvc *corev1.Service, newUserSvc *co
 func (s *ShadowServiceManager) Delete(userSvc *corev1.Service) error {
 	name := s.getShadowServiceName(userSvc.Name, userSvc.Namespace)
 
-	s.cleanupPortMapping(userSvc, nil)
+	if err := s.cleanupPortMapping(userSvc, nil); err != nil {
+		return fmt.Errorf("unable to cleanup port mapping for service %s/%s: %w", userSvc.Namespace, userSvc.Name, err)
+	}
 
 	_, err := s.lister.Services(s.namespace).Get(name)
 	if err != nil {
@@ -149,16 +163,21 @@ func (s *ShadowServiceManager) Delete(userSvc *corev1.Service) error {
 	return nil
 }
 
-func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, newUserSvc *corev1.Service) {
+func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, newUserSvc *corev1.Service) error {
 	var stateTable PortMapper
 
-	switch svcMode := s.getServiceMode(oldUserSvc); svcMode {
-	case k8s.ServiceTypeTCP:
+	trafficType, err := annotations.GetTrafficType(s.defaultTrafficType, oldUserSvc.Annotations)
+	if err != nil {
+		return fmt.Errorf("unable to get service traffic type: %w", err)
+	}
+
+	switch trafficType {
+	case annotations.ServiceTypeTCP:
 		stateTable = s.tcpStateTable
-	case k8s.ServiceTypeUDP:
+	case annotations.ServiceTypeUDP:
 		stateTable = s.udpStateTable
 	default:
-		return
+		return nil
 	}
 
 	for _, old := range oldUserSvc.Spec.Ports {
@@ -185,20 +204,24 @@ func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, ne
 			}
 		}
 	}
+
+	return nil
 }
 
-func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) []corev1.ServicePort {
+func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) ([]corev1.ServicePort, error) {
 	var ports []corev1.ServicePort
 
-	svcMode := s.getServiceMode(svc)
+	trafficType, err := annotations.GetTrafficType(s.defaultTrafficType, svc.Annotations)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get service traffic-type: %w", err)
+	}
 
 	for i, sp := range svc.Spec.Ports {
-		if !(svcMode == k8s.ServiceTypeUDP && sp.Protocol == corev1.ProtocolUDP) && !(svcMode != k8s.ServiceTypeUDP && sp.Protocol == corev1.ProtocolTCP) {
-			s.log.Warnf("Unsupported port type: %s, skipping port %s on service %s/%s", sp.Protocol, sp.Name, svc.Namespace, svc.Name)
-			continue
+		if !isPortSuitable(trafficType, sp) {
+			s.log.Warnf("Unsupported port type %q on %q service %s/%s, skipping port %q", sp.Protocol, trafficType, svc.Namespace, svc.Name, sp.Name)
 		}
 
-		targetPort, err := s.getTargetPort(svcMode, i, svc.Name, svc.Namespace, sp.Port)
+		targetPort, err := s.getTargetPort(trafficType, i, svc.Name, svc.Namespace, sp.Port)
 		if err != nil {
 			s.log.Errorf("Unable to find available %s port: %v, skipping port %s on service %s/%s", sp.Name, err, sp.Name, svc.Namespace, svc.Name)
 			continue
@@ -212,15 +235,7 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) []core
 		})
 	}
 
-	return ports
-}
-
-func (s *ShadowServiceManager) getServiceMode(svc *corev1.Service) string {
-	if svcMode, ok := svc.Annotations[k8s.AnnotationServiceType]; ok {
-		return svcMode
-	}
-
-	return s.defaultMode
+	return ports, nil
 }
 
 // getShadowServiceName converts a User service with a namespace to a mesh service name.
@@ -228,13 +243,13 @@ func (s *ShadowServiceManager) getShadowServiceName(name string, namespace strin
 	return fmt.Sprintf("%s-%s-6d61657368-%s", s.namespace, name, namespace)
 }
 
-func (s *ShadowServiceManager) getTargetPort(svcMode string, portID int, name, namespace string, port int32) (int32, error) {
-	switch svcMode {
-	case k8s.ServiceTypeHTTP:
+func (s *ShadowServiceManager) getTargetPort(trafficType string, portID int, name, namespace string, port int32) (int32, error) {
+	switch trafficType {
+	case annotations.ServiceTypeHTTP:
 		return s.getHTTPPort(portID)
-	case k8s.ServiceTypeTCP:
+	case annotations.ServiceTypeTCP:
 		return s.getMappedPort(s.tcpStateTable, name, namespace, port)
-	case k8s.ServiceTypeUDP:
+	case annotations.ServiceTypeUDP:
 		return s.getMappedPort(s.udpStateTable, name, namespace, port)
 	default:
 		return 0, errors.New("unknown service mode")
@@ -271,6 +286,18 @@ func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, svcName, svc
 	s.log.Debugf("Service %s/%s %d as been assigned port %d", svcName, svcNamespace, svcPort, port)
 
 	return port, nil
+}
+
+func isPortSuitable(trafficType string, sp corev1.ServicePort) bool {
+	if trafficType == annotations.ServiceTypeUDP {
+		return sp.Protocol == corev1.ProtocolUDP
+	}
+
+	if trafficType == annotations.ServiceTypeTCP || trafficType == annotations.ServiceTypeHTTP {
+		return sp.Protocol == corev1.ProtocolTCP
+	}
+
+	return false
 }
 
 func parseKubernetesServerVersion(kubeClient kubernetes.Interface) (major, minor int) {
