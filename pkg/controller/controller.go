@@ -182,7 +182,6 @@ func (c *Controller) init() {
 		MaxHTTPPort:        c.cfg.MaxHTTPPort,
 		ACL:                c.cfg.ACLEnabled,
 		DefaultTrafficType: c.cfg.DefaultMode,
-		MaeshNamespace:     c.cfg.Namespace,
 	}
 
 	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddlewares, providerCfg, c.logger)

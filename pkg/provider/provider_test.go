@@ -126,7 +126,6 @@ func TestProvider_BuildConfig(t *testing.T) {
 				MaxHTTPPort:        10010,
 				ACL:                test.acl,
 				DefaultTrafficType: defaultTrafficType,
-				MaeshNamespace:     "maesh",
 			}
 
 			tcpStateTable := func(port mk8s.ServiceWithPort) (int32, bool) {
