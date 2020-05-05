@@ -135,7 +135,7 @@ func (c *Controller) init() {
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
 	c.serviceManager = NewShadowServiceManager(c.logger, c.ServiceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
 
-	// configRefreshChan is used to trigger configuration refreshes and deploys.
+	// configRefreshChan is used to trigger configuration refreshes.
 	c.configRefreshChan = make(chan string)
 	c.handler = NewHandler(c.logger, c.ignoredResources, c.serviceManager, c.configRefreshChan)
 
@@ -213,7 +213,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		case <-stopCh:
 			c.logger.Info("Shutting down workers")
 			return nil
-		case message := <-c.configRefreshChan:
+		case <-c.configRefreshChan:
 			// Reload the configuration.
 			topo, err := c.topologyBuilder.Build(c.ignoredResources)
 			if err != nil {
@@ -223,15 +223,14 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 			conf := c.provider.BuildConfig(topo)
 
-			if message == k8s.ConfigMessageChanForce || !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
+			if !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
 				c.lastConfiguration.Set(conf)
 
 				// Configuration successfully created, enable readiness in the api.
 				c.api.EnableReadiness()
 			}
 		case <-timer.C:
-			rawCfg := c.lastConfiguration.Get()
-			if rawCfg == nil {
+			if rawCfg := c.lastConfiguration.Get(); rawCfg == nil {
 				break
 			}
 
