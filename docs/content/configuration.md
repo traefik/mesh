@@ -7,17 +7,17 @@ The static configuration is configured when the service mesh is installed and is
 
 - The Maesh image version can be manually defined if needed.
 
-- Debug logging can be globally enabled.
+- Logging level for controller and proxies can be defined.
 
 - The default mesh mode can be configured. If this is not set, the default mode will be HTTP.
-    This means that new mesh services that are not specified will default to operate in HTTP mode.
+  This means that new mesh services that are not specified will default to operate in HTTP mode.
 
 - Tracing can be enabled.
 
 - Access-Control List (ACL) mode can be enabled.
-    This configures Maesh to run in ACL mode, where all traffic is forbidden unless explicitly allowed via 
-    an SMI [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md).
-    Please see the [SMI Specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md) for more information.
+  This configures Maesh to run in ACL mode, where all traffic is forbidden unless explicitly allowed via an SMI 
+  [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md). Please see 
+  the [SMI Specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md) for more information.
 
 ## Dynamic configuration
 
