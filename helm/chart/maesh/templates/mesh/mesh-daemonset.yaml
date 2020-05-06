@@ -156,7 +156,9 @@ spec:
             - "--api.dashboard=false"
             - "--api.insecure"
             - "--ping"
-            - "--log.level={{ .Values.mesh.logging }}"
+            {{- if .Values.mesh.logLevel }}
+            - "--log.level={{ .Values.mesh.logLevel }}"
+            {{- end }}
             {{- if .Values.metrics.prometheus.enabled }}
             - "--metrics.prometheus"
             {{- end }}
