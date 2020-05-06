@@ -25,11 +25,5 @@ If errors are encountered, the error will be returned in the body, and logged on
 
 ## `/api/status/readiness`
 
-This endpoint returns a 200 response if the controller successfully deployed a configuration to all Maesh nodes, and Maesh is ready for use.
-Otherwise, it will return a 500.
-
-## `/api/log/deployment`
-
-This endpoint provides a json array containing details about configuration deployments made by the controller.
-This array is currently capped at 1000 entries to avoid memory issues.
-If this is not enough, please open a github issue and we will look into updating this to be configurable.
+This endpoint returns a 200 response if the controller successfully deployed a configuration to all Maesh nodes, and Maesh 
+is ready for use. Otherwise, it will return a 500.
