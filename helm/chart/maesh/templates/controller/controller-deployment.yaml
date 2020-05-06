@@ -64,8 +64,8 @@ spec:
           image: {{ include "maesh.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
-            {{- if .Values.controller.logging.debug }}
-            - "--debug"
+            {{- if .Values.controller.logLevel }}
+            - "--logLevel={{ .Values.controller.logLevel }}"
             {{- end }}
             {{- if .Values.mesh }}
             - "--defaultMode={{ .Values.mesh.defaultMode }}"
@@ -113,8 +113,8 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent"}}
           args:
             - "prepare"
-            {{- if .Values.controller.logging.debug }}
-            - "--debug"
+            {{- if .Values.controller.logLevel }}
+            - "--logLevel={{ .Values.controller.logLevel }}"
             {{- end }}
             {{- if .Values.acl }}
             - "--acl"
