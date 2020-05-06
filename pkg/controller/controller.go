@@ -146,7 +146,6 @@ func (c *Controller) init() {
 
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
-	c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
 	c.splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(c.handler)
 
 	// Create SharedInformers, listers and register the event handler for ACL related resources.
@@ -159,6 +158,7 @@ func (c *Controller) init() {
 		c.TCPRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
 
 		c.accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
+		c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
 		c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
 		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
 	}
