@@ -1,4 +1,4 @@
-package topology_test
+package topology
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"time"
 
 	mk8s "github.com/containous/maesh/pkg/k8s"
-	"github.com/containous/maesh/pkg/topology"
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
 	spec "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
@@ -77,11 +76,11 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	want := &topology.Topology{
-		Services:              make(map[topology.Key]*topology.Service),
-		Pods:                  make(map[topology.Key]*topology.Pod),
-		ServiceTrafficTargets: make(map[topology.ServiceTrafficTargetKey]*topology.ServiceTrafficTarget),
-		TrafficSplits:         make(map[topology.Key]*topology.TrafficSplit),
+	want := &Topology{
+		Services:              make(map[Key]*Service),
+		Pods:                  make(map[Key]*Pod),
+		ServiceTrafficTargets: make(map[ServiceTrafficTargetKey]*ServiceTrafficTarget),
+		TrafficSplits:         make(map[Key]*TrafficSplit),
 	}
 
 	assert.Equal(t, want, got)
@@ -499,17 +498,17 @@ func TestTopologyBuilder_EmptyTrafficTargetDestination(t *testing.T) {
 	require.NoError(t, err)
 
 	ignoredResources := mk8s.NewIgnored()
-	res, err := builder.LoadResources(ignoredResources)
+	res, err := builder.loadResources(ignoredResources)
 	require.NoError(t, err)
 
-	actual, exists := res.TrafficTargets[topology.Key{Name: "test", Namespace: metav1.NamespaceDefault}]
+	actual, exists := res.TrafficTargets[Key{Name: "test", Namespace: metav1.NamespaceDefault}]
 	assert.Equal(t, true, exists)
 	assert.Equal(t, metav1.NamespaceDefault, actual.Destination.Namespace)
 }
 
 // createBuilder initializes the different k8s factories and start them, initializes listers and create
 // a new topology.Builder.
-func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interface, smiSpecClient specsclient.Interface, smiSplitClient splitclient.Interface) (*topology.Builder, error) {
+func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interface, smiSpecClient specsclient.Interface, smiSplitClient splitclient.Interface) (*Builder, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -560,7 +559,7 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
 
-	return &topology.Builder{
+	return &Builder{
 		ServiceLister:        svcLister,
 		EndpointsLister:      epLister,
 		PodLister:            podLister,
@@ -572,8 +571,8 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 	}, nil
 }
 
-func nn(name, ns string) topology.Key {
-	return topology.Key{
+func nn(name, ns string) Key {
+	return Key{
 		Name:      name,
 		Namespace: ns,
 	}
@@ -771,11 +770,11 @@ func createServiceAccount(ns, name string) *corev1.ServiceAccount {
 	}
 }
 
-func assertTopology(t *testing.T, filename string, got *topology.Topology) {
+func assertTopology(t *testing.T, filename string, got *Topology) {
 	data, err := ioutil.ReadFile(filename)
 	require.NoError(t, err)
 
-	var want topology.Topology
+	var want Topology
 
 	err = json.Unmarshal(data, &want)
 	require.NoError(t, err)
