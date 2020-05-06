@@ -35,7 +35,7 @@ type Builder struct {
 func (b *Builder) Build(ignoredResources mk8s.IgnoreWrapper) (*Topology, error) {
 	topology := NewTopology()
 
-	res, err := b.LoadResources(ignoredResources)
+	res, err := b.loadResources(ignoredResources)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load resources: %w", err)
 	}
@@ -564,8 +564,6 @@ func getOrCreatePod(topology *Topology, pod *corev1.Pod) Key {
 
 	return podKey
 }
-
-// LoadResources uses listers to populate a resource object.
 
 func (b *Builder) loadResources(ignoredResources mk8s.IgnoreWrapper) (*resources, error) {
 	res := &resources{
