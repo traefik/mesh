@@ -107,7 +107,7 @@ func (s *BaseSuite) maeshStartControllerWithArgsCmd(args ...string) *exec.Cmd {
 	controllerArgSlice := []string{
 		fmt.Sprintf("--masterurl=%s", masterURL),
 		fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")),
-		"--debug",
+		"--logLevel=debug",
 		fmt.Sprintf("--namespace=%s", maeshNamespace),
 		"--apihost=127.0.0.1",
 	}
@@ -117,7 +117,7 @@ func (s *BaseSuite) maeshStartControllerWithArgsCmd(args ...string) *exec.Cmd {
 }
 
 func (s *BaseSuite) maeshPrepareWithArgs(args ...string) *exec.Cmd {
-	prepareArgSlice := []string{"prepare", fmt.Sprintf("--masterurl=%s", masterURL), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")), "--debug", "--clusterdomain=cluster.local", fmt.Sprintf("--namespace=%s", maeshNamespace)}
+	prepareArgSlice := []string{"prepare", fmt.Sprintf("--masterurl=%s", masterURL), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")), "--loglevel=debug", "--clusterdomain=cluster.local", fmt.Sprintf("--namespace=%s", maeshNamespace)}
 	args = append(prepareArgSlice, args...)
 
 	return exec.Command(maeshBinary, args...)

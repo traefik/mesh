@@ -14,7 +14,8 @@ type MaeshConfiguration struct {
 	ConfigFile       string   `description:"Configuration file to use. If specified all other flags are ignored." export:"true"`
 	KubeConfig       string   `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL        string   `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
-	Debug            bool     `description:"Debug mode." export:"true"`
+	LogLevel         string   `description:"The log level." export:"true"`
+	Debug            bool     `description:"Debug mode, deprecated, use --loglevel=debug instead." export:"true"`
 	ACL              bool     `description:"Enable ACL mode." export:"true"`
 	SMI              bool     `description:"Enable SMI operation, deprecated, use --acl instead." export:"true"`
 	DefaultMode      string   `description:"Default mode for mesh services." export:"true"`
@@ -32,6 +33,7 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 	return &MaeshConfiguration{
 		ConfigFile:    "",
 		KubeConfig:    os.Getenv("KUBECONFIG"),
+		LogLevel:      "error",
 		Debug:         false,
 		ACL:           false,
 		SMI:           false,
@@ -49,7 +51,8 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 type PrepareConfiguration struct {
 	KubeConfig    string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL     string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
-	Debug         bool   `description:"Debug mode." export:"true"`
+	LogLevel      string `description:"The log level." export:"true"`
+	Debug         bool   `description:"Debug mode, deprecated, use --loglevel=debug instead." export:"true"`
 	Namespace     string `description:"The namespace that maesh is installed in." export:"true"`
 	ClusterDomain string `description:"Your internal K8s cluster domain." export:"true"`
 	SMI           bool   `description:"Enable SMI operation, deprecated, use --acl instead." export:"true"`
@@ -60,6 +63,7 @@ type PrepareConfiguration struct {
 func NewPrepareConfiguration() *PrepareConfiguration {
 	return &PrepareConfiguration{
 		KubeConfig:    os.Getenv("KUBECONFIG"),
+		LogLevel:      "error",
 		Debug:         false,
 		Namespace:     "maesh",
 		ClusterDomain: "cluster.local",

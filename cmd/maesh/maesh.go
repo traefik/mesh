@@ -59,11 +59,20 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.InfoLevel)
 
+	logLevelStr := iConfig.LogLevel
 	if iConfig.Debug {
-		log.SetLevel(logrus.DebugLevel)
+		logLevelStr = "debug"
+		
+		log.Warnf("debug flag is deprecated, please consider using --loglevel=DEBUG instead")
 	}
+
+	logLevel, err := logrus.ParseLevel(logLevelStr)
+	if err != nil {
+		return err
+	}
+
+	log.SetLevel(logLevel)
 
 	log.Debugln("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
