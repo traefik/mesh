@@ -64,7 +64,7 @@ func runCmd(proxyConfiguration *cmd.ProxyConfiguration) error {
 
 	log.WithoutContext().Infof("Maesh proxy version %s built on %s", version.Version, version.Date)
 
-	if proxyConfiguration.Configuration.Log.Level == "DEBUG" {
+	if proxyConfiguration.Configuration.Log != nil && proxyConfiguration.Configuration.Log.Level == "DEBUG" {
 		jsonConf, err := json.Marshal(proxyConfiguration.Configuration)
 		if err != nil {
 			log.WithoutContext().Errorf("Could not marshal static configuration: %v", err)
