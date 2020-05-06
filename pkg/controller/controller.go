@@ -309,8 +309,3 @@ func (c *Controller) createMeshServices() error {
 
 	return nil
 }
-
-// isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
-func isMeshPod(pod *corev1.Pod) bool {
-	return pod.Labels["component"] == "maesh-mesh"
-}
