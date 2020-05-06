@@ -473,6 +473,40 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 	assertTopology(t, "fixtures/topology-multi-sources-destinations.json", got)
 }
 
+func TestTopologyBuilder_EmptyTrafficTargetDestination(t *testing.T) {
+	tt := &access.TrafficTarget{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "TrafficTarget",
+			APIVersion: "access.smi-spec.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: metav1.NamespaceDefault,
+			Name:      "test",
+		},
+		Destination: access.IdentityBindingSubject{
+			Kind: "ServiceAccount",
+			Name: "test",
+			Port: "80",
+		},
+	}
+
+	k8sClient := fake.NewSimpleClientset()
+	smiAccessClient := accessfake.NewSimpleClientset(tt)
+	smiSplitClient := splitfake.NewSimpleClientset()
+	smiSpecClient := specfake.NewSimpleClientset()
+
+	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
+	require.NoError(t, err)
+
+	ignoredResources := mk8s.NewIgnored()
+	res, err := builder.LoadResources(ignoredResources)
+	require.NoError(t, err)
+
+	actual, exists := res.TrafficTargets[topology.Key{Name: "test", Namespace: metav1.NamespaceDefault}]
+	assert.Equal(t, true, exists)
+	assert.Equal(t, metav1.NamespaceDefault, actual.Destination.Namespace)
+}
+
 // createBuilder initializes the different k8s factories and start them, initializes listers and create
 // a new topology.Builder.
 func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interface, smiSpecClient specsclient.Interface, smiSplitClient splitclient.Interface) (*topology.Builder, error) {
