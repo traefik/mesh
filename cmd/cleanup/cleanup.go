@@ -28,11 +28,15 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.InfoLevel)
 
-	if cConfig.Debug {
-		log.SetLevel(logrus.DebugLevel)
+	logLevelStr := cConfig.LogLevel
+
+	logLevel, err := logrus.ParseLevel(logLevelStr)
+	if err != nil {
+		return err
 	}
+
+	log.SetLevel(logLevel)
 
 	log.Debugln("Starting maesh cleanup...")
 	log.Debugf("Using masterURL: %q", cConfig.MasterURL)

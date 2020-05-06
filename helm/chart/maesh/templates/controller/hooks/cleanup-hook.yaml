@@ -101,8 +101,8 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "cleanup"
-            {{- if .Values.controller.logging.debug }}
-            - "--debug"
+            {{- if .Values.controller.logLevel }}
+            - "--logLevel={{ .Values.controller.logLevel }}"
             {{- end }}
             - "--namespace={{ .Release.Namespace }}"
           securityContext:
