@@ -40,12 +40,12 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 
 	clients, err := k8s.NewClient(log, cConfig.MasterURL, cConfig.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("error building clients: %wß", err)
+		return fmt.Errorf("error building clients: %w", err)
 	}
 
-	c := cleanup.NewCleanup(log, clients)
+	c := cleanup.NewCleanup(log, clients, cConfig.Namespace)
 
-	if err := c.CleanShadowServices(cConfig.Namespace); err != nil {
+	if err := c.CleanShadowServices(); err != nil {
 		return fmt.Errorf("error encountered during cluster cleanup: %w", err)
 	}
 

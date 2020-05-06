@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestNewCleanup(t *testing.T) {
+func TestCleanup_New(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -21,11 +21,11 @@ func TestNewCleanup(t *testing.T) {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	cln := NewCleanup(log, clientMock)
+	cln := NewCleanup(log, clientMock, metav1.NamespaceDefault)
 	assert.NotNil(t, cln)
 }
 
-func TestCleanShadowServices(t *testing.T) {
+func TestCleanup_CleanShadowServices(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -35,10 +35,10 @@ func TestCleanShadowServices(t *testing.T) {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	cln := NewCleanup(log, clientMock)
+	cln := NewCleanup(log, clientMock, "maesh")
 	assert.NotNil(t, cln)
 
-	err := cln.CleanShadowServices("maesh")
+	err := cln.CleanShadowServices()
 	assert.NoError(t, err)
 
 	sl, err := clientMock.GetKubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{
