@@ -44,7 +44,6 @@ type Config struct {
 	MaxHTTPPort        int32
 	ACL                bool
 	DefaultTrafficType string
-	MaeshNamespace     string
 }
 
 // Provider holds the configuration for generating dynamic configuration from a kubernetes cluster state.

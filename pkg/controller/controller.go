@@ -135,7 +135,7 @@ func (c *Controller) init() {
 	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
 	c.serviceManager = NewShadowServiceManager(c.logger, c.ServiceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
 
-	// configRefreshChan is used to trigger configuration refreshes and deploys.
+	// configRefreshChan is used to trigger configuration refreshes.
 	c.configRefreshChan = make(chan string)
 	c.handler = NewHandler(c.logger, c.ignoredResources, c.serviceManager, c.configRefreshChan)
 
@@ -146,7 +146,6 @@ func (c *Controller) init() {
 
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
-	c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
 	c.splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(c.handler)
 
 	// Create SharedInformers, listers and register the event handler for ACL related resources.
@@ -159,6 +158,7 @@ func (c *Controller) init() {
 		c.TCPRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
 
 		c.accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
+		c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
 		c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
 		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
 	}
@@ -182,7 +182,6 @@ func (c *Controller) init() {
 		MaxHTTPPort:        c.cfg.MaxHTTPPort,
 		ACL:                c.cfg.ACLEnabled,
 		DefaultTrafficType: c.cfg.DefaultMode,
-		MaeshNamespace:     c.cfg.Namespace,
 	}
 
 	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddlewares, providerCfg, c.logger)
@@ -214,7 +213,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		case <-stopCh:
 			c.logger.Info("Shutting down workers")
 			return nil
-		case message := <-c.configRefreshChan:
+		case <-c.configRefreshChan:
 			// Reload the configuration.
 			topo, err := c.topologyBuilder.Build(c.ignoredResources)
 			if err != nil {
@@ -224,15 +223,14 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 			conf := c.provider.BuildConfig(topo)
 
-			if message == k8s.ConfigMessageChanForce || !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
+			if !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
 				c.lastConfiguration.Set(conf)
 
 				// Configuration successfully created, enable readiness in the api.
 				c.api.EnableReadiness()
 			}
 		case <-timer.C:
-			rawCfg := c.lastConfiguration.Get()
-			if rawCfg == nil {
+			if rawCfg := c.lastConfiguration.Get(); rawCfg == nil {
 				break
 			}
 
@@ -310,9 +308,4 @@ func (c *Controller) createMeshServices() error {
 	}
 
 	return nil
-}
-
-// isMeshPod checks if the pod is a mesh pod. Can be modified to use multiple metrics if needed.
-func isMeshPod(pod *corev1.Pod) bool {
-	return pod.Labels["component"] == "maesh-mesh"
 }

@@ -21,9 +21,4 @@ const (
 	TCPStateConfigMapName string = "tcp-state-table"
 	// UDPStateConfigMapName UDP config map name.
 	UDPStateConfigMapName string = "udp-state-table"
-
-	// ConfigMessageChanRebuild rebuild.
-	ConfigMessageChanRebuild string = "rebuild"
-	// ConfigMessageChanForce force.
-	ConfigMessageChanForce string = "force"
 )
