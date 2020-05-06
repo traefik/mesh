@@ -104,14 +104,13 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 func (s *ShadowServiceManager) Update(oldUserSvc *corev1.Service, newUserSvc *corev1.Service) (*corev1.Service, error) {
 	name := s.getShadowServiceName(newUserSvc.Name, newUserSvc.Namespace)
 
+	if err := s.cleanupPortMapping(oldUserSvc, newUserSvc); err != nil {
+		return nil, fmt.Errorf("unable to cleanup port mapping for service %s/%s: %w", oldUserSvc.Namespace, oldUserSvc.Name, err)
+	}
+
 	ports, err := s.getShadowServicePorts(newUserSvc)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get ports for service %s/%s: %w", newUserSvc.Namespace, newUserSvc.Name, err)
-	}
-
-	err = s.cleanupPortMapping(oldUserSvc, newUserSvc)
-	if err != nil {
-		return nil, fmt.Errorf("unable to cleanup port mapping for service %s/%s: %w", oldUserSvc.Namespace, oldUserSvc.Name, err)
 	}
 
 	var updatedSvc *corev1.Service
