@@ -206,7 +206,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	c.logger.Info("Creating initial mesh services")
 
 	if err := c.createMeshServices(); err != nil {
-		c.logger.Errorf("could not create mesh services: %v", err)
+		c.logger.Errorf("Could not create mesh services: %v", err)
 	}
 
 	// Start the api, and enable the readiness endpoint.
@@ -256,7 +256,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.logger.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
@@ -264,7 +264,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 	for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.logger.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+			c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
@@ -273,7 +273,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 		for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
-				c.logger.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+				c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
 			}
 		}
 
@@ -281,7 +281,7 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 
 		for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
 			if !ok {
-				c.logger.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+				c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
 			}
 		}
 	}

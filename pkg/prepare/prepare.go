@@ -69,7 +69,7 @@ func NewPrepare(log logrus.FieldLogger, client k8s.Client) Preparer {
 // CheckDNSProvider checks that the DNS provider that is deployed in the cluster
 // is supported and returns it.
 func (p *Prepare) CheckDNSProvider() (DNSProvider, error) {
-	p.log.Infoln("Checking DNS provider")
+	p.log.Info("Checking DNS provider")
 
 	match, err := p.coreDNSMatch()
 	if err != nil {
@@ -93,11 +93,11 @@ func (p *Prepare) CheckDNSProvider() (DNSProvider, error) {
 }
 
 func (p *Prepare) coreDNSMatch() (bool, error) {
-	p.log.Infoln("Checking CoreDNS")
+	p.log.Info("Checking CoreDNS")
 
 	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
 	if kubeerror.IsNotFound(err) {
-		p.log.Debugf("%s does not exist in namespace %s", "coredns", metav1.NamespaceSystem)
+		p.log.Debugf("CoreDNS does not exist in namespace %q", metav1.NamespaceSystem)
 		return false, nil
 	}
 
@@ -136,11 +136,11 @@ func isCoreDNSVersionSupported(versionLine string) bool {
 }
 
 func (p *Prepare) kubeDNSMatch() (bool, error) {
-	p.log.Infoln("Checking KubeDNS")
+	p.log.Info("Checking KubeDNS")
 
 	_, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
 	if kubeerror.IsNotFound(err) {
-		p.log.Debugf("%s does not exist in namespace %s", "kube-dns", metav1.NamespaceSystem)
+		p.log.Debugf("KubeDNS does not exist in namespace %q", metav1.NamespaceSystem)
 		return false, nil
 	}
 
@@ -155,7 +155,7 @@ func (p *Prepare) kubeDNSMatch() (bool, error) {
 
 // ConfigureCoreDNS patches the CoreDNS configuration for Maesh.
 func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
-	p.log.Debugln("Patching CoreDNS")
+	p.log.Debug("Patching CoreDNS")
 
 	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
 	if err != nil {
@@ -169,11 +169,11 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 
 	if isPatched(coreConfigMap) {
 		// CoreDNS has already been patched.
-		p.log.Debugln("Configmap already patched")
+		p.log.Debug("Configmap already patched")
 		return nil
 	}
 
-	p.log.Debugln("Patching CoreDNS configmap")
+	p.log.Debug("Patching CoreDNS configmap")
 
 	if err := p.patchCoreDNSConfigMap(coreConfigMap, clusterDomain, maeshNamespace, deployment.Namespace); err != nil {
 		return err
@@ -257,7 +257,7 @@ func (p *Prepare) getCorefileConfigMap(coreDeployment *appsv1.Deployment) (*core
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
 func (p *Prepare) ConfigureKubeDNS() error {
-	p.log.Debugln("Patching KubeDNS")
+	p.log.Debug("Patching KubeDNS")
 
 	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
 	if err != nil {
@@ -269,7 +269,7 @@ func (p *Prepare) ConfigureKubeDNS() error {
 		ebo       = backoff.NewConstantBackOff(10 * time.Second)
 	)
 
-	p.log.Debugln("Getting CoreDNS service IP")
+	p.log.Debug("Getting CoreDNS service IP")
 
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
 		svc, errSvc := p.client.GetKubernetesClient().CoreV1().Services("maesh").Get("coredns", metav1.GetOptions{})
@@ -292,12 +292,12 @@ func (p *Prepare) ConfigureKubeDNS() error {
 	}
 
 	if isPatched(configMap) {
-		p.log.Debugln("Configmap already patched")
+		p.log.Debug("Configmap already patched")
 
 		return nil
 	}
 
-	p.log.Debugln("Patching KubeDNS configmap with IP", serviceIP)
+	p.log.Debug("Patching KubeDNS configmap with IP", serviceIP)
 
 	if err := p.patchKubeDNSConfigMap(configMap, deployment.Namespace, serviceIP); err != nil {
 		return err
@@ -433,7 +433,7 @@ func isPatched(cfgMap *corev1.ConfigMap) bool {
 }
 
 func (p *Prepare) restartPods(deployment *appsv1.Deployment) error {
-	p.log.Infof("Restarting %s pods", deployment.Name)
+	p.log.Infof("Restarting %q pods", deployment.Name)
 
 	// Never edit original object, always work with a clone for updates.
 	newDeployment := deployment.DeepCopy()

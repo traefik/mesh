@@ -50,7 +50,7 @@ var (
 
 func Test(t *testing.T) {
 	if !*integration {
-		log.Println("Integration tests disabled.")
+		log.Println("Integration tests disabled")
 		return
 	}
 
