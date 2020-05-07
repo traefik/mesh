@@ -19,8 +19,8 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
-	s.createResources(c, "resources/state-table/")
-	s.createResources(c, "resources/smi/crds/")
+	s.createResources(c, "testdata/state-table/")
+	s.createResources(c, "testdata/smi/crds/")
 }
 
 func (s *ACLEnabledSuite) TearDownSuite(c *check.C) {
@@ -37,8 +37,8 @@ func (s *ACLEnabledSuite) TestTrafficTargetWithSMI(c *check.C) {
 }
 
 func (s *ACLEnabledSuite) testTrafficTarget(smi, acl bool, c *check.C) {
-	s.createResources(c, "resources/acl/enabled/traffic-target")
-	defer s.deleteResources(c, "resources/acl/enabled/traffic-target")
+	s.createResources(c, "testdata/acl/enabled/traffic-target")
+	defer s.deleteResources(c, "testdata/acl/enabled/traffic-target")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"client-a", "client-b", "server"})
@@ -49,7 +49,7 @@ func (s *ACLEnabledSuite) testTrafficTarget(smi, acl bool, c *check.C) {
 	c.Assert(err, checker.IsNil)
 	defer s.stopMaeshBinary(c, cmd.Process)
 
-	config := s.testConfigurationWithReturn(c, "resources/acl/enabled/traffic-target.json")
+	config := s.testConfigurationWithReturn(c, "testdata/acl/enabled/traffic-target.json")
 
 	svc := s.getService(c, "server")
 	tt := s.getTrafficTarget(c, "traffic-target")
@@ -72,8 +72,8 @@ func (s *ACLEnabledSuite) TestTrafficSplitSMIEnable(c *check.C) {
 }
 
 func (s *ACLEnabledSuite) testTrafficSplit(smi, acl bool, c *check.C) {
-	s.createResources(c, "resources/acl/enabled/traffic-split")
-	defer s.deleteResources(c, "resources/acl/enabled/traffic-split")
+	s.createResources(c, "testdata/acl/enabled/traffic-split")
+	defer s.deleteResources(c, "testdata/acl/enabled/traffic-split")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"client-a", "client-b", "server-v1", "server-v2"})
@@ -84,7 +84,7 @@ func (s *ACLEnabledSuite) testTrafficSplit(smi, acl bool, c *check.C) {
 	c.Assert(err, checker.IsNil)
 	defer s.stopMaeshBinary(c, cmd.Process)
 
-	config := s.testConfigurationWithReturn(c, "resources/acl/enabled/traffic-split.json")
+	config := s.testConfigurationWithReturn(c, "testdata/acl/enabled/traffic-split.json")
 
 	s.checkBlockAllMiddleware(c, config)
 	s.checkHTTPReadinessService(c, config)
