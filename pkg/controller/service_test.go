@@ -64,6 +64,7 @@ func TestShadowServiceManager_Create(t *testing.T) {
 					Namespace: "maesh",
 					Labels: map[string]string{
 						"app":               "maesh",
+						"type":              "shadow",
 						"test-alreadyexist": "true",
 					},
 				},
@@ -91,7 +92,8 @@ func TestShadowServiceManager_Create(t *testing.T) {
 					Name:      "maesh-http-default-6d61657368-namespace",
 					Namespace: "maesh",
 					Labels: map[string]string{
-						"app": "maesh",
+						"app":  "maesh",
+						"type": "shadow",
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -134,7 +136,8 @@ func TestShadowServiceManager_Create(t *testing.T) {
 					Name:      "maesh-http-6d61657368-namespace",
 					Namespace: "maesh",
 					Labels: map[string]string{
-						"app": "maesh",
+						"app":  "maesh",
+						"type": "shadow",
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -177,7 +180,8 @@ func TestShadowServiceManager_Create(t *testing.T) {
 					Name:      "maesh-udp-reuse-6d61657368-namespace",
 					Namespace: "maesh",
 					Labels: map[string]string{
-						"app": "maesh",
+						"app":  "maesh",
+						"type": "shadow",
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -221,7 +225,8 @@ func TestShadowServiceManager_Create(t *testing.T) {
 					Name:      "maesh-udp-6d61657368-namespace",
 					Namespace: "maesh",
 					Labels: map[string]string{
-						"app": "maesh",
+						"app":  "maesh",
+						"type": "shadow",
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -249,6 +254,7 @@ func TestShadowServiceManager_Create(t *testing.T) {
 			Namespace: "maesh",
 			Labels: map[string]string{
 				"app":               "maesh",
+				"type":              "shadow",
 				"test-alreadyexist": "true",
 			},
 		},
@@ -369,7 +375,8 @@ func TestShadowServiceManager_Update(t *testing.T) {
 					Name:      "maesh-my-svc-6d61657368-my-ns",
 					Namespace: "maesh",
 					Labels: map[string]string{
-						"app": "maesh",
+						"app":  "maesh",
+						"type": "shadow",
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -441,7 +448,8 @@ func TestShadowServiceManager_Update(t *testing.T) {
 					Name:      "maesh-my-svc-6d61657368-my-ns",
 					Namespace: "maesh",
 					Labels: map[string]string{
-						"app": "maesh",
+						"app":  "maesh",
+						"type": "shadow",
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -537,7 +545,8 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 					Name:      "maesh-my-svc-6d61657368-my-ns",
 					Namespace: "maesh",
 					Labels: map[string]string{
-						"app": "maesh",
+						"app":  "maesh",
+						"type": "shadow",
 					},
 				},
 				Spec: corev1.ServiceSpec{

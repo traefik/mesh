@@ -70,7 +70,8 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 			Name:      name,
 			Namespace: s.namespace,
 			Labels: map[string]string{
-				"app": "maesh",
+				"app":  "maesh",
+				"type": "shadow",
 			},
 		},
 		Spec: corev1.ServiceSpec{

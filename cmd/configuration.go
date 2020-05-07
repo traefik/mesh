@@ -96,3 +96,20 @@ func NewProxyConfiguration() *ProxyConfiguration {
 		},
 	}
 }
+
+// CleanupConfiguration holds the configuration for the cleanup command.
+type CleanupConfiguration struct {
+	KubeConfig string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
+	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
+	Namespace  string `description:"The namespace that maesh is installed in." export:"true"`
+	LogLevel   string `description:"The log level." export:"true"`
+}
+
+// NewCleanupConfiguration creates CleanupConfiguration.
+func NewCleanupConfiguration() *CleanupConfiguration {
+	return &CleanupConfiguration{
+		KubeConfig: os.Getenv("KUBECONFIG"),
+		Namespace:  "maesh",
+		LogLevel:   "error",
+	}
+}
