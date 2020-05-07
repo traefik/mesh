@@ -71,7 +71,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	if iConfig.Debug {
 		logLevelStr = "debug"
 
-		log.Warnf("debug flag is deprecated, please consider using --loglevel=DEBUG instead")
+		log.Warnf("Debug flag is deprecated, please consider using --loglevel=DEBUG instead")
 	}
 
 	logLevel, err := logrus.ParseLevel(logLevelStr)
