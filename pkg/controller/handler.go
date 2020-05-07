@@ -5,9 +5,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// configMessageChanRebuild rebuild.
-var configMessageChanRebuild = struct{}{}
-
 // Handler is an implementation of a ResourceEventHandler.
 type Handler struct {
 	log               logrus.FieldLogger
@@ -34,10 +31,10 @@ func (h *Handler) OnAdd(obj interface{}) {
 	}
 
 	// Trigger a configuration rebuild.
-	h.configRefreshChan <- configMessageChanRebuild
+	h.configRefreshChan <- struct{}{}
 }
 
-// OnUpdate is called when an object is updated and ensures that the proper handler is called depending on the filter matches.
+// OnUpdate is called when an object is updated.
 func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 	// If the updated object is a service we have to update the corresponding shadow service.
 	if obj, isService := newObj.(*corev1.Service); isService {
@@ -55,7 +52,7 @@ func (h *Handler) OnUpdate(oldObj, newObj interface{}) {
 	}
 
 	// Trigger a configuration rebuild.
-	h.configRefreshChan <- configMessageChanRebuild
+	h.configRefreshChan <- struct{}{}
 }
 
 // OnDelete is called when an object is deleted.
@@ -70,5 +67,5 @@ func (h *Handler) OnDelete(obj interface{}) {
 	}
 
 	// Trigger a configuration rebuild.
-	h.configRefreshChan <- configMessageChanRebuild
+	h.configRefreshChan <- struct{}{}
 }
