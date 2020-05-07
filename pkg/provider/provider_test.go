@@ -40,22 +40,22 @@ func TestProvider_BuildConfig(t *testing.T) {
 			udpStateTable: map[mk8s.ServiceWithPort]int32{
 				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 15000,
 			},
-			topology:   "fixtures/annotations-traffic-type-topology.json",
-			wantConfig: "fixtures/annotations-traffic-type-config.json",
+			topology:   "testdata/annotations-traffic-type-topology.json",
+			wantConfig: "testdata/annotations-traffic-type-config.json",
 		},
 		{
 			desc:               "Annotations: scheme",
 			acl:                false,
 			defaultTrafficType: "http",
-			topology:           "fixtures/annotations-scheme-topology.json",
-			wantConfig:         "fixtures/annotations-scheme-config.json",
+			topology:           "testdata/annotations-scheme-topology.json",
+			wantConfig:         "testdata/annotations-scheme-config.json",
 		},
 		{
 			desc:               "ACL disabled: basic HTTP service",
 			acl:                false,
 			defaultTrafficType: "http",
-			topology:           "fixtures/acl-disabled-http-basic-topology.json",
-			wantConfig:         "fixtures/acl-disabled-http-basic-config.json",
+			topology:           "testdata/acl-disabled-http-basic-topology.json",
+			wantConfig:         "testdata/acl-disabled-http-basic-config.json",
 		},
 		{
 			desc:               "ACL disabled: basic TCP service",
@@ -64,8 +64,8 @@ func TestProvider_BuildConfig(t *testing.T) {
 			tcpStateTable: map[mk8s.ServiceWithPort]int32{
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 5000,
 			},
-			topology:   "fixtures/acl-disabled-tcp-basic-topology.json",
-			wantConfig: "fixtures/acl-disabled-tcp-basic-config.json",
+			topology:   "testdata/acl-disabled-tcp-basic-topology.json",
+			wantConfig: "testdata/acl-disabled-tcp-basic-config.json",
 		},
 		{
 			desc:               "ACL disabled: basic UDP service",
@@ -74,22 +74,22 @@ func TestProvider_BuildConfig(t *testing.T) {
 			udpStateTable: map[mk8s.ServiceWithPort]int32{
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 15000,
 			},
-			topology:   "fixtures/acl-disabled-udp-basic-topology.json",
-			wantConfig: "fixtures/acl-disabled-udp-basic-config.json",
+			topology:   "testdata/acl-disabled-udp-basic-topology.json",
+			wantConfig: "testdata/acl-disabled-udp-basic-config.json",
 		},
 		{
 			desc:               "ACL disabled: HTTP service with traffic-split",
 			acl:                false,
 			defaultTrafficType: "http",
-			topology:           "fixtures/acl-disabled-http-traffic-split-topology.json",
-			wantConfig:         "fixtures/acl-disabled-http-traffic-split-config.json",
+			topology:           "testdata/acl-disabled-http-traffic-split-topology.json",
+			wantConfig:         "testdata/acl-disabled-http-traffic-split-config.json",
 		},
 		{
 			desc:               "ACL enabled: basic HTTP service",
 			acl:                true,
 			defaultTrafficType: "http",
-			topology:           "fixtures/acl-enabled-http-basic-topology.json",
-			wantConfig:         "fixtures/acl-enabled-http-basic-config.json",
+			topology:           "testdata/acl-enabled-http-basic-topology.json",
+			wantConfig:         "testdata/acl-enabled-http-basic-config.json",
 		},
 		{
 			desc:               "ACL enabled: basic TCP service",
@@ -98,15 +98,15 @@ func TestProvider_BuildConfig(t *testing.T) {
 			tcpStateTable: map[mk8s.ServiceWithPort]int32{
 				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 5000,
 			},
-			topology:   "fixtures/acl-enabled-tcp-basic-topology.json",
-			wantConfig: "fixtures/acl-enabled-tcp-basic-config.json",
+			topology:   "testdata/acl-enabled-tcp-basic-topology.json",
+			wantConfig: "testdata/acl-enabled-tcp-basic-config.json",
 		},
 		{
 			desc:               "ACL enabled: HTTP service with traffic-split",
 			acl:                true,
 			defaultTrafficType: "http",
-			topology:           "fixtures/acl-enabled-http-traffic-split-topology.json",
-			wantConfig:         "fixtures/acl-enabled-http-traffic-split-config.json",
+			topology:           "testdata/acl-enabled-http-traffic-split-topology.json",
+			wantConfig:         "testdata/acl-enabled-http-traffic-split-config.json",
 		},
 	}
 

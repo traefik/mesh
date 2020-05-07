@@ -350,7 +350,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit(t *testing.T) {
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	assertTopology(t, "fixtures/topology-basic.json", got)
+	assertTopology(t, "testdata/topology-basic.json", got)
 }
 
 // TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch makes sure that when TrafficTarget.Spec.Matches is empty,
@@ -389,7 +389,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	assertTopology(t, "fixtures/topology-spec-with-empty-match.json", got)
+	assertTopology(t, "testdata/topology-spec-with-empty-match.json", got)
 }
 
 // TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort makes sure that when a TrafficTarget.Destination.Port
@@ -431,7 +431,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	assertTopology(t, "fixtures/topology-empty-destination-port.json", got)
+	assertTopology(t, "testdata/topology-empty-destination-port.json", got)
 }
 
 // TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations makes sure we can build a topology with
@@ -470,7 +470,7 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 	got, err := builder.Build(ignoredResources)
 	require.NoError(t, err)
 
-	assertTopology(t, "fixtures/topology-multi-sources-destinations.json", got)
+	assertTopology(t, "testdata/topology-multi-sources-destinations.json", got)
 }
 
 // createBuilder initializes the different k8s factories and start them, initializes listers and create
