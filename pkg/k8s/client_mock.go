@@ -82,7 +82,7 @@ type ClientMock struct {
 
 // NewClientMock create a new client mock.
 func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
-	yamlContent, err := ioutil.ReadFile(filepath.FromSlash("./fixtures/" + path))
+	yamlContent, err := ioutil.ReadFile(filepath.FromSlash("./testdata/" + path))
 	if err != nil {
 		panic(err)
 	}

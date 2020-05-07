@@ -19,8 +19,8 @@ func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
-	s.createResources(c, "resources/state-table/")
-	s.createResources(c, "resources/smi/crds/")
+	s.createResources(c, "testdata/state-table/")
+	s.createResources(c, "testdata/smi/crds/")
 }
 
 func (s *ACLDisabledSuite) TearDownSuite(c *check.C) {
@@ -28,8 +28,8 @@ func (s *ACLDisabledSuite) TearDownSuite(c *check.C) {
 }
 
 func (s *ACLDisabledSuite) TestHTTPService(c *check.C) {
-	s.createResources(c, "resources/acl/disabled/http")
-	defer s.deleteResources(c, "resources/acl/disabled/http")
+	s.createResources(c, "testdata/acl/disabled/http")
+	defer s.deleteResources(c, "testdata/acl/disabled/http")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"server"})
@@ -40,7 +40,7 @@ func (s *ACLDisabledSuite) TestHTTPService(c *check.C) {
 	c.Assert(err, checker.IsNil)
 	defer s.stopMaeshBinary(c, cmd.Process)
 
-	config := s.testConfigurationWithReturn(c, "resources/acl/disabled/http.json")
+	config := s.testConfigurationWithReturn(c, "testdata/acl/disabled/http.json")
 
 	serverSvc := s.getService(c, "server")
 	serverPod := s.getPod(c, "server")
@@ -51,8 +51,8 @@ func (s *ACLDisabledSuite) TestHTTPService(c *check.C) {
 }
 
 func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
-	s.createResources(c, "resources/acl/disabled/tcp")
-	defer s.deleteResources(c, "resources/acl/disabled/tcp")
+	s.createResources(c, "testdata/acl/disabled/tcp")
+	defer s.deleteResources(c, "testdata/acl/disabled/tcp")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"server"})
@@ -63,7 +63,7 @@ func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
 	c.Assert(err, checker.IsNil)
 	defer s.stopMaeshBinary(c, cmd.Process)
 
-	config := s.testConfigurationWithReturn(c, "resources/acl/disabled/tcp.json")
+	config := s.testConfigurationWithReturn(c, "testdata/acl/disabled/tcp.json")
 
 	serverSvc := s.getService(c, "server")
 	serverPod := s.getPod(c, "server")
@@ -73,8 +73,8 @@ func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
 }
 
 func (s *ACLDisabledSuite) TestUDPService(c *check.C) {
-	s.createResources(c, "resources/acl/disabled/udp")
-	defer s.deleteResources(c, "resources/acl/disabled/udp")
+	s.createResources(c, "testdata/acl/disabled/udp")
+	defer s.deleteResources(c, "testdata/acl/disabled/udp")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"server"})
@@ -85,7 +85,7 @@ func (s *ACLDisabledSuite) TestUDPService(c *check.C) {
 	c.Assert(err, checker.IsNil)
 	defer s.stopMaeshBinary(c, cmd.Process)
 
-	config := s.testConfigurationWithReturn(c, "resources/acl/disabled/udp.json")
+	config := s.testConfigurationWithReturn(c, "testdata/acl/disabled/udp.json")
 
 	serverSvc := s.getService(c, "server")
 	serverPod := s.getPod(c, "server")
@@ -95,8 +95,8 @@ func (s *ACLDisabledSuite) TestUDPService(c *check.C) {
 }
 
 func (s *ACLDisabledSuite) TestSplitTraffic(c *check.C) {
-	s.createResources(c, "resources/acl/disabled/traffic-split")
-	defer s.deleteResources(c, "resources/acl/disabled/traffic-split")
+	s.createResources(c, "testdata/acl/disabled/traffic-split")
+	defer s.deleteResources(c, "testdata/acl/disabled/traffic-split")
 	defer s.deleteShadowServices(c)
 
 	s.waitForPods(c, []string{"server-v1", "server-v2"})
@@ -107,7 +107,7 @@ func (s *ACLDisabledSuite) TestSplitTraffic(c *check.C) {
 	c.Assert(err, checker.IsNil)
 	defer s.stopMaeshBinary(c, cmd.Process)
 
-	config := s.testConfigurationWithReturn(c, "resources/acl/disabled/traffic-split.json")
+	config := s.testConfigurationWithReturn(c, "testdata/acl/disabled/traffic-split.json")
 
 	s.checkBlockAllMiddleware(c, config)
 	s.checkHTTPReadinessService(c, config)
