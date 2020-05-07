@@ -73,7 +73,7 @@ spec:
             {{- if .Values.acl }}
             - "--acl"
             {{- end }}
-            - "--namespace=$(POD_NAMESPACE)"
+            - "--namespace={{ .Release.Namespace }}"
             {{- if .Values.controller.ignoreNamespaces }}
             - {{ include "maesh.controllerIgnoreNamespaces" . | quote }}
             {{- end }}
@@ -86,11 +86,6 @@ spec:
             {{- if .Values.limits.udp }}
             - "--limitUDPPort={{ .Values.limits.udp }}"
             {{- end }}
-          env:
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
           resources:
             requests:
               memory: {{ .Values.controller.resources.request.mem }}
@@ -121,12 +116,7 @@ spec:
             {{- end }}
             - "--clusterdomain"
             - {{ default "cluster.local" .Values.clusterDomain | quote }}
-            - "--namespace=$(POD_NAMESPACE)"
-          env:
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+            - "--namespace={{ .Release.Namespace }}"
           securityContext:
             capabilities:
               drop:
