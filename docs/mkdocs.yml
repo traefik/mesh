@@ -67,6 +67,7 @@ nav:
   - 'Quickstart': 'quickstart.md'
   - 'Installation': 'install.md'
   - 'Configuration': 'configuration.md'
+  - 'Compatibility': 'compatibility.md'
   - 'Examples': 'examples.md'
   - 'API': 'api.md'
   - 'Migration':
