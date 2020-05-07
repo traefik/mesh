@@ -294,7 +294,7 @@ func (s *BaseSuite) waitForPods(c *check.C, pods []string) {
 }
 
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
-	s.createResources(c, "resources/coredns/coredns.yaml")
+	s.createResources(c, "testdata/coredns/coredns.yaml")
 	s.WaitForCoreDNS(c)
 }
 
@@ -303,7 +303,7 @@ func (s *BaseSuite) WaitForCoreDNS(c *check.C) {
 }
 
 func (s *BaseSuite) startAndWaitForKubeDNS(c *check.C) {
-	s.createResources(c, "resources/kubedns")
+	s.createResources(c, "testdata/kubedns")
 	c.Assert(s.try.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 }
 
@@ -328,7 +328,7 @@ func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) 
 }
 
 func (s *BaseSuite) startWhoami(c *check.C) {
-	s.createResources(c, "resources/whoami")
+	s.createResources(c, "testdata/whoami")
 	c.Assert(s.try.WaitReadyDeployment("whoami", "whoami", 30*time.Second), checker.IsNil)
 }
 
@@ -344,7 +344,7 @@ func (s *BaseSuite) createRequiredNamespaces(c *check.C) {
 func (s *BaseSuite) installHelmMaesh(c *check.C, acl bool, kubeDNS bool) error {
 	c.Log("Installing Maesh via helm...")
 	// Install the helm chart.
-	argSlice := []string{"install", "powpow", "../helm/chart/maesh", "--values", "resources/values.yaml", "--namespace", maeshNamespace}
+	argSlice := []string{"install", "powpow", "../helm/chart/maesh", "--values", "testdata/values.yaml", "--namespace", maeshNamespace}
 
 	if kubeDNS {
 		argSlice = append(argSlice, "--set", "kubedns=true")
@@ -389,7 +389,7 @@ func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
 
 func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
 	// Create new tiny tools deployment.
-	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, "resources/tools/deployment.yaml"))
+	s.kubectlCommand(c, "apply", "-f", path.Join(s.dir, "testdata/tools/deployment.yaml"))
 
 	// Wait for tools to be initialized.
 	s.waitForTools(c)

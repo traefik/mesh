@@ -23,8 +23,8 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c, requiredImages)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
-	s.createResources(c, "resources/state-table/")
-	s.createResources(c, "resources/smi/crds/")
+	s.createResources(c, "testdata/state-table/")
+	s.createResources(c, "testdata/smi/crds/")
 }
 
 func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
@@ -54,8 +54,8 @@ func (s *CoreDNSSuite) TestCoreDNSVersionSafe(c *check.C) {
 		},
 	}
 
-	s.createResources(c, "resources/coredns/corednssafe.yaml")
-	defer s.deleteResources(c, "resources/coredns/corednssafe.yaml")
+	s.createResources(c, "testdata/coredns/corednssafe.yaml")
+	defer s.deleteResources(c, "testdata/coredns/corednssafe.yaml")
 
 	for _, test := range testCases {
 		s.WaitForCoreDNS(c)
@@ -91,8 +91,8 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		},
 	}
 
-	s.createResources(c, "resources/coredns/coredns.yaml")
-	defer s.deleteResources(c, "resources/coredns/coredns.yaml")
+	s.createResources(c, "testdata/coredns/coredns.yaml")
+	defer s.deleteResources(c, "testdata/coredns/coredns.yaml")
 
 	for _, test := range testCases {
 		s.WaitForCoreDNS(c)
@@ -109,8 +109,8 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 }
 
 func (s *CoreDNSSuite) TestCoreDNSDig(c *check.C) {
-	s.createResources(c, "resources/coredns/coredns.yaml")
-	defer s.deleteResources(c, "resources/coredns/coredns.yaml")
+	s.createResources(c, "testdata/coredns/coredns.yaml")
+	defer s.deleteResources(c, "testdata/coredns/coredns.yaml")
 	s.WaitForCoreDNS(c)
 
 	cmd := s.startMaeshBinaryCmd(c, false, false)
