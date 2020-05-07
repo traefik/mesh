@@ -15,4 +15,4 @@ Some of Maesh's features are only supported on certain Kubernetes versions. Plea
  | Features              | K8s 1.16 | K8s 1.17 | K8s 1.18 |
  |-----------------------|----------|----------|----------|
  | General functionality | ✔        | ✔        | ✔        |
- | Service Topology      | ✘        | ✘        | ✔        |
+ | Service Topology      | ✘        | ✔        | ✔        |
