@@ -29,9 +29,7 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 
 	log.SetOutput(os.Stdout)
 
-	logLevelStr := cConfig.LogLevel
-
-	logLevel, err := logrus.ParseLevel(logLevelStr)
+	logLevel, err := logrus.ParseLevel(cConfig.LogLevel)
 	if err != nil {
 		return err
 	}
