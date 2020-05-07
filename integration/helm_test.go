@@ -16,7 +16,7 @@ func (s *HelmSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
 	s.startWhoami(c)
-	s.createResources(c, "resources/smi/crds/")
+	s.createResources(c, "testdata/smi/crds/")
 }
 
 func (s *HelmSuite) TearDownSuite(c *check.C) {
