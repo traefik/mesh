@@ -20,10 +20,12 @@ import (
 	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 // PortMapper is capable of storing and retrieving a port mapping for a given service.
@@ -64,9 +66,9 @@ type Config struct {
 // Controller hold controller configuration.
 type Controller struct {
 	cfg               Config
-	handler           *Handler
+	handler           cache.ResourceEventHandler
 	serviceManager    ServiceManager
-	configRefreshChan chan string
+	configRefreshChan chan struct{}
 	provider          *provider.Provider
 	ignoredResources  k8s.IgnoreWrapper
 	tcpStateTable     PortMapper
@@ -136,8 +138,11 @@ func (c *Controller) init() {
 	c.serviceManager = NewShadowServiceManager(c.logger, c.ServiceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
 
 	// configRefreshChan is used to trigger configuration refreshes.
-	c.configRefreshChan = make(chan string)
-	c.handler = NewHandler(c.logger, c.ignoredResources, c.serviceManager, c.configRefreshChan)
+	c.configRefreshChan = make(chan struct{})
+	c.handler = cache.FilteringResourceEventHandler{
+		FilterFunc: c.isWatchedResource,
+		Handler:    NewHandler(c.logger, c.serviceManager, c.configRefreshChan),
+	}
 
 	// Create listers and register the event handler to informers that are not ACL related.
 	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
@@ -308,4 +313,16 @@ func (c *Controller) createMeshServices() error {
 	}
 
 	return nil
+}
+
+// isWatchedResource returns true if the given resource is not ignored, false otherwise.
+func (c *Controller) isWatchedResource(obj interface{}) bool {
+	accessor, err := meta.Accessor(obj)
+	if err != nil {
+		return false
+	}
+
+	pMeta := meta.AsPartialObjectMetadata(accessor)
+
+	return !c.ignoredResources.IsIgnored(pMeta.ObjectMeta)
 }
