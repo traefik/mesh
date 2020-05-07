@@ -77,7 +77,7 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 					case <-ticker.C:
 						data, err := p.getDataFromEndpoint(ctxLog)
 						if err != nil {
-							logger.Errorf("Failed to get config from endpoint: %w", err)
+							logger.Errorf("Failed to get config from endpoint: %v", err)
 							errChan <- err
 							return
 						}
@@ -85,7 +85,7 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 						configuration := &dynamic.Configuration{}
 
 						if err := json.Unmarshal(data, configuration); err != nil {
-							log.FromContext(ctx).Errorf("Error parsing configuration %w", err)
+							log.FromContext(ctx).Errorf("Error parsing configuration: %v", err)
 							return
 						}
 
@@ -110,11 +110,11 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 		}
 
 		notify := func(err error, time time.Duration) {
-			logger.Errorf("Provider connection error %w, retrying in %s", err, time)
+			logger.Errorf("Provider connection error, retrying in %s: %v", time, err)
 		}
 		err := backoff.RetryNotify(safe.OperationWithRecover(operation), backoff.WithContext(job.NewBackOff(backoff.NewExponentialBackOff()), ctxLog), notify)
 		if err != nil {
-			logger.Errorf("Cannot connect to HTTP server %w", err)
+			logger.Errorf("Cannot connect to HTTP server: %v", err)
 		}
 	})
 
