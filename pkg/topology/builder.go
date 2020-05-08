@@ -13,7 +13,6 @@ import (
 	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	listers "k8s.io/client-go/listers/core/v1"
 )
@@ -723,9 +722,9 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 			continue
 		}
 
-		// If the destination namepace is empty or blank, set it to default.
-		if trafficTarget.Destination.Namespace == "" {
-			trafficTarget.Destination.Namespace = metav1.NamespaceDefault
+		// If the destination namepace is empty or blank, set it to the trafficTarget namespace.
+		if len(trafficTarget.Destination.Namespace) == 0 {
+			trafficTarget.Destination.Namespace = trafficTarget.Namespace
 		}
 
 		key := Key{trafficTarget.Name, trafficTarget.Namespace}
