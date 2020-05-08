@@ -472,14 +472,15 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 	assertTopology(t, "fixtures/topology-multi-sources-destinations.json", got)
 }
 
-func TestTopologyBuilder_EmptyTrafficTargetDestination(t *testing.T) {
+func TestTopologyBuilder_EmptyTrafficTargetDestinationNamespace(t *testing.T) {
+	namespace := "foo"
 	tt := &access.TrafficTarget{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TrafficTarget",
 			APIVersion: "access.smi-spec.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: metav1.NamespaceDefault,
+			Namespace: namespace,
 			Name:      "test",
 		},
 		Destination: access.IdentityBindingSubject{
@@ -501,9 +502,9 @@ func TestTopologyBuilder_EmptyTrafficTargetDestination(t *testing.T) {
 	res, err := builder.loadResources(ignoredResources)
 	require.NoError(t, err)
 
-	actual, exists := res.TrafficTargets[Key{Name: "test", Namespace: metav1.NamespaceDefault}]
+	actual, exists := res.TrafficTargets[Key{Name: "test", Namespace: namespace}]
 	assert.Equal(t, true, exists)
-	assert.Equal(t, metav1.NamespaceDefault, actual.Destination.Namespace)
+	assert.Equal(t, namespace, actual.Destination.Namespace)
 }
 
 // createBuilder initializes the different k8s factories and start them, initializes listers and create
