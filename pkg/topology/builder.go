@@ -223,24 +223,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 
 		// As required by the SMI specification, backends must expose at least the same ports as the Service on
 		// which the TrafficSplit is.
-		for _, svcPort := range svc.Ports {
-			var portFound bool
-
-			for _, backendPort := range backendSvc.Ports {
-				if svcPort.Port == backendPort.Port {
-					portFound = true
-					break
-				}
-			}
-
-			if !portFound {
-				err := fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend", svcPort.Port, backendSvcKey)
-				setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
-				b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
-
-				return
-			}
-		}
+		b.validateServiceAndBackendPorts(svc.Ports, backendSvc.Ports, topology, trafficSplit, svcKey, tsKey, backendSvcKey)
 
 		backends[i] = TrafficSplitBackend{
 			Weight:  backend.Weight,
@@ -258,6 +241,27 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 	}
 
 	svc.TrafficSplits = append(svc.TrafficSplits, tsKey)
+}
+
+func (b *Builder) validateServiceAndBackendPorts(svcPorts []corev1.ServicePort, backendPorts []corev1.ServicePort, topology *Topology, trafficSplit *split.TrafficSplit, svcKey Key, tsKey Key, backendSvcKey Key) {
+	for _, svcPort := range svcPorts {
+		var portFound bool
+
+		for _, backendPort := range backendPorts {
+			if svcPort.Port == backendPort.Port {
+				portFound = true
+				break
+			}
+		}
+
+		if !portFound {
+			err := fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend", svcPort.Port, backendSvcKey)
+			setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
+			b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+
+			return
+		}
+	}
 }
 
 func setTrafficSplitWithErr(topology *Topology, trafficSplit *split.TrafficSplit, svcKey Key, err error) {
@@ -349,20 +353,7 @@ func (b *Builder) getIncomingPodsForService(topology *Topology, svcKey Key, visi
 	}
 
 	if len(svc.TrafficSplits) == 0 {
-		var pods []Key
-
-		for _, ttKey := range svc.TrafficTargets {
-			tt, ok := topology.ServiceTrafficTargets[ttKey]
-			if !ok {
-				return nil, fmt.Errorf("unable to find TrafficTarget %q", ttKey)
-			}
-
-			for _, source := range tt.Sources {
-				pods = append(pods, source.Pods...)
-			}
-		}
-
-		return pods, nil
+		return getPodsForServiceWithNoTrafficSplits(topology, svc)
 	}
 
 	for _, tsKey := range svc.TrafficSplits {
@@ -384,6 +375,23 @@ func (b *Builder) getIncomingPodsForService(topology *Topology, svcKey Key, visi
 	}
 
 	return union, nil
+}
+
+func getPodsForServiceWithNoTrafficSplits(topology *Topology, svc *Service) ([]Key, error) {
+	var pods []Key
+
+	for _, ttKey := range svc.TrafficTargets {
+		tt, ok := topology.ServiceTrafficTargets[ttKey]
+		if !ok {
+			return nil, fmt.Errorf("unable to find TrafficTarget %q", ttKey)
+		}
+
+		for _, source := range tt.Sources {
+			pods = append(pods, source.Pods...)
+		}
+	}
+
+	return pods, nil
 }
 
 // unionPod returns the union of the given two slices.
@@ -477,7 +485,10 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 		return TrafficSpec{}, fmt.Errorf("unable to find HTTPRouteGroup %q", key)
 	}
 
-	var httpMatches []*spec.HTTPMatch
+	var (
+		httpMatches []*spec.HTTPMatch
+		err         error
+	)
 
 	if len(s.Matches) == 0 {
 		httpMatches = make([]*spec.HTTPMatch, len(httpRouteGroup.Matches))
@@ -487,21 +498,9 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 			httpMatches[i] = &m
 		}
 	} else {
-		for _, name := range s.Matches {
-			var found bool
-
-			for _, match := range httpRouteGroup.Matches {
-				found = match.Name == name
-
-				if found {
-					httpMatches = append(httpMatches, &match)
-					break
-				}
-			}
-
-			if !found {
-				return TrafficSpec{}, fmt.Errorf("unable to find match %q in HTTPRouteGroup %q", name, key)
-			}
+		httpMatches, err = buildHTTPRouteGroupMatches(s.Matches, httpRouteGroup.Matches, httpMatches, key)
+		if err != nil {
+			return TrafficSpec{}, err
 		}
 	}
 
@@ -509,6 +508,27 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 		HTTPRouteGroup: httpRouteGroup,
 		HTTPMatches:    httpMatches,
 	}, nil
+}
+
+func buildHTTPRouteGroupMatches(ttMatches []string, httpRouteGroupMatches []spec.HTTPMatch, httpMatches []*spec.HTTPMatch, key Key) ([]*spec.HTTPMatch, error) {
+	for _, name := range ttMatches {
+		var found bool
+
+		for _, match := range httpRouteGroupMatches {
+			found = match.Name == name
+
+			if found {
+				httpMatches = append(httpMatches, &match)
+				break
+			}
+		}
+
+		if !found {
+			return nil, fmt.Errorf("unable to find match %q in HTTPRouteGroup %q", name, key)
+		}
+	}
+
+	return httpMatches, nil
 }
 
 func (b *Builder) buildTCPRoute(tcpRts map[Key]*spec.TCPRoute, ns string, s access.TrafficTargetSpec) (TrafficSpec, error) {
@@ -576,19 +596,19 @@ func (b *Builder) loadResources(ignoredResources mk8s.IgnoreWrapper) (*resources
 		PodsBySvcBySa:         make(map[Key]map[Key][]*corev1.Pod),
 	}
 
-	svcs, err := b.ServiceLister.List(labels.Everything())
+	err := b.loadServices(ignoredResources, res)
 	if err != nil {
-		return nil, fmt.Errorf("unable to list Services: %w", err)
+		return nil, fmt.Errorf("unable to load Services: %w", err)
 	}
 
 	pods, err := b.PodLister.List(labels.Everything())
 	if err != nil {
-		return nil, fmt.Errorf("unable to list Services: %w", err)
+		return nil, fmt.Errorf("unable to list Pods: %w", err)
 	}
 
 	eps, err := b.EndpointsLister.List(labels.Everything())
 	if err != nil {
-		return nil, fmt.Errorf("unable to list Services: %w", err)
+		return nil, fmt.Errorf("unable to list Endpoints: %w", err)
 	}
 
 	tss, err := b.TrafficSplitLister.List(labels.Everything())
@@ -620,6 +640,18 @@ func (b *Builder) loadResources(ignoredResources mk8s.IgnoreWrapper) (*resources
 		}
 	}
 
+	res.indexSMIResources(ignoredResources, tts, tss, tcpRts, httpRtGrps)
+	res.indexPods(ignoredResources, pods, eps)
+
+	return res, nil
+}
+
+func (b *Builder) loadServices(ignoredResources mk8s.IgnoreWrapper, res *resources) error {
+	svcs, err := b.ServiceLister.List(labels.Everything())
+	if err != nil {
+		return fmt.Errorf("unable to list Services: %w", err)
+	}
+
 	for _, svc := range svcs {
 		if ignoredResources.IsIgnored(svc.ObjectMeta) {
 			continue
@@ -628,10 +660,7 @@ func (b *Builder) loadResources(ignoredResources mk8s.IgnoreWrapper) (*resources
 		res.Services[Key{svc.Name, svc.Namespace}] = svc
 	}
 
-	res.indexSMIResources(ignoredResources, tts, tss, tcpRts, httpRtGrps)
-	res.indexPods(ignoredResources, pods, eps)
-
-	return res, nil
+	return nil
 }
 
 type resources struct {
@@ -650,10 +679,15 @@ type resources struct {
 // indexPods populates the different pod indexes in the given resources object. It builds 3 indexes:
 // - pods indexed by service-account
 // - pods indexed by service
-// - pods indexed by service indexed by service-account
+// - pods indexed by service indexed by service-account.
 func (r *resources) indexPods(ignoredResources mk8s.IgnoreWrapper, pods []*corev1.Pod, eps []*corev1.Endpoints) {
 	podsByName := make(map[Key]*corev1.Pod)
 
+	r.indexPodsByServiceAccount(ignoredResources, pods, podsByName)
+	r.indexPodsByService(ignoredResources, eps, podsByName)
+}
+
+func (r *resources) indexPodsByServiceAccount(ignoredResources mk8s.IgnoreWrapper, pods []*corev1.Pod, podsByName map[Key]*corev1.Pod) {
 	for _, pod := range pods {
 		if ignoredResources.IsIgnored(pod.ObjectMeta) {
 			continue
@@ -665,7 +699,9 @@ func (r *resources) indexPods(ignoredResources mk8s.IgnoreWrapper, pods []*corev
 		saKey := Key{pod.Spec.ServiceAccountName, pod.Namespace}
 		r.PodsByServiceAccounts[saKey] = append(r.PodsByServiceAccounts[saKey], pod)
 	}
+}
 
+func (r *resources) indexPodsByService(ignoredResources mk8s.IgnoreWrapper, eps []*corev1.Endpoints, podsByName map[Key]*corev1.Pod) {
 	for _, ep := range eps {
 		if ignoredResources.IsIgnored(ep.ObjectMeta) {
 			continue
@@ -673,29 +709,33 @@ func (r *resources) indexPods(ignoredResources mk8s.IgnoreWrapper, pods []*corev
 
 		for _, subset := range ep.Subsets {
 			for _, address := range subset.Addresses {
-				if address.TargetRef == nil {
-					continue
-				}
-
-				keyPod := Key{Name: address.TargetRef.Name, Namespace: address.TargetRef.Namespace}
-
-				pod, ok := podsByName[keyPod]
-				if !ok {
-					continue
-				}
-
-				keySA := Key{Name: pod.Spec.ServiceAccountName, Namespace: pod.Namespace}
-				keyEP := Key{Name: ep.Name, Namespace: ep.Namespace}
-
-				if _, ok := r.PodsBySvcBySa[keySA]; !ok {
-					r.PodsBySvcBySa[keySA] = make(map[Key][]*corev1.Pod)
-				}
-
-				r.PodsBySvcBySa[keySA][keyEP] = append(r.PodsBySvcBySa[keySA][keyEP], pod)
-				r.PodsBySvc[keyEP] = append(r.PodsBySvc[keyEP], pod)
+				r.indexPodByService(ep, address, podsByName)
 			}
 		}
 	}
+}
+
+func (r *resources) indexPodByService(ep *corev1.Endpoints, address corev1.EndpointAddress, podsByName map[Key]*corev1.Pod) {
+	if address.TargetRef == nil {
+		return
+	}
+
+	keyPod := Key{Name: address.TargetRef.Name, Namespace: address.TargetRef.Namespace}
+
+	pod, ok := podsByName[keyPod]
+	if !ok {
+		return
+	}
+
+	keySA := Key{Name: pod.Spec.ServiceAccountName, Namespace: pod.Namespace}
+	keyEP := Key{Name: ep.Name, Namespace: ep.Namespace}
+
+	if _, ok := r.PodsBySvcBySa[keySA]; !ok {
+		r.PodsBySvcBySa[keySA] = make(map[Key][]*corev1.Pod)
+	}
+
+	r.PodsBySvcBySa[keySA][keyEP] = append(r.PodsBySvcBySa[keySA][keyEP], pod)
+	r.PodsBySvc[keyEP] = append(r.PodsBySvc[keyEP], pod)
 }
 
 func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts []*access.TrafficTarget, tss []*split.TrafficSplit, tcpRts []*spec.TCPRoute, httpRtGrps []*spec.HTTPRouteGroup) {
