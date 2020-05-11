@@ -152,62 +152,74 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 
 	switch trafficType {
 	case annotations.ServiceTypeHTTP:
-		httpRule := buildHTTPRuleFromService(svc)
-
-		for portID, svcPort := range svc.Ports {
-			entrypoint, err := p.buildHTTPEntrypoint(portID)
-			if err != nil {
-				err = fmt.Errorf("unable to build HTTP entrypoint for port %d: %v", svcPort.Port, err)
-				svc.AddError(err)
-				p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, err)
-
-				continue
-			}
-
-			key := getServiceRouterKeyFromService(svc, svcPort.Port)
-			cfg.HTTP.Services[key] = p.buildHTTPServiceFromService(t, svc, scheme, svcPort.TargetPort.IntVal)
-			cfg.HTTP.Routers[key] = buildHTTPRouter(httpRule, entrypoint, middlewares, key, priorityService)
-		}
+		p.buildServicesAndRoutersForHTTPService(t, cfg, svc, scheme, middlewares, svcKey)
 
 	case annotations.ServiceTypeTCP:
-		rule := buildTCPRouterRule()
-
-		for _, svcPort := range svc.Ports {
-			entrypoint, err := p.buildTCPEntrypoint(svc, svcPort.Port)
-			if err != nil {
-				err = fmt.Errorf("unable to build TCP entrypoint for port %d: %v", svcPort.Port, err)
-				svc.AddError(err)
-				p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, err)
-
-				continue
-			}
-
-			key := getServiceRouterKeyFromService(svc, svcPort.Port)
-			cfg.TCP.Services[key] = p.buildTCPServiceFromService(t, svc, svcPort.TargetPort.IntVal)
-			cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
-		}
+		p.buildServicesAndRoutersForTCPService(t, cfg, svc, svcKey)
 
 	case annotations.ServiceTypeUDP:
-		for _, svcPort := range svc.Ports {
-			entrypoint, err := p.buildUDPEntrypoint(svc, svcPort.Port)
-			if err != nil {
-				err = fmt.Errorf("unable to build UDP entrypoint for port %d: %v", svcPort.Port, err)
-				svc.AddError(err)
-				p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, err)
-
-				continue
-			}
-
-			key := getServiceRouterKeyFromService(svc, svcPort.Port)
-			cfg.UDP.Services[key] = p.buildUDPServiceFromService(t, svc, svcPort.TargetPort.IntVal)
-			cfg.UDP.Routers[key] = buildUDPRouter(entrypoint, key)
-		}
+		p.buildServicesAndRoutersForUDPService(t, cfg, svc, svcKey)
 
 	default:
 		return fmt.Errorf("unknown traffic-type %q", trafficType)
 	}
 
 	return nil
+}
+
+func (p *Provider) buildServicesAndRoutersForHTTPService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme string, middlewares []string, svcKey topology.Key) {
+	httpRule := buildHTTPRuleFromService(svc)
+
+	for portID, svcPort := range svc.Ports {
+		entrypoint, err := p.buildHTTPEntrypoint(portID)
+		if err != nil {
+			err = fmt.Errorf("unable to build HTTP entrypoint for port %d: %v", svcPort.Port, err)
+			svc.AddError(err)
+			p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, err)
+
+			continue
+		}
+
+		key := getServiceRouterKeyFromService(svc, svcPort.Port)
+		cfg.HTTP.Services[key] = p.buildHTTPServiceFromService(t, svc, scheme, svcPort.TargetPort.IntVal)
+		cfg.HTTP.Routers[key] = buildHTTPRouter(httpRule, entrypoint, middlewares, key, priorityService)
+	}
+}
+
+func (p *Provider) buildServicesAndRoutersForTCPService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, svcKey topology.Key) {
+	rule := buildTCPRouterRule()
+
+	for _, svcPort := range svc.Ports {
+		entrypoint, err := p.buildTCPEntrypoint(svc, svcPort.Port)
+		if err != nil {
+			err = fmt.Errorf("unable to build TCP entrypoint for port %d: %v", svcPort.Port, err)
+			svc.AddError(err)
+			p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, err)
+
+			continue
+		}
+
+		key := getServiceRouterKeyFromService(svc, svcPort.Port)
+		cfg.TCP.Services[key] = p.buildTCPServiceFromService(t, svc, svcPort.TargetPort.IntVal)
+		cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
+	}
+}
+
+func (p *Provider) buildServicesAndRoutersForUDPService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, svcKey topology.Key) {
+	for _, svcPort := range svc.Ports {
+		entrypoint, err := p.buildUDPEntrypoint(svc, svcPort.Port)
+		if err != nil {
+			err = fmt.Errorf("unable to build UDP entrypoint for port %d: %v", svcPort.Port, err)
+			svc.AddError(err)
+			p.logger.Errorf("Error building dynamic configuration for Service %q: %v", svcKey, err)
+
+			continue
+		}
+
+		key := getServiceRouterKeyFromService(svc, svcPort.Port)
+		cfg.UDP.Services[key] = p.buildUDPServiceFromService(t, svc, svcPort.TargetPort.IntVal)
+		cfg.UDP.Routers[key] = buildUDPRouter(entrypoint, key)
+	}
 }
 
 func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology, cfg *dynamic.Configuration, ttKey topology.ServiceTrafficTargetKey, scheme, trafficType string, middlewares []string) error {
