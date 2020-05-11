@@ -723,7 +723,7 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 		}
 
 		// If the destination namepace is empty or blank, set it to the trafficTarget namespace.
-		if len(trafficTarget.Destination.Namespace) == 0 {
+		if trafficTarget.Destination.Namespace == "" {
 			trafficTarget.Destination.Namespace = trafficTarget.Namespace
 		}
 
