@@ -49,7 +49,7 @@ type Preparer interface {
 	ConfigureKubeDNS() error
 }
 
-// Ensure the Prepare fits the Preparer interface
+// Ensure the Prepare fits the Preparer interface.
 var _ Preparer = (*Prepare)(nil)
 
 // Prepare holds the clients for the various resource controllers.

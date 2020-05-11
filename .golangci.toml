@@ -41,6 +41,7 @@
     "bodyclose", # Too many false positives
     "godox",
     "goconst", # Too many false positives
+    "testpackage", # Does not allow testing private funcs
   ]
 
 [issues]
