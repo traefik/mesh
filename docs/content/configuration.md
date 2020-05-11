@@ -141,7 +141,8 @@ By default, all traffic is denied so we need to grant access to clients to our a
 
 !!! Note "TrafficTarget Source & Destination"
     Please note that TrafficTarget is a namespaced resource.
-    If the destination namespace is not populated, the TrafficTarget namespace will be used as the destination namespace. 
+    If the destination namespace is not populated, the TrafficTarget namespace will be used as the destination namespace.
+    The source namespace must be populated, as it cannot be inferred.
 
 ```yaml
 ---
