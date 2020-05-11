@@ -223,24 +223,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 
 		// As required by the SMI specification, backends must expose at least the same ports as the Service on
 		// which the TrafficSplit is.
-		for _, svcPort := range svc.Ports {
-			var portFound bool
-
-			for _, backendPort := range backendSvc.Ports {
-				if svcPort.Port == backendPort.Port {
-					portFound = true
-					break
-				}
-			}
-
-			if !portFound {
-				err := fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend", svcPort.Port, backendSvcKey)
-				setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
-				b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
-
-				return
-			}
-		}
+		b.validateServiceAndBackendPorts(svc.Ports, backendSvc.Ports, topology, trafficSplit, svcKey, tsKey, backendSvcKey)
 
 		backends[i] = TrafficSplitBackend{
 			Weight:  backend.Weight,
@@ -258,6 +241,27 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 	}
 
 	svc.TrafficSplits = append(svc.TrafficSplits, tsKey)
+}
+
+func (b *Builder) validateServiceAndBackendPorts(svcPorts []corev1.ServicePort, backendPorts []corev1.ServicePort, topology *Topology, trafficSplit *split.TrafficSplit, svcKey Key, tsKey Key, backendSvcKey Key) {
+	for _, svcPort := range svcPorts {
+		var portFound bool
+
+		for _, backendPort := range backendPorts {
+			if svcPort.Port == backendPort.Port {
+				portFound = true
+				break
+			}
+		}
+
+		if !portFound {
+			err := fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend", svcPort.Port, backendSvcKey)
+			setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
+			b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+
+			return
+		}
+	}
 }
 
 func setTrafficSplitWithErr(topology *Topology, trafficSplit *split.TrafficSplit, svcKey Key, err error) {
@@ -349,20 +353,7 @@ func (b *Builder) getIncomingPodsForService(topology *Topology, svcKey Key, visi
 	}
 
 	if len(svc.TrafficSplits) == 0 {
-		var pods []Key
-
-		for _, ttKey := range svc.TrafficTargets {
-			tt, ok := topology.ServiceTrafficTargets[ttKey]
-			if !ok {
-				return nil, fmt.Errorf("unable to find TrafficTarget %q", ttKey)
-			}
-
-			for _, source := range tt.Sources {
-				pods = append(pods, source.Pods...)
-			}
-		}
-
-		return pods, nil
+		return getPodsForServiceWithNoTrafficSplits(topology, svc)
 	}
 
 	for _, tsKey := range svc.TrafficSplits {
@@ -384,6 +375,23 @@ func (b *Builder) getIncomingPodsForService(topology *Topology, svcKey Key, visi
 	}
 
 	return union, nil
+}
+
+func getPodsForServiceWithNoTrafficSplits(topology *Topology, svc *Service) ([]Key, error) {
+	var pods []Key
+
+	for _, ttKey := range svc.TrafficTargets {
+		tt, ok := topology.ServiceTrafficTargets[ttKey]
+		if !ok {
+			return nil, fmt.Errorf("unable to find TrafficTarget %q", ttKey)
+		}
+
+		for _, source := range tt.Sources {
+			pods = append(pods, source.Pods...)
+		}
+	}
+
+	return pods, nil
 }
 
 // unionPod returns the union of the given two slices.
@@ -701,30 +709,35 @@ func (r *resources) indexPodsByService(ignoredResources mk8s.IgnoreWrapper, eps 
 
 		for _, subset := range ep.Subsets {
 			for _, address := range subset.Addresses {
-				if address.TargetRef == nil {
-					continue
-				}
-
-				keyPod := Key{Name: address.TargetRef.Name, Namespace: address.TargetRef.Namespace}
-
-				pod, ok := podsByName[keyPod]
-				if !ok {
-					continue
-				}
-
-				keySA := Key{Name: pod.Spec.ServiceAccountName, Namespace: pod.Namespace}
-				keyEP := Key{Name: ep.Name, Namespace: ep.Namespace}
-
-				if _, ok := r.PodsBySvcBySa[keySA]; !ok {
-					r.PodsBySvcBySa[keySA] = make(map[Key][]*corev1.Pod)
-				}
-
-				r.PodsBySvcBySa[keySA][keyEP] = append(r.PodsBySvcBySa[keySA][keyEP], pod)
-				r.PodsBySvc[keyEP] = append(r.PodsBySvc[keyEP], pod)
+				r.indexPodByService(ep, address, podsByName)
 			}
 		}
 	}
 }
+
+func (r *resources) indexPodByService(ep *corev1.Endpoints, address corev1.EndpointAddress, podsByName map[Key]*corev1.Pod) {
+	if address.TargetRef == nil {
+		return
+	}
+
+	keyPod := Key{Name: address.TargetRef.Name, Namespace: address.TargetRef.Namespace}
+
+	pod, ok := podsByName[keyPod]
+	if !ok {
+		return
+	}
+
+	keySA := Key{Name: pod.Spec.ServiceAccountName, Namespace: pod.Namespace}
+	keyEP := Key{Name: ep.Name, Namespace: ep.Namespace}
+
+	if _, ok := r.PodsBySvcBySa[keySA]; !ok {
+		r.PodsBySvcBySa[keySA] = make(map[Key][]*corev1.Pod)
+	}
+
+	r.PodsBySvcBySa[keySA][keyEP] = append(r.PodsBySvcBySa[keySA][keyEP], pod)
+	r.PodsBySvc[keyEP] = append(r.PodsBySvc[keyEP], pod)
+}
+
 func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts []*access.TrafficTarget, tss []*split.TrafficSplit, tcpRts []*spec.TCPRoute, httpRtGrps []*spec.HTTPRouteGroup) {
 	for _, httpRouteGroup := range httpRtGrps {
 		if ignoredResources.IsIgnored(httpRouteGroup.ObjectMeta) {
