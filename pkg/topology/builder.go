@@ -477,7 +477,10 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 		return TrafficSpec{}, fmt.Errorf("unable to find HTTPRouteGroup %q", key)
 	}
 
-	var httpMatches []*spec.HTTPMatch
+	var (
+		httpMatches []*spec.HTTPMatch
+		err         error
+	)
 
 	if len(s.Matches) == 0 {
 		httpMatches = make([]*spec.HTTPMatch, len(httpRouteGroup.Matches))
@@ -487,21 +490,9 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 			httpMatches[i] = &m
 		}
 	} else {
-		for _, name := range s.Matches {
-			var found bool
-
-			for _, match := range httpRouteGroup.Matches {
-				found = match.Name == name
-
-				if found {
-					httpMatches = append(httpMatches, &match)
-					break
-				}
-			}
-
-			if !found {
-				return TrafficSpec{}, fmt.Errorf("unable to find match %q in HTTPRouteGroup %q", name, key)
-			}
+		httpMatches, err = buildHTTPRouteGroupMatches(s.Matches, httpRouteGroup.Matches, httpMatches, key)
+		if err != nil {
+			return TrafficSpec{}, err
 		}
 	}
 
@@ -509,6 +500,27 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 		HTTPRouteGroup: httpRouteGroup,
 		HTTPMatches:    httpMatches,
 	}, nil
+}
+
+func buildHTTPRouteGroupMatches(ttMatches []string, httpRouteGroupMatches []spec.HTTPMatch, httpMatches []*spec.HTTPMatch, key Key) ([]*spec.HTTPMatch, error) {
+	for _, name := range ttMatches {
+		var found bool
+
+		for _, match := range httpRouteGroupMatches {
+			found = match.Name == name
+
+			if found {
+				httpMatches = append(httpMatches, &match)
+				break
+			}
+		}
+
+		if !found {
+			return nil, fmt.Errorf("unable to find match %q in HTTPRouteGroup %q", name, key)
+		}
+	}
+
+	return httpMatches, nil
 }
 
 func (b *Builder) buildTCPRoute(tcpRts map[Key]*spec.TCPRoute, ns string, s access.TrafficTargetSpec) (TrafficSpec, error) {
@@ -576,19 +588,19 @@ func (b *Builder) loadResources(ignoredResources mk8s.IgnoreWrapper) (*resources
 		PodsBySvcBySa:         make(map[Key]map[Key][]*corev1.Pod),
 	}
 
-	svcs, err := b.ServiceLister.List(labels.Everything())
+	err := b.loadServices(ignoredResources, res)
 	if err != nil {
-		return nil, fmt.Errorf("unable to list Services: %w", err)
+		return nil, fmt.Errorf("unable to load Services: %w", err)
 	}
 
 	pods, err := b.PodLister.List(labels.Everything())
 	if err != nil {
-		return nil, fmt.Errorf("unable to list Services: %w", err)
+		return nil, fmt.Errorf("unable to list Pods: %w", err)
 	}
 
 	eps, err := b.EndpointsLister.List(labels.Everything())
 	if err != nil {
-		return nil, fmt.Errorf("unable to list Services: %w", err)
+		return nil, fmt.Errorf("unable to list Endpoints: %w", err)
 	}
 
 	tss, err := b.TrafficSplitLister.List(labels.Everything())
@@ -620,6 +632,18 @@ func (b *Builder) loadResources(ignoredResources mk8s.IgnoreWrapper) (*resources
 		}
 	}
 
+	res.indexSMIResources(ignoredResources, tts, tss, tcpRts, httpRtGrps)
+	res.indexPods(ignoredResources, pods, eps)
+
+	return res, nil
+}
+
+func (b *Builder) loadServices(ignoredResources mk8s.IgnoreWrapper, res *resources) error {
+	svcs, err := b.ServiceLister.List(labels.Everything())
+	if err != nil {
+		return fmt.Errorf("unable to list Services: %w", err)
+	}
+
 	for _, svc := range svcs {
 		if ignoredResources.IsIgnored(svc.ObjectMeta) {
 			continue
@@ -628,10 +652,7 @@ func (b *Builder) loadResources(ignoredResources mk8s.IgnoreWrapper) (*resources
 		res.Services[Key{svc.Name, svc.Namespace}] = svc
 	}
 
-	res.indexSMIResources(ignoredResources, tts, tss, tcpRts, httpRtGrps)
-	res.indexPods(ignoredResources, pods, eps)
-
-	return res, nil
+	return nil
 }
 
 type resources struct {
