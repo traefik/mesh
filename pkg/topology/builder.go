@@ -722,6 +722,11 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 			continue
 		}
 
+		// If the destination namepace is empty or blank, set it to the trafficTarget namespace.
+		if trafficTarget.Destination.Namespace == "" {
+			trafficTarget.Destination.Namespace = trafficTarget.Namespace
+		}
+
 		key := Key{trafficTarget.Name, trafficTarget.Namespace}
 		r.TrafficTargets[key] = trafficTarget
 	}
