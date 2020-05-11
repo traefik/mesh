@@ -139,9 +139,10 @@ Other types of route groups and detailed information are available [in the speci
 
 By default, all traffic is denied so we need to grant access to clients to our application. This is done by defining a `TrafficTarget`.
 
-??? Note "TrafficTarget Source & Destination"
-    Please note that TrafficTarget is a namespaced resource. Therefore, the source and the destination namespace needs to be explicitly defined.
-    If you do not define a destination namespace, the TrafficTarget namespace will be used as the destination namespace.
+!!! Note "TrafficTarget Source & Destination"
+    Please note that TrafficTarget is a namespaced resource.
+    It is important to ensure that the destination namespace is populated, as kubernetes will not autopopulate this field for you.
+    If the destination namespace is not populated, the TrafficTarget namespace will be used as the destination namespace. 
 
 ```yaml
 ---
