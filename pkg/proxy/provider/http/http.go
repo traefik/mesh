@@ -8,9 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	"github.com/containous/traefik/v2/pkg/job"
 	"github.com/containous/traefik/v2/pkg/log"
 	"github.com/containous/traefik/v2/pkg/provider"
 	"github.com/containous/traefik/v2/pkg/safe"
@@ -60,65 +58,42 @@ func (p *Provider) Init() error {
 // Provide allows the provider to provide configurations to traefik
 // using the given configuration channel.
 func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.Pool) error {
-	pool.GoCtx(func(routineCtx context.Context) {
-		ctxLog := log.With(routineCtx, log.Str(log.ProviderName, providerName))
-		logger := log.FromContext(ctxLog)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		operation := func() error {
-			errChan := make(chan error)
-			ticker := time.NewTicker(p.PollInterval)
+	ctxLog := log.With(ctx, log.Str(log.ProviderName, providerName))
+	logger := log.FromContext(ctxLog)
 
-			pool.GoCtx(func(ctx context.Context) {
-				ctx = log.With(ctx, log.Str(log.ProviderName, providerName))
+	ticker := time.NewTicker(p.PollInterval)
 
-				defer close(errChan)
-				for {
-					select {
-					case <-ticker.C:
-						data, err := p.getDataFromEndpoint(ctxLog)
-						if err != nil {
-							logger.Errorf("Failed to get config from endpoint: %v", err)
-							errChan <- err
-							return
-						}
-
-						configuration := &dynamic.Configuration{}
-
-						if err := json.Unmarshal(data, configuration); err != nil {
-							log.FromContext(ctx).Errorf("Error parsing configuration: %v", err)
-							return
-						}
-
-						if configuration != nil {
-							configurationChan <- dynamic.Message{
-								ProviderName:  providerName,
-								Configuration: configuration,
-							}
-						}
-
-					case <-ctx.Done():
-						ticker.Stop()
-						return
-					}
-				}
-			})
-			if err, ok := <-errChan; ok {
-				return err
+	for {
+		select {
+		case <-ticker.C:
+			data, err := p.getDataFromEndpoint(ctxLog)
+			if err != nil {
+				logger.Errorf("Failed to get config from endpoint: %v", err)
+				break
 			}
-			// channel closed
+
+			configuration := &dynamic.Configuration{}
+
+			if err := json.Unmarshal(data, configuration); err != nil {
+				logger.Errorf("Error parsing configuration: %v", err)
+				break
+			}
+
+			if configuration != nil {
+				configurationChan <- dynamic.Message{
+					ProviderName:  providerName,
+					Configuration: configuration,
+				}
+			}
+
+		case <-ctx.Done():
+			ticker.Stop()
 			return nil
 		}
-
-		notify := func(err error, time time.Duration) {
-			logger.Errorf("Provider connection error, retrying in %s: %v", time, err)
-		}
-		err := backoff.RetryNotify(safe.OperationWithRecover(operation), backoff.WithContext(job.NewBackOff(backoff.NewExponentialBackOff()), ctxLog), notify)
-		if err != nil {
-			logger.Errorf("Cannot connect to HTTP server: %v", err)
-		}
-	})
-
-	return nil
+	}
 }
 
 // getDataFromEndpoint returns data from the configured provider endpoint.
