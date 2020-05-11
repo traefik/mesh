@@ -373,13 +373,13 @@ func (p *Prepare) StartInformers(acl bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := p.startBaseInformers(stopCh, ctx)
+	err := p.startBaseInformers(ctx, stopCh)
 	if err != nil {
 		return err
 	}
 
 	if acl {
-		err = p.startACLInformers(stopCh, ctx)
+		err = p.startACLInformers(ctx, stopCh)
 		if err != nil {
 			return err
 		}
@@ -388,7 +388,7 @@ func (p *Prepare) StartInformers(acl bool) error {
 	return nil
 }
 
-func (p *Prepare) startBaseInformers(stopCh <-chan struct{}, ctx context.Context) error {
+func (p *Prepare) startBaseInformers(ctx context.Context, stopCh <-chan struct{}) error {
 	// Create a new SharedInformerFactory, and register the event handler to informers.
 	kubeFactory := informers.NewSharedInformerFactoryWithOptions(p.client.GetKubernetesClient(), k8s.ResyncPeriod)
 	kubeFactory.Core().V1().Services().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
@@ -415,7 +415,7 @@ func (p *Prepare) startBaseInformers(stopCh <-chan struct{}, ctx context.Context
 	return nil
 }
 
-func (p *Prepare) startACLInformers(stopCh <-chan struct{}, ctx context.Context) error {
+func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{}) error {
 	// Create new SharedInformerFactories, and register the event handler to informers.
 	accessFactory := accessinformer.NewSharedInformerFactoryWithOptions(p.client.GetAccessClient(), k8s.ResyncPeriod)
 	accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
