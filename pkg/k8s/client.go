@@ -20,7 +20,7 @@ type Client interface {
 	GetSplitClient() splitclient.Interface
 }
 
-// Ensure the client wrapper fits the Client interface
+// Ensure the client wrapper fits the Client interface.
 var _ Client = (*ClientWrapper)(nil)
 
 // ClientWrapper holds the clients for the various resource controllers.

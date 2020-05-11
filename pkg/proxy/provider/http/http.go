@@ -59,6 +59,7 @@ func (p *Provider) Init() error {
 
 // Provide allows the provider to provide configurations to traefik
 // using the given configuration channel.
+//nolint:gocognit // This requires a refactor that will come in its own PR.
 func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.Pool) error {
 	pool.GoCtx(func(routineCtx context.Context) {
 		ctxLog := log.With(routineCtx, log.Str(log.ProviderName, providerName))
