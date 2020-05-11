@@ -113,13 +113,7 @@ func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, smi
 	c.NamespaceLister = c.informerFactory.Core().V1().Namespaces().Lister()
 
 	// Start the informers.
-	c.informerFactory.Start(stopCh)
-
-	for t, ok := range c.informerFactory.WaitForCacheSync(stopCh) {
-		if !ok {
-			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
-		}
-	}
+	c.startInformers(stopCh)
 
 	if smi {
 		c.accessClient = fakeaccessclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, AccessObjectKinds)...)
@@ -146,30 +140,46 @@ func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, smi
 		c.TrafficSplitLister = c.splitInformerFactory.Split().V1alpha2().TrafficSplits().Lister()
 
 		// Start the informers.
-		c.accessInformerFactory.Start(stopCh)
-		c.specsInformerFactory.Start(stopCh)
-		c.splitInformerFactory.Start(stopCh)
-
-		for t, ok := range c.accessInformerFactory.WaitForCacheSync(stopCh) {
-			if !ok {
-				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
-			}
-		}
-
-		for t, ok := range c.specsInformerFactory.WaitForCacheSync(stopCh) {
-			if !ok {
-				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
-			}
-		}
-
-		for t, ok := range c.splitInformerFactory.WaitForCacheSync(stopCh) {
-			if !ok {
-				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
-			}
-		}
+		c.startSMIInformers(stopCh)
 	}
 
 	return c
+}
+
+// startInformers waits for the kubernetes core informers to start and sync.
+func (c *ClientMock) startInformers(stopCh <-chan struct{}) {
+	c.informerFactory.Start(stopCh)
+
+	for t, ok := range c.informerFactory.WaitForCacheSync(stopCh) {
+		if !ok {
+			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
+		}
+	}
+}
+
+// startSMIInformers waits for the SMI informers to start and sync.
+func (c *ClientMock) startSMIInformers(stopCh <-chan struct{}) {
+	c.accessInformerFactory.Start(stopCh)
+	c.specsInformerFactory.Start(stopCh)
+	c.splitInformerFactory.Start(stopCh)
+
+	for t, ok := range c.accessInformerFactory.WaitForCacheSync(stopCh) {
+		if !ok {
+			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
+		}
+	}
+
+	for t, ok := range c.specsInformerFactory.WaitForCacheSync(stopCh) {
+		if !ok {
+			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
+		}
+	}
+
+	for t, ok := range c.splitInformerFactory.WaitForCacheSync(stopCh) {
+		if !ok {
+			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
+		}
+	}
 }
 
 // GetKubernetesClient is used to get the kubernetes clientset.
