@@ -141,7 +141,6 @@ By default, all traffic is denied so we need to grant access to clients to our a
 
 !!! Note "TrafficTarget Source & Destination"
     Please note that TrafficTarget is a namespaced resource.
-    It is important to ensure that the destination namespace is populated, as kubernetes will not autopopulate this field for you.
     If the destination namespace is not populated, the TrafficTarget namespace will be used as the destination namespace. 
 
 ```yaml
