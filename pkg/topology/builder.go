@@ -152,27 +152,30 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 		svc.TrafficTargets = append(svc.TrafficTargets, svcTTKey)
 
-		// Add the ServiceTrafficTarget to the source pods.
-		for _, source := range sources {
-			for _, podKey := range source.Pods {
-				// Skip pods which haven't been added to the topology.
-				if _, ok := topology.Pods[podKey]; !ok {
-					continue
-				}
+		// Add the ServiceTrafficTarget to the source and destination pods.
+		addSourceAndDestinationToPods(topology, sources, svcTTKey)
+	}
+}
 
-				topology.Pods[podKey].SourceOf = append(topology.Pods[podKey].SourceOf, svcTTKey)
-			}
-		}
-
-		// Add the ServiceTrafficTarget to the destination pods.
-		for _, podKey := range topology.ServiceTrafficTargets[svcTTKey].Destination.Pods {
+func addSourceAndDestinationToPods(topology *Topology, sources []ServiceTrafficTargetSource, svcTTKey ServiceTrafficTargetKey) {
+	for _, source := range sources {
+		for _, podKey := range source.Pods {
 			// Skip pods which haven't been added to the topology.
 			if _, ok := topology.Pods[podKey]; !ok {
 				continue
 			}
 
-			topology.Pods[podKey].DestinationOf = append(topology.Pods[podKey].DestinationOf, svcTTKey)
+			topology.Pods[podKey].SourceOf = append(topology.Pods[podKey].SourceOf, svcTTKey)
 		}
+	}
+
+	for _, podKey := range topology.ServiceTrafficTargets[svcTTKey].Destination.Pods {
+		// Skip pods which haven't been added to the topology.
+		if _, ok := topology.Pods[podKey]; !ok {
+			continue
+		}
+
+		topology.Pods[podKey].DestinationOf = append(topology.Pods[podKey].DestinationOf, svcTTKey)
 	}
 }
 
