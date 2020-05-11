@@ -15,7 +15,7 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
-// Ensure the API fits the interface
+// Ensure the API fits the interface.
 var _ Interface = (*API)(nil)
 
 // Interface is an interface to interact with the REST API.
