@@ -5,7 +5,7 @@ import (
 	checker "github.com/vdemeester/shakers"
 )
 
-// KubeDNSSuite
+// KubeDNSSuite.
 type KubeDNSSuite struct{ BaseSuite }
 
 func (s *KubeDNSSuite) SetUpSuite(c *check.C) {

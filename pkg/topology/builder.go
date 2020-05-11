@@ -650,10 +650,15 @@ type resources struct {
 // indexPods populates the different pod indexes in the given resources object. It builds 3 indexes:
 // - pods indexed by service-account
 // - pods indexed by service
-// - pods indexed by service indexed by service-account
+// - pods indexed by service indexed by service-account.
 func (r *resources) indexPods(ignoredResources mk8s.IgnoreWrapper, pods []*corev1.Pod, eps []*corev1.Endpoints) {
 	podsByName := make(map[Key]*corev1.Pod)
 
+	r.indexPodsByServiceAccount(ignoredResources, pods, podsByName)
+	r.indexPodsByService(ignoredResources, eps, podsByName)
+}
+
+func (r *resources) indexPodsByServiceAccount(ignoredResources mk8s.IgnoreWrapper, pods []*corev1.Pod, podsByName map[Key]*corev1.Pod) {
 	for _, pod := range pods {
 		if ignoredResources.IsIgnored(pod.ObjectMeta) {
 			continue
@@ -665,7 +670,9 @@ func (r *resources) indexPods(ignoredResources mk8s.IgnoreWrapper, pods []*corev
 		saKey := Key{pod.Spec.ServiceAccountName, pod.Namespace}
 		r.PodsByServiceAccounts[saKey] = append(r.PodsByServiceAccounts[saKey], pod)
 	}
+}
 
+func (r *resources) indexPodsByService(ignoredResources mk8s.IgnoreWrapper, eps []*corev1.Endpoints, podsByName map[Key]*corev1.Pod) {
 	for _, ep := range eps {
 		if ignoredResources.IsIgnored(ep.ObjectMeta) {
 			continue
@@ -697,7 +704,6 @@ func (r *resources) indexPods(ignoredResources mk8s.IgnoreWrapper, pods []*corev
 		}
 	}
 }
-
 func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts []*access.TrafficTarget, tss []*split.TrafficSplit, tcpRts []*spec.TCPRoute, httpRtGrps []*spec.HTTPRouteGroup) {
 	for _, httpRouteGroup := range httpRtGrps {
 		if ignoredResources.IsIgnored(httpRouteGroup.ObjectMeta) {
