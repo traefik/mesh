@@ -650,7 +650,7 @@ type resources struct {
 // indexPods populates the different pod indexes in the given resources object. It builds 3 indexes:
 // - pods indexed by service-account
 // - pods indexed by service
-// - pods indexed by service indexed by service-account
+// - pods indexed by service indexed by service-account.
 func (r *resources) indexPods(ignoredResources mk8s.IgnoreWrapper, pods []*corev1.Pod, eps []*corev1.Endpoints) {
 	podsByName := make(map[Key]*corev1.Pod)
 

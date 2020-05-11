@@ -33,7 +33,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// Ensure the client mock fits the Client interface
+// Ensure the client mock fits the Client interface.
 var _ Client = (*ClientMock)(nil)
 
 func init() {
