@@ -181,9 +181,7 @@ func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, ne
 	}
 
 	for _, old := range oldUserSvc.Spec.Ports {
-		found := matchPort(old, newUserSvc)
-
-		if !found {
+		if found := matchPort(old, newUserSvc); !found {
 			_, err := stateTable.Remove(k8s.ServiceWithPort{
 				Namespace: oldUserSvc.Namespace,
 				Name:      oldUserSvc.Name,

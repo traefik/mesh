@@ -168,10 +168,10 @@ func setupServer(proxyConfiguration *cmd.ProxyConfiguration) (*server.Server, er
 	return server.NewServer(routinesPool, serverEntryPointsTCP, serverEntryPointsUDP, watcher, chainBuilder, accessLog), nil
 }
 
-func createAndSortDefaultEntrypoints(eps static.EntryPoints) []string {
+func createAndSortDefaultEntrypoints(entryPoints static.EntryPoints) []string {
 	var defaultEntryPoints []string
 
-	for name, cfg := range eps {
+	for name, cfg := range entryPoints {
 		protocol, _ := cfg.GetProtocol()
 		if protocol != "udp" && name != static.DefaultInternalEntryPointName {
 			defaultEntryPoints = append(defaultEntryPoints, name)
