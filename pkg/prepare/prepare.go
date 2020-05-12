@@ -393,7 +393,6 @@ func (p *Prepare) startBaseInformers(ctx context.Context, stopCh <-chan struct{}
 	kubeFactory := informers.NewSharedInformerFactoryWithOptions(p.client.GetKubernetesClient(), k8s.ResyncPeriod)
 	kubeFactory.Core().V1().Services().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	kubeFactory.Core().V1().Endpoints().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-	kubeFactory.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	kubeFactory.Start(stopCh)
 
 	for t, ok := range kubeFactory.WaitForCacheSync(ctx.Done()) {
@@ -433,6 +432,17 @@ func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{})
 	specsFactory.Start(stopCh)
 
 	for t, ok := range specsFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+		}
+	}
+
+	// Create a new SharedInformerFactory, and register the event handler to informers.
+	kubeFactory := informers.NewSharedInformerFactoryWithOptions(p.client.GetKubernetesClient(), k8s.ResyncPeriod)
+	kubeFactory.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	kubeFactory.Start(stopCh)
+
+	for t, ok := range kubeFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
