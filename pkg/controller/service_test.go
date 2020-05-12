@@ -39,6 +39,7 @@ func (t portMapperMock) Remove(svc k8s.ServiceWithPort) (int32, error) {
 	return t.removeFunc(svc)
 }
 
+//nolint:gocognit // This returns a false positive due to the portmapper funcs defined in the test loop.
 func TestShadowServiceManager_Create(t *testing.T) {
 	tests := []struct {
 		name        string
