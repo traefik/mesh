@@ -13,8 +13,6 @@ builds:
       - -X github.com/containous/maesh/pkg/version.Date={{.Date}}
     goos:
       - linux
-      - darwin
-      - windows
       - freebsd
       - openbsd
     goarch:
@@ -24,12 +22,8 @@ builds:
       - arm64
     goarm:
       - 7
-      - 6
-      - 5
 
     ignore:
-      - goos: darwin
-        goarch: 386
       - goos: freebsd
         goarch: arm64
       - goos: openbsd
@@ -39,9 +33,6 @@ archives:
   - id: maesh
     name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - LICENSE
 
