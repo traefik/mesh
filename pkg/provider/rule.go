@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/containous/maesh/pkg/topology"
+	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
 )
 
 func buildTrafficTargetRule(tt *topology.ServiceTrafficTarget) string {
@@ -15,32 +16,10 @@ func buildTrafficTargetRule(tt *topology.ServiceTrafficTarget) string {
 			var matchParts []string
 
 			// Handle Path filtering.
-			if match.PathRegex != "" {
-				pathRegex := match.PathRegex
-
-				if strings.HasPrefix(match.PathRegex, "/") {
-					pathRegex = strings.TrimPrefix(match.PathRegex, "/")
-				}
-
-				matchParts = append(matchParts, fmt.Sprintf("PathPrefix(`/{path:%s}`)", pathRegex))
-			}
+			matchParts = appendPathFilter(matchParts, match)
 
 			// Handle Method filtering.
-			if len(match.Methods) > 0 {
-				var matchAll bool
-
-				for _, m := range match.Methods {
-					if m == "*" {
-						matchAll = true
-						break
-					}
-				}
-
-				if !matchAll {
-					methods := strings.Join(match.Methods, "`,`")
-					matchParts = append(matchParts, fmt.Sprintf("Method(`%s`)", methods))
-				}
-			}
+			matchParts = appendMethodFilter(matchParts, match)
 
 			// Conditions within a HTTPMatch must all be fulfilled to be considered valid.
 			if len(matchParts) > 0 {
@@ -56,6 +35,42 @@ func buildTrafficTargetRule(tt *topology.ServiceTrafficTarget) string {
 
 	// At least one HTTPMatch in the Specs must be valid.
 	return strings.Join(orRules, " || ")
+}
+
+func appendPathFilter(matchParts []string, match *specs.HTTPMatch) []string {
+	if match.PathRegex == "" {
+		return matchParts
+	}
+
+	pathRegex := match.PathRegex
+
+	if strings.HasPrefix(match.PathRegex, "/") {
+		pathRegex = strings.TrimPrefix(match.PathRegex, "/")
+	}
+
+	return append(matchParts, fmt.Sprintf("PathPrefix(`/{path:%s}`)", pathRegex))
+}
+
+func appendMethodFilter(matchParts []string, match *specs.HTTPMatch) []string {
+	if len(match.Methods) == 0 {
+		return matchParts
+	}
+
+	var matchAll bool
+
+	for _, m := range match.Methods {
+		if m == "*" {
+			matchAll = true
+			break
+		}
+	}
+
+	if !matchAll {
+		methods := strings.Join(match.Methods, "`,`")
+		return append(matchParts, fmt.Sprintf("Method(`%s`)", methods))
+	}
+
+	return matchParts
 }
 
 func buildHTTPRuleFromService(svc *topology.Service) string {

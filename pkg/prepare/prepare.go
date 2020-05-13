@@ -49,7 +49,7 @@ type Preparer interface {
 	ConfigureKubeDNS() error
 }
 
-// Ensure the Prepare fits the Preparer interface
+// Ensure the Prepare fits the Preparer interface.
 var _ Preparer = (*Prepare)(nil)
 
 // Prepare holds the clients for the various resource controllers.
@@ -373,11 +373,26 @@ func (p *Prepare) StartInformers(acl bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	err := p.startBaseInformers(ctx, stopCh)
+	if err != nil {
+		return err
+	}
+
+	if acl {
+		err = p.startACLInformers(ctx, stopCh)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *Prepare) startBaseInformers(ctx context.Context, stopCh <-chan struct{}) error {
 	// Create a new SharedInformerFactory, and register the event handler to informers.
 	kubeFactory := informers.NewSharedInformerFactoryWithOptions(p.client.GetKubernetesClient(), k8s.ResyncPeriod)
 	kubeFactory.Core().V1().Services().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	kubeFactory.Core().V1().Endpoints().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-	kubeFactory.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	kubeFactory.Start(stopCh)
 
 	for t, ok := range kubeFactory.WaitForCacheSync(ctx.Done()) {
@@ -396,27 +411,40 @@ func (p *Prepare) StartInformers(acl bool) error {
 		}
 	}
 
-	if acl {
-		// Create new SharedInformerFactories, and register the event handler to informers.
-		accessFactory := accessinformer.NewSharedInformerFactoryWithOptions(p.client.GetAccessClient(), k8s.ResyncPeriod)
-		accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-		accessFactory.Start(stopCh)
+	return nil
+}
 
-		for t, ok := range accessFactory.WaitForCacheSync(ctx.Done()) {
-			if !ok {
-				return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
-			}
+func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{}) error {
+	// Create new SharedInformerFactories, and register the event handler to informers.
+	accessFactory := accessinformer.NewSharedInformerFactoryWithOptions(p.client.GetAccessClient(), k8s.ResyncPeriod)
+	accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	accessFactory.Start(stopCh)
+
+	for t, ok := range accessFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
+	}
 
-		specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(p.client.GetSpecsClient(), k8s.ResyncPeriod)
-		specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-		specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-		specsFactory.Start(stopCh)
+	specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(p.client.GetSpecsClient(), k8s.ResyncPeriod)
+	specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	specsFactory.Start(stopCh)
 
-		for t, ok := range specsFactory.WaitForCacheSync(ctx.Done()) {
-			if !ok {
-				return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
-			}
+	for t, ok := range specsFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+		}
+	}
+
+	// Create a new SharedInformerFactory, and register the event handler to informers.
+	kubeFactory := informers.NewSharedInformerFactoryWithOptions(p.client.GetKubernetesClient(), k8s.ResyncPeriod)
+	kubeFactory.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	kubeFactory.Start(stopCh)
+
+	for t, ok := range kubeFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
 	}
 

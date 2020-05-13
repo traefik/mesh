@@ -6,7 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// ACLEnabledSuite
+// ACLEnabledSuite.
 type ACLEnabledSuite struct{ BaseSuite }
 
 func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {

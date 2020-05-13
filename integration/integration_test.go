@@ -428,31 +428,7 @@ func (s *BaseSuite) testConfigurationWithReturn(c *check.C, path string) *dynami
 
 func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 	return func(res *http.Response) error {
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read response body: %s", err)
-		}
-
-		if err = res.Body.Close(); err != nil {
-			return err
-		}
-
-		var obtained dynamic.Configuration
-
-		err = json.Unmarshal(body, &obtained)
-		if err != nil {
-			return err
-		}
-
-		if buf != nil {
-			buf.Reset()
-
-			if _, err = io.Copy(buf, bytes.NewReader(body)); err != nil {
-				return err
-			}
-		}
-
-		got, err := json.MarshalIndent(obtained, "", "  ")
+		got, err := getConfigFromResponse(res, buf)
 		if err != nil {
 			return err
 		}
@@ -507,6 +483,34 @@ func matchesConfig(wantConfig string, buf *bytes.Buffer) try.ResponseCondition {
 
 		return errors.New(text)
 	}
+}
+
+func getConfigFromResponse(res *http.Response, buf *bytes.Buffer) ([]byte, error) {
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %s", err)
+	}
+
+	if err = res.Body.Close(); err != nil {
+		return nil, err
+	}
+
+	var obtained dynamic.Configuration
+
+	err = json.Unmarshal(body, &obtained)
+	if err != nil {
+		return nil, err
+	}
+
+	if buf != nil {
+		buf.Reset()
+
+		if _, err = io.Copy(buf, bytes.NewReader(body)); err != nil {
+			return nil, err
+		}
+	}
+
+	return json.MarshalIndent(obtained, "", "  ")
 }
 
 func (s *BaseSuite) digHost(c *check.C, source, namespace, destination string) {
