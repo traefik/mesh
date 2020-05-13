@@ -16,10 +16,10 @@ func buildTrafficTargetRule(tt *topology.ServiceTrafficTarget) string {
 			var matchParts []string
 
 			// Handle Path filtering.
-			matchParts = buildPathFilter(match, matchParts)
+			matchParts = appendPathFilter(matchParts, match)
 
 			// Handle Method filtering.
-			matchParts = buildMethodFilter(match, matchParts)
+			matchParts = appendMethodFilter(matchParts, match)
 
 			// Conditions within a HTTPMatch must all be fulfilled to be considered valid.
 			if len(matchParts) > 0 {
@@ -37,7 +37,7 @@ func buildTrafficTargetRule(tt *topology.ServiceTrafficTarget) string {
 	return strings.Join(orRules, " || ")
 }
 
-func buildPathFilter(match *specs.HTTPMatch, matchParts []string) []string {
+func appendPathFilter(matchParts []string, match *specs.HTTPMatch) []string {
 	if match.PathRegex == "" {
 		return matchParts
 	}
@@ -51,7 +51,7 @@ func buildPathFilter(match *specs.HTTPMatch, matchParts []string) []string {
 	return append(matchParts, fmt.Sprintf("PathPrefix(`/{path:%s}`)", pathRegex))
 }
 
-func buildMethodFilter(match *specs.HTTPMatch, matchParts []string) []string {
+func appendMethodFilter(matchParts []string, match *specs.HTTPMatch) []string {
 	if len(match.Methods) == 0 {
 		return matchParts
 	}
