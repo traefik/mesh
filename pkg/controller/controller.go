@@ -247,6 +247,14 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 	defer cancel()
 
 	c.logger.Debug("Starting Informers")
+	c.startBaseInformers(ctx, stopCh)
+
+	if c.cfg.ACLEnabled {
+		c.startACLInformers(ctx, stopCh)
+	}
+}
+
+func (c *Controller) startBaseInformers(ctx context.Context, stopCh <-chan struct{}) {
 	c.kubernetesFactory.Start(stopCh)
 
 	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
@@ -262,22 +270,22 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 			c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
 		}
 	}
+}
 
-	if c.cfg.ACLEnabled {
-		c.accessFactory.Start(stopCh)
+func (c *Controller) startACLInformers(ctx context.Context, stopCh <-chan struct{}) {
+	c.accessFactory.Start(stopCh)
 
-		for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
-			if !ok {
-				c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
-			}
+	for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
 		}
+	}
 
-		c.specsFactory.Start(stopCh)
+	c.specsFactory.Start(stopCh)
 
-		for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
-			if !ok {
-				c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
-			}
+	for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 }
