@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -199,20 +198,13 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
-	c.logger.Debug("Initializing Mesh controller")
+	c.logger.Debug("Initializing mesh controller")
 
 	// Start the api.
 	c.api.Start()
 
 	// Start the informers.
 	c.startInformers(stopCh, 10*time.Second)
-
-	// Create the mesh services here to ensure that they exist.
-	c.logger.Info("Creating initial mesh services")
-
-	if err := c.createMeshServices(); err != nil {
-		c.logger.Errorf("Could not create mesh services: %v", err)
-	}
 
 	// Enable API readiness endpoint, informers are started and default conf is available.
 	c.api.EnableReadiness()
@@ -280,34 +272,6 @@ func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Dur
 			}
 		}
 	}
-}
-
-func (c *Controller) createMeshServices() error {
-	sel, err := c.ignoredResources.LabelSelector()
-	if err != nil {
-		return fmt.Errorf("unable to build label selectors: %w", err)
-	}
-
-	// Because createMeshServices is called after startInformers,
-	// then we already have the cache built, so we can use it.
-	svcs, err := c.serviceLister.List(sel)
-	if err != nil {
-		return fmt.Errorf("unable to get services: %w", err)
-	}
-
-	for _, service := range svcs {
-		if c.ignoredResources.IsIgnored(service.ObjectMeta) {
-			continue
-		}
-
-		c.logger.Debugf("Creating mesh for service: %v", service.Name)
-
-		if err := c.serviceManager.Create(service); err != nil {
-			return fmt.Errorf("unable to create mesh service: %w", err)
-		}
-	}
-
-	return nil
 }
 
 // isWatchedResource returns true if the given resource is not ignored, false otherwise.

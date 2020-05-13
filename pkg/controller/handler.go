@@ -25,6 +25,8 @@ func NewHandler(log logrus.FieldLogger, serviceManager ServiceManager, configRef
 func (h *Handler) OnAdd(obj interface{}) {
 	// If the created object is a service we have to create a corresponding shadow service.
 	if obj, isService := obj.(*corev1.Service); isService {
+		h.log.Debugf("MeshControllerHandler ObjectAdded with type: *corev1.Service: %s/%s", obj.Namespace, obj.Name)
+
 		if err := h.serviceManager.Create(obj); err != nil {
 			h.log.Errorf("Could not create mesh service: %v", err)
 		}
