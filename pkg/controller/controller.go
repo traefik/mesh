@@ -213,7 +213,6 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	c.api.Start()
 
 	for {
-		timer := time.NewTimer(10 * time.Second)
 		select {
 		case <-stopCh:
 			c.logger.Info("Shutting down workers")
@@ -234,13 +233,6 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 				// Configuration successfully created, enable readiness in the api.
 				c.api.EnableReadiness()
 			}
-		case <-timer.C:
-			if rawCfg := c.lastConfiguration.Get(); rawCfg == nil {
-				break
-			}
-
-			// Configuration successfully created, enable readiness in the api.
-			c.api.EnableReadiness()
 		}
 	}
 }
