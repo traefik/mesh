@@ -373,16 +373,16 @@ func (p *Prepare) StartInformers(acl bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := p.startBaseInformers(ctx, stopCh)
-	if err != nil {
+	if err := p.startBaseInformers(ctx, stopCh); err != nil {
 		return err
 	}
 
-	if acl {
-		err = p.startACLInformers(ctx, stopCh)
-		if err != nil {
-			return err
-		}
+	if !acl {
+		return nil
+	}
+
+	if err := p.startACLInformers(ctx, stopCh); err != nil {
+		return err
 	}
 
 	return nil

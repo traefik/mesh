@@ -181,7 +181,7 @@ func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, ne
 	}
 
 	for _, old := range oldUserSvc.Spec.Ports {
-		if found := matchPort(old, newUserSvc); !found {
+		if found := matchPort(old.Port, newUserSvc); !found {
 			_, err := stateTable.Remove(k8s.ServiceWithPort{
 				Namespace: oldUserSvc.Namespace,
 				Name:      oldUserSvc.Name,
@@ -308,13 +308,13 @@ func parseKubernetesServerVersion(kubeClient kubernetes.Interface) (major, minor
 	return major, minor
 }
 
-func matchPort(old corev1.ServicePort, newUserSvc *corev1.Service) bool {
+func matchPort(oldPort int32, newUserSvc *corev1.Service) bool {
 	if newUserSvc == nil {
 		return false
 	}
 
 	for _, new := range newUserSvc.Spec.Ports {
-		if old.Port == new.Port {
+		if oldPort == new.Port {
 			return true
 		}
 	}

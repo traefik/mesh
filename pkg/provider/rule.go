@@ -43,7 +43,6 @@ func appendPathFilter(matchParts []string, match *specs.HTTPMatch) []string {
 	}
 
 	pathRegex := match.PathRegex
-
 	if strings.HasPrefix(match.PathRegex, "/") {
 		pathRegex = strings.TrimPrefix(match.PathRegex, "/")
 	}
