@@ -5,7 +5,7 @@ import (
 	checker "github.com/vdemeester/shakers"
 )
 
-// HelmSuite
+// HelmSuite.
 type HelmSuite struct{ BaseSuite }
 
 func (s *HelmSuite) SetUpSuite(c *check.C) {
