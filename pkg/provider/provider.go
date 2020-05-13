@@ -153,12 +153,12 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 
 	// When ACL mode is on, all traffic must be forbidden unless explicitly authorized via a TrafficTarget.
 	if p.config.ACL {
-		err = p.buildACLConfigRoutersAndServices(t, cfg, svc, scheme, trafficType, middlewareKeys)
+		p.buildACLConfigRoutersAndServices(t, cfg, svc, scheme, trafficType, middlewareKeys)
 	} else {
 		err = p.buildConfigRoutersAndServices(t, cfg, svc, scheme, trafficType, middlewareKeys)
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, tsKey := range svc.TrafficSplits {
@@ -201,7 +201,7 @@ func (p *Provider) buildConfigRoutersAndServices(t *topology.Topology, cfg *dyna
 	return nil
 }
 
-func (p *Provider) buildACLConfigRoutersAndServices(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewareKeys []string) error {
+func (p *Provider) buildACLConfigRoutersAndServices(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewareKeys []string) {
 	if trafficType == annotations.ServiceTypeHTTP {
 		p.buildBlockAllRouters(cfg, svc)
 	}
@@ -215,8 +215,6 @@ func (p *Provider) buildACLConfigRoutersAndServices(t *topology.Topology, cfg *d
 			continue
 		}
 	}
-
-	return nil
 }
 
 func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewares []string) error {
