@@ -26,14 +26,14 @@ type Interface interface {
 
 // API is an implementation of an api.
 type API struct {
-	log               logrus.FieldLogger
-	router            *mux.Router
-	readiness         bool
-	lastConfiguration *safe.Safe
-	apiPort           int32
-	apiHost           string
-	meshNamespace     string
-	podLister         listers.PodLister
+	log                  logrus.FieldLogger
+	router               *mux.Router
+	readiness            bool
+	currentConfiguration *safe.Safe
+	apiPort              int32
+	apiHost              string
+	meshNamespace        string
+	podLister            listers.PodLister
 }
 
 type podInfo struct {
@@ -43,15 +43,15 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, lastConfiguration *safe.Safe, podLister listers.PodLister, meshNamespace string) *API {
+func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, currentConfiguration *safe.Safe, podLister listers.PodLister, meshNamespace string) *API {
 	a := &API{
-		log:               log,
-		readiness:         false,
-		lastConfiguration: lastConfiguration,
-		apiPort:           apiPort,
-		apiHost:           apiHost,
-		podLister:         podLister,
-		meshNamespace:     meshNamespace,
+		log:                  log,
+		readiness:            false,
+		currentConfiguration: currentConfiguration,
+		apiPort:              apiPort,
+		apiHost:              apiHost,
+		podLister:            podLister,
+		meshNamespace:        meshNamespace,
 	}
 
 	if err := a.Init(); err != nil {
@@ -63,7 +63,7 @@ func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, lastConfigura
 
 // Init handles any api initialization.
 func (a *API) Init() error {
-	a.log.Debugln("API.Init")
+	a.log.Debugln("Initializing API")
 
 	a.router = mux.NewRouter()
 
@@ -77,7 +77,7 @@ func (a *API) Init() error {
 
 // Start runs the API.
 func (a *API) Start() {
-	a.log.Debugln("API.Start")
+	a.log.Debug("Starting API")
 
 	go a.Run()
 }
@@ -90,7 +90,7 @@ func (a *API) Run() {
 // EnableReadiness enables the readiness flag in the API.
 func (a *API) EnableReadiness() {
 	if !a.readiness {
-		a.log.Debug("Controller Readiness enabled")
+		a.log.Debug("API readiness enabled")
 
 		a.readiness = true
 	}
@@ -100,7 +100,7 @@ func (a *API) EnableReadiness() {
 func (a *API) getCurrentConfiguration(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if err := json.NewEncoder(w).Encode(a.lastConfiguration.Get()); err != nil {
+	if err := json.NewEncoder(w).Encode(a.currentConfiguration.Get()); err != nil {
 		a.log.Error(err)
 	}
 }

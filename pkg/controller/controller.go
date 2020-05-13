@@ -65,31 +65,31 @@ type Config struct {
 
 // Controller hold controller configuration.
 type Controller struct {
-	cfg               Config
-	handler           cache.ResourceEventHandler
-	serviceManager    ServiceManager
-	configRefreshChan chan struct{}
-	provider          *provider.Provider
-	ignoredResources  k8s.IgnoreWrapper
-	tcpStateTable     PortMapper
-	udpStateTable     PortMapper
-	topologyBuilder   TopologyBuilder
-	lastConfiguration safe.Safe
-	api               api.Interface
-	logger            logrus.FieldLogger
+	cfg                  Config
+	handler              cache.ResourceEventHandler
+	serviceManager       ServiceManager
+	configRefreshChan    chan struct{}
+	provider             *provider.Provider
+	ignoredResources     k8s.IgnoreWrapper
+	tcpStateTable        PortMapper
+	udpStateTable        PortMapper
+	topologyBuilder      TopologyBuilder
+	currentConfiguration *safe.Safe
+	api                  api.Interface
+	logger               logrus.FieldLogger
 
 	clients              k8s.Client
 	kubernetesFactory    informers.SharedInformerFactory
 	accessFactory        accessinformer.SharedInformerFactory
 	specsFactory         specsinformer.SharedInformerFactory
 	splitFactory         splitinformer.SharedInformerFactory
-	PodLister            listers.PodLister
-	ServiceLister        listers.ServiceLister
-	EndpointsLister      listers.EndpointsLister
-	TrafficTargetLister  accesslister.TrafficTargetLister
-	HTTPRouteGroupLister specslister.HTTPRouteGroupLister
-	TCPRouteLister       specslister.TCPRouteLister
-	TrafficSplitLister   splitlister.TrafficSplitLister
+	podLister            listers.PodLister
+	serviceLister        listers.ServiceLister
+	endpointsLister      listers.EndpointsLister
+	trafficTargetLister  accesslister.TrafficTargetLister
+	httpRouteGroupLister specslister.HTTPRouteGroupLister
+	tcpRouteLister       specslister.TCPRouteLister
+	trafficSplitLister   splitlister.TrafficSplitLister
 }
 
 // NewMeshController is used to build the informers and other required components of the mesh controller,
@@ -134,8 +134,8 @@ func (c *Controller) init() {
 	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.GetKubernetesClient(), k8s.ResyncPeriod)
 	c.splitFactory = splitinformer.NewSharedInformerFactoryWithOptions(c.clients.GetSplitClient(), k8s.ResyncPeriod)
 
-	c.ServiceLister = c.kubernetesFactory.Core().V1().Services().Lister()
-	c.serviceManager = NewShadowServiceManager(c.logger, c.ServiceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
+	c.serviceLister = c.kubernetesFactory.Core().V1().Services().Lister()
+	c.serviceManager = NewShadowServiceManager(c.logger, c.serviceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
 
 	// configRefreshChan is used to trigger configuration refreshes.
 	c.configRefreshChan = make(chan struct{})
@@ -145,9 +145,9 @@ func (c *Controller) init() {
 	}
 
 	// Create listers and register the event handler to informers that are not ACL related.
-	c.PodLister = c.kubernetesFactory.Core().V1().Pods().Lister()
-	c.EndpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
-	c.TrafficSplitLister = c.splitFactory.Split().V1alpha2().TrafficSplits().Lister()
+	c.podLister = c.kubernetesFactory.Core().V1().Pods().Lister()
+	c.endpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
+	c.trafficSplitLister = c.splitFactory.Split().V1alpha2().TrafficSplits().Lister()
 
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
@@ -158,9 +158,9 @@ func (c *Controller) init() {
 		c.accessFactory = accessinformer.NewSharedInformerFactoryWithOptions(c.clients.GetAccessClient(), k8s.ResyncPeriod)
 		c.specsFactory = specsinformer.NewSharedInformerFactoryWithOptions(c.clients.GetSpecsClient(), k8s.ResyncPeriod)
 
-		c.TrafficTargetLister = c.accessFactory.Access().V1alpha1().TrafficTargets().Lister()
-		c.HTTPRouteGroupLister = c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
-		c.TCPRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
+		c.trafficTargetLister = c.accessFactory.Access().V1alpha1().TrafficTargets().Lister()
+		c.httpRouteGroupLister = c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
+		c.tcpRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
 
 		c.accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
 		c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
@@ -168,16 +168,18 @@ func (c *Controller) init() {
 		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
 	}
 
-	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, &c.lastConfiguration, c.PodLister, c.cfg.Namespace)
+	c.currentConfiguration = safe.New(provider.NewDefaultDynamicConfig())
+
+	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, c.currentConfiguration, c.podLister, c.cfg.Namespace)
 
 	c.topologyBuilder = &topology.Builder{
-		ServiceLister:        c.ServiceLister,
-		EndpointsLister:      c.EndpointsLister,
-		PodLister:            c.PodLister,
-		TrafficTargetLister:  c.TrafficTargetLister,
-		TrafficSplitLister:   c.TrafficSplitLister,
-		HTTPRouteGroupLister: c.HTTPRouteGroupLister,
-		TCPRoutesLister:      c.TCPRouteLister,
+		ServiceLister:        c.serviceLister,
+		EndpointsLister:      c.endpointsLister,
+		PodLister:            c.podLister,
+		TrafficTargetLister:  c.trafficTargetLister,
+		TrafficSplitLister:   c.trafficSplitLister,
+		HTTPRouteGroupLister: c.httpRouteGroupLister,
+		TCPRoutesLister:      c.tcpRouteLister,
 		Logger:               c.logger,
 	}
 
@@ -199,6 +201,9 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 	c.logger.Debug("Initializing Mesh controller")
 
+	// Start the api.
+	c.api.Start()
+
 	// Start the informers.
 	c.startInformers(stopCh, 10*time.Second)
 
@@ -209,15 +214,15 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		c.logger.Errorf("Could not create mesh services: %v", err)
 	}
 
-	// Start the api, and enable the readiness endpoint.
-	c.api.Start()
+	// Enable API readiness endpoint, informers are started and default conf is available.
+	c.api.EnableReadiness()
 
 	for {
-		timer := time.NewTimer(10 * time.Second)
 		select {
 		case <-stopCh:
 			c.logger.Info("Shutting down workers")
 			return nil
+
 		case <-c.configRefreshChan:
 			// Reload the configuration.
 			topo, err := c.topologyBuilder.Build(c.ignoredResources)
@@ -228,19 +233,9 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 			conf := c.provider.BuildConfig(topo)
 
-			if !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
-				c.lastConfiguration.Set(conf)
-
-				// Configuration successfully created, enable readiness in the api.
-				c.api.EnableReadiness()
+			if !reflect.DeepEqual(c.currentConfiguration.Get(), conf) {
+				c.currentConfiguration.Set(conf)
 			}
-		case <-timer.C:
-			if rawCfg := c.lastConfiguration.Get(); rawCfg == nil {
-				break
-			}
-
-			// Configuration successfully created, enable readiness in the api.
-			c.api.EnableReadiness()
 		}
 	}
 }
@@ -295,7 +290,7 @@ func (c *Controller) createMeshServices() error {
 
 	// Because createMeshServices is called after startInformers,
 	// then we already have the cache built, so we can use it.
-	svcs, err := c.ServiceLister.List(sel)
+	svcs, err := c.serviceLister.List(sel)
 	if err != nil {
 		return fmt.Errorf("unable to get services: %w", err)
 	}
