@@ -152,7 +152,11 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 	}
 
 	// When ACL mode is on, all traffic must be forbidden unless explicitly authorized via a TrafficTarget.
-	err = p.buildConfigRoutersAndServices(t, cfg, svc, scheme, trafficType, middlewareKeys, p.config.ACL)
+	if p.config.ACL {
+		err = p.buildACLConfigRoutersAndServices(t, cfg, svc, scheme, trafficType, middlewareKeys)
+	} else {
+		err = p.buildConfigRoutersAndServices(t, cfg, svc, scheme, trafficType, middlewareKeys)
+	}
 	if err != nil {
 		return err
 	}
@@ -188,25 +192,27 @@ func (p *Provider) buildMiddlewaresForConfigFromService(cfg *dynamic.Configurati
 	return middlewareKeys, nil
 }
 
-func (p *Provider) buildConfigRoutersAndServices(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewareKeys []string, acl bool) error {
-	if acl {
-		if trafficType == annotations.ServiceTypeHTTP {
-			p.buildBlockAllRouters(cfg, svc)
-		}
+func (p *Provider) buildConfigRoutersAndServices(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewareKeys []string) error {
+	err := p.buildServicesAndRoutersForService(t, cfg, svc, scheme, trafficType, middlewareKeys)
+	if err != nil {
+		return fmt.Errorf("unable to build routers and services: %w", err)
+	}
 
-		for _, ttKey := range svc.TrafficTargets {
-			if err := p.buildServicesAndRoutersForTrafficTarget(t, cfg, ttKey, scheme, trafficType, middlewareKeys); err != nil {
-				err = fmt.Errorf("unable to build routers and services: %v", err)
-				t.ServiceTrafficTargets[ttKey].AddError(err)
-				p.logger.Errorf("Error building dynamic configuration for TrafficTarget %q: %v", ttKey, err)
+	return nil
+}
 
-				continue
-			}
-		}
-	} else {
-		err := p.buildServicesAndRoutersForService(t, cfg, svc, scheme, trafficType, middlewareKeys)
-		if err != nil {
-			return fmt.Errorf("unable to build routers and services: %w", err)
+func (p *Provider) buildACLConfigRoutersAndServices(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme, trafficType string, middlewareKeys []string) error {
+	if trafficType == annotations.ServiceTypeHTTP {
+		p.buildBlockAllRouters(cfg, svc)
+	}
+
+	for _, ttKey := range svc.TrafficTargets {
+		if err := p.buildServicesAndRoutersForTrafficTarget(t, cfg, ttKey, scheme, trafficType, middlewareKeys); err != nil {
+			err = fmt.Errorf("unable to build routers and services: %v", err)
+			t.ServiceTrafficTargets[ttKey].AddError(err)
+			p.logger.Errorf("Error building dynamic configuration for TrafficTarget %q: %v", ttKey, err)
+
+			continue
 		}
 	}
 

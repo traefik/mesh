@@ -309,7 +309,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 	}
 
 	// Remove the TrafficSplits that causes a loop.
-	removeLoopTrafficSplits(loopDetected)
+	removeTrafficSplitsLoop(loopDetected)
 }
 
 func (b *Builder) getIncomingPodsForTrafficSplit(topology *Topology, ts *TrafficSplit, visited map[Key]struct{}) ([]Key, error) {
@@ -785,7 +785,7 @@ func mapCopy(m map[Key]struct{}) map[Key]struct{} {
 	return cpy
 }
 
-func removeLoopTrafficSplits(loopDetected map[*Service][]Key) {
+func removeTrafficSplitsLoop(loopDetected map[*Service][]Key) {
 	for svc, tss := range loopDetected {
 		for _, loopTs := range tss {
 			for i, ts := range svc.TrafficSplits {
