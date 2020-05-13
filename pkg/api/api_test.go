@@ -137,7 +137,7 @@ func TestGetMeshNodes(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
+			clientMock := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 			api := NewAPI(log, 9000, localhost, &config, clientMock.PodLister, "foo")
 			res := httptest.NewRecorder()
 			req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/nodes", nil)
@@ -185,7 +185,7 @@ func TestGetMeshNodeConfiguration(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		clientMock := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
+		clientMock := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 		api := NewAPI(log, 9000, localhost, &config, clientMock.PodLister, "foo")
 		res := httptest.NewRecorder()
 		req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/node/mesh-pod-1/configuration", nil)

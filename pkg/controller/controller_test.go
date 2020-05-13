@@ -24,7 +24,7 @@ func TestNewController(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", false)
+	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", false)
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
@@ -52,7 +52,7 @@ func TestNewControllerWithSMI(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", true)
+	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", true)
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
