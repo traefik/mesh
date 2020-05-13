@@ -7,7 +7,7 @@ import (
 	checker "github.com/vdemeester/shakers"
 )
 
-// CoreDNSSuite
+// CoreDNSSuite.
 type CoreDNSSuite struct{ BaseSuite }
 
 func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
