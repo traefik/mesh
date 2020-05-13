@@ -65,18 +65,18 @@ type Config struct {
 
 // Controller hold controller configuration.
 type Controller struct {
-	cfg               Config
-	handler           cache.ResourceEventHandler
-	serviceManager    ServiceManager
-	configRefreshChan chan struct{}
-	provider          *provider.Provider
-	ignoredResources  k8s.IgnoreWrapper
-	tcpStateTable     PortMapper
-	udpStateTable     PortMapper
-	topologyBuilder   TopologyBuilder
-	lastConfiguration safe.Safe
-	api               api.Interface
-	logger            logrus.FieldLogger
+	cfg                  Config
+	handler              cache.ResourceEventHandler
+	serviceManager       ServiceManager
+	configRefreshChan    chan struct{}
+	provider             *provider.Provider
+	ignoredResources     k8s.IgnoreWrapper
+	tcpStateTable        PortMapper
+	udpStateTable        PortMapper
+	topologyBuilder      TopologyBuilder
+	currentConfiguration *safe.Safe
+	api                  api.Interface
+	logger               logrus.FieldLogger
 
 	clients              k8s.Client
 	kubernetesFactory    informers.SharedInformerFactory
@@ -168,7 +168,9 @@ func (c *Controller) init() {
 		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
 	}
 
-	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, &c.lastConfiguration, c.podLister, c.cfg.Namespace)
+	c.currentConfiguration = safe.New(provider.NewDefaultDynamicConfig())
+
+	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, c.currentConfiguration, c.podLister, c.cfg.Namespace)
 
 	c.topologyBuilder = &topology.Builder{
 		ServiceLister:        c.serviceLister,
@@ -199,6 +201,9 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 	c.logger.Debug("Initializing Mesh controller")
 
+	// Start the api.
+	c.api.Start()
+
 	// Start the informers.
 	c.startInformers(stopCh, 10*time.Second)
 
@@ -209,14 +214,15 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 		c.logger.Errorf("Could not create mesh services: %v", err)
 	}
 
-	// Start the api, and enable the readiness endpoint.
-	c.api.Start()
+	// Enable API readiness endpoint, informers are started and default conf is available.
+	c.api.EnableReadiness()
 
 	for {
 		select {
 		case <-stopCh:
 			c.logger.Info("Shutting down workers")
 			return nil
+
 		case <-c.configRefreshChan:
 			// Reload the configuration.
 			topo, err := c.topologyBuilder.Build(c.ignoredResources)
@@ -227,11 +233,8 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 			conf := c.provider.BuildConfig(topo)
 
-			if !reflect.DeepEqual(c.lastConfiguration.Get(), conf) {
-				c.lastConfiguration.Set(conf)
-
-				// Configuration successfully created, enable readiness in the api.
-				c.api.EnableReadiness()
+			if !reflect.DeepEqual(c.currentConfiguration.Get(), conf) {
+				c.currentConfiguration.Set(conf)
 			}
 		}
 	}
