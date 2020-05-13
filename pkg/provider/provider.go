@@ -68,9 +68,55 @@ func New(tcpStateTable, udpStateTable PortFinder, middlewareBuilder MiddlewareBu
 	}
 }
 
+// NewDefaultDynamicConfig creates and returns the minimal working dynamic configuration which should be propagated
+// to proxy nodes.
+func NewDefaultDynamicConfig() *dynamic.Configuration {
+	return &dynamic.Configuration{
+		HTTP: &dynamic.HTTPConfiguration{
+			Routers: map[string]*dynamic.Router{
+				"readiness": {
+					Rule:        "Path(`/ping`)",
+					EntryPoints: []string{"readiness"},
+					Service:     "readiness",
+				},
+			},
+			Services: map[string]*dynamic.Service{
+				"readiness": {
+					LoadBalancer: &dynamic.ServersLoadBalancer{
+						PassHostHeader: getBoolRef(true),
+						Servers: []dynamic.Server{
+							{
+								URL: "http://127.0.0.1:8080",
+							},
+						},
+					},
+				},
+				blockAllServiceKey: {
+					LoadBalancer: &dynamic.ServersLoadBalancer{},
+				},
+			},
+			Middlewares: map[string]*dynamic.Middleware{
+				blockAllMiddlewareKey: {
+					IPWhiteList: &dynamic.IPWhiteList{
+						SourceRange: []string{"255.255.255.255"},
+					},
+				},
+			},
+		},
+		TCP: &dynamic.TCPConfiguration{
+			Routers:  map[string]*dynamic.TCPRouter{},
+			Services: map[string]*dynamic.TCPService{},
+		},
+		UDP: &dynamic.UDPConfiguration{
+			Routers:  map[string]*dynamic.UDPRouter{},
+			Services: map[string]*dynamic.UDPService{},
+		},
+	}
+}
+
 // BuildConfig builds a dynamic configuration.
 func (p *Provider) BuildConfig(t *topology.Topology) *dynamic.Configuration {
-	cfg := buildDefaultDynamicConfig()
+	cfg := NewDefaultDynamicConfig()
 
 	for svcKey, svc := range t.Services {
 		if err := p.buildConfigForService(t, cfg, svc); err != nil {
@@ -799,50 +845,6 @@ func hasTrafficTargetSpecTCPRoute(tt *topology.ServiceTrafficTarget) bool {
 	}
 
 	return false
-}
-
-func buildDefaultDynamicConfig() *dynamic.Configuration {
-	return &dynamic.Configuration{
-		HTTP: &dynamic.HTTPConfiguration{
-			Routers: map[string]*dynamic.Router{
-				"readiness": {
-					Rule:        "Path(`/ping`)",
-					EntryPoints: []string{"readiness"},
-					Service:     "readiness",
-				},
-			},
-			Services: map[string]*dynamic.Service{
-				"readiness": {
-					LoadBalancer: &dynamic.ServersLoadBalancer{
-						PassHostHeader: getBoolRef(true),
-						Servers: []dynamic.Server{
-							{
-								URL: "http://127.0.0.1:8080",
-							},
-						},
-					},
-				},
-				blockAllServiceKey: {
-					LoadBalancer: &dynamic.ServersLoadBalancer{},
-				},
-			},
-			Middlewares: map[string]*dynamic.Middleware{
-				blockAllMiddlewareKey: {
-					IPWhiteList: &dynamic.IPWhiteList{
-						SourceRange: []string{"255.255.255.255"},
-					},
-				},
-			},
-		},
-		TCP: &dynamic.TCPConfiguration{
-			Routers:  map[string]*dynamic.TCPRouter{},
-			Services: map[string]*dynamic.TCPService{},
-		},
-		UDP: &dynamic.UDPConfiguration{
-			Routers:  map[string]*dynamic.UDPRouter{},
-			Services: map[string]*dynamic.UDPService{},
-		},
-	}
 }
 
 func addToSliceCopy(items []string, item string) []string {
