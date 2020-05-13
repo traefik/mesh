@@ -787,9 +787,9 @@ func mapCopy(m map[Key]struct{}) map[Key]struct{} {
 
 func removeTrafficSplitsLoop(loopDetected map[*Service][]Key) {
 	for svc, tss := range loopDetected {
-		for _, loopTs := range tss {
+		for _, loopTS := range tss {
 			for i, ts := range svc.TrafficSplits {
-				if ts == loopTs {
+				if ts == loopTS {
 					svc.TrafficSplits = append(svc.TrafficSplits[:i], svc.TrafficSplits[i+1:]...)
 					break
 				}
