@@ -111,7 +111,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			setTrafficTargetWithErr(topology, tt, sources, err)
 			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
-			return
+			continue
 		}
 
 		var destPods []Key
@@ -132,7 +132,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			setTrafficTargetWithErr(topology, tt, sources, err)
 			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
-			return
+			continue
 		}
 
 		// Create the ServiceTrafficTarget for the given service.
@@ -221,12 +221,17 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 			setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
 			b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
 
-			return
+			continue
 		}
 
 		// As required by the SMI specification, backends must expose at least the same ports as the Service on
 		// which the TrafficSplit is.
-		b.validateServiceAndBackendPorts(svc.Ports, backendSvc.Ports, topology, trafficSplit, svcKey, tsKey, backendSvcKey)
+		if err := b.validateServiceAndBackendPorts(svc.Ports, backendSvc.Ports); err != nil {
+			setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
+			b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+
+			continue
+		}
 
 		backends[i] = TrafficSplitBackend{
 			Weight:  backend.Weight,
@@ -246,7 +251,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 	svc.TrafficSplits = append(svc.TrafficSplits, tsKey)
 }
 
-func (b *Builder) validateServiceAndBackendPorts(svcPorts []corev1.ServicePort, backendPorts []corev1.ServicePort, topology *Topology, trafficSplit *split.TrafficSplit, svcKey Key, tsKey Key, backendSvcKey Key) {
+func (b *Builder) validateServiceAndBackendPorts(svcPorts []corev1.ServicePort, backendPorts []corev1.ServicePort) error {
 	for _, svcPort := range svcPorts {
 		var portFound bool
 
@@ -258,13 +263,11 @@ func (b *Builder) validateServiceAndBackendPorts(svcPorts []corev1.ServicePort, 
 		}
 
 		if !portFound {
-			err := fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend", svcPort.Port, backendSvcKey)
-			setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
-			b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
-
-			return
+			return fmt.Errorf("port %d must be exposed", svcPort.Port)
 		}
 	}
+
+	return nil
 }
 
 func setTrafficSplitWithErr(topology *Topology, trafficSplit *split.TrafficSplit, svcKey Key, err error) {
