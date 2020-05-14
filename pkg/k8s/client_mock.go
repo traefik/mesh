@@ -117,7 +117,7 @@ func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, smi
 
 	for t, ok := range c.informerFactory.WaitForCacheSync(stopCh) {
 		if !ok {
-			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t.String())
+			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
@@ -152,19 +152,19 @@ func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, smi
 
 		for t, ok := range c.accessInformerFactory.WaitForCacheSync(stopCh) {
 			if !ok {
-				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t.String())
+				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
 			}
 		}
 
 		for t, ok := range c.specsInformerFactory.WaitForCacheSync(stopCh) {
 			if !ok {
-				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t.String())
+				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
 			}
 		}
 
 		for t, ok := range c.splitInformerFactory.WaitForCacheSync(stopCh) {
 			if !ok {
-				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t.String())
+				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
 			}
 		}
 	}
