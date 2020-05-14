@@ -111,7 +111,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			setTrafficTargetWithErr(topology, tt, sources, err)
 			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
-			return
+			continue
 		}
 
 		var destPods []Key
@@ -132,7 +132,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			setTrafficTargetWithErr(topology, tt, sources, err)
 			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
-			return
+			continue
 		}
 
 		// Create the ServiceTrafficTarget for the given service.
@@ -218,8 +218,10 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 			setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
 			b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
 
-			return
+			continue
 		}
+
+		var err error
 
 		// As required by the SMI specification, backends must expose at least the same ports as the Service on
 		// which the TrafficSplit is.
@@ -234,12 +236,16 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 			}
 
 			if !portFound {
-				err := fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend", svcPort.Port, backendSvcKey)
-				setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
-				b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
-
-				return
+				err = fmt.Errorf("port %d must be exposed by Service %q in order to be used as a backend", svcPort.Port, backendSvcKey)
+				break
 			}
+		}
+
+		if err != nil {
+			setTrafficSplitWithErr(topology, trafficSplit, svcKey, err)
+			b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+
+			continue
 		}
 
 		backends[i] = TrafficSplitBackend{
