@@ -80,7 +80,7 @@ func buildConfig(log logrus.FieldLogger, url string, kubeConfig string) (*rest.C
 		return clientcmd.BuildConfigFromFlags(url, kubeConfig)
 	}
 
-	return nil, fmt.Errorf("Could not create client: Missing masterURL or kubeConfig")
+	return nil, fmt.Errorf("could not create client: Missing masterURL or kubeConfig")
 }
 
 // GetKubernetesClient is used to get the kubernetes clientset.
