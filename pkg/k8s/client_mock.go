@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"testing"
 
 	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
@@ -60,6 +61,8 @@ func init() {
 
 // ClientMock holds mock client.
 type ClientMock struct {
+	testingT *testing.T
+
 	kubeClient   *fakekubeclient.Clientset
 	accessClient *fakeaccessclient.Clientset
 	specsClient  *fakespecsclient.Clientset
@@ -81,14 +84,14 @@ type ClientMock struct {
 }
 
 // NewClientMock create a new client mock.
-func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
+func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 	yamlContent, err := ioutil.ReadFile(filepath.FromSlash("./testdata/" + path))
 	if err != nil {
 		panic(err)
 	}
 
 	k8sObjects := MustParseYaml(yamlContent)
-	c := &ClientMock{}
+	c := &ClientMock{testingT: testingT}
 
 	c.kubeClient = fakekubeclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, CoreObjectKinds)...)
 
@@ -114,7 +117,7 @@ func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 
 	for t, ok := range c.informerFactory.WaitForCacheSync(stopCh) {
 		if !ok {
-			fmt.Printf("timed out waiting for controller caches to sync: %s", t.String())
+			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
@@ -149,19 +152,19 @@ func NewClientMock(stopCh <-chan struct{}, path string, smi bool) *ClientMock {
 
 		for t, ok := range c.accessInformerFactory.WaitForCacheSync(stopCh) {
 			if !ok {
-				fmt.Printf("timed out waiting for controller caches to sync: %s", t.String())
+				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
 			}
 		}
 
 		for t, ok := range c.specsInformerFactory.WaitForCacheSync(stopCh) {
 			if !ok {
-				fmt.Printf("timed out waiting for controller caches to sync: %s", t.String())
+				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
 			}
 		}
 
 		for t, ok := range c.splitInformerFactory.WaitForCacheSync(stopCh) {
 			if !ok {
-				fmt.Printf("timed out waiting for controller caches to sync: %s", t.String())
+				c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
 			}
 		}
 	}

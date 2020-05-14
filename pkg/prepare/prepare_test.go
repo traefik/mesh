@@ -60,7 +60,7 @@ func TestCheckDNSProvider(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			clt := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
+			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
 			prep := prepare.NewPrepare(logrus.New(), clt)
 			provider, err := prep.CheckDNSProvider()
@@ -122,7 +122,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			clt := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
+			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
 			prep := prepare.NewPrepare(logrus.New(), clt)
 			err := prep.ConfigureCoreDNS("titi", "toto")
@@ -179,7 +179,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			clt := k8s.NewClientMock(ctx.Done(), test.mockFile, false)
+			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
 			prep := prepare.NewPrepare(logrus.New(), clt)
 			err := prep.ConfigureKubeDNS()
