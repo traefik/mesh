@@ -15,7 +15,7 @@ func TestCleanup_New(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", false)
+	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", false)
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
@@ -29,7 +29,7 @@ func TestCleanup_CleanShadowServices(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientMock := k8s.NewClientMock(ctx.Done(), "mock.yaml", false)
+	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", false)
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
