@@ -6,11 +6,6 @@ type Service struct {
 	Name      string
 }
 
-// State holds service state for TCP.
-type State struct {
-	Table map[int]*ServiceWithPort
-}
-
 // ServiceWithPort holds a combination of service name and namespace and port.
 type ServiceWithPort struct {
 	Namespace string
