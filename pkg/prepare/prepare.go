@@ -162,6 +162,12 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 		return nil
 	}
 
+	p.log.Debug("Backing up CoreDNS configmap")
+
+	if err := p.backupConfigMap(coreConfigMap); err != nil {
+		return err
+	}
+
 	p.log.Debug("Patching CoreDNS configmap")
 
 	if err := p.patchCoreDNSConfigMap(coreConfigMap, clusterDomain, maeshNamespace, deployment.Namespace); err != nil {
@@ -173,6 +179,20 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 	}
 
 	return nil
+}
+
+// backupConfigMap backs up a configmap with `-backup` appended to its name.
+func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap) error {
+	newConfigMap := configMap.DeepCopy()
+
+	newConfigMap.Name = configMap.Name + "-backup"
+
+	// Remove resourceVersion since it is not to be set manually.
+	newConfigMap.ObjectMeta.ResourceVersion = ""
+
+	_, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Create(newConfigMap)
+
+	return err
 }
 
 func (p *Prepare) patchCoreDNSConfigMap(coreConfigMap *corev1.ConfigMap, clusterDomain, maeshNamespace, coreNamespace string) error {
@@ -284,6 +304,12 @@ func (p *Prepare) ConfigureKubeDNS() error {
 		p.log.Debug("Configmap already patched")
 
 		return nil
+	}
+
+	p.log.Debug("Backing up KubeDNS configmap")
+
+	if err := p.backupConfigMap(configMap); err != nil {
+		return err
 	}
 
 	p.log.Debug("Patching KubeDNS configmap with IP", serviceIP)
