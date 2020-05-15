@@ -41,13 +41,13 @@ func TestCleanup_CleanShadowServices(t *testing.T) {
 	err := cln.CleanShadowServices()
 	assert.NoError(t, err)
 
-	sl, err := clientMock.GetKubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{
+	sl, err := clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{
 		LabelSelector: "app=maesh,type=shadow",
 	})
 	assert.NoError(t, err)
 	assert.Len(t, sl.Items, 0)
 
-	srv, err := clientMock.GetKubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{})
+	srv, err := clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{})
 	assert.NoError(t, err)
 	assert.Len(t, srv.Items, 2)
 }
