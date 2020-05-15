@@ -23,8 +23,6 @@ kind: ConfigMap
 metadata:
   name: coredns-cfgmap
   namespace: kube-system
-  labels:
-    maesh-patched: "true"
 data:
   Corefile: |
     .:53 {
@@ -45,6 +43,7 @@ data:
             reload
             loadbalance
         }
+    #### Begin Maesh Block
     maesh:53 {
         errors
         rewrite continue {
@@ -62,3 +61,5 @@ data:
         reload
         loadbalance
     }
+    #### End Maesh Block
+    # This is test data that must be present
