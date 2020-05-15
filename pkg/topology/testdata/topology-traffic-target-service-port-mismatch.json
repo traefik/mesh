@@ -1,0 +1,130 @@
+{
+  "services": {
+    "svc-b1@my-ns": {
+      "name": "svc-b1",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-b1"
+      },
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.16",
+      "pods": [
+        "app-b1@my-ns"
+      ]
+    },
+    "svc-b2@my-ns": {
+      "name": "svc-b2",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-b2"
+      },
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-80",
+          "protocol": "TCP",
+          "port": 80,
+          "targetPort": 80
+        }
+      ],
+      "clusterIp": "10.10.1.17",
+      "pods": [
+        "app-b2@my-ns"
+      ],
+      "trafficTargets": [
+        "svc-b2@my-ns:tt@my-ns"
+      ]
+    }
+  },
+  "pods": {
+    "app-a@my-ns": {
+      "name": "app-a",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-a",
+      "ip": "10.10.1.1",
+      "sourceOf": [
+        "svc-b2@my-ns:tt@my-ns"
+      ]
+    },
+    "app-b1@my-ns": {
+      "name": "app-b1",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-b",
+      "ip": "10.10.1.2"
+    },
+    "app-b2@my-ns": {
+      "name": "app-b2",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-b",
+      "ip": "10.10.1.3",
+      "destinationOf": [
+        "svc-b2@my-ns:tt@my-ns"
+      ]
+    }
+  },
+  "serviceTrafficTargets": {
+    "svc-b1@my-ns:tt@my-ns": {
+      "service": "svc-b1@my-ns",
+      "name": "tt",
+      "namespace": "my-ns",
+      "sources": [
+        {
+          "serviceAccount": "service-account-a",
+          "namespace": "my-ns",
+          "pods": [
+            "app-a@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "service-account-b",
+        "namespace": "my-ns",
+        "ports": [],
+        "pods": [
+          "app-b1@my-ns"
+        ]
+      },
+      "errors": [
+        "unable to find destination ports on Service \"svc-b1@my-ns\": destination port 80 of TrafficTarget \"tt@my-ns\" is not exposed by the service"
+      ]
+    },
+    "svc-b2@my-ns:tt@my-ns": {
+      "service": "svc-b2@my-ns",
+      "name": "tt",
+      "namespace": "my-ns",
+      "sources": [
+        {
+          "serviceAccount": "service-account-a",
+          "namespace": "my-ns",
+          "pods": [
+            "app-a@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "service-account-b",
+        "namespace": "my-ns",
+        "ports": [
+          {
+            "name": "port-80",
+            "protocol": "TCP",
+            "port": 80,
+            "targetPort": 80
+          }
+        ],
+        "pods": [
+          "app-b2@my-ns"
+        ]
+      }
+    }
+  },
+  "trafficSplits": {}
+}
