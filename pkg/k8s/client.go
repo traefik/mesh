@@ -15,10 +15,10 @@ import (
 
 // Client is an interface for the various resource controllers.
 type Client interface {
-	GetKubernetesClient() kubernetes.Interface
-	GetAccessClient() accessclient.Interface
-	GetSpecsClient() specsclient.Interface
-	GetSplitClient() splitclient.Interface
+	KubernetesClient() kubernetes.Interface
+	AccessClient() accessclient.Interface
+	SpecsClient() specsclient.Interface
+	SplitClient() splitclient.Interface
 }
 
 // Ensure the client wrapper fits the Client interface.
@@ -33,8 +33,8 @@ type ClientWrapper struct {
 }
 
 // NewClient creates and returns a ClientWrapper that satisfies the Client interface.
-func NewClient(log logrus.FieldLogger, url string, kubeConfig string) (Client, error) {
-	config, err := buildConfig(log, url, kubeConfig)
+func NewClient(log logrus.FieldLogger, masterURL, kubeConfig string) (Client, error) {
+	config, err := buildConfig(log, masterURL, kubeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -67,39 +67,39 @@ func NewClient(log logrus.FieldLogger, url string, kubeConfig string) (Client, e
 	}, nil
 }
 
-// buildConfig takes the url and kubeconfig, and returns an external or internal config.
-func buildConfig(log logrus.FieldLogger, url string, kubeConfig string) (*rest.Config, error) {
+// buildConfig takes the master URL and kubeconfig, and returns an external or internal config.
+func buildConfig(log logrus.FieldLogger, masterURL, kubeConfig string) (*rest.Config, error) {
 	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("KUBERNETES_SERVICE_PORT") != "" {
 		// If these env vars are set, we can build an in-cluster config.
 		log.Infoln("Creating in-cluster client")
 		return rest.InClusterConfig()
 	}
 
-	if url != "" && kubeConfig != "" {
+	if masterURL != "" && kubeConfig != "" {
 		log.Infoln("Creating cluster-external client from masterURL and kubeconfig")
-		return clientcmd.BuildConfigFromFlags(url, kubeConfig)
+		return clientcmd.BuildConfigFromFlags(masterURL, kubeConfig)
 	}
 
-	return nil, fmt.Errorf("could not create client: Missing masterURL or kubeConfig")
+	return nil, fmt.Errorf("could not create client: missing masterURL or kubeConfig")
 }
 
-// GetKubernetesClient is used to get the kubernetes clientset.
-func (w *ClientWrapper) GetKubernetesClient() kubernetes.Interface {
+// KubernetesClient is used to get the kubernetes clientset.
+func (w *ClientWrapper) KubernetesClient() kubernetes.Interface {
 	return w.kubeClient
 }
 
-// GetAccessClient is used to get the SMI Access clientset.
-func (w *ClientWrapper) GetAccessClient() accessclient.Interface {
+// AccessClient is used to get the SMI Access clientset.
+func (w *ClientWrapper) AccessClient() accessclient.Interface {
 	return w.accessClient
 }
 
-// GetSpecsClient is used to get the SMI Specs clientset.
-func (w *ClientWrapper) GetSpecsClient() specsclient.Interface {
+// SpecsClient is used to get the SMI Specs clientset.
+func (w *ClientWrapper) SpecsClient() specsclient.Interface {
 	return w.specsClient
 }
 
-// GetSplitClient is used to get the SMI Split clientset.
-func (w *ClientWrapper) GetSplitClient() splitclient.Interface {
+// SplitClient is used to get the SMI Split clientset.
+func (w *ClientWrapper) SplitClient() splitclient.Interface {
 	return w.splitClient
 }
 

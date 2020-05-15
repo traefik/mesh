@@ -183,23 +183,23 @@ func (c *ClientMock) startACLInformers(stopCh <-chan struct{}) {
 	}
 }
 
-// GetKubernetesClient is used to get the kubernetes clientset.
-func (c *ClientMock) GetKubernetesClient() kubeclient.Interface {
+// KubernetesClient is used to get the kubernetes clientset.
+func (c *ClientMock) KubernetesClient() kubeclient.Interface {
 	return c.kubeClient
 }
 
-// GetAccessClient is used to get the SMI Access clientset.
-func (c *ClientMock) GetAccessClient() accessclient.Interface {
+// AccessClient is used to get the SMI Access clientset.
+func (c *ClientMock) AccessClient() accessclient.Interface {
 	return c.accessClient
 }
 
-// GetSpecsClient is used to get the SMI Specs clientset.
-func (c *ClientMock) GetSpecsClient() specsclient.Interface {
+// SpecsClient is used to get the SMI Specs clientset.
+func (c *ClientMock) SpecsClient() specsclient.Interface {
 	return c.specsClient
 }
 
-// GetSplitClient is used to get the SMI Split clientset.
-func (c *ClientMock) GetSplitClient() splitclient.Interface {
+// SplitClient is used to get the SMI Split clientset.
+func (c *ClientMock) SplitClient() splitclient.Interface {
 	return c.splitClient
 }
 
