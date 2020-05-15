@@ -190,6 +190,11 @@ func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap) error {
 	// Remove resourceVersion since it is not to be set manually.
 	newConfigMap.ObjectMeta.ResourceVersion = ""
 
+	if _, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Get(newConfigMap.Name, metav1.GetOptions{}); err == nil {
+		// Backup already exists, return nil.
+		return nil
+	}
+
 	_, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Create(newConfigMap)
 
 	return err
