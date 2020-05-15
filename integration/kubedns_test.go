@@ -32,7 +32,7 @@ func (s *KubeDNSSuite) TestKubeDNS(c *check.C) {
 	c.Assert(pod, checker.NotNil)
 
 	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.svc.cluster.local", "--max-time", "5",
+		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.svc.cluster.local", "--max-time", "5",
 	}
 
 	err := s.installHelmMaesh(c, false, true)
@@ -41,8 +41,8 @@ func (s *KubeDNSSuite) TestKubeDNS(c *check.C) {
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
 
 	argSlice = []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
+		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmMaesh(c)
+	s.uninstallHelmMaesh(c)
 }
