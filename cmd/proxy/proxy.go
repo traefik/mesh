@@ -133,16 +133,7 @@ func setupServer(proxyConfiguration *cmd.ProxyConfiguration) (*server.Server, er
 	managerFactory := service.NewManagerFactory(proxyConfiguration.Configuration, routinesPool, metricsRegistry)
 	routerFactory := server.NewRouterFactory(proxyConfiguration.Configuration, managerFactory, tlsManager, chainBuilder)
 
-	var defaultEntryPoints []string
-
-	for name, cfg := range proxyConfiguration.Configuration.EntryPoints {
-		protocol, _ := cfg.GetProtocol()
-		if protocol != "udp" && name != static.DefaultInternalEntryPointName {
-			defaultEntryPoints = append(defaultEntryPoints, name)
-		}
-	}
-
-	sort.Strings(defaultEntryPoints)
+	defaultEntryPoints := createAndSortDefaultEntrypoints(proxyConfiguration.Configuration.EntryPoints)
 
 	watcher := server.NewConfigurationWatcher(
 		routinesPool,
@@ -175,6 +166,21 @@ func setupServer(proxyConfiguration *cmd.ProxyConfiguration) (*server.Server, er
 	})
 
 	return server.NewServer(routinesPool, serverEntryPointsTCP, serverEntryPointsUDP, watcher, chainBuilder, accessLog), nil
+}
+
+func createAndSortDefaultEntrypoints(entryPoints static.EntryPoints) []string {
+	var defaultEntryPoints []string
+
+	for name, cfg := range entryPoints {
+		protocol, _ := cfg.GetProtocol()
+		if protocol != "udp" && name != static.DefaultInternalEntryPointName {
+			defaultEntryPoints = append(defaultEntryPoints, name)
+		}
+	}
+
+	sort.Strings(defaultEntryPoints)
+
+	return defaultEntryPoints
 }
 
 func switchRouter(routerFactory *server.RouterFactory, serverEntryPointsTCP server.TCPEntryPoints, serverEntryPointsUDP server.UDPEntryPoints) func(conf dynamic.Configuration) {
@@ -280,22 +286,26 @@ func configureLogging(staticConfiguration *static.Configuration) {
 	log.SetFormatter(formatter)
 
 	if len(logFile) > 0 {
-		dir := filepath.Dir(logFile)
+		createLogFile(logFile)
+	}
+}
 
-		if err = os.MkdirAll(dir, 0755); err != nil {
-			log.WithoutContext().Errorf("Failed to create log path %s: %s", dir, err)
+func createLogFile(logFile string) {
+	dir := filepath.Dir(logFile)
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.WithoutContext().Errorf("Failed to create log path %s: %s", dir, err)
+	}
+
+	err := log.OpenFile(logFile)
+
+	logrus.RegisterExitHandler(func() {
+		if closeErr := log.CloseFile(); closeErr != nil {
+			log.WithoutContext().Errorf("Error while closing log file: %v", closeErr)
 		}
+	})
 
-		err = log.OpenFile(logFile)
-
-		logrus.RegisterExitHandler(func() {
-			if closeErr := log.CloseFile(); closeErr != nil {
-				log.WithoutContext().Errorf("Error while closing log file: %v", closeErr)
-			}
-		})
-
-		if err != nil {
-			log.WithoutContext().Errorf("Error while opening log file %s: %v", logFile, err)
-		}
+	if err != nil {
+		log.WithoutContext().Errorf("Error while opening log file %s: %v", logFile, err)
 	}
 }
