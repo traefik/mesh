@@ -84,7 +84,7 @@ func (p *Prepare) CheckDNSProvider() (DNSProvider, error) {
 func (p *Prepare) coreDNSMatch() (bool, error) {
 	p.log.Info("Checking CoreDNS")
 
-	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+	deployment, err := p.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
 	if kubeerror.IsNotFound(err) {
 		p.log.Debugf("CoreDNS does not exist in namespace %q", metav1.NamespaceSystem)
 		return false, nil
@@ -127,7 +127,7 @@ func isCoreDNSVersionSupported(versionLine string) bool {
 func (p *Prepare) kubeDNSMatch() (bool, error) {
 	p.log.Info("Checking KubeDNS")
 
-	_, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
+	_, err := p.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
 	if kubeerror.IsNotFound(err) {
 		p.log.Debugf("KubeDNS does not exist in namespace %q", metav1.NamespaceSystem)
 		return false, nil
@@ -146,7 +146,7 @@ func (p *Prepare) kubeDNSMatch() (bool, error) {
 func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 	p.log.Debug("Patching CoreDNS")
 
-	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+	deployment, err := p.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ maesh:53 {
 
 	coreConfigMap.ObjectMeta.Labels["maesh-patched"] = "true"
 
-	if _, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(coreNamespace).Update(coreConfigMap); err != nil {
+	if _, err := p.client.KubernetesClient().CoreV1().ConfigMaps(coreNamespace).Update(coreConfigMap); err != nil {
 		return err
 	}
 
@@ -225,7 +225,7 @@ func (p *Prepare) getCorefileConfigMap(coreDeployment *appsv1.Deployment) (*core
 			continue
 		}
 
-		cfgMap, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(coreDeployment.Namespace).Get(volume.ConfigMap.Name, metav1.GetOptions{})
+		cfgMap, err := p.client.KubernetesClient().CoreV1().ConfigMaps(coreDeployment.Namespace).Get(volume.ConfigMap.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -248,7 +248,7 @@ func (p *Prepare) getCorefileConfigMap(coreDeployment *appsv1.Deployment) (*core
 func (p *Prepare) ConfigureKubeDNS() error {
 	p.log.Debug("Patching KubeDNS")
 
-	deployment, err := p.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
+	deployment, err := p.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -261,7 +261,7 @@ func (p *Prepare) ConfigureKubeDNS() error {
 	p.log.Debug("Getting CoreDNS service IP")
 
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
-		svc, errSvc := p.client.GetKubernetesClient().CoreV1().Services("maesh").Get("coredns", metav1.GetOptions{})
+		svc, errSvc := p.client.KubernetesClient().CoreV1().Services("maesh").Get("coredns", metav1.GetOptions{})
 		if errSvc != nil {
 			return fmt.Errorf("unable get the service %q in namespace %q: %w", "coredns", "maesh", errSvc)
 		}
@@ -305,7 +305,7 @@ func (p *Prepare) getKubeDNSConfigMap(kubeDeployment *appsv1.Deployment) (*corev
 			continue
 		}
 
-		cfgMap, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(kubeDeployment.Namespace).Get(volume.ConfigMap.Name, metav1.GetOptions{})
+		cfgMap, err := p.client.KubernetesClient().CoreV1().ConfigMaps(kubeDeployment.Namespace).Get(volume.ConfigMap.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -348,7 +348,7 @@ func (p *Prepare) patchKubeDNSConfigMap(kubeConfigMap *corev1.ConfigMap, namespa
 
 	kubeConfigMap.ObjectMeta.Labels["maesh-patched"] = "true"
 
-	if _, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(namespace).Update(kubeConfigMap); err != nil {
+	if _, err := p.client.KubernetesClient().CoreV1().ConfigMaps(namespace).Update(kubeConfigMap); err != nil {
 		return err
 	}
 
@@ -379,7 +379,7 @@ func (p *Prepare) StartInformers(acl bool) error {
 
 func (p *Prepare) startBaseInformers(ctx context.Context, stopCh <-chan struct{}) error {
 	// Create a new SharedInformerFactory, and register the event handler to informers.
-	kubeFactory := informers.NewSharedInformerFactoryWithOptions(p.client.GetKubernetesClient(), k8s.ResyncPeriod)
+	kubeFactory := informers.NewSharedInformerFactoryWithOptions(p.client.KubernetesClient(), k8s.ResyncPeriod)
 	kubeFactory.Core().V1().Services().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	kubeFactory.Core().V1().Endpoints().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	kubeFactory.Start(stopCh)
@@ -390,7 +390,7 @@ func (p *Prepare) startBaseInformers(ctx context.Context, stopCh <-chan struct{}
 		}
 	}
 
-	splitFactory := splitinformer.NewSharedInformerFactoryWithOptions(p.client.GetSplitClient(), k8s.ResyncPeriod)
+	splitFactory := splitinformer.NewSharedInformerFactoryWithOptions(p.client.SplitClient(), k8s.ResyncPeriod)
 	splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	splitFactory.Start(stopCh)
 
@@ -405,7 +405,7 @@ func (p *Prepare) startBaseInformers(ctx context.Context, stopCh <-chan struct{}
 
 func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{}) error {
 	// Create new SharedInformerFactories, and register the event handler to informers.
-	accessFactory := accessinformer.NewSharedInformerFactoryWithOptions(p.client.GetAccessClient(), k8s.ResyncPeriod)
+	accessFactory := accessinformer.NewSharedInformerFactoryWithOptions(p.client.AccessClient(), k8s.ResyncPeriod)
 	accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	accessFactory.Start(stopCh)
 
@@ -415,7 +415,7 @@ func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{})
 		}
 	}
 
-	specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(p.client.GetSpecsClient(), k8s.ResyncPeriod)
+	specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(p.client.SpecsClient(), k8s.ResyncPeriod)
 	specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	specsFactory.Start(stopCh)
@@ -427,7 +427,7 @@ func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{})
 	}
 
 	// Create a new SharedInformerFactory, and register the event handler to informers.
-	kubeFactory := informers.NewSharedInformerFactoryWithOptions(p.client.GetKubernetesClient(), k8s.ResyncPeriod)
+	kubeFactory := informers.NewSharedInformerFactoryWithOptions(p.client.KubernetesClient(), k8s.ResyncPeriod)
 	kubeFactory.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	kubeFactory.Start(stopCh)
 
@@ -462,7 +462,7 @@ func (p *Prepare) restartPods(deployment *appsv1.Deployment) error {
 
 	annotations["maesh-hash"] = uuid.New().String()
 	newDeployment.Spec.Template.Annotations = annotations
-	_, err := p.client.GetKubernetesClient().AppsV1().Deployments(newDeployment.Namespace).Update(newDeployment)
+	_, err := p.client.KubernetesClient().AppsV1().Deployments(newDeployment.Namespace).Update(newDeployment)
 
 	return err
 }
