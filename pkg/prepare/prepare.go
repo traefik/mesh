@@ -187,6 +187,9 @@ func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap) error {
 
 	newConfigMap.Name = configMap.Name + "-backup"
 
+	// Remove resourceVersion since it is not to be set manually.
+	newConfigMap.ObjectMeta.ResourceVersion = ""
+
 	_, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Create(newConfigMap)
 
 	return err
