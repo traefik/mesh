@@ -481,7 +481,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(traefik_backend_open_connections) by (method)",
+              "expr": "sum(traefik_service_open_connections) by (method)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ method }}",
@@ -567,7 +567,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(traefik_backend_request_duration_seconds_bucket{le=\"0.1\",code=\"200\"}[5m])) by (job) / sum(rate(traefik_backend_request_duration_seconds_count{code=\"200\"}[5m])) by (job)",
+              "expr": "sum(rate(traefik_service_request_duration_seconds_bucket{le=\"0.1\",code=\"200\"}[5m])) by (job) / sum(rate(traefik_service_request_duration_seconds_count{code=\"200\"}[5m])) by (job)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Code 200",
@@ -615,7 +615,7 @@
           }
         }
       ],
-      "title": "Backends",
+      "title": "Services",
       "type": "row"
     },
     {
@@ -669,7 +669,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(traefik_backend_requests_total{code=~\"2..\"}[5m])) by (method, code)",
+              "expr": "sum(rate(traefik_service_requests_total{code=~\"2..\"}[5m])) by (method, code)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{method}} : {{code}}",
@@ -755,7 +755,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(traefik_backend_requests_total{code=~\"5..\"}[5m])) by (method, code)",
+              "expr": "sum(rate(traefik_service_requests_total{code=~\"5..\"}[5m])) by (method, code)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{method}} : {{code}}",
@@ -843,17 +843,17 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(traefik_backend_requests_total[1m])) by (backend)",
+              "expr": "sum(rate(traefik_service_requests_total[1m])) by (service)",
               "format": "time_series",
               "intervalFactor": 2,
-              "legendFormat": "{{ backend }}",
+              "legendFormat": "{{ service }}",
               "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Backend total requests over 1min per backend",
+          "title": "Service total requests over 1min per service",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -930,7 +930,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(traefik_backend_requests_total{code!~\"2..|5..\"}[5m])) by (method, code)",
+              "expr": "sum(rate(traefik_service_requests_total{code!~\"2..|5..\"}[5m])) by (method, code)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{ method }} : {{code}}",
