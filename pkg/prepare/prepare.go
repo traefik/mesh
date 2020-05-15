@@ -41,17 +41,6 @@ var supportedCoreDNSVersions = []string{
 	"1.6",
 }
 
-// Preparer is an interface for the prepare methods.
-type Preparer interface {
-	CheckDNSProvider() (DNSProvider, error)
-	StartInformers(acl bool) error
-	ConfigureCoreDNS(clusterDomain, namespace string) error
-	ConfigureKubeDNS() error
-}
-
-// Ensure the Prepare fits the Preparer interface.
-var _ Preparer = (*Prepare)(nil)
-
 // Prepare holds the clients for the various resource controllers.
 type Prepare struct {
 	client k8s.Client
@@ -59,7 +48,7 @@ type Prepare struct {
 }
 
 // NewPrepare returns an initialized prepare object.
-func NewPrepare(log logrus.FieldLogger, client k8s.Client) Preparer {
+func NewPrepare(log logrus.FieldLogger, client k8s.Client) *Prepare {
 	return &Prepare{
 		client: client,
 		log:    log,
