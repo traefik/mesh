@@ -151,7 +151,7 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 		return err
 	}
 
-	coreConfigMap, err := p.getCorefileConfigMap(deployment)
+	coreConfigMap, err := p.GetCorefileConfigMap(deployment)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 
 	p.log.Debug("Backing up CoreDNS configmap")
 
-	if err := p.backupConfigMap(coreConfigMap); err != nil {
+	if err := p.backupConfigMap(coreConfigMap, maeshNamespace); err != nil {
 		return err
 	}
 
@@ -174,7 +174,7 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 		return err
 	}
 
-	if err := p.restartPods(deployment); err != nil {
+	if err := p.RestartPods(deployment); err != nil {
 		return err
 	}
 
@@ -182,17 +182,20 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 }
 
 // backupConfigMap backs up a configmap with `-backup` appended to its name.
-func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap) error {
+func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap, maeshNamespace string) error {
 	newConfigMap := configMap.DeepCopy()
 
 	newConfigMap.Name = configMap.Name + "-backup"
+	newConfigMap.Namespace = maeshNamespace
 
 	// Remove resourceVersion since it is not to be set manually.
 	newConfigMap.ObjectMeta.ResourceVersion = ""
 
 	if _, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Get(newConfigMap.Name, metav1.GetOptions{}); err == nil {
-		// Backup already exists, return nil.
-		return nil
+		// Backup already exists, update it.
+		_, err = p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Update(newConfigMap)
+
+		return err
 	}
 
 	_, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Create(newConfigMap)
@@ -243,8 +246,8 @@ maesh:53 {
 	return nil
 }
 
-// getCorefileConfigMap returns the name of a coreDNS config map.
-func (p *Prepare) getCorefileConfigMap(coreDeployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
+// GetCorefileConfigMap returns the name of a coreDNS config map.
+func (p *Prepare) GetCorefileConfigMap(coreDeployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
 	for _, volume := range coreDeployment.Spec.Template.Spec.Volumes {
 		if volume.ConfigMap == nil {
 			continue
@@ -270,7 +273,7 @@ func (p *Prepare) getCorefileConfigMap(coreDeployment *appsv1.Deployment) (*core
 }
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
-func (p *Prepare) ConfigureKubeDNS() error {
+func (p *Prepare) ConfigureKubeDNS(maeshNamespace string) error {
 	p.log.Debug("Patching KubeDNS")
 
 	deployment, err := p.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
@@ -286,7 +289,11 @@ func (p *Prepare) ConfigureKubeDNS() error {
 	p.log.Debug("Getting CoreDNS service IP")
 
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
+<<<<<<< HEAD
 		svc, errSvc := p.client.KubernetesClient().CoreV1().Services("maesh").Get("coredns", metav1.GetOptions{})
+=======
+		svc, errSvc := p.client.GetKubernetesClient().CoreV1().Services(maeshNamespace).Get("coredns", metav1.GetOptions{})
+>>>>>>> add restore code
 		if errSvc != nil {
 			return fmt.Errorf("unable get the service %q in namespace %q: %w", "coredns", "maesh", errSvc)
 		}
@@ -300,7 +307,7 @@ func (p *Prepare) ConfigureKubeDNS() error {
 		return fmt.Errorf("unable get the service %q in namespace %q: %w", "coredns", "maesh", err)
 	}
 
-	configMap, err := p.getKubeDNSConfigMap(deployment)
+	configMap, err := p.GetKubeDNSConfigMap(deployment)
 	if err != nil {
 		return err
 	}
@@ -313,7 +320,7 @@ func (p *Prepare) ConfigureKubeDNS() error {
 
 	p.log.Debug("Backing up KubeDNS configmap")
 
-	if err := p.backupConfigMap(configMap); err != nil {
+	if err := p.backupConfigMap(configMap, maeshNamespace); err != nil {
 		return err
 	}
 
@@ -323,14 +330,15 @@ func (p *Prepare) ConfigureKubeDNS() error {
 		return err
 	}
 
-	if err := p.restartPods(deployment); err != nil {
+	if err := p.RestartPods(deployment); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p *Prepare) getKubeDNSConfigMap(kubeDeployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
+// GetKubeDNSConfigMap parses the deployment and returns the associated configuration configmap.
+func (p *Prepare) GetKubeDNSConfigMap(kubeDeployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
 	for _, volume := range kubeDeployment.Spec.Template.Spec.Volumes {
 		if volume.ConfigMap == nil {
 			continue
@@ -480,7 +488,8 @@ func isPatched(cfgMap *corev1.ConfigMap) bool {
 	return patched
 }
 
-func (p *Prepare) restartPods(deployment *appsv1.Deployment) error {
+// RestartPods restarts the pods in a given deployment.
+func (p *Prepare) RestartPods(deployment *appsv1.Deployment) error {
 	p.log.Infof("Restarting %q pods", deployment.Name)
 
 	// Never edit original object, always work with a clone for updates.
