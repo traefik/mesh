@@ -104,12 +104,12 @@ func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger
 	ignoredResources.AddIgnoredNamespace(metav1.NamespaceSystem)
 	ignoredResources.AddIgnoredApps("maesh", "jaeger")
 
-	tcpStateTable, err := k8s.NewPortMapping(clients.GetKubernetesClient(), cfg.Namespace, k8s.TCPStateConfigMapName, cfg.MinTCPPort, cfg.MaxTCPPort)
+	tcpStateTable, err := k8s.NewPortMapping(clients.KubernetesClient(), cfg.Namespace, k8s.TCPStateConfigMapName, cfg.MinTCPPort, cfg.MaxTCPPort)
 	if err != nil {
 		return nil, err
 	}
 
-	udpStateTable, err := k8s.NewPortMapping(clients.GetKubernetesClient(), cfg.Namespace, k8s.UDPStateConfigMapName, cfg.MinUDPPort, cfg.MaxUDPPort)
+	udpStateTable, err := k8s.NewPortMapping(clients.KubernetesClient(), cfg.Namespace, k8s.UDPStateConfigMapName, cfg.MinUDPPort, cfg.MaxUDPPort)
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +130,11 @@ func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger
 
 func (c *Controller) init() {
 	// Create SharedInformers for non-ACL related resources.
-	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.GetKubernetesClient(), k8s.ResyncPeriod)
-	c.splitFactory = splitinformer.NewSharedInformerFactoryWithOptions(c.clients.GetSplitClient(), k8s.ResyncPeriod)
+	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubernetesClient(), k8s.ResyncPeriod)
+	c.splitFactory = splitinformer.NewSharedInformerFactoryWithOptions(c.clients.SplitClient(), k8s.ResyncPeriod)
 
 	c.serviceLister = c.kubernetesFactory.Core().V1().Services().Lister()
-	c.serviceManager = NewShadowServiceManager(c.logger, c.serviceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.GetKubernetesClient())
+	c.serviceManager = NewShadowServiceManager(c.logger, c.serviceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.KubernetesClient())
 
 	// configRefreshChan is used to trigger configuration refreshes.
 	c.configRefreshChan = make(chan struct{})
@@ -154,8 +154,8 @@ func (c *Controller) init() {
 
 	// Create SharedInformers, listers and register the event handler for ACL related resources.
 	if c.cfg.ACLEnabled {
-		c.accessFactory = accessinformer.NewSharedInformerFactoryWithOptions(c.clients.GetAccessClient(), k8s.ResyncPeriod)
-		c.specsFactory = specsinformer.NewSharedInformerFactoryWithOptions(c.clients.GetSpecsClient(), k8s.ResyncPeriod)
+		c.accessFactory = accessinformer.NewSharedInformerFactoryWithOptions(c.clients.AccessClient(), k8s.ResyncPeriod)
+		c.specsFactory = specsinformer.NewSharedInformerFactoryWithOptions(c.clients.SpecsClient(), k8s.ResyncPeriod)
 
 		c.trafficTargetLister = c.accessFactory.Access().V1alpha1().TrafficTargets().Lister()
 		c.httpRouteGroupLister = c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
