@@ -141,6 +141,43 @@ func TestConfigureCoreDNS(t *testing.T) {
 	}
 }
 
+func TestPrepare_CoreDNSBackup(t *testing.T) {
+	tests := []struct {
+		desc string
+
+		mockFile string
+	}{
+		{
+			desc: "First time backup of CoreDNS configmap",
+
+			mockFile: "configurecoredns_not_patched.yaml",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
+
+			prep := prepare.NewPrepare(logrus.New(), clt)
+			err := prep.ConfigureCoreDNS("titi", "toto")
+
+			assert.NoError(t, err)
+
+			cfgMap, err := clt.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-cfgmap", metav1.GetOptions{})
+			require.NoError(t, err)
+
+			cfgMapBackup, err := clt.KubernetesClient().CoreV1().ConfigMaps("toto").Get("coredns-cfgmap-backup", metav1.GetOptions{})
+			require.NoError(t, err)
+
+			assert.Len(t, cfgMap.Data, 1)
+			assert.Len(t, cfgMapBackup.Data, 1)
+		})
+	}
+}
+
 func TestConfigureKubeDNS(t *testing.T) {
 	tests := []struct {
 		desc string
@@ -182,7 +219,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
 			prep := prepare.NewPrepare(logrus.New(), clt)
-			err := prep.ConfigureKubeDNS()
+			err := prep.ConfigureKubeDNS("maesh")
 			if test.expectedErr {
 				assert.Error(t, err)
 				return
