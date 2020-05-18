@@ -75,8 +75,8 @@ func buildConfig(log logrus.FieldLogger, masterURL, kubeConfig string) (*rest.Co
 		return rest.InClusterConfig()
 	}
 
-	if masterURL != "" && kubeConfig != "" {
-		log.Infoln("Creating cluster-external client from masterURL and kubeconfig")
+	if masterURL != "" || kubeConfig != "" {
+		log.Infoln("Creating cluster-external client from provided masterURL or kubeconfig")
 		return clientcmd.BuildConfigFromFlags(masterURL, kubeConfig)
 	}
 
