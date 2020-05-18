@@ -82,7 +82,7 @@ func (c *Cleanup) RestoreDNSConfig() error {
 	}
 
 	// Delete backup configmap.
-	if err := c.client.GetKubernetesClient().CoreV1().ConfigMaps(configmapBackup.Namespace).Delete(configmapBackup.Name, &metav1.DeleteOptions{}); err != nil {
+	if err := c.client.KubernetesClient().CoreV1().ConfigMaps(configmapBackup.Namespace).Delete(configmapBackup.Name, &metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 
@@ -90,7 +90,7 @@ func (c *Cleanup) RestoreDNSConfig() error {
 }
 
 func (c *Cleanup) restoreCoreDNS() (*appsv1.Deployment, *corev1.ConfigMap, error) {
-	deployment, err := c.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+	deployment, err := c.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -104,7 +104,7 @@ func (c *Cleanup) restoreCoreDNS() (*appsv1.Deployment, *corev1.ConfigMap, error
 }
 
 func (c *Cleanup) restoreKubeDNS() (*appsv1.Deployment, *corev1.ConfigMap, error) {
-	deployment, err := c.client.GetKubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
+	deployment, err := c.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, err
 	}

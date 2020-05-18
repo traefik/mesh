@@ -191,14 +191,14 @@ func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap, maeshNamespace st
 	// Remove resourceVersion since it is not to be set manually.
 	newConfigMap.ObjectMeta.ResourceVersion = ""
 
-	if _, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Get(newConfigMap.Name, metav1.GetOptions{}); err == nil {
+	if _, err := p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Get(newConfigMap.Name, metav1.GetOptions{}); err == nil {
 		// Backup already exists, update it.
-		_, err = p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Update(newConfigMap)
+		_, err = p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Update(newConfigMap)
 
 		return err
 	}
 
-	_, err := p.client.GetKubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Create(newConfigMap)
+	_, err := p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Create(newConfigMap)
 
 	return err
 }
@@ -289,11 +289,7 @@ func (p *Prepare) ConfigureKubeDNS(maeshNamespace string) error {
 	p.log.Debug("Getting CoreDNS service IP")
 
 	if err = backoff.Retry(safe.OperationWithRecover(func() error {
-<<<<<<< HEAD
-		svc, errSvc := p.client.KubernetesClient().CoreV1().Services("maesh").Get("coredns", metav1.GetOptions{})
-=======
-		svc, errSvc := p.client.GetKubernetesClient().CoreV1().Services(maeshNamespace).Get("coredns", metav1.GetOptions{})
->>>>>>> add restore code
+		svc, errSvc := p.client.KubernetesClient().CoreV1().Services(maeshNamespace).Get("coredns", metav1.GetOptions{})
 		if errSvc != nil {
 			return fmt.Errorf("unable get the service %q in namespace %q: %w", "coredns", "maesh", errSvc)
 		}

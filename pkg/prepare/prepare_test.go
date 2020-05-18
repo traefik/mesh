@@ -166,10 +166,10 @@ func TestPrepare_CoreDNSBackup(t *testing.T) {
 
 			assert.NoError(t, err)
 
-			cfgMap, err := clt.GetKubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-cfgmap", metav1.GetOptions{})
+			cfgMap, err := clt.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-cfgmap", metav1.GetOptions{})
 			require.NoError(t, err)
 
-			cfgMapBackup, err := clt.GetKubernetesClient().CoreV1().ConfigMaps("toto").Get("coredns-cfgmap-backup", metav1.GetOptions{})
+			cfgMapBackup, err := clt.KubernetesClient().CoreV1().ConfigMaps("toto").Get("coredns-cfgmap-backup", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Len(t, cfgMap.Data, 1)
