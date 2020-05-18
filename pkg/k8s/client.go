@@ -2,22 +2,23 @@ package k8s
 
 import (
 	"fmt"
+	"os"
 
 	accessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
 	specsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
 	splitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	kubeclient "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Client is an interface for the various resource controllers.
 type Client interface {
-	GetKubernetesClient() kubeclient.Interface
-	GetAccessClient() accessclient.Interface
-	GetSpecsClient() specsclient.Interface
-	GetSplitClient() splitclient.Interface
+	KubernetesClient() kubernetes.Interface
+	AccessClient() accessclient.Interface
+	SpecsClient() specsclient.Interface
+	SplitClient() splitclient.Interface
 }
 
 // Ensure the client wrapper fits the Client interface.
@@ -25,15 +26,15 @@ var _ Client = (*ClientWrapper)(nil)
 
 // ClientWrapper holds the clients for the various resource controllers.
 type ClientWrapper struct {
-	kubeClient   *kubeclient.Clientset
+	kubeClient   *kubernetes.Clientset
 	accessClient *accessclient.Clientset
 	specsClient  *specsclient.Clientset
 	splitClient  *splitclient.Clientset
 }
 
 // NewClient creates and returns a ClientWrapper that satisfies the Client interface.
-func NewClient(log logrus.FieldLogger, url string, kubeConfig string) (Client, error) {
-	config, err := clientcmd.BuildConfigFromFlags(url, kubeConfig)
+func NewClient(log logrus.FieldLogger, masterURL, kubeConfig string) (Client, error) {
+	config, err := buildConfig(log, masterURL, kubeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -66,31 +67,47 @@ func NewClient(log logrus.FieldLogger, url string, kubeConfig string) (Client, e
 	}, nil
 }
 
-// GetKubernetesClient is used to get the kubernetes clientset.
-func (w *ClientWrapper) GetKubernetesClient() kubeclient.Interface {
+// buildConfig takes the master URL and kubeconfig, and returns an external or internal config.
+func buildConfig(log logrus.FieldLogger, masterURL, kubeConfig string) (*rest.Config, error) {
+	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("KUBERNETES_SERVICE_PORT") != "" {
+		// If these env vars are set, we can build an in-cluster config.
+		log.Infoln("Creating in-cluster client")
+		return rest.InClusterConfig()
+	}
+
+	if masterURL != "" || kubeConfig != "" {
+		log.Infoln("Creating cluster-external client from provided masterURL or kubeconfig")
+		return clientcmd.BuildConfigFromFlags(masterURL, kubeConfig)
+	}
+
+	return nil, fmt.Errorf("could not create client: missing masterURL or kubeConfig")
+}
+
+// KubernetesClient is used to get the kubernetes clientset.
+func (w *ClientWrapper) KubernetesClient() kubernetes.Interface {
 	return w.kubeClient
 }
 
-// GetAccessClient is used to get the SMI Access clientset.
-func (w *ClientWrapper) GetAccessClient() accessclient.Interface {
+// AccessClient is used to get the SMI Access clientset.
+func (w *ClientWrapper) AccessClient() accessclient.Interface {
 	return w.accessClient
 }
 
-// GetSpecsClient is used to get the SMI Specs clientset.
-func (w *ClientWrapper) GetSpecsClient() specsclient.Interface {
+// SpecsClient is used to get the SMI Specs clientset.
+func (w *ClientWrapper) SpecsClient() specsclient.Interface {
 	return w.specsClient
 }
 
-// GetSplitClient is used to get the SMI Split clientset.
-func (w *ClientWrapper) GetSplitClient() splitclient.Interface {
+// SplitClient is used to get the SMI Split clientset.
+func (w *ClientWrapper) SplitClient() splitclient.Interface {
 	return w.splitClient
 }
 
 // buildClient returns a useable kubernetes client.
-func buildKubernetesClient(log logrus.FieldLogger, config *rest.Config) (*kubeclient.Clientset, error) {
+func buildKubernetesClient(log logrus.FieldLogger, config *rest.Config) (*kubernetes.Clientset, error) {
 	log.Debugln("Building Kubernetes Client...")
 
-	client, err := kubeclient.NewForConfig(config)
+	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create kubernetes client: %v", err)
 	}
