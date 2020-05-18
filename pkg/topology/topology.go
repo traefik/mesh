@@ -95,6 +95,19 @@ func (k *ServiceTrafficTargetKey) UnmarshalText(data []byte) error {
 	return nil
 }
 
+// UnmarshalJSON implements the `json.Unmarshaler` interface.
+// This is a temporary workaround for the bug described in this
+// issue: https://github.com/golang/go/issues/38771.
+func (k *ServiceTrafficTargetKey) UnmarshalJSON(data []byte) error {
+	if len(data) < 2 {
+		return nil
+	}
+
+	data = data[1 : len(data)-1]
+
+	return k.UnmarshalText(data)
+}
+
 // Topology holds the graph. Each Pods and services are nodes of the graph.
 type Topology struct {
 	Services              map[Key]*Service                                  `json:"services"`

@@ -433,6 +433,44 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	assertTopology(t, "testdata/topology-empty-destination-port.json", got)
 }
 
+func TestTopologyBuilder_BuildWithTrafficTargetAndMismatchServicePort(t *testing.T) {
+	annotations := map[string]string{}
+
+	selectorAppA := map[string]string{"app": "app-a"}
+	saA := createServiceAccount("my-ns", "service-account-a")
+	podA := createPod("my-ns", "app-a", saA, selectorAppA, "10.10.1.1")
+
+	saB := createServiceAccount("my-ns", "service-account-b")
+
+	selectorAppB1 := map[string]string{"app": "app-b1"}
+	svcB1Ports := []corev1.ServicePort{svcPort("port-8080", 8080, 8080)}
+	podB1 := createPod("my-ns", "app-b1", saB, selectorAppB1, "10.10.1.2")
+	svcB1 := createService("my-ns", "svc-b1", annotations, svcB1Ports, selectorAppB1, "10.10.1.16")
+	epB1 := createEndpoints(svcB1, []*corev1.Pod{podB1})
+
+	selectorAppB2 := map[string]string{"app": "app-b2"}
+	svcB2Ports := []corev1.ServicePort{svcPort("port-80", 80, 80)}
+	podB2 := createPod("my-ns", "app-b2", saB, selectorAppB2, "10.10.1.3")
+	svcB2 := createService("my-ns", "svc-b2", annotations, svcB2Ports, selectorAppB2, "10.10.1.17")
+	epB2 := createEndpoints(svcB2, []*corev1.Pod{podB2})
+
+	tt := createTrafficTarget("my-ns", "tt", saB, "80", []*corev1.ServiceAccount{saA}, nil, []string{})
+
+	k8sClient := fake.NewSimpleClientset(saA, podA, saB, podB1, svcB1, epB1, podB2, svcB2, epB2)
+	smiAccessClient := accessfake.NewSimpleClientset(tt)
+	smiSplitClient := splitfake.NewSimpleClientset()
+	smiSpecClient := specfake.NewSimpleClientset()
+
+	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
+	require.NoError(t, err)
+
+	ignoredResources := mk8s.NewIgnored()
+	got, err := builder.Build(ignoredResources)
+	require.NoError(t, err)
+
+	assertTopology(t, "testdata/topology-traffic-target-service-port-mismatch.json", got)
+}
+
 // TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations makes sure we can build a topology with
 // a TrafficTarget defined with multiple sources.
 func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *testing.T) {
