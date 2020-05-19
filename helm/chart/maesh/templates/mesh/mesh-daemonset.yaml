@@ -156,6 +156,9 @@ spec:
             - "--api.dashboard=false"
             - "--api.insecure"
             - "--ping"
+            - "--serversTransport.forwardingTimeouts.dialTimeout={{ .Values.mesh.forwardingTimeouts.dialTimeout }}"
+            - "--serversTransport.forwardingTimeouts.responseHeaderTimeout={{ .Values.mesh.forwardingTimeouts.responseHeaderTimeout }}"
+            - "--serversTransport.forwardingTimeouts.idleConnTimeout={{ .Values.mesh.forwardingTimeouts.idleConnTimeout }}"
             {{- if .Values.mesh.logLevel }}
             - "--log.level={{ .Values.mesh.logLevel }}"
             {{- end }}
