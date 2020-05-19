@@ -126,6 +126,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 			continue
 		}
+
 		stt.Specs = specs
 
 		// Find out which are the destination pods.
@@ -146,6 +147,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 			continue
 		}
+
 		stt.Destination.Ports = destPorts
 
 		svc.TrafficTargets = append(svc.TrafficTargets, svcTTKey)
