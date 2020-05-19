@@ -95,12 +95,28 @@ func (c *Cleanup) restoreCoreDNS() (*appsv1.Deployment, *corev1.ConfigMap, error
 		return nil, nil, err
 	}
 
+	// Get the currently loaded CoreDNS ConfigMap.
 	coreConfigMap, err := c.prep.GetCorefileConfigMap(deployment)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return deployment, coreConfigMap, nil
+	//Get the backup CoreDNS ConfigMap.
+	configmapBackup, err := c.client.KubernetesClient().CoreV1().ConfigMaps(c.namespace).Get(coreConfigMap.Name+"-backup", metav1.GetOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Reset the data to the backed up data.
+	coreConfigMap.Data = configmapBackup.Data
+	coreConfigMap.BinaryData = configmapBackup.BinaryData
+
+	// Update the CoreDNS configmap to the backup.
+	if _, err := c.client.KubernetesClient().CoreV1().ConfigMaps(coreConfigMap.Namespace).Update(coreConfigMap); err != nil {
+		return nil, nil, err
+	}
+
+	return deployment, configmapBackup, nil
 }
 
 func (c *Cleanup) restoreKubeDNS() (*appsv1.Deployment, *corev1.ConfigMap, error) {
@@ -109,10 +125,26 @@ func (c *Cleanup) restoreKubeDNS() (*appsv1.Deployment, *corev1.ConfigMap, error
 		return nil, nil, err
 	}
 
+	// Get the currently loaded KubeDNS ConfigMap.
 	kubeConfigMap, err := c.prep.GetKubeDNSConfigMap(deployment)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return deployment, kubeConfigMap, nil
+	//Get the backup KubeDNS ConfigMap.
+	configmapBackup, err := c.client.KubernetesClient().CoreV1().ConfigMaps(c.namespace).Get(kubeConfigMap.Name+"-backup", metav1.GetOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Reset the data to the backed up data.
+	kubeConfigMap.Data = configmapBackup.Data
+	kubeConfigMap.BinaryData = configmapBackup.BinaryData
+
+	// Update the KubeDNS configmap to the backup.
+	if _, err := c.client.KubernetesClient().CoreV1().ConfigMaps(kubeConfigMap.Namespace).Update(kubeConfigMap); err != nil {
+		return nil, nil, err
+	}
+
+	return deployment, configmapBackup, nil
 }
