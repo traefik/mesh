@@ -77,7 +77,7 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 			return fmt.Errorf("unable to configure CoreDNS: %v", err)
 		}
 	case prepare.KubeDNS:
-		if err := p.ConfigureKubeDNS(); err != nil {
+		if err := p.ConfigureKubeDNS(pConfig.Namespace); err != nil {
 			return fmt.Errorf("unable to configure KubeDNS: %v", err)
 		}
 	}
