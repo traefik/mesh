@@ -173,6 +173,7 @@ func TestPrepare_CoreDNSBackup(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Len(t, cfgMap.Data, 1)
+			assert.Equal(t, cfgMap.ObjectMeta.Labels["maesh-backed-up"], "true")
 			assert.Len(t, cfgMapBackup.Data, 1)
 		})
 	}
