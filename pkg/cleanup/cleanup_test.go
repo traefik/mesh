@@ -71,7 +71,6 @@ func TestCleanup_RestoreDNSConfig(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
