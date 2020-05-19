@@ -344,7 +344,7 @@ func (s *BaseSuite) createRequiredNamespaces(c *check.C) {
 func (s *BaseSuite) installHelmMaesh(c *check.C, acl bool, kubeDNS bool) error {
 	c.Log("Installing Maesh via helm...")
 	// Install the helm chart.
-	argSlice := []string{"install", "powpow", "../helm/chart/maesh", "--values", "testdata/values.yaml", "--namespace", maeshNamespace}
+	argSlice := []string{"install", "powpow", "../helm/chart/maesh", "--debug", "--values", "testdata/values.yaml", "--namespace", maeshNamespace}
 
 	if kubeDNS {
 		argSlice = append(argSlice, "--set", "kubedns=true")
@@ -354,14 +354,14 @@ func (s *BaseSuite) installHelmMaesh(c *check.C, acl bool, kubeDNS bool) error {
 		argSlice = append(argSlice, "--set", "acl=true")
 	}
 
-	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 10*time.Second)
+	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 30*time.Second)
 }
 
 func (s *BaseSuite) unInstallHelmMaesh(c *check.C) {
 	c.Log("Uninstalling Maesh via helm...")
-	// Install the helm chart.
-	argSlice := []string{"uninstall", "powpow", "--namespace", maeshNamespace}
-	err := s.try.WaitCommandExecute("helm", argSlice, "uninstalled", 10*time.Second)
+	// Uninstall the helm chart.
+	argSlice := []string{"uninstall", "powpow", "--debug", "--namespace", maeshNamespace}
+	err := s.try.WaitCommandExecute("helm", argSlice, "uninstalled", 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }
 
