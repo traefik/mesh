@@ -184,7 +184,7 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 	return nil
 }
 
-// backupConfigMap backs up a configmap with `-backup` appended to its name.
+// backupConfigMap backs up a configmap with `-backup` appended to its name, and returns the updated configmap.
 func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap, maeshNamespace string) (*corev1.ConfigMap, error) {
 	// Create a copy of the configmap, but with new objectmeta to avoid conflicts.
 	newConfigMap := &corev1.ConfigMap{
