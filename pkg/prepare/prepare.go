@@ -159,15 +159,10 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 	if !isBackedUp(coreConfigMap) {
 		p.log.Debug("Backing up CoreDNS configmap")
 
-		if err = p.backupConfigMap(coreConfigMap, maeshNamespace); err != nil {
+		coreConfigMap, err = p.backupConfigMap(coreConfigMap, maeshNamespace)
+		if err != nil {
 			return err
 		}
-	}
-
-	// We need to get the updated configmap since it may have been changed via the backup.
-	coreConfigMap, err = p.GetCorefileConfigMap(deployment)
-	if err != nil {
-		return err
 	}
 
 	if isPatched(coreConfigMap) {
@@ -190,7 +185,7 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 }
 
 // backupConfigMap backs up a configmap with `-backup` appended to its name.
-func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap, maeshNamespace string) error {
+func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap, maeshNamespace string) (*corev1.ConfigMap, error) {
 	// Create a copy of the configmap, but with new objectmeta to avoid conflicts.
 	newConfigMap := &corev1.ConfigMap{
 		TypeMeta: configMap.TypeMeta,
@@ -205,13 +200,13 @@ func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap, maeshNamespace st
 	if _, err := p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Get(newConfigMap.Name, metav1.GetOptions{}); err == nil {
 		// Backup already exists, delete it.
 		if err = p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Delete(newConfigMap.Name, &metav1.DeleteOptions{}); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// Create backup configmap.
 	if _, err := p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Create(newConfigMap); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Label the configmap as backed up.
@@ -222,11 +217,7 @@ func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap, maeshNamespace st
 	configMap.ObjectMeta.Labels["maesh-backed-up"] = "true"
 
 	// Update the configmap to show as backed up.
-	if _, err := p.client.KubernetesClient().CoreV1().ConfigMaps(configMap.Namespace).Update(configMap); err != nil {
-		return err
-	}
-
-	return nil
+	return p.client.KubernetesClient().CoreV1().ConfigMaps(configMap.Namespace).Update(configMap)
 }
 
 func (p *Prepare) patchCoreDNSConfigMap(coreConfigMap *corev1.ConfigMap, clusterDomain, maeshNamespace, coreNamespace string) error {
@@ -337,15 +328,10 @@ func (p *Prepare) ConfigureKubeDNS(maeshNamespace string) error {
 	if !isBackedUp(configMap) {
 		p.log.Debug("Backing up KubeDNS configmap")
 
-		if err = p.backupConfigMap(configMap, maeshNamespace); err != nil {
+		configMap, err = p.backupConfigMap(configMap, maeshNamespace)
+		if err != nil {
 			return err
 		}
-	}
-
-	// We need to get the updated configmap since it may have been changed via the backup.
-	configMap, err = p.GetKubeDNSConfigMap(deployment)
-	if err != nil {
-		return err
 	}
 
 	if isPatched(configMap) {
