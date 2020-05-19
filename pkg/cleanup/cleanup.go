@@ -111,6 +111,10 @@ func (c *Cleanup) restoreCoreDNS() (*appsv1.Deployment, *corev1.ConfigMap, error
 	coreConfigMap.Data = configmapBackup.Data
 	coreConfigMap.BinaryData = configmapBackup.BinaryData
 
+	// Remove patch and backup labels.
+	delete(coreConfigMap.ObjectMeta.Labels, "maesh-patched")
+	delete(coreConfigMap.ObjectMeta.Labels, "maesh-backed-up")
+
 	// Update the CoreDNS configmap to the backup.
 	if _, err := c.client.KubernetesClient().CoreV1().ConfigMaps(coreConfigMap.Namespace).Update(coreConfigMap); err != nil {
 		return nil, nil, err
@@ -140,6 +144,10 @@ func (c *Cleanup) restoreKubeDNS() (*appsv1.Deployment, *corev1.ConfigMap, error
 	// Reset the data to the backed up data.
 	kubeConfigMap.Data = configmapBackup.Data
 	kubeConfigMap.BinaryData = configmapBackup.BinaryData
+
+	// Remove patch and backup labels.
+	delete(kubeConfigMap.ObjectMeta.Labels, "maesh-patched")
+	delete(kubeConfigMap.ObjectMeta.Labels, "maesh-backed-up")
 
 	// Update the KubeDNS configmap to the backup.
 	if _, err := c.client.KubernetesClient().CoreV1().ConfigMaps(kubeConfigMap.Namespace).Update(kubeConfigMap); err != nil {
