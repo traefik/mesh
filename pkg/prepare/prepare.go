@@ -159,9 +159,15 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 	if !isBackedUp(coreConfigMap) {
 		p.log.Debug("Backing up CoreDNS configmap")
 
-		if err := p.backupConfigMap(coreConfigMap, maeshNamespace); err != nil {
+		if err = p.backupConfigMap(coreConfigMap, maeshNamespace); err != nil {
 			return err
 		}
+	}
+
+	// We need to get the updated configmap since it may have been changed via the backup.
+	coreConfigMap, err = p.GetCorefileConfigMap(deployment)
+	if err != nil {
+		return err
 	}
 
 	if isPatched(coreConfigMap) {
@@ -331,9 +337,15 @@ func (p *Prepare) ConfigureKubeDNS(maeshNamespace string) error {
 	if !isBackedUp(configMap) {
 		p.log.Debug("Backing up KubeDNS configmap")
 
-		if err := p.backupConfigMap(configMap, maeshNamespace); err != nil {
+		if err = p.backupConfigMap(configMap, maeshNamespace); err != nil {
 			return err
 		}
+	}
+
+	// We need to get the updated configmap since it may have been changed via the backup.
+	configMap, err = p.GetKubeDNSConfigMap(deployment)
+	if err != nil {
+		return err
 	}
 
 	if isPatched(configMap) {
