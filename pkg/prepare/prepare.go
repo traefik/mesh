@@ -183,19 +183,22 @@ func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
 
 // backupConfigMap backs up a configmap with `-backup` appended to its name.
 func (p *Prepare) backupConfigMap(configMap *corev1.ConfigMap, maeshNamespace string) error {
-	newConfigMap := configMap.DeepCopy()
-
-	newConfigMap.Name = configMap.Name + "-backup"
-	newConfigMap.Namespace = maeshNamespace
-
-	// Remove resourceVersion since it is not to be set manually.
-	newConfigMap.ObjectMeta.ResourceVersion = ""
+	// Create a copy of the configmap, but with new objectmeta to avoid conflicts.
+	newConfigMap := &corev1.ConfigMap{
+		TypeMeta: configMap.TypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configMap.Name + "-backup",
+			Namespace: maeshNamespace,
+		},
+		Data:       configMap.Data,
+		BinaryData: configMap.BinaryData,
+	}
 
 	if _, err := p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Get(newConfigMap.Name, metav1.GetOptions{}); err == nil {
-		// Backup already exists, update it.
-		_, err = p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Update(newConfigMap)
-
-		return err
+		// Backup already exists, delete it.
+		if err = p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Delete(newConfigMap.Name, &metav1.DeleteOptions{}); err != nil {
+			return err
+		}
 	}
 
 	_, err := p.client.KubernetesClient().CoreV1().ConfigMaps(newConfigMap.Namespace).Create(newConfigMap)
