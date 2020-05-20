@@ -51,5 +51,9 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 		return fmt.Errorf("error encountered during cluster cleanup: %w", err)
 	}
 
+	if err := c.RestoreDNSConfig(); err != nil {
+		return fmt.Errorf("error encountered during DNS restore: %w", err)
+	}
+
 	return nil
 }
