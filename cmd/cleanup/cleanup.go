@@ -52,7 +52,7 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 	}
 
 	if err := c.RestoreDNSConfig(); err != nil {
-		return fmt.Errorf("error encountered during dns restore: %w", err)
+		return fmt.Errorf("error encountered during DNS restore: %w", err)
 	}
 
 	return nil

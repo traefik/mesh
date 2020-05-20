@@ -44,5 +44,5 @@ func (s *KubeDNSSuite) TestKubeDNS(c *check.C) {
 		"exec", "-i", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
 	}
 	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmMaesh(c)
+	s.uninstallHelmMaesh(c)
 }
