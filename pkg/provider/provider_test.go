@@ -1,4 +1,4 @@
-package provider_test
+package provider
 
 import (
 	"encoding/json"
@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	mk8s "github.com/containous/maesh/pkg/k8s"
-	"github.com/containous/maesh/pkg/provider"
 	"github.com/containous/maesh/pkg/topology"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
@@ -120,7 +119,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 				defaultTrafficType = test.defaultTrafficType
 			}
 
-			cfg := provider.Config{
+			cfg := Config{
 				IgnoredResources:   mk8s.NewIgnored(),
 				MinHTTPPort:        10000,
 				MaxHTTPPort:        10010,
@@ -148,7 +147,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 				return nil, nil
 			}
 
-			p := provider.New(stateTableMock(tcpStateTable), stateTableMock(udpStateTable), middlewareBuilder, cfg, logger)
+			p := New(stateTableMock(tcpStateTable), stateTableMock(udpStateTable), middlewareBuilder, cfg, logger)
 
 			topo, err := loadTopology(test.topology)
 			require.NoError(t, err)
