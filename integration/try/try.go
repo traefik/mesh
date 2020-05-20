@@ -182,7 +182,7 @@ func (t *Try) WaitCommandExecute(command string, argSlice []string, expected str
 			return fmt.Errorf("output %s does not contain %s", string(output), expected)
 		}
 
-		fmt.Print(string(output))
+		t.log.Debug(string(output))
 
 		return nil
 	}), ebo); err != nil {
