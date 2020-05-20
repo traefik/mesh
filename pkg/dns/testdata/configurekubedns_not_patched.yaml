@@ -15,8 +15,6 @@ kind: ConfigMap
 metadata:
   name: kubedns-cfgmap
   namespace: kube-system
-  labels:
-    maesh-patched: "true"
 ---
 apiVersion: v1
 kind: Service
