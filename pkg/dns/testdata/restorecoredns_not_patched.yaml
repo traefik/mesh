@@ -6,9 +6,6 @@ metadata:
 spec:
   template:
     spec:
-      containers:
-        - name: coredns
-          image: coredns/coredns:1.6.3
       volumes:
         - configMap:
             name: "other-cfgmap"
@@ -26,9 +23,6 @@ kind: ConfigMap
 metadata:
   name: coredns-cfgmap
   namespace: kube-system
-  labels:
-    "maesh-backed-up": "true"
-    "maesh-patched": "true"
 data:
   Corefile: |
     .:53 {
@@ -49,31 +43,3 @@ data:
         reload
         loadbalance
     }
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: coredns-cfgmap-backup
-  namespace: maesh
-data:
-  Corefile: |
-    .:53 {
-        errors
-        health {
-            lameduck 5s
-        }
-        ready
-        kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {
-            pods insecure
-            fallthrough in-addr.arpa ip6.arpa
-            ttl 30
-        }
-        prometheus :9153
-        forward . /etc/resolv.conf
-        cache 30
-        loop
-        reload
-        loadbalance
-          }
-      

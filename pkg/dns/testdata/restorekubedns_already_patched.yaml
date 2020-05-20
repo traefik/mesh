@@ -15,17 +15,9 @@ kind: ConfigMap
 metadata:
   name: kubedns-cfgmap
   namespace: kube-system
-  labels:
-    "maesh-backed-up": "true"
-    "maesh-patched": "true"
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kubedns-cfgmap-backup
-  namespace: maesh
-
+data:
+  stubDomains: |
+    {"maesh":["1.2.3.4"], "test":["5.6.7.8"]}
 ---
 apiVersion: v1
 kind: Service

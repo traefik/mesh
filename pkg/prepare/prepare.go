@@ -19,12 +19,12 @@ import (
 type Prepare struct {
 	client k8s.Client
 	log    logrus.FieldLogger
-	dns    *dns.DNSClient
+	dns    *dns.Client
 }
 
 // NewPrepare returns an initialized prepare object.
 func NewPrepare(log logrus.FieldLogger, client k8s.Client) *Prepare {
-	dns := dns.NewDNSClient(log, client)
+	dns := dns.NewClient(log, client)
 
 	return &Prepare{
 		client: client,
@@ -119,7 +119,7 @@ func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{})
 }
 
 // CheckDNSProvider checks if the required informers can start and sync in a reasonable time.
-func (p *Prepare) CheckDNSProvider() (dns.DNSProvider, error) {
+func (p *Prepare) CheckDNSProvider() (dns.Provider, error) {
 	return p.dns.CheckDNSProvider()
 }
 
