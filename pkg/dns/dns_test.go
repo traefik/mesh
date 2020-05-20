@@ -1,11 +1,11 @@
-package prepare_test
+package dns_test
 
 import (
 	"context"
 	"testing"
 
+	"github.com/containous/maesh/pkg/dns"
 	"github.com/containous/maesh/pkg/k8s"
-	"github.com/containous/maesh/pkg/prepare"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +18,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 		mockFile string
 
-		expectedProvider prepare.DNSProvider
+		expectedProvider dns.DNSProvider
 		expectedErr      bool
 	}{
 		{
@@ -26,7 +26,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			mockFile: "checkdnsprovider_supported_version.yaml",
 
-			expectedProvider: prepare.CoreDNS,
+			expectedProvider: dns.CoreDNS,
 			expectedErr:      false,
 		},
 		{
@@ -34,7 +34,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			mockFile: "checkdnsprovider_kubedns.yaml",
 
-			expectedProvider: prepare.KubeDNS,
+			expectedProvider: dns.KubeDNS,
 			expectedErr:      false,
 		},
 		{
@@ -42,7 +42,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			mockFile: "checkdnsprovider_unsupported_version.yaml",
 
-			expectedProvider: prepare.UnknownDNS,
+			expectedProvider: dns.UnknownDNS,
 			expectedErr:      true,
 		},
 		{
@@ -50,7 +50,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			mockFile: "checkdnsprovider_no_provider.yaml",
 
-			expectedProvider: prepare.UnknownDNS,
+			expectedProvider: dns.UnknownDNS,
 			expectedErr:      true,
 		},
 	}
@@ -62,8 +62,8 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
-			prep := prepare.NewPrepare(logrus.New(), clt)
-			provider, err := prep.CheckDNSProvider()
+			client := dns.NewDNSClient(logrus.New(), clt)
+			provider, err := client.CheckDNSProvider()
 
 			if test.expectedErr {
 				assert.Error(t, err)
@@ -91,7 +91,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 			mockFile: "configurecoredns_not_patched.yaml",
 
 			expectedErr:      false,
-			expectedCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\nmaesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.maesh toto-{1}-6d61657368-{2}.toto.svc.titi\n        answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.maesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        upstream\n    \tfallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n",
+			expectedCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Maesh Block\nmaesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.maesh toto-{1}-6d61657368-{2}.toto.svc.titi\n        answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.maesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        upstream\n    \tfallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Maesh Block\n",
 		},
 		{
 			desc: "Missing Corefile configmap",
@@ -113,7 +113,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 			mockFile: "configurecoredns_already_patched.yaml",
 
 			expectedErr:      false,
-			expectedCorefile: ".:53 {\n        errors\n        health {\n            lameduck 5s\n        }\n        ready\n        kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n            pods insecure\n            fallthrough in-addr.arpa ip6.arpa\n            ttl 30\n        }\n        prometheus :9153\n        forward . /etc/resolv.conf\n        cache 30\n        loop\n        reload\n        loadbalance\n    }\nmaesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.maesh toto-{1}-6d61657368-{2}.toto.svc.titi\n        answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.maesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        upstream\n    \tfallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n",
+			expectedCorefile: ".:53 {\n        errors\n        health {\n            lameduck 5s\n        }\n        ready\n        kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n            pods insecure\n            fallthrough in-addr.arpa ip6.arpa\n            ttl 30\n        }\n        prometheus :9153\n        forward . /etc/resolv.conf\n        cache 30\n        loop\n        reload\n        loadbalance\n    }\n#### Begin Maesh Block\nmaesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.maesh toto-{1}-6d61657368-{2}.toto.svc.titi\n        answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.maesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        upstream\n    \tfallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Maesh Block\n",
 		},
 	}
 
@@ -124,8 +124,8 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
-			prep := prepare.NewPrepare(logrus.New(), clt)
-			err := prep.ConfigureCoreDNS("titi", "toto")
+			client := dns.NewDNSClient(logrus.New(), clt)
+			err := client.ConfigureCoreDNS("titi", "toto")
 			if test.expectedErr {
 				assert.Error(t, err)
 				return
@@ -163,7 +163,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			mockFile: "configurekubedns_already_patched.yaml",
 
-			expectedErr: false,
+			expectedStubDomains: `{"maesh":["1.2.3.4"]}`,
 		},
 		{
 			desc: "Missing KubeDNS deployment",
@@ -181,8 +181,8 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
-			prep := prepare.NewPrepare(logrus.New(), clt)
-			err := prep.ConfigureKubeDNS()
+			client := dns.NewDNSClient(logrus.New(), clt)
+			err := client.ConfigureKubeDNS("maesh")
 			if test.expectedErr {
 				assert.Error(t, err)
 				return

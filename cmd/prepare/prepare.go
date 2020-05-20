@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/containous/maesh/cmd"
+	"github.com/containous/maesh/pkg/dns"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/prepare"
 	"github.com/containous/traefik/v2/pkg/cli"
@@ -72,12 +73,12 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 	}
 
 	switch provider {
-	case prepare.CoreDNS:
+	case dns.CoreDNS:
 		if err := p.ConfigureCoreDNS(pConfig.ClusterDomain, pConfig.Namespace); err != nil {
 			return fmt.Errorf("unable to configure CoreDNS: %v", err)
 		}
-	case prepare.KubeDNS:
-		if err := p.ConfigureKubeDNS(); err != nil {
+	case dns.KubeDNS:
+		if err := p.ConfigureKubeDNS(pConfig.Namespace); err != nil {
 			return fmt.Errorf("unable to configure KubeDNS: %v", err)
 		}
 	}

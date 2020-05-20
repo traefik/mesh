@@ -16,7 +16,16 @@ metadata:
   name: kubedns-cfgmap
   namespace: kube-system
   labels:
-    maesh-patched: "true"
+    "maesh-backed-up": "true"
+    "maesh-patched": "true"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubedns-cfgmap-backup
+  namespace: maesh
+
 ---
 apiVersion: v1
 kind: Service
