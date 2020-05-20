@@ -1,9 +1,8 @@
-package annotations_test
+package annotations
 
 import (
 	"testing"
 
-	"github.com/containous/maesh/pkg/annotations"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,34 +24,34 @@ func TestGetTrafficType(t *testing.T) {
 		{
 			desc:        "returns the default traffic-type if not set",
 			annotations: map[string]string{},
-			want:        annotations.ServiceTypeHTTP,
+			want:        ServiceTypeHTTP,
 		},
 		{
 			desc: "http",
 			annotations: map[string]string{
 				"maesh.containo.us/traffic-type": "http",
 			},
-			want: annotations.ServiceTypeHTTP,
+			want: ServiceTypeHTTP,
 		},
 		{
 			desc: "tcp",
 			annotations: map[string]string{
 				"maesh.containo.us/traffic-type": "tcp",
 			},
-			want: annotations.ServiceTypeTCP,
+			want: ServiceTypeTCP,
 		},
 		{
 			desc: "udp",
 			annotations: map[string]string{
 				"maesh.containo.us/traffic-type": "udp",
 			},
-			want: annotations.ServiceTypeUDP,
+			want: ServiceTypeUDP,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			tt, err := annotations.GetTrafficType(annotations.ServiceTypeHTTP, test.annotations)
+			tt, err := GetTrafficType(ServiceTypeHTTP, test.annotations)
 			if test.err {
 				assert.Error(t, err)
 			} else {
@@ -80,34 +79,34 @@ func TestGetScheme(t *testing.T) {
 		{
 			desc:        "returns the default scheme if not set",
 			annotations: map[string]string{},
-			want:        annotations.SchemeHTTP,
+			want:        SchemeHTTP,
 		},
 		{
 			desc: "http",
 			annotations: map[string]string{
 				"maesh.containo.us/scheme": "http",
 			},
-			want: annotations.SchemeHTTP,
+			want: SchemeHTTP,
 		},
 		{
 			desc: "https",
 			annotations: map[string]string{
 				"maesh.containo.us/scheme": "https",
 			},
-			want: annotations.SchemeHTTPS,
+			want: SchemeHTTPS,
 		},
 		{
 			desc: "h2c",
 			annotations: map[string]string{
 				"maesh.containo.us/scheme": "h2c",
 			},
-			want: annotations.SchemeH2C,
+			want: SchemeH2C,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			tt, err := annotations.GetScheme(test.annotations)
+			tt, err := GetScheme(test.annotations)
 			if test.err {
 				assert.Error(t, err)
 			} else {
@@ -119,7 +118,7 @@ func TestGetScheme(t *testing.T) {
 }
 
 func TestGetRetryAttempts_Valid(t *testing.T) {
-	attempts, err := annotations.GetRetryAttempts(map[string]string{
+	attempts, err := GetRetryAttempts(map[string]string{
 		"maesh.containo.us/retry-attempts": "2",
 	})
 
@@ -128,13 +127,13 @@ func TestGetRetryAttempts_Valid(t *testing.T) {
 }
 
 func TestGetRetryAttempts_NotSet(t *testing.T) {
-	_, err := annotations.GetRetryAttempts(map[string]string{})
+	_, err := GetRetryAttempts(map[string]string{})
 
-	assert.Equal(t, annotations.ErrNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 }
 
 func TestGetRetryAttempts_Invalid(t *testing.T) {
-	_, err := annotations.GetRetryAttempts(map[string]string{
+	_, err := GetRetryAttempts(map[string]string{
 		"maesh.containo.us/retry-attempts": "hello",
 	})
 
@@ -142,7 +141,7 @@ func TestGetRetryAttempts_Invalid(t *testing.T) {
 }
 
 func TestGetCircuitBreakerExpression_Valid(t *testing.T) {
-	expression, err := annotations.GetCircuitBreakerExpression(map[string]string{
+	expression, err := GetCircuitBreakerExpression(map[string]string{
 		"maesh.containo.us/circuit-breaker-expression": "LatencyAtQuantileMS(50.0) > 100",
 	})
 
@@ -151,13 +150,13 @@ func TestGetCircuitBreakerExpression_Valid(t *testing.T) {
 }
 
 func TestGetCircuitBreakerExpression_NotSet(t *testing.T) {
-	_, err := annotations.GetCircuitBreakerExpression(map[string]string{})
+	_, err := GetCircuitBreakerExpression(map[string]string{})
 
-	assert.Equal(t, annotations.ErrNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 }
 
 func TestGetRateLimitBurst_Valid(t *testing.T) {
-	attempts, err := annotations.GetRateLimitBurst(map[string]string{
+	attempts, err := GetRateLimitBurst(map[string]string{
 		"maesh.containo.us/ratelimit-burst": "200",
 	})
 
@@ -166,13 +165,13 @@ func TestGetRateLimitBurst_Valid(t *testing.T) {
 }
 
 func TestGetRateLimitBurst_NotSet(t *testing.T) {
-	_, err := annotations.GetRateLimitBurst(map[string]string{})
+	_, err := GetRateLimitBurst(map[string]string{})
 
-	assert.Equal(t, annotations.ErrNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 }
 
 func TestGetRateLimitBurst_Invalid(t *testing.T) {
-	_, err := annotations.GetRateLimitBurst(map[string]string{
+	_, err := GetRateLimitBurst(map[string]string{
 		"maesh.containo.us/ratelimit-burst": "hello",
 	})
 
@@ -180,7 +179,7 @@ func TestGetRateLimitBurst_Invalid(t *testing.T) {
 }
 
 func TestGetRateLimitAverage_Valid(t *testing.T) {
-	attempts, err := annotations.GetRateLimitAverage(map[string]string{
+	attempts, err := GetRateLimitAverage(map[string]string{
 		"maesh.containo.us/ratelimit-average": "100",
 	})
 
@@ -189,13 +188,13 @@ func TestGetRateLimitAverage_Valid(t *testing.T) {
 }
 
 func TestGetRateLimitAverage_NotSet(t *testing.T) {
-	_, err := annotations.GetRateLimitAverage(map[string]string{})
+	_, err := GetRateLimitAverage(map[string]string{})
 
-	assert.Equal(t, annotations.ErrNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 }
 
 func TestGetRateLimitAverage_Invalid(t *testing.T) {
-	_, err := annotations.GetRateLimitAverage(map[string]string{
+	_, err := GetRateLimitAverage(map[string]string{
 		"maesh.containo.us/ratelimit-average": "hello",
 	})
 
