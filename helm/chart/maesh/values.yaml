@@ -41,7 +41,12 @@ mesh:
   # Added so we can launch on nodes with restrictions
   nodeSelector: {}
   tolerations: []
-
+  # forwardingTimeouts:
+  #   dialTimeout: "30s"
+  #   (Optional)
+  #   responseHeaderTimeout: "0s"
+  #   (Optional)
+  #   idleConnTimeout: "1s"
 #
 # Tracing configuration
 #
