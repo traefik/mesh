@@ -1,13 +1,11 @@
-package controller_test
+package controller
 
 import (
 	"context"
-	"errors"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/containous/maesh/pkg/controller"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -28,588 +26,613 @@ type portMapperMock struct {
 }
 
 func (t portMapperMock) Find(svc k8s.ServiceWithPort) (int32, bool) {
+	if t.findFunc == nil {
+		return 0, false
+	}
+
 	return t.findFunc(svc)
 }
 
 func (t portMapperMock) Add(svc *k8s.ServiceWithPort) (int32, error) {
+	if t.addFunc == nil {
+		return 0, nil
+	}
+
 	return t.addFunc(svc)
 }
 
 func (t portMapperMock) Remove(svc k8s.ServiceWithPort) (int32, error) {
+	if t.removeFunc == nil {
+		return 0, nil
+	}
+
 	return t.removeFunc(svc)
 }
 
-//nolint:gocognit // This returns a false positive due to the portmapper funcs defined in the test loop.
-func TestShadowServiceManager_Create(t *testing.T) {
+func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 	tests := []struct {
-		name        string
-		provided    corev1.Service
-		expected    corev1.Service
-		findTCPPort int32
-		addTCPPort  int32
-		findUDPPort int32
-		addUDPPort  int32
-		expectedErr bool
+		desc              string
+		defaultMode       string
+		svc               *corev1.Service
+		currentShadowSvc  *corev1.Service
+		expectedShadowSvc *corev1.Service
 	}{
 		{
-			name: "does not create when shadow service already exists",
-			provided: corev1.Service{
+			desc:        "should create a shadow service",
+			defaultMode: "tcp",
+			svc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "alreadyexist",
-					Namespace: "namespace",
-				},
-			},
-			expected: corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-alreadyexist-6d61657368-namespace",
-					Namespace: "maesh",
-					Labels: map[string]string{
-						"app":               "maesh",
-						"type":              "shadow",
-						"test-alreadyexist": "true",
-					},
-				},
-			},
-		},
-		{
-			name: "create HTTP service by default",
-			provided: corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "http-default",
-					Namespace: "namespace",
+					Name:      "foo",
+					Namespace: "bar",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
 						{
-							Name:     "portName",
 							Protocol: corev1.ProtocolTCP,
-							Port:     80,
+							Port:     8080,
 						},
 					},
 				},
 			},
-			expected: corev1.Service{
+			expectedShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-http-default-6d61657368-namespace",
+					Name:      "maesh-foo-6d61657368-bar",
 					Namespace: "maesh",
-					Labels: map[string]string{
-						"app":  "maesh",
-						"type": "shadow",
-					},
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
 						{
-							Name:       "portName",
 							Protocol:   corev1.ProtocolTCP,
-							Port:       80,
-							TargetPort: intstr.FromInt(5000),
-						},
-					},
-					Selector: map[string]string{
-						"component": "maesh-mesh",
-					},
-				},
-			},
-			expectedErr: false,
-		},
-		{
-			name: "create HTTP service",
-			provided: corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "http",
-					Namespace: "namespace",
-					Annotations: map[string]string{
-						"maesh.containo.us/traffic-type": "http",
-					}},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:     "portName",
-							Protocol: corev1.ProtocolTCP,
-							Port:     80,
-						},
-					},
-				},
-			},
-			expected: corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-http-6d61657368-namespace",
-					Namespace: "maesh",
-					Labels: map[string]string{
-						"app":  "maesh",
-						"type": "shadow",
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "portName",
-							Protocol:   corev1.ProtocolTCP,
-							Port:       80,
-							TargetPort: intstr.FromInt(5000),
-						},
-					},
-					Selector: map[string]string{
-						"component": "maesh-mesh",
-					},
-				},
-			},
-			expectedErr: false,
-		},
-		{
-			name: "create UDP service, reuse UDP port",
-			provided: corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "udp-reuse",
-					Namespace: "namespace",
-					Annotations: map[string]string{
-						"maesh.containo.us/traffic-type": "udp",
-					}},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:     "portName",
-							Protocol: corev1.ProtocolUDP,
-							Port:     80,
-						},
-					},
-				},
-			},
-			expected: corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-udp-reuse-6d61657368-namespace",
-					Namespace: "maesh",
-					Labels: map[string]string{
-						"app":  "maesh",
-						"type": "shadow",
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "portName",
-							Protocol:   corev1.ProtocolUDP,
-							Port:       80,
+							Port:       8080,
 							TargetPort: intstr.FromInt(10000),
 						},
 					},
-					Selector: map[string]string{
-						"component": "maesh-mesh",
-					},
 				},
 			},
-			findUDPPort: 10000,
-			expectedErr: false,
 		},
 		{
-			name: "create UDP service",
-			provided: corev1.Service{
+			desc:        "should update the existing shadow service and remove the unused port",
+			defaultMode: "tcp",
+			svc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "udp",
-					Namespace: "namespace",
-					Annotations: map[string]string{
-						"maesh.containo.us/traffic-type": "udp",
-					}},
+					Name:      "foo",
+					Namespace: "bar",
+				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
-						{
-							Name:     "portName",
-							Protocol: corev1.ProtocolUDP,
-							Port:     80,
-						},
+						{Protocol: corev1.ProtocolTCP, Port: 8080},
 					},
 				},
 			},
-			expected: corev1.Service{
+			currentShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-udp-6d61657368-namespace",
+					Name:      "maesh-foo-6d61657368-bar",
 					Namespace: "maesh",
-					Labels: map[string]string{
-						"app":  "maesh",
-						"type": "shadow",
-					},
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
 						{
-							Name:       "portName",
-							Protocol:   corev1.ProtocolUDP,
-							Port:       80,
-							TargetPort: intstr.FromInt(10001),
-						},
-					},
-					Selector: map[string]string{
-						"component": "maesh-mesh",
-					},
-				},
-			},
-			addUDPPort:  10001,
-			expectedErr: false,
-		},
-	}
-
-	client, lister := makeClient(&corev1.Service{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      "maesh-alreadyexist-6d61657368-namespace",
-			Namespace: "maesh",
-			Labels: map[string]string{
-				"app":               "maesh",
-				"type":              "shadow",
-				"test-alreadyexist": "true",
-			},
-		},
-	})
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tcpPortMapper := portMapperMock{
-				findFunc: func(svc k8s.ServiceWithPort) (i int32, b bool) {
-					if test.findTCPPort != 0 {
-						return test.findTCPPort, true
-					}
-					return 0, false
-				},
-				addFunc: func(svc *k8s.ServiceWithPort) (i int32, err error) {
-					if test.addTCPPort != 0 {
-						return test.addTCPPort, nil
-					}
-					return 0, errors.New("nope")
-				},
-			}
-			udpPortMapper := portMapperMock{
-				findFunc: func(svc k8s.ServiceWithPort) (i int32, b bool) {
-					if test.findUDPPort != 0 {
-						return test.findUDPPort, true
-					}
-					return 0, false
-				},
-				addFunc: func(svc *k8s.ServiceWithPort) (i int32, err error) {
-					if test.addUDPPort != 0 {
-						return test.addUDPPort, nil
-					}
-					return 0, errors.New("nope")
-				},
-			}
-
-			log := logrus.New()
-
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
-
-			service := controller.NewShadowServiceManager(log, lister, "maesh", tcpPortMapper, udpPortMapper, "http", 5000, 5002, client)
-			err := service.Create(&test.provided)
-			if test.expectedErr {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-
-			svcGot, err := client.CoreV1().Services("maesh").Get(test.expected.Name, v1.GetOptions{})
-			assert.NoError(t, err)
-
-			assert.Equal(t, &test.expected, svcGot)
-		})
-	}
-}
-
-func TestShadowServiceManager_Update(t *testing.T) {
-	tests := []struct {
-		name              string
-		defaultMode       string
-		portProtocol      corev1.Protocol
-		tcpPortMapperMock func(*k8s.ServiceWithPort, *k8s.ServiceWithPort) portMapperMock
-		udpPortMapperMock func(*k8s.ServiceWithPort, *k8s.ServiceWithPort) portMapperMock
-	}{
-		{
-			name:         "update TCP service",
-			defaultMode:  "tcp",
-			portProtocol: corev1.ProtocolTCP,
-			udpPortMapperMock: func(addedPortMapping, removedPortMapping *k8s.ServiceWithPort) portMapperMock {
-				return portMapperMock{}
-			},
-			tcpPortMapperMock: func(addedPortMapping, removedPortMapping *k8s.ServiceWithPort) portMapperMock {
-				return portMapperMock{
-					findFunc: func(svc k8s.ServiceWithPort) (int32, bool) {
-						return 0, false
-					},
-					addFunc: func(svc *k8s.ServiceWithPort) (int32, error) {
-						*addedPortMapping = *svc
-						return 10001, nil
-					},
-					removeFunc: func(svc k8s.ServiceWithPort) (int32, error) {
-						*removedPortMapping = svc
-						return 10001, nil
-					},
-				}
-			},
-		},
-		{
-			name:         "update UDP service",
-			defaultMode:  "udp",
-			portProtocol: corev1.ProtocolUDP,
-			tcpPortMapperMock: func(addedPortMapping, removedPortMapping *k8s.ServiceWithPort) portMapperMock {
-				return portMapperMock{}
-			},
-			udpPortMapperMock: func(addedPortMapping, removedPortMapping *k8s.ServiceWithPort) portMapperMock {
-				return portMapperMock{
-					findFunc: func(svc k8s.ServiceWithPort) (int32, bool) {
-						return 0, false
-					},
-					addFunc: func(svc *k8s.ServiceWithPort) (int32, error) {
-						*addedPortMapping = *svc
-						return 10001, nil
-					},
-					removeFunc: func(svc k8s.ServiceWithPort) (int32, error) {
-						*removedPortMapping = svc
-						return 10001, nil
-					},
-				}
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			shadowSvc := &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-my-svc-6d61657368-my-ns",
-					Namespace: "maesh",
-					Labels: map[string]string{
-						"app":  "maesh",
-						"type": "shadow",
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "portName",
-							Protocol:   test.portProtocol,
+							Protocol:   corev1.ProtocolTCP,
 							Port:       8080,
+							TargetPort: intstr.FromInt(10005),
+						},
+						{
+							Protocol:   corev1.ProtocolTCP,
+							Port:       8081,
 							TargetPort: intstr.FromInt(10001),
 						},
 					},
-					Selector: map[string]string{
-						"component": "maesh-mesh",
+				},
+			},
+			expectedShadowSvc: &corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "maesh-foo-6d61657368-bar",
+					Namespace: "maesh",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Protocol:   corev1.ProtocolTCP,
+							Port:       8080,
+							TargetPort: intstr.FromInt(10000),
+						},
 					},
 				},
-			}
-			client, lister := makeClient(shadowSvc)
+			},
+		},
+		{
+			desc:        "should update existing shadow service and reuse port mappings",
+			defaultMode: "tcp",
+			svc: &corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "bar",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{Protocol: corev1.ProtocolTCP, Port: 8080},
+					},
+				},
+			},
+			currentShadowSvc: &corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "maesh-foo-6d61657368-bar",
+					Namespace: "maesh",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Protocol:   corev1.ProtocolTCP,
+							Port:       8080,
+							TargetPort: intstr.FromInt(10000),
+						},
+					},
+				},
+			},
+			expectedShadowSvc: &corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "maesh-foo-6d61657368-bar",
+					Namespace: "maesh",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Protocol:   corev1.ProtocolTCP,
+							Port:       8080,
+							TargetPort: intstr.FromInt(10000),
+						},
+					},
+				},
+			},
+		},
+	}
 
-			var addedPortMapping, removedPortMapping k8s.ServiceWithPort
-
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
 			log := logrus.New()
 
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			service := controller.NewShadowServiceManager(
-				log, lister,
+			currentShadowServices := make([]runtime.Object, 0)
+			if test.currentShadowSvc != nil {
+				currentShadowServices = append(currentShadowServices, test.currentShadowSvc)
+			}
+
+			client, lister := newFakeClient(currentShadowServices...)
+
+			tcpPortMapperMock := portMapperMock{
+				findFunc: func(svc k8s.ServiceWithPort) (int32, bool) {
+					return 0, false
+				},
+				addFunc: func(svc *k8s.ServiceWithPort) (int32, error) {
+					return 10000, nil
+				},
+				removeFunc: func(svc k8s.ServiceWithPort) (int32, error) {
+					return 10000, nil
+				},
+			}
+
+			shadowServiceManager := NewShadowServiceManager(
+				log,
+				lister,
 				"maesh",
-				test.tcpPortMapperMock(&addedPortMapping, &removedPortMapping),
-				test.udpPortMapperMock(&addedPortMapping, &removedPortMapping),
+				tcpPortMapperMock,
+				portMapperMock{},
 				test.defaultMode,
 				5000,
 				5002,
 				client,
 			)
 
-			oldUserSvc := corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "my-svc",
-					Namespace: "my-ns",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:     "portName",
-							Protocol: test.portProtocol,
-							Port:     8090,
-						},
-					},
-				},
-			}
-			newUserSvc := corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "my-svc",
-					Namespace: "my-ns",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:     "portName",
-							Protocol: test.portProtocol,
-							Port:     80,
-						},
-					},
-				},
-			}
-			expected := corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-my-svc-6d61657368-my-ns",
-					Namespace: "maesh",
-					Labels: map[string]string{
-						"app":  "maesh",
-						"type": "shadow",
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "portName",
-							Protocol:   test.portProtocol,
-							Port:       80,
-							TargetPort: intstr.FromInt(10001),
-						},
-					},
-					Selector: map[string]string{
-						"component": "maesh-mesh",
-					},
-				},
-			}
-			svcGot, err := service.Update(&oldUserSvc, &newUserSvc)
+			shadowSvc, err := shadowServiceManager.CreateOrUpdate(test.svc)
+
 			require.NoError(t, err)
-			assert.Equal(t, &expected, svcGot)
 
-			assert.Equal(t, k8s.ServiceWithPort{
-				Namespace: oldUserSvc.Namespace,
-				Name:      oldUserSvc.Name,
-				Port:      oldUserSvc.Spec.Ports[0].Port,
-			}, removedPortMapping)
-			assert.Equal(t, k8s.ServiceWithPort{
-				Namespace: newUserSvc.Namespace,
-				Name:      newUserSvc.Name,
-				Port:      newUserSvc.Spec.Ports[0].Port,
-			}, addedPortMapping)
+			assert.Equal(t, test.expectedShadowSvc.Name, shadowSvc.Name)
+			assert.Equal(t, test.expectedShadowSvc.Namespace, shadowSvc.Namespace)
 
-			svcGot, err = client.CoreV1().Services("maesh").Get(expected.Name, v1.GetOptions{})
-			assert.NoError(t, err)
-
-			assert.Equal(t, &expected, svcGot)
+			for i, port := range test.expectedShadowSvc.Spec.Ports {
+				assert.Equal(t, port, shadowSvc.Spec.Ports[i])
+			}
 		})
 	}
 }
 
 func TestShadowServiceManager_Delete(t *testing.T) {
 	tests := []struct {
-		name              string
-		defaultMode       string
-		portProtocol      corev1.Protocol
-		tcpPortMapperMock func(*k8s.ServiceWithPort) portMapperMock
-		udpPortMapperMock func(*k8s.ServiceWithPort) portMapperMock
+		desc             string
+		name             string
+		namespace        string
+		currentShadowSvc *corev1.Service
 	}{
 		{
-			name:         "delete TCP service",
-			defaultMode:  "tcp",
-			portProtocol: corev1.ProtocolTCP,
-			udpPortMapperMock: func(removedPortMapping *k8s.ServiceWithPort) portMapperMock {
-				return portMapperMock{}
-			},
-			tcpPortMapperMock: func(removedPortMapping *k8s.ServiceWithPort) portMapperMock {
-				return portMapperMock{
-					removeFunc: func(svc k8s.ServiceWithPort) (int32, error) {
-						*removedPortMapping = svc
-						return 10001, nil
+			desc:      "should return nil if the corresponding shadow service cannot be found",
+			name:      "foo",
+			namespace: "bar",
+		},
+		{
+			desc:      "should remove the TCP ports mapped for the deleted service",
+			name:      "foo",
+			namespace: "bar",
+			currentShadowSvc: &corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "maesh-foo-6d61657368-bar",
+					Namespace: "maesh",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Protocol:   corev1.ProtocolTCP,
+							TargetPort: intstr.FromInt(10000),
+							Port:       8080,
+						},
 					},
-				}
+				},
 			},
 		},
 		{
-			name:         "delete UDP service",
-			defaultMode:  "udp",
-			portProtocol: corev1.ProtocolUDP,
-			tcpPortMapperMock: func(removedPortMapping *k8s.ServiceWithPort) portMapperMock {
-				return portMapperMock{}
-			},
-			udpPortMapperMock: func(removedPortMapping *k8s.ServiceWithPort) portMapperMock {
-				return portMapperMock{
-					removeFunc: func(svc k8s.ServiceWithPort) (int32, error) {
-						*removedPortMapping = svc
-						return 10001, nil
+			desc:      "should remove the UDP ports mapped for the deleted service",
+			name:      "foo",
+			namespace: "bar",
+			currentShadowSvc: &corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "maesh-foo-6d61657368-bar",
+					Namespace: "maesh",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Protocol:   corev1.ProtocolUDP,
+							TargetPort: intstr.FromInt(15000),
+							Port:       8081,
+						},
 					},
-				}
+				},
+			},
+		},
+		{
+			desc:      "should remove the UDP and TCP ports mapped for the deleted service",
+			name:      "foo",
+			namespace: "bar",
+			currentShadowSvc: &corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "maesh-foo-6d61657368-bar",
+					Namespace: "maesh",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Protocol:   corev1.ProtocolTCP,
+							TargetPort: intstr.FromInt(10000),
+							Port:       8080,
+						},
+						{
+							Protocol:   corev1.ProtocolUDP,
+							TargetPort: intstr.FromInt(15000),
+							Port:       8081,
+						},
+					},
+				},
 			},
 		},
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			var removedPortMapping k8s.ServiceWithPort
-
+		t.Run(test.desc, func(t *testing.T) {
 			log := logrus.New()
 
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			shadowSvc := &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-my-svc-6d61657368-my-ns",
-					Namespace: "maesh",
-					Labels: map[string]string{
-						"app":  "maesh",
-						"type": "shadow",
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "portName",
-							Protocol:   test.portProtocol,
-							Port:       8088,
-							TargetPort: intstr.FromInt(10001),
-						},
-					},
-					Selector: map[string]string{
-						"component": "maesh-mesh",
-					},
+			removedUDPPorts := make(map[k8s.ServiceWithPort]bool)
+			udpPortMapperMock := portMapperMock{
+				removeFunc: func(svc k8s.ServiceWithPort) (port int32, err error) {
+					removedUDPPorts[svc] = true
+					return
 				},
 			}
-			client, lister := makeClient(shadowSvc)
 
-			service := controller.NewShadowServiceManager(
+			removedTCPPorts := make(map[k8s.ServiceWithPort]bool)
+			tcpPortMapperMock := portMapperMock{
+				removeFunc: func(svc k8s.ServiceWithPort) (port int32, err error) {
+					removedTCPPorts[svc] = true
+					return
+				},
+			}
+
+			currentShadowServices := make([]runtime.Object, 0)
+			if test.currentShadowSvc != nil {
+				currentShadowServices = append(currentShadowServices, test.currentShadowSvc)
+			}
+
+			client, lister := newFakeClient(currentShadowServices...)
+
+			shadowServiceManager := NewShadowServiceManager(
 				log,
 				lister,
 				"maesh",
-				test.tcpPortMapperMock(&removedPortMapping),
-				test.udpPortMapperMock(&removedPortMapping),
-				test.defaultMode,
+				tcpPortMapperMock,
+				udpPortMapperMock,
+				"http",
 				5000,
 				5002,
 				client,
 			)
 
-			userSvc := &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "my-svc",
-					Namespace: "my-ns",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:     "portName",
-							Protocol: test.portProtocol,
-							Port:     8088,
-						},
-					},
-				},
-			}
-			err := service.Delete(userSvc)
+			err := shadowServiceManager.Delete(test.namespace, test.name)
 			require.NoError(t, err)
 
-			assert.Equal(t, k8s.ServiceWithPort{
-				Namespace: userSvc.Namespace,
-				Name:      userSvc.Name,
-				Port:      userSvc.Spec.Ports[0].Port,
-			}, removedPortMapping)
+			if test.currentShadowSvc == nil {
+				assert.Equal(t, 0, len(removedTCPPorts))
+				assert.Equal(t, 0, len(removedUDPPorts))
+				return
+			}
 
-			_, err = client.CoreV1().Services("maesh").Get(shadowSvc.Name, v1.GetOptions{})
-			assert.Error(t, err)
+			for _, svcPort := range test.currentShadowSvc.Spec.Ports {
+				svcWithPort := k8s.ServiceWithPort{
+					Namespace: test.namespace,
+					Name:      test.name,
+					Port:      svcPort.Port,
+				}
+
+				switch svcPort.Protocol {
+				case corev1.ProtocolTCP:
+					assert.True(t, removedTCPPorts[svcWithPort])
+
+				case corev1.ProtocolUDP:
+					assert.True(t, removedUDPPorts[svcWithPort])
+
+				default:
+					t.Fail()
+				}
+			}
 		})
 	}
 }
 
-func makeClient(args ...runtime.Object) (*fake.Clientset, listers.ServiceLister) {
-	client := fake.NewSimpleClientset(args...)
+func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
+	name := "foo"
+	namespace := "bar"
+
+	log := logrus.New()
+
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	client, lister := newFakeClient()
+
+	shadowServiceManager := NewShadowServiceManager(
+		log,
+		lister,
+		"maesh",
+		portMapperMock{},
+		portMapperMock{},
+		"http",
+		5000,
+		5002,
+		client,
+	)
+
+	shadowSvcName := shadowServiceManager.getShadowServiceName(namespace, name)
+
+	assert.Equal(t, shadowSvcName, "maesh-foo-6d61657368-bar")
+}
+
+func TestShadowServiceManager_getHTTPPort(t *testing.T) {
+	tests := []struct {
+		desc        string
+		portID      int
+		expectedErr bool
+	}{
+		{
+			desc:        "should return an error if no HTTP port mapping is available",
+			portID:      2,
+			expectedErr: true,
+		},
+		{
+			desc:        "should return the HTTP port mapping associated with the given portID",
+			portID:      0,
+			expectedErr: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			log := logrus.New()
+
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
+
+			client, lister := newFakeClient()
+
+			minHTTPPort := int32(5000)
+			maxHTTPPort := int32(5002)
+
+			shadowServiceManager := NewShadowServiceManager(
+				log,
+				lister,
+				"maesh",
+				portMapperMock{},
+				portMapperMock{},
+				"http",
+				minHTTPPort,
+				maxHTTPPort,
+				client,
+			)
+
+			port, err := shadowServiceManager.getHTTPPort(test.portID)
+			if test.expectedErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, minHTTPPort+int32(test.portID), port)
+		})
+	}
+}
+
+func TestShadowServiceManager_isPortSuitable(t *testing.T) {
+	tests := []struct {
+		desc           string
+		trafficType    string
+		portProtocol   corev1.Protocol
+		expectedResult bool
+	}{
+		{
+			desc:           "should return true if the traffic type is udp and the port protocol is UDP",
+			trafficType:    "udp",
+			portProtocol:   corev1.ProtocolUDP,
+			expectedResult: true,
+		},
+		{
+			desc:           "should return false if the traffic type is udp and the port protocol is not UDP",
+			trafficType:    "udp",
+			portProtocol:   corev1.ProtocolSCTP,
+			expectedResult: false,
+		},
+		{
+			desc:           "should return true if the traffic type is http and the port protocol is TCP",
+			trafficType:    "http",
+			portProtocol:   corev1.ProtocolTCP,
+			expectedResult: true,
+		},
+		{
+			desc:           "should return true if the traffic type is tcp and the port protocol is TCP",
+			trafficType:    "tcp",
+			portProtocol:   corev1.ProtocolTCP,
+			expectedResult: true,
+		},
+		{
+			desc:           "should return false if the traffic type is http and the port protocol is not TCP",
+			trafficType:    "http",
+			portProtocol:   corev1.ProtocolSCTP,
+			expectedResult: false,
+		},
+		{
+			desc:           "should return false if the traffic type is http and the port protocol is not TCP",
+			trafficType:    "tcp",
+			portProtocol:   corev1.ProtocolUDP,
+			expectedResult: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			result := isPortSuitable(test.trafficType, corev1.ServicePort{
+				Protocol: test.portProtocol,
+			})
+
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestShadowServiceManager_containsPort(t *testing.T) {
+	tests := []struct {
+		desc           string
+		port           corev1.ServicePort
+		ports          []corev1.ServicePort
+		expectedResult bool
+	}{
+		{
+			desc: "should return true if the given service port exists",
+			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolTCP},
+			ports: []corev1.ServicePort{
+				{Port: 80, Protocol: corev1.ProtocolTCP},
+			},
+			expectedResult: true,
+		},
+		{
+			desc:           "should return false if the given service port list is empty",
+			port:           corev1.ServicePort{Port: 8080, Protocol: corev1.ProtocolTCP},
+			expectedResult: false,
+		},
+		{
+			desc: "should return false if the given service port does not have the same port",
+			port: corev1.ServicePort{Port: 8080, Protocol: corev1.ProtocolTCP},
+			ports: []corev1.ServicePort{
+				{Port: 80, Protocol: corev1.ProtocolTCP},
+			},
+			expectedResult: false,
+		},
+		{
+			desc: "should return false if the given service port does not have the same protocol",
+			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolUDP},
+			ports: []corev1.ServicePort{
+				{Port: 80, Protocol: corev1.ProtocolTCP},
+			},
+			expectedResult: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			result := containsPort(test.ports, test.port)
+
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestShadowServiceManager_needsCleanup(t *testing.T) {
+	tests := []struct {
+		desc           string
+		port           corev1.ServicePort
+		ports          []corev1.ServicePort
+		expectedResult bool
+	}{
+		{
+			desc: "should return false if the given service port exists",
+			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
+			ports: []corev1.ServicePort{
+				{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
+			},
+			expectedResult: false,
+		},
+		{
+			desc:           "should return true if the given service port list is empty",
+			port:           corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
+			expectedResult: true,
+		},
+		{
+			desc: "should return true if the given service port does not have the same port",
+			port: corev1.ServicePort{Port: 90, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
+			ports: []corev1.ServicePort{
+				{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
+			},
+			expectedResult: true,
+		},
+		{
+			desc: "should return true if the given service port does not have the same protocol",
+			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt(80)},
+			ports: []corev1.ServicePort{
+				{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
+			},
+			expectedResult: true,
+		},
+		{
+			desc: "should return true if the given service port does not have the same target port",
+			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(90)},
+			ports: []corev1.ServicePort{
+				{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
+			},
+			expectedResult: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			result := needsCleanup(test.ports, test.port)
+
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func newFakeClient(objects ...runtime.Object) (*fake.Clientset, listers.ServiceLister) {
+	client := fake.NewSimpleClientset(objects...)
 
 	informerFactory := informers.NewSharedInformerFactory(client, 5*time.Minute)
 	lister := informerFactory.Core().V1().Services().Lister()
