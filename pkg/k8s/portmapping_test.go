@@ -22,7 +22,7 @@ func TestPortMapping_GetEmptyState(t *testing.T) {
 	m, err := NewPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
 	require.NoError(t, err)
 
-	svc := m.Get(8080)
+	svc := m.table[8080]
 	assert.Nil(t, svc)
 }
 
@@ -42,13 +42,13 @@ func TestPortMapping_GetWithState(t *testing.T) {
 	m, err := NewPortMapping(client, "maesh", "tcp-state-table", 10000, 10200)
 	require.NoError(t, err)
 
-	svc := m.Get(10000)
+	svc := m.table[10000]
 	require.NotNil(t, svc)
 	assert.Equal(t, "my-ns", svc.Namespace)
 	assert.Equal(t, "my-app", svc.Name)
 	assert.Equal(t, int32(9090), svc.Port)
 
-	svc = m.Get(10001)
+	svc = m.table[10001]
 	require.NotNil(t, svc)
 	assert.Equal(t, "my-ns", svc.Namespace)
 	assert.Equal(t, "my-app2", svc.Name)
@@ -76,7 +76,7 @@ func TestPortMapping_AddEmptyState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int32(10000), port)
 
-	gotSvc := m.Get(10000)
+	gotSvc := m.table[10000]
 	require.NotNil(t, gotSvc)
 	assert.Equal(t, wantSvc, gotSvc)
 
@@ -115,15 +115,15 @@ func TestPortMapping_AddOverflow(t *testing.T) {
 	_, err = m.Add(wantSvc)
 	assert.Error(t, err)
 
-	gotSvc := m.Get(10000)
+	gotSvc := m.table[10000]
 	require.NotNil(t, gotSvc)
 	assert.Equal(t, wantSvc, gotSvc)
 
-	gotSvc = m.Get(10001)
+	gotSvc = m.table[10001]
 	require.NotNil(t, gotSvc)
 	assert.Equal(t, wantSvc, gotSvc)
 
-	gotSvc = m.Get(10002)
+	gotSvc = m.table[10002]
 	assert.Nil(t, gotSvc)
 
 	cfgMap, err = client.CoreV1().ConfigMaps("maesh").Get("tcp-state-table", metav1.GetOptions{})
