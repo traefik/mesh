@@ -161,10 +161,10 @@ spec:
             - "--serversTransport.forwardingTimeouts.dialTimeout={{ .Values.mesh.forwardingTimeouts.dialTimeout }}"
               {{- end }}
               {{- if .Values.mesh.forwardingTimeouts.responseHeaderTimeout }}
-              - "--serversTransport.forwardingTimeouts.responseHeaderTimeout={{ .Values.mesh.forwardingTimeouts.responseHeaderTimeout }}"
+            - "--serversTransport.forwardingTimeouts.responseHeaderTimeout={{ .Values.mesh.forwardingTimeouts.responseHeaderTimeout }}"
               {{- end }}
               {{- if .Values.mesh.forwardingTimeouts.idleConnTimeout }}
-              - "--serversTransport.forwardingTimeouts.idleConnTimeout={{ .Values.mesh.forwardingTimeouts.idleConnTimeout }}"
+            - "--serversTransport.forwardingTimeouts.idleConnTimeout={{ .Values.mesh.forwardingTimeouts.idleConnTimeout }}"
               {{- end }}
             {{- end }}
             {{- if .Values.mesh.logLevel }}
