@@ -54,11 +54,6 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 
 	p := prepare.NewPrepare(log, clients)
 
-	provider, err := p.CheckDNSProvider()
-	if err != nil {
-		return fmt.Errorf("error during cluster check: %v", err)
-	}
-
 	if pConfig.SMI {
 		log.Warnf("SMI mode is deprecated, please consider using --acl instead")
 	}
@@ -71,15 +66,8 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 		return fmt.Errorf("error during informer check: %v, this can be caused by pre-existing objects in your cluster that do not conform to the spec", err)
 	}
 
-	switch provider {
-	case prepare.CoreDNS:
-		if err := p.ConfigureCoreDNS(pConfig.ClusterDomain, pConfig.Namespace); err != nil {
-			return fmt.Errorf("unable to configure CoreDNS: %v", err)
-		}
-	case prepare.KubeDNS:
-		if err := p.ConfigureKubeDNS(); err != nil {
-			return fmt.Errorf("unable to configure KubeDNS: %v", err)
-		}
+	if err = p.ConfigureDNS(pConfig.ClusterDomain, pConfig.Namespace); err != nil {
+		return fmt.Errorf("unable to configure DNS: %w", err)
 	}
 
 	return nil
