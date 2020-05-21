@@ -522,7 +522,7 @@ func (s *BaseSuite) digHost(c *check.C, source, namespace, destination string) {
 	var IP net.IP
 
 	ebo := backoff.NewExponentialBackOff()
-	ebo.MaxElapsedTime = 120 * time.Second
+	ebo.MaxElapsedTime = 60 * time.Second
 
 	_ = backoff.Retry(safe.OperationWithRecover(func() error {
 		output, err := s.waitKubectlExecCommandReturn(c, argSlice)
