@@ -19,6 +19,7 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForKubeDNS(c)
+	s.WaitForCoreDNS(c)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
 }
@@ -27,22 +28,15 @@ func (s *KubeDNSSuite) TearDownSuite(c *check.C) {
 	s.stopK3s()
 }
 
-func (s *KubeDNSSuite) TestKubeDNS(c *check.C) {
+func (s *KubeDNSSuite) TestKubeDNSDig(c *check.C) {
+	cmd := s.startMaeshBinaryCmd(c, false, false)
+	err := cmd.Start()
+
+	c.Assert(err, checker.IsNil)
+	defer s.stopMaeshBinary(c, cmd.Process)
+
 	pod := s.getToolsPodMaesh(c)
 	c.Assert(pod, checker.NotNil)
 
-	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.svc.cluster.local", "--max-time", "5",
-	}
-
-	err := s.installHelmMaesh(c, false, true)
-	c.Assert(err, checker.IsNil)
-	s.waitForMaeshControllerStarted(c)
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-
-	argSlice = []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
-	}
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmMaesh(c)
+	s.digHost(c, pod.Name, pod.Namespace, "whoami.whoami.maesh")
 }
