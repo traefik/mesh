@@ -58,14 +58,6 @@ func (m *PortMapping) Find(svc ServiceWithPort) (int32, bool) {
 	return 0, false
 }
 
-// Get returns the ServiceWithPort associated to the given port.
-func (m *PortMapping) Get(srcPort int32) *ServiceWithPort {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return m.table[srcPort]
-}
-
 // Add adds a new mapping between the given ServiceWithPort and the first port available in the range defined
 // within minPort and maxPort. If there's no port left, an error will be returned.
 func (m *PortMapping) Add(svc *ServiceWithPort) (int32, error) {
