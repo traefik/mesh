@@ -27,6 +27,8 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
+	s.createResources(c, "testdata/state-table/")
+	s.createResources(c, "testdata/smi/crds/")
 }
 
 func (s *KubeDNSSuite) TearDownSuite(c *check.C) {
@@ -34,6 +36,8 @@ func (s *KubeDNSSuite) TearDownSuite(c *check.C) {
 }
 
 func (s *KubeDNSSuite) TestKubeDNSDig(c *check.C) {
+	s.WaitForKubeDNS(c)
+
 	cmd := s.startMaeshBinaryCmd(c, false, false)
 	err := cmd.Start()
 
@@ -43,5 +47,7 @@ func (s *KubeDNSSuite) TestKubeDNSDig(c *check.C) {
 	pod := s.getToolsPodMaesh(c)
 	c.Assert(pod, checker.NotNil)
 
+	// We need to wait for kubeDNS again, as the pods will be restarted by prepare.
+	s.WaitForKubeDNS(c)
 	s.digHost(c, pod.Name, pod.Namespace, "whoami.whoami.maesh")
 }

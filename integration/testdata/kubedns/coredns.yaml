@@ -92,23 +92,35 @@ metadata:
   name: coredns
   namespace: maesh
   labels:
-    k8s-app: kube-dns
+    k8s-app: coredns
     kubernetes.io/name: "CoreDNS"
 spec:
-  #replicas: 1
+  # replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 1
   selector:
     matchLabels:
-      k8s-app: kube-dns
+      k8s-app: coredns
   template:
     metadata:
       labels:
-        k8s-app: kube-dns
+        k8s-app: coredns
     spec:
       serviceAccountName: coredns
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: k8s-app
+                      operator: In
+                      values:
+                        - corednss
+                topologyKey: "kubernetes.io/hostname"
       tolerations:
         - key: "CriticalAddonsOnly"
           operator: "Exists"
@@ -156,15 +168,6 @@ spec:
             timeoutSeconds: 5
             successThreshold: 1
             failureThreshold: 5
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 8181
-              scheme: HTTP
-            initialDelaySeconds: 10
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 5
       dnsPolicy: Default
       volumes:
         - name: config-volume
@@ -173,24 +176,22 @@ spec:
             items:
               - key: Corefile
                 path: Corefile
-              - key: NodeHosts
-                path: NodeHosts
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: kube-dns
+  name: coredns
   namespace: maesh
   annotations:
     prometheus.io/port: "9153"
     prometheus.io/scrape: "true"
   labels:
-    k8s-app: kube-dns
+    k8s-app: coredns
     kubernetes.io/cluster-service: "true"
     kubernetes.io/name: "CoreDNS"
 spec:
   selector:
-    k8s-app: kube-dns
+    k8s-app: coredns
   ports:
     - name: dns
       port: 53
