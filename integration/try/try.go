@@ -182,6 +182,8 @@ func (t *Try) WaitCommandExecute(command string, argSlice []string, expected str
 			return fmt.Errorf("output %s does not contain %s", string(output), expected)
 		}
 
+		t.log.Debug(string(output))
+
 		return nil
 	}), ebo); err != nil {
 		return fmt.Errorf("unable execute command %s %s: \n%v", command, strings.Join(argSlice, " "), err)
