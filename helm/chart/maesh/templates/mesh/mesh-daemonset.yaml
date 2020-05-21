@@ -156,6 +156,17 @@ spec:
             - "--api.dashboard=false"
             - "--api.insecure"
             - "--ping"
+            {{- if .Values.mesh.forwardingTimeouts }}
+              {{- if .Values.mesh.forwardingTimeouts.dialTimeout }}
+            - "--serversTransport.forwardingTimeouts.dialTimeout={{ .Values.mesh.forwardingTimeouts.dialTimeout }}"
+              {{- end }}
+              {{- if .Values.mesh.forwardingTimeouts.responseHeaderTimeout }}
+              - "--serversTransport.forwardingTimeouts.responseHeaderTimeout={{ .Values.mesh.forwardingTimeouts.responseHeaderTimeout }}"
+              {{- end }}
+              {{- if .Values.mesh.forwardingTimeouts.idleConnTimeout }}
+              - "--serversTransport.forwardingTimeouts.idleConnTimeout={{ .Values.mesh.forwardingTimeouts.idleConnTimeout }}"
+              {{- end }}
+            {{- end }}
             {{- if .Values.mesh.logLevel }}
             - "--log.level={{ .Values.mesh.logLevel }}"
             {{- end }}
