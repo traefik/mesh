@@ -42,3 +42,13 @@ func (s *HelmSuite) TestACLEnabled(c *check.C) {
 	s.waitForMaeshControllerStarted(c)
 	s.waitForMaeshProxyStarted(c)
 }
+
+func (s *HelmSuite) TestKubeDNSEnabled(c *check.C) {
+	err := s.installHelmMaesh(c, false, true)
+	c.Assert(err, checker.IsNil)
+
+	defer s.unInstallHelmMaesh(c)
+
+	s.waitForMaeshControllerStarted(c)
+	s.waitForMaeshProxyStarted(c)
+}
