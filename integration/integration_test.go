@@ -319,10 +319,6 @@ func (s *BaseSuite) waitForTools(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("tiny-tools", testNamespace, 30*time.Second), checker.IsNil)
 }
 
-func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data string) {
-	c.Assert(s.try.WaitCommandExecute("kubectl", argSlice, data, 10*time.Second), checker.IsNil)
-}
-
 func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) (string, error) {
 	return s.try.WaitCommandExecuteReturn("kubectl", argSlice, 10*time.Second)
 }
