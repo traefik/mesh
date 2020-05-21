@@ -307,6 +307,10 @@ func (s *BaseSuite) startAndWaitForKubeDNS(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 }
 
+func (s *BaseSuite) WaitForKubeDNS(c *check.C) {
+	c.Assert(s.try.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
+}
+
 func (s *BaseSuite) waitForMaeshControllerStarted(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
 }
@@ -317,10 +321,6 @@ func (s *BaseSuite) waitForMaeshProxyStarted(c *check.C) {
 
 func (s *BaseSuite) waitForTools(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("tiny-tools", testNamespace, 30*time.Second), checker.IsNil)
-}
-
-func (s *BaseSuite) waitKubectlExecCommand(c *check.C, argSlice []string, data string) {
-	c.Assert(s.try.WaitCommandExecute("kubectl", argSlice, data, 10*time.Second), checker.IsNil)
 }
 
 func (s *BaseSuite) waitKubectlExecCommandReturn(_ *check.C, argSlice []string) (string, error) {
@@ -519,10 +519,25 @@ func (s *BaseSuite) digHost(c *check.C, source, namespace, destination string) {
 		"exec", "-i", source, "-n", namespace, "--", "dig", destination, "+short",
 	}
 
-	output, err := s.waitKubectlExecCommandReturn(c, argSlice)
-	c.Assert(err, checker.IsNil)
-	c.Log(fmt.Sprintf("Dig %s: %s", destination, strings.TrimSpace(output)))
-	IP := net.ParseIP(strings.TrimSpace(output))
+	var IP net.IP
+
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = 60 * time.Second
+
+	_ = backoff.Retry(safe.OperationWithRecover(func() error {
+		output, err := s.waitKubectlExecCommandReturn(c, argSlice)
+		if err != nil {
+			return err
+		}
+		c.Log(fmt.Sprintf("Dig %s: %s", destination, strings.TrimSpace(output)))
+		IP = net.ParseIP(strings.TrimSpace(output))
+		if IP == nil {
+			return fmt.Errorf("could not parse an IP from dig")
+		}
+
+		return nil
+	}), ebo)
+
 	c.Assert(IP, checker.NotNil)
 }
 
