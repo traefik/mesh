@@ -16,8 +16,8 @@ The static configuration is configured when the service mesh is installed and is
 
 - Access-Control List (ACL) mode can be enabled.
   This configures Maesh to run in ACL mode, where all traffic is forbidden unless explicitly allowed via an SMI 
-  [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md). Please see 
-  the [SMI Specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md) for more information.
+  [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha1/traffic-access.md#traffictarget). Please see 
+  the [SMI Specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha1/traffic-access.md) for more information.
 
 ## Dynamic configuration
 
@@ -50,8 +50,8 @@ If this annotation is not present, the mesh service will operate in the default 
 
 !!! Info
     For now, the `udp` traffic type does not work when ACL mode is enabled. In ACL mode, all traffic is forbidden unless it
-    is explicitly allowed with a [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md) and
-    unfortunately the SMI specification does not yet define a [Traffic Spec](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-specs.md) for `UDP`.
+    is explicitly allowed with a [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha1/traffic-access.md#traffictarget) and
+    unfortunately the SMI specification does not yet define a [Traffic Spec](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-specs/traffic-specs-WD.md) for `UDP`.
     
 #### Scheme
 
@@ -135,7 +135,7 @@ More precisely, the `server` app is composed by two routes:
 - The `api` route under the `/api` path, accepting all methods.
 - The `metrics` routes under the `/metrics` path, accepting only `GET` requests.
 
-Other types of route groups and detailed information are available [in the specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-specs.md).
+Other types of route groups and detailed information are available [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-specs/v1alpha2/traffic-specs.md).
 
 By default, all traffic is denied so we need to grant access to clients to our application. This is done by defining a `TrafficTarget`.
 
@@ -170,7 +170,7 @@ In this example, we grant access to all pods running with the service account `c
 
 Any client running with the service account `client` under the `client` namespace accessing `server.server.maesh/api` is allowed to access the `/api` resource. Others will receive 404 answers from the Maesh node.
 
-More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md).
+More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha1/traffic-access.md).
 
 #### Traffic Splitting
 
@@ -194,8 +194,8 @@ spec:
 In this example, we define a traffic split for our server service between two versions of our server, v1 and v2.
 `server.server.maesh` directs 80% of the traffic to the server-v1 pods, and 20% of the traffic to the server-v2 pods.
 
-More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-split.md).
+More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-split/v1alpha2/traffic-split.md).
 
 #### Traffic Metrics
 
-At the moment, Maesh does not implement the [Traffic Metrics specification](https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-metrics.md).
+At the moment, Maesh does not implement the [Traffic Metrics specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-metrics/traffic-metrics-WD.md).
