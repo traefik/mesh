@@ -55,17 +55,30 @@ data:
     .:53 {
         errors
         health
-        ready
         kubernetes cluster.local in-addr.arpa ip6.arpa {
           pods insecure
           upstream
           fallthrough in-addr.arpa ip6.arpa
         }
-        hosts /etc/coredns/NodeHosts {
-          reload 1s
-          fallthrough
-        }
         prometheus :9153
+        forward . /etc/resolv.conf
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
+
+    maesh:53 {
+        errors
+        rewrite continue {
+            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh maesh-{1}-6d61657368-{2}.maesh.svc.cluster.local
+            answer name maesh-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.maesh\.svc\.cluster\.local {1}.{2}.maesh
+        }
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+            pods insecure
+            upstream
+            fallthrough in-addr.arpa ip6.arpa
+        }
         forward . /etc/resolv.conf
         cache 30
         loop
