@@ -28,7 +28,7 @@ func (s *KubeDNSSuite) TearDownSuite(c *check.C) {
 	s.stopK3s()
 }
 
-func (s *CoreDNSSuite) TestKubeDNSDig(c *check.C) {
+func (s *KubeDNSSuite) TestKubeDNSDig(c *check.C) {
 	cmd := s.startMaeshBinaryCmd(c, false, false)
 	err := cmd.Start()
 
