@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/containous/maesh/pkg/annotations"
@@ -198,7 +199,7 @@ func (c *Controller) init() {
 }
 
 // Run is the main entrypoint for the controller.
-func (c *Controller) Run(stopCh <-chan struct{}) error {
+func (c *Controller) Run(stopCh <-chan struct{}) {
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
@@ -221,8 +222,6 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 	<-stopCh
 	c.logger.Info("Shutting down workers")
-
-	return nil
 }
 
 // startInformers starts the controller informers.
@@ -305,7 +304,7 @@ func (c *Controller) processNextWorkItem() bool {
 
 	if key != configRefreshKey {
 		if err := c.syncShadowService(key.(string)); err != nil {
-			c.handleErr(key, err)
+			c.handleErr(key, fmt.Errorf("unable to sync shadow service: %w", err))
 			return true
 		}
 	}
@@ -313,7 +312,7 @@ func (c *Controller) processNextWorkItem() bool {
 	// Build and store config.
 	topo, err := c.topologyBuilder.Build(c.ignoredResources)
 	if err != nil {
-		c.handleErr(key, err)
+		c.handleErr(key, fmt.Errorf("unable to build topology: %w", err))
 		return true
 	}
 
@@ -356,6 +355,6 @@ func (c *Controller) handleErr(key interface{}, err error) {
 		return
 	}
 
-	c.logger.Errorf("Unable to complete work for key %q: %v", key, err)
+	c.logger.Errorf("Unable to complete work %q: %v", key, err)
 	c.workQueue.Forget(key)
 }
