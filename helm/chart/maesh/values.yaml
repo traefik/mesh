@@ -10,9 +10,9 @@ image:
 
 # acl: true
 
-kubedns: false
+# kubedns: true
 
-#clusterDomain: cluster.local
+# clusterDomain: cluster.local
 
 limits:
   http: 10
