@@ -63,7 +63,11 @@ func (t *Try) WaitReadyDeployment(name string, namespace string, timeout time.Du
 			return fmt.Errorf("deployment %q has no replicas", name)
 		}
 
-		if d.Status.ReadyReplicas == d.Status.Replicas {
+		if d.Status.UnavailableReplicas > 0 {
+			return fmt.Errorf("deployment %q has unavailable replicas", name)
+		}
+
+		if d.Status.ReadyReplicas == d.Status.Replicas && d.Status.ReadyReplicas == d.Status.AvailableReplicas {
 			return nil
 		}
 		return errors.New("deployment not ready")
