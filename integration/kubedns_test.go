@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"time"
+
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 )
@@ -19,30 +21,33 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForKubeDNS(c)
+
+	// Wait for our created coreDNS deployment in the maesh namespace.
+	c.Assert(s.try.WaitReadyDeployment("coredns", maeshNamespace, 60*time.Second), checker.IsNil)
+
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
+	s.createResources(c, "testdata/state-table/")
+	s.createResources(c, "testdata/smi/crds/")
 }
 
 func (s *KubeDNSSuite) TearDownSuite(c *check.C) {
 	s.stopK3s()
 }
 
-func (s *KubeDNSSuite) TestKubeDNS(c *check.C) {
+func (s *KubeDNSSuite) TestKubeDNSDig(c *check.C) {
+	s.WaitForKubeDNS(c)
+
+	cmd := s.startMaeshBinaryCmd(c, false, false)
+	err := cmd.Start()
+
+	c.Assert(err, checker.IsNil)
+	defer s.stopMaeshBinary(c, cmd.Process)
+
 	pod := s.getToolsPodMaesh(c)
 	c.Assert(pod, checker.NotNil)
 
-	argSlice := []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.svc.cluster.local", "--max-time", "5",
-	}
-
-	err := s.installHelmMaesh(c, false, true)
-	c.Assert(err, checker.IsNil)
-	s.waitForMaeshControllerStarted(c)
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-
-	argSlice = []string{
-		"exec", "-it", pod.Name, "-n", pod.Namespace, "-c", pod.Spec.Containers[0].Name, "--", "curl", "whoami.whoami.maesh", "--max-time", "5",
-	}
-	s.waitKubectlExecCommand(c, argSlice, "whoami")
-	s.unInstallHelmMaesh(c)
+	// We need to wait for kubeDNS again, as the pods will be restarted by prepare.
+	s.WaitForKubeDNS(c)
+	s.digHost(c, pod.Name, pod.Namespace, "whoami.whoami.maesh")
 }
