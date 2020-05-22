@@ -8,7 +8,7 @@ image:
   # (Optional)
   # pullSecret: xxx
 
-acl: false
+# acl: true
 
 kubedns: false
 
