@@ -20,6 +20,10 @@ limits:
   udp: 25
 
 controller:
+  # logLevel: error
+  # ignoreNamespaces:
+  #  - example
+
   resources:
     limit:
       mem: "100Mi"
@@ -27,8 +31,6 @@ controller:
     request:
       mem: "50Mi"
       cpu: "100m"
-  # ignoreNamespaces:
-  # logLevel: error
 
   # Added so we can launch on nodes with restrictions
   nodeSelector: {}
@@ -36,6 +38,17 @@ controller:
   affinity: {}
 
 mesh:
+  pollInterval: "1s"
+  pollTimeout: "1s"
+  # defaultMode: http
+  # logLevel: error
+  # forwardingTimeouts:
+  #   dialTimeout: "30s"
+  #   (Optional)
+  #   responseHeaderTimeout: "0s"
+  #   (Optional)
+  #   idleConnTimeout: "1s"
+
   resources:
     limit:
       mem: "100Mi"
@@ -43,21 +56,10 @@ mesh:
     request:
       mem: "50Mi"
       cpu: "100m"
-  pollInterval: "1s"
-  pollTimeout: "1s"
-  # defaultMode: http
-  # logLevel: error
 
   # Added so we can launch on nodes with restrictions
   nodeSelector: {}
   tolerations: []
-  # forwardingTimeouts:
-  #   (Optional)
-  #   dialTimeout: "30s"
-  #   (Optional)
-  #   responseHeaderTimeout: "0s"
-  #   (Optional)
-  #   idleConnTimeout: "1s"
 
 #
 # Tracing configuration
