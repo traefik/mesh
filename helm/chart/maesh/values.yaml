@@ -16,8 +16,9 @@ controller:
     request:
       mem: "50Mi"
       cpu: "100m"
-  logLevel: error
   ignoreNamespaces:
+  # logLevel: error
+
   # Added so we can launch on nodes with restrictions
   nodeSelector: {}
   tolerations: []
@@ -34,10 +35,11 @@ mesh:
     request:
       mem: "50Mi"
       cpu: "100m"
-  defaultMode: http
   pollInterval: "1s"
   pollTimeout: "1s"
-  logLevel: error
+  # defaultMode: http
+  # logLevel: error
+
   # Added so we can launch on nodes with restrictions
   nodeSelector: {}
   tolerations: []
