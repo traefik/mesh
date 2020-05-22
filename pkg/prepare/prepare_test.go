@@ -1,11 +1,10 @@
-package prepare_test
+package prepare
 
 import (
 	"context"
 	"testing"
 
 	"github.com/containous/maesh/pkg/k8s"
-	"github.com/containous/maesh/pkg/prepare"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +17,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 		mockFile string
 
-		expectedProvider prepare.DNSProvider
+		expectedProvider DNSProvider
 		expectedErr      bool
 	}{
 		{
@@ -26,7 +25,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			mockFile: "checkdnsprovider_supported_version.yaml",
 
-			expectedProvider: prepare.CoreDNS,
+			expectedProvider: CoreDNS,
 			expectedErr:      false,
 		},
 		{
@@ -34,7 +33,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			mockFile: "checkdnsprovider_kubedns.yaml",
 
-			expectedProvider: prepare.KubeDNS,
+			expectedProvider: KubeDNS,
 			expectedErr:      false,
 		},
 		{
@@ -42,7 +41,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			mockFile: "checkdnsprovider_unsupported_version.yaml",
 
-			expectedProvider: prepare.UnknownDNS,
+			expectedProvider: UnknownDNS,
 			expectedErr:      true,
 		},
 		{
@@ -50,7 +49,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			mockFile: "checkdnsprovider_no_provider.yaml",
 
-			expectedProvider: prepare.UnknownDNS,
+			expectedProvider: UnknownDNS,
 			expectedErr:      true,
 		},
 	}
@@ -62,7 +61,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
-			prep := prepare.NewPrepare(logrus.New(), clt)
+			prep := NewPrepare(logrus.New(), clt)
 			provider, err := prep.CheckDNSProvider()
 
 			if test.expectedErr {
@@ -124,7 +123,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
-			prep := prepare.NewPrepare(logrus.New(), clt)
+			prep := NewPrepare(logrus.New(), clt)
 			err := prep.ConfigureCoreDNS("titi", "toto")
 			if test.expectedErr {
 				assert.Error(t, err)
@@ -181,7 +180,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			clt := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
 
-			prep := prepare.NewPrepare(logrus.New(), clt)
+			prep := NewPrepare(logrus.New(), clt)
 			err := prep.ConfigureKubeDNS()
 			if test.expectedErr {
 				assert.Error(t, err)

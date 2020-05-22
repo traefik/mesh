@@ -8,6 +8,7 @@ import (
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 	maxUDPPort           = int32(15005)
 )
 
-func TestNewController(t *testing.T) {
+func TestController_NewMeshController(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -44,11 +45,12 @@ func TestNewController(t *testing.T) {
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       maxUDPPort,
 	}, log)
-	assert.NoError(t, err)
+
+	require.NoError(t, err)
 	assert.NotNil(t, controller)
 }
 
-func TestNewControllerWithSMI(t *testing.T) {
+func TestController_NewMeshControllerWithSMI(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -72,6 +74,7 @@ func TestNewControllerWithSMI(t *testing.T) {
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       maxUDPPort,
 	}, log)
-	assert.NoError(t, err)
+
+	require.NoError(t, err)
 	assert.NotNil(t, controller)
 }
