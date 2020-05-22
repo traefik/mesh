@@ -8,46 +8,58 @@ image:
   # (Optional)
   # pullSecret: xxx
 
+# acl: true
+
+# kubedns: true
+
+# clusterDomain: cluster.local
+
+limits:
+  http: 10
+  tcp: 25
+  udp: 25
+
 controller:
+  # logLevel: error
+  # ignoreNamespaces:
+  #  - example
+
   resources:
     limit:
-      mem: "100Mi"
-      cpu: "200m"
+      mem: 100Mi
+      cpu: 200m
     request:
-      mem: "50Mi"
-      cpu: "100m"
-  logLevel: error
-  ignoreNamespaces:
+      mem: 50Mi
+      cpu: 100m
+
   # Added so we can launch on nodes with restrictions
   nodeSelector: {}
   tolerations: []
   affinity: {}
 
-kubedns: false
-#clusterDomain: cluster.local
-
 mesh:
+  pollInterval: 1s
+  pollTimeout: 1s
+  # defaultMode: http
+  # logLevel: error
+  # forwardingTimeouts:
+  #   dialTimeout: 30s
+  #   (Optional)
+  #   responseHeaderTimeout: 0s
+  #   (Optional)
+  #   idleConnTimeout: 1s
+
   resources:
     limit:
-      mem: "100Mi"
-      cpu: "200m"
+      mem: 100Mi
+      cpu: 200m
     request:
-      mem: "50Mi"
-      cpu: "100m"
-  defaultMode: http
-  pollInterval: "1s"
-  pollTimeout: "1s"
-  logLevel: error
+      mem: 50Mi
+      cpu: 100m
+
   # Added so we can launch on nodes with restrictions
   nodeSelector: {}
   tolerations: []
-  # forwardingTimeouts:
-  #   (Optional)
-  #   dialTimeout: "30s"
-  #   (Optional)
-  #   responseHeaderTimeout: "0s"
-  #   (Optional)
-  #   idleConnTimeout: "1s"
 
 #
 # Tracing configuration
@@ -147,10 +159,3 @@ metrics:
     # addServiceLabels: true
     # (Optional)
     # pushInterval: 10s
-
-acl: false
-
-limits:
-  http: 10
-  tcp: 25
-  udp: 25
