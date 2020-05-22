@@ -8,6 +8,17 @@ image:
   # (Optional)
   # pullSecret: xxx
 
+acl: false
+
+kubedns: false
+
+#clusterDomain: cluster.local
+
+limits:
+  http: 10
+  tcp: 25
+  udp: 25
+
 controller:
   resources:
     limit:
@@ -23,9 +34,6 @@ controller:
   nodeSelector: {}
   tolerations: []
   affinity: {}
-
-kubedns: false
-#clusterDomain: cluster.local
 
 mesh:
   resources:
@@ -149,10 +157,3 @@ metrics:
     # addServiceLabels: true
     # (Optional)
     # pushInterval: 10s
-
-acl: false
-
-limits:
-  http: 10
-  tcp: 25
-  udp: 25
