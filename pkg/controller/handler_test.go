@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -56,7 +55,7 @@ func TestEnqueueWorkHandler_OnUpdate(t *testing.T) {
 		expectedLen int
 	}{
 		{
-			desc: "should enqueue if this is not a re-sync event",
+			desc: "should not enqueue if this is a re-sync event",
 			oldObj: &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{ResourceVersion: "foo"},
 			},
@@ -66,7 +65,7 @@ func TestEnqueueWorkHandler_OnUpdate(t *testing.T) {
 			expectedLen: 0,
 		},
 		{
-			desc: "should enqueue if this is a re-sync event",
+			desc: "should enqueue if this is not a re-sync event",
 			oldObj: &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{ResourceVersion: "foo"},
 			},
@@ -135,8 +134,6 @@ func TestEnqueueWorkHandler_enqueueWork(t *testing.T) {
 			assert.Equal(t, test.expectedLen, workQueue.Len())
 
 			currentKey, _ := workQueue.Get()
-
-			fmt.Println(currentKey)
 
 			assert.Equal(t, test.expectedKey, currentKey)
 		})

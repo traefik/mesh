@@ -131,9 +131,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	}
 
 	// run the ctr loop to process items
-	if err = ctr.Run(stopCh); err != nil {
-		log.Fatalf("Error running ctr: %v", err)
-	}
+	ctr.Run(stopCh)
 
 	return nil
 }
