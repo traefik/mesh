@@ -27,7 +27,7 @@ controller:
     request:
       mem: "50Mi"
       cpu: "100m"
-  ignoreNamespaces:
+  # ignoreNamespaces:
   # logLevel: error
 
   # Added so we can launch on nodes with restrictions
