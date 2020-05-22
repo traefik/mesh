@@ -67,7 +67,7 @@ spec:
             {{- if .Values.controller.logLevel }}
             - "--logLevel={{ .Values.controller.logLevel }}"
             {{- end }}
-            {{- if .Values.mesh }}
+            {{- if .Values.mesh.defaultMode }}
             - "--defaultMode={{ .Values.mesh.defaultMode }}"
             {{- end }}
             {{- if .Values.acl }}
