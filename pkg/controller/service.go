@@ -170,7 +170,7 @@ func (s *ShadowServiceManager) removeServicePortMapping(namespace, name string, 
 
 	case corev1.ProtocolUDP:
 		if _, err := s.udpStateTable.Remove(svcWithPort); err != nil {
-			s.logger.Warnf("Unable to remove TCP port mapping for %s/%s on port %d", namespace, name, svcPort.Port)
+			s.logger.Warnf("Unable to remove UDP port mapping for %s/%s on port %d", namespace, name, svcPort.Port)
 		}
 	}
 }
