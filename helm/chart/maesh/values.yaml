@@ -47,6 +47,7 @@ mesh:
   #   responseHeaderTimeout: "0s"
   #   (Optional)
   #   idleConnTimeout: "1s"
+
 #
 # Tracing configuration
 #
