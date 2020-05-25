@@ -11,6 +11,7 @@ import (
 	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	splitinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
@@ -124,13 +125,13 @@ func (p *Prepare) CheckDNSProvider() (dns.Provider, error) {
 }
 
 // ConfigureCoreDNS patches the CoreDNS configuration for Maesh.
-func (p *Prepare) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
-	return p.dns.ConfigureCoreDNS(clusterDomain, maeshNamespace)
+func (p *Prepare) ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespace string) error {
+	return p.dns.ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespace)
 }
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
-func (p *Prepare) ConfigureKubeDNS(maeshNamespace string) error {
-	return p.dns.ConfigureKubeDNS(maeshNamespace)
+func (p *Prepare) ConfigureKubeDNS(clusterDomain, maeshNamespace string) error {
+	return p.dns.ConfigureKubeDNS(clusterDomain, maeshNamespace)
 }
 
 // ConfigureDNS configures and patches the DNS system.
@@ -142,11 +143,11 @@ func (p *Prepare) ConfigureDNS(clusterDomain, maeshNamespace string) error {
 
 	switch provider {
 	case dns.CoreDNS:
-		if err := p.ConfigureCoreDNS(clusterDomain, maeshNamespace); err != nil {
+		if err := p.ConfigureCoreDNS(metav1.NamespaceSystem, clusterDomain, maeshNamespace); err != nil {
 			return fmt.Errorf("unable to configure CoreDNS: %v", err)
 		}
 	case dns.KubeDNS:
-		if err := p.ConfigureKubeDNS(maeshNamespace); err != nil {
+		if err := p.ConfigureKubeDNS(clusterDomain, maeshNamespace); err != nil {
 			return fmt.Errorf("unable to configure KubeDNS: %v", err)
 		}
 	}
