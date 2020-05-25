@@ -2,7 +2,7 @@ package controller
 
 import (
 	"context"
-	"reflect"
+	"fmt"
 	"time"
 
 	"github.com/containous/maesh/pkg/annotations"
@@ -18,13 +18,25 @@ import (
 	splitinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
 	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+)
+
+const (
+	// configRefreshKey is the work queue key used to indicate that config has to be refreshed.
+	configRefreshKey = "refresh"
+
+	// maxRetries is the number of times a work task will be retried before it is dropped out of the queue.
+	// With the current rate-limiter in use (5ms*2^(maxRetries-1)) the following numbers represent the times a
+	// work task is going to be re-queued: 5ms, 10ms, 20ms, 40ms, 80ms, 160ms, 320ms, 640ms, 1.3s, 2.6s, 5.1s, 10.2s
+	maxRetries = 12
 )
 
 // PortMapper is capable of storing and retrieving a port mapping for a given service.
@@ -37,13 +49,6 @@ type PortMapper interface {
 // TopologyBuilder builds Topologies.
 type TopologyBuilder interface {
 	Build(ignoredResources k8s.IgnoreWrapper) (*topology.Topology, error)
-}
-
-// ServiceManager is capable of managing kubernetes services.
-type ServiceManager interface {
-	Create(userSvc *corev1.Service) error
-	Update(oldUserSvc, newUserSvc *corev1.Service) (*corev1.Service, error)
-	Delete(userSvc *corev1.Service) error
 }
 
 // Config holds the configuration of the controller.
@@ -66,8 +71,8 @@ type Config struct {
 type Controller struct {
 	cfg                  Config
 	handler              cache.ResourceEventHandler
-	serviceManager       ServiceManager
-	configRefreshChan    chan struct{}
+	workQueue            workqueue.RateLimitingInterface
+	shadowServiceManager *ShadowServiceManager
 	provider             *provider.Provider
 	ignoredResources     k8s.IgnoreWrapper
 	tcpStateTable        PortMapper
@@ -91,8 +96,8 @@ type Controller struct {
 	trafficSplitLister   splitlister.TrafficSplitLister
 }
 
-// NewMeshController is used to build the informers and other required components of the mesh controller,
-// and return an initialized mesh controller object.
+// NewMeshController builds the informers and other required components of the mesh controller, and returns an
+// initialized mesh controller object.
 func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger) (*Controller, error) {
 	ignoredResources := k8s.NewIgnored()
 
@@ -134,13 +139,13 @@ func (c *Controller) init() {
 	c.splitFactory = splitinformer.NewSharedInformerFactoryWithOptions(c.clients.SplitClient(), k8s.ResyncPeriod)
 
 	c.serviceLister = c.kubernetesFactory.Core().V1().Services().Lister()
-	c.serviceManager = NewShadowServiceManager(c.logger, c.serviceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.KubernetesClient())
+	c.shadowServiceManager = NewShadowServiceManager(c.logger, c.serviceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.KubernetesClient())
 
-	// configRefreshChan is used to trigger configuration refreshes.
-	c.configRefreshChan = make(chan struct{})
+	// Create the work queue and the enqueue handler.
+	c.workQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 	c.handler = cache.FilteringResourceEventHandler{
 		FilterFunc: c.isWatchedResource,
-		Handler:    NewHandler(c.logger, c.serviceManager, c.configRefreshChan),
+		Handler:    &enqueueWorkHandler{logger: c.logger, workQueue: c.workQueue},
 	}
 
 	// Create listers and register the event handler to informers that are not ACL related.
@@ -194,9 +199,12 @@ func (c *Controller) init() {
 }
 
 // Run is the main entrypoint for the controller.
-func (c *Controller) Run(stopCh <-chan struct{}) error {
+func (c *Controller) Run(stopCh <-chan struct{}) {
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
+
+	// Tell processNextWorkItem to exit when the control loop ends.
+	defer c.workQueue.ShutDown()
 
 	c.logger.Debug("Initializing mesh controller")
 
@@ -209,27 +217,11 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Enable API readiness endpoint, informers are started and default conf is available.
 	c.api.EnableReadiness()
 
-	for {
-		select {
-		case <-stopCh:
-			c.logger.Info("Shutting down workers")
-			return nil
+	// Start to poll work from the queue.
+	go wait.Until(c.runWorker, time.Second, stopCh)
 
-		case <-c.configRefreshChan:
-			// Reload the configuration.
-			topo, err := c.topologyBuilder.Build(c.ignoredResources)
-			if err != nil {
-				c.logger.Errorf("Unable to build dynamic configuration: %v", err)
-				continue
-			}
-
-			conf := c.provider.BuildConfig(topo)
-
-			if !reflect.DeepEqual(c.currentConfiguration.Get(), conf) {
-				c.currentConfiguration.Set(conf)
-			}
-		}
-	}
+	<-stopCh
+	c.logger.Info("Shutting down workers")
 }
 
 // startInformers starts the controller informers.
@@ -292,4 +284,77 @@ func (c *Controller) isWatchedResource(obj interface{}) bool {
 	pMeta := meta.AsPartialObjectMetadata(accessor)
 
 	return !c.ignoredResources.IsIgnored(pMeta.ObjectMeta)
+}
+
+// runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and
+// process a message on the work queue.
+func (c *Controller) runWorker() {
+	for c.processNextWorkItem() {
+	}
+}
+
+// processNextWorkItem will read a single work item off the work queue and attempt to process it.
+func (c *Controller) processNextWorkItem() bool {
+	key, quit := c.workQueue.Get()
+	if quit {
+		return false
+	}
+
+	defer c.workQueue.Done(key)
+
+	if key != configRefreshKey {
+		if err := c.syncShadowService(key.(string)); err != nil {
+			c.handleErr(key, fmt.Errorf("unable to sync shadow service: %w", err))
+			return true
+		}
+	}
+
+	// Build and store config.
+	topo, err := c.topologyBuilder.Build(c.ignoredResources)
+	if err != nil {
+		c.handleErr(key, fmt.Errorf("unable to build topology: %w", err))
+		return true
+	}
+
+	conf := c.provider.BuildConfig(topo)
+	c.currentConfiguration.Set(conf)
+
+	c.workQueue.Forget(key)
+
+	return true
+}
+
+// syncShadowService calls the shadow service manager to keep the shadow service state in sync with the service events received.
+func (c *Controller) syncShadowService(key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+
+	svc, err := c.serviceLister.Services(namespace).Get(name)
+	if errors.IsNotFound(err) {
+		return c.shadowServiceManager.Delete(namespace, name)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	_, err = c.shadowServiceManager.CreateOrUpdate(svc)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// handleErr re-queues the given work key only if the maximum number of attempts is not exceeded.
+func (c *Controller) handleErr(key interface{}, err error) {
+	if c.workQueue.NumRequeues(key) < maxRetries {
+		c.workQueue.AddRateLimited(key)
+		return
+	}
+
+	c.logger.Errorf("Unable to complete work %q: %v", key, err)
+	c.workQueue.Forget(key)
 }

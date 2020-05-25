@@ -14,13 +14,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/util/retry"
 )
 
 // ShadowServiceManager manages shadow services.
 type ShadowServiceManager struct {
-	log                logrus.FieldLogger
-	lister             listers.ServiceLister
+	logger             logrus.FieldLogger
+	serviceLister      listers.ServiceLister
 	namespace          string
 	tcpStateTable      PortMapper
 	udpStateTable      PortMapper
@@ -31,10 +30,10 @@ type ShadowServiceManager struct {
 }
 
 // NewShadowServiceManager returns new shadow service manager.
-func NewShadowServiceManager(log logrus.FieldLogger, lister listers.ServiceLister, namespace string, tcpStateTable PortMapper, udpStateTable PortMapper, defaultTrafficType string, minHTTPPort, maxHTTPPort int32, kubeClient kubernetes.Interface) *ShadowServiceManager {
+func NewShadowServiceManager(logger logrus.FieldLogger, serviceLister listers.ServiceLister, namespace string, tcpStateTable, udpStateTable PortMapper, defaultTrafficType string, minHTTPPort, maxHTTPPort int32, kubeClient kubernetes.Interface) *ShadowServiceManager {
 	return &ShadowServiceManager{
-		log:                log,
-		lister:             lister,
+		logger:             logger,
+		serviceLister:      serviceLister,
 		namespace:          namespace,
 		tcpStateTable:      tcpStateTable,
 		udpStateTable:      udpStateTable,
@@ -45,29 +44,28 @@ func NewShadowServiceManager(log logrus.FieldLogger, lister listers.ServiceListe
 	}
 }
 
-// Create creates a new shadow service based on the given service.
-func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
-	name := s.getShadowServiceName(userSvc.Name, userSvc.Namespace)
+// CreateOrUpdate creates or updates the shadow service corresponding to the given service.
+func (s *ShadowServiceManager) CreateOrUpdate(svc *corev1.Service) (*corev1.Service, error) {
+	shadowSvcName := s.getShadowServiceName(svc.Namespace, svc.Name)
 
-	s.log.Debugf("Creating mesh service: %s", name)
-
-	_, err := s.lister.Services(s.namespace).Get(name)
-	if err == nil {
-		return nil
+	shadowSvc, err := s.serviceLister.Services(s.namespace).Get(shadowSvcName)
+	if err != nil && !kerrors.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to get shadow service %q: %w", shadowSvcName, err)
 	}
 
-	if !kerrors.IsNotFound(err) {
-		return fmt.Errorf("unable to get shadow service %q: %w", name, err)
-	}
+	// Removes the current mappings for the ports that are not present in the new service version.
+	// Current shadow service ports are equal to the ports mapped for the previous service version.
+	// This step is required to free up some ports before allocation.
+	s.removeUnusedPortMappings(shadowSvc, svc)
 
-	ports, err := s.getShadowServicePorts(userSvc)
+	ports, err := s.getShadowServicePorts(svc)
 	if err != nil {
-		return fmt.Errorf("unable to get ports for service %s/%s: %w", userSvc.Namespace, userSvc.Name, err)
+		return nil, fmt.Errorf("unable to get shadow service ports for service %s/%s: %w", svc.Namespace, svc.Name, err)
 	}
 
-	svc := &corev1.Service{
+	newShadowSvc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      shadowSvcName,
 			Namespace: s.namespace,
 			Labels: map[string]string{
 				"app":  "maesh",
@@ -82,11 +80,9 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 		},
 	}
 
-	major, minor := parseKubernetesServerVersion(s.kubeClient)
-
 	// If the kubernetes server version is 1.17+, then use the topology key.
-	if major == 1 && minor >= 17 {
-		svc.Spec.TopologyKeys = []string{
+	if major, minor := parseKubernetesServerVersion(s.kubeClient); major == 1 && minor >= 17 {
+		newShadowSvc.Spec.TopologyKeys = []string{
 			"kubernetes.io/hostname",
 			"topology.kubernetes.io/zone",
 			"topology.kubernetes.io/region",
@@ -94,107 +90,94 @@ func (s *ShadowServiceManager) Create(userSvc *corev1.Service) error {
 		}
 	}
 
-	if _, err = s.kubeClient.CoreV1().Services(s.namespace).Create(svc); err != nil {
-		return fmt.Errorf("unable to create kubernetes service: %w", err)
+	if shadowSvc == nil {
+		return s.kubeClient.CoreV1().Services(s.namespace).Create(newShadowSvc)
 	}
 
-	return nil
+	// Ensure that we are not leaking some port mappings if the traffic type of the new service version has been updated.
+	// If the traffic has been updated, some ports may be missing if they are not suitable, and some target port values may not match.
+	s.cleanupPortMappings(svc.Namespace, svc.Name, shadowSvc, newShadowSvc)
+
+	shadowSvc = shadowSvc.DeepCopy()
+	shadowSvc.Spec.Ports = newShadowSvc.Spec.Ports
+
+	return s.kubeClient.CoreV1().Services(s.namespace).Update(shadowSvc)
 }
 
-// Update updates the shadow service associated with the old user service following the content of the new user service.
-func (s *ShadowServiceManager) Update(oldUserSvc *corev1.Service, newUserSvc *corev1.Service) (*corev1.Service, error) {
-	name := s.getShadowServiceName(newUserSvc.Name, newUserSvc.Namespace)
+// Delete deletes the shadow service associated with the given service.
+func (s *ShadowServiceManager) Delete(namespace, name string) error {
+	shadowSvcName := s.getShadowServiceName(namespace, name)
 
-	if err := s.cleanupPortMapping(oldUserSvc, newUserSvc); err != nil {
-		return nil, fmt.Errorf("unable to cleanup port mapping for service %s/%s: %w", oldUserSvc.Namespace, oldUserSvc.Name, err)
-	}
-
-	ports, err := s.getShadowServicePorts(newUserSvc)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get ports for service %s/%s: %w", newUserSvc.Namespace, newUserSvc.Name, err)
-	}
-
-	var updatedSvc *corev1.Service
-
-	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		svc, err := s.lister.Services(s.namespace).Get(name)
-		if err != nil {
-			return fmt.Errorf("unable to get shadow service %q: %w", name, err)
-		}
-
-		newSvc := svc.DeepCopy()
-		newSvc.Spec.Ports = ports
-
-		if updatedSvc, err = s.kubeClient.CoreV1().Services(s.namespace).Update(newSvc); err != nil {
-			return fmt.Errorf("unable to update kubernetes service: %w", err)
-		}
-
+	shadowSvc, err := s.serviceLister.Services(s.namespace).Get(shadowSvcName)
+	if kerrors.IsNotFound(err) {
 		return nil
-	})
-
-	if retryErr != nil {
-		return nil, fmt.Errorf("unable to update service %q: %v", name, retryErr)
 	}
 
-	s.log.Debugf("Updated service: %s/%s", s.namespace, name)
-
-	return updatedSvc, nil
-}
-
-// Delete deletes a shadow service associated with the given user service.
-func (s *ShadowServiceManager) Delete(userSvc *corev1.Service) error {
-	name := s.getShadowServiceName(userSvc.Name, userSvc.Namespace)
-
-	if err := s.cleanupPortMapping(userSvc, nil); err != nil {
-		return fmt.Errorf("unable to cleanup port mapping for service %s/%s: %w", userSvc.Namespace, userSvc.Name, err)
-	}
-
-	_, err := s.lister.Services(s.namespace).Get(name)
 	if err != nil {
 		return err
 	}
 
-	if err := s.kubeClient.CoreV1().Services(s.namespace).Delete(name, &metav1.DeleteOptions{}); err != nil {
-		return err
+	// Removes all port mappings for the deleted service.
+	// Current shadow service ports are equal to the deleted service ports.
+	for _, svcPort := range shadowSvc.Spec.Ports {
+		s.removeServicePortMapping(namespace, name, svcPort)
 	}
 
-	s.log.Debugf("Deleted service: %s/%s", s.namespace, name)
-
-	return nil
+	return s.kubeClient.CoreV1().Services(s.namespace).Delete(shadowSvcName, &metav1.DeleteOptions{})
 }
 
-func (s *ShadowServiceManager) cleanupPortMapping(oldUserSvc *corev1.Service, newUserSvc *corev1.Service) error {
-	var stateTable PortMapper
+func (s *ShadowServiceManager) cleanupPortMappings(namespace, name string, oldShadowSvc, newShadowSvc *corev1.Service) {
+	for _, oldPort := range oldShadowSvc.Spec.Ports {
+		if !needsCleanup(newShadowSvc.Spec.Ports, oldPort) {
+			continue
+		}
 
-	trafficType, err := annotations.GetTrafficType(s.defaultTrafficType, oldUserSvc.Annotations)
-	if err != nil {
-		return fmt.Errorf("unable to get service traffic type: %w", err)
+		s.removeServicePortMapping(namespace, name, oldPort)
+	}
+}
+
+func (s *ShadowServiceManager) removeUnusedPortMappings(shadowSvc, svc *corev1.Service) {
+	if svc == nil || shadowSvc == nil {
+		return
 	}
 
-	switch trafficType {
-	case annotations.ServiceTypeTCP:
-		stateTable = s.tcpStateTable
-	case annotations.ServiceTypeUDP:
-		stateTable = s.udpStateTable
-	default:
-		return nil
+	for _, shadowSvcPort := range shadowSvc.Spec.Ports {
+		if containsPort(svc.Spec.Ports, shadowSvcPort) {
+			continue
+		}
+
+		s.removeServicePortMapping(svc.Namespace, svc.Name, shadowSvcPort)
+	}
+}
+
+func (s *ShadowServiceManager) removeServicePortMapping(namespace, name string, svcPort corev1.ServicePort) {
+	// Nothing to do here as there is no port table for HTTP ports.
+	if svcPort.TargetPort.IntVal < s.maxHTTPPort {
+		return
 	}
 
-	for _, old := range oldUserSvc.Spec.Ports {
-		if found := matchPort(old.Port, newUserSvc); !found {
-			_, err := stateTable.Remove(k8s.ServiceWithPort{
-				Namespace: oldUserSvc.Namespace,
-				Name:      oldUserSvc.Name,
-				Port:      old.Port,
-			})
+	svcWithPort := k8s.ServiceWithPort{
+		Namespace: namespace,
+		Name:      name,
+		Port:      svcPort.Port,
+	}
 
-			if err != nil {
-				s.log.Warnf("Unable to remove port mapping for %s/%s on port %d", oldUserSvc.Namespace, oldUserSvc.Name, old.Port)
-			}
+	switch svcPort.Protocol {
+	case corev1.ProtocolTCP:
+		if _, err := s.tcpStateTable.Remove(svcWithPort); err != nil {
+			s.logger.Warnf("Unable to remove TCP port mapping for %s/%s on port %d", namespace, name, svcPort.Port)
+		}
+
+	case corev1.ProtocolUDP:
+		if _, err := s.udpStateTable.Remove(svcWithPort); err != nil {
+			s.logger.Warnf("Unable to remove UDP port mapping for %s/%s on port %d", namespace, name, svcPort.Port)
 		}
 	}
+}
 
-	return nil
+// getShadowServiceName returns the shadow service name corresponding to the given service name and namespace.
+func (s *ShadowServiceManager) getShadowServiceName(namespace, name string) string {
+	return fmt.Sprintf("%s-%s-6d61657368-%s", s.namespace, name, namespace)
 }
 
 func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) ([]corev1.ServicePort, error) {
@@ -207,12 +190,13 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) ([]cor
 
 	for i, sp := range svc.Spec.Ports {
 		if !isPortSuitable(trafficType, sp) {
-			s.log.Warnf("Unsupported port type %q on %q service %s/%s, skipping port %q", sp.Protocol, trafficType, svc.Namespace, svc.Name, sp.Name)
+			s.logger.Warnf("Unsupported port type %q on %q service %s/%s, skipping port %q", sp.Protocol, trafficType, svc.Namespace, svc.Name, sp.Name)
+			continue
 		}
 
 		targetPort, err := s.getTargetPort(trafficType, i, svc.Name, svc.Namespace, sp.Port)
 		if err != nil {
-			s.log.Errorf("Unable to find available %s port: %v, skipping port %s on service %s/%s", sp.Name, err, sp.Name, svc.Namespace, svc.Name)
+			s.logger.Errorf("Unable to find available %s port: %v, skipping port %s on service %s/%s", sp.Name, err, sp.Name, svc.Namespace, svc.Name)
 			continue
 		}
 
@@ -225,11 +209,6 @@ func (s *ShadowServiceManager) getShadowServicePorts(svc *corev1.Service) ([]cor
 	}
 
 	return ports, nil
-}
-
-// getShadowServiceName converts a User service with a namespace to a mesh service name.
-func (s *ShadowServiceManager) getShadowServiceName(name string, namespace string) string {
-	return fmt.Sprintf("%s-%s-6d61657368-%s", s.namespace, name, namespace)
 }
 
 func (s *ShadowServiceManager) getTargetPort(trafficType string, portID int, name, namespace string, port int32) (int32, error) {
@@ -265,14 +244,14 @@ func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, svcName, svc
 		return port, nil
 	}
 
-	s.log.Debugf("No match found for %s/%s %d - Add a new port", svcName, svcNamespace, svcPort)
+	s.logger.Debugf("No match found for %s/%s %d - Add a new port", svcName, svcNamespace, svcPort)
 
 	port, err := stateTable.Add(&svc)
 	if err != nil {
 		return 0, fmt.Errorf("unable to add service to the TCP state table: %w", err)
 	}
 
-	s.log.Debugf("Service %s/%s %d as been assigned port %d", svcName, svcNamespace, svcPort, port)
+	s.logger.Debugf("Service %s/%s %d as been assigned port %d", svcName, svcNamespace, svcPort, port)
 
 	return port, nil
 }
@@ -308,16 +287,24 @@ func parseKubernetesServerVersion(kubeClient kubernetes.Interface) (major, minor
 	return major, minor
 }
 
-func matchPort(oldPort int32, newUserSvc *corev1.Service) bool {
-	if newUserSvc == nil {
-		return false
-	}
-
-	for _, new := range newUserSvc.Spec.Ports {
-		if oldPort == new.Port {
+// containsPort returns true if a service port with the same port and protocol value exist in the given port list, false otherwise.
+func containsPort(ports []corev1.ServicePort, port corev1.ServicePort) bool {
+	for _, onePort := range ports {
+		if onePort.Port == port.Port && onePort.Protocol == port.Protocol {
 			return true
 		}
 	}
 
 	return false
+}
+
+// needsCleanup returns true if the given shadow service port have to be cleaned up, false otherwise.
+func needsCleanup(ports []corev1.ServicePort, port corev1.ServicePort) bool {
+	for _, onePort := range ports {
+		if onePort.Port == port.Port && onePort.Protocol == port.Protocol && onePort.TargetPort == port.TargetPort {
+			return false
+		}
+	}
+
+	return true
 }
