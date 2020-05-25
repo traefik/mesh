@@ -43,6 +43,16 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 
 	log.SetLevel(logLevel)
 
+	// configure log format
+	var formatter logrus.Formatter
+	if pConfig.LogFormat == "json" {
+		formatter = &logrus.JSONFormatter{}
+	} else {
+		formatter = &logrus.TextFormatter{DisableColors: false, FullTimestamp: true, DisableSorting: true}
+	}
+
+	log.SetFormatter(formatter)
+
 	log.Debugln("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)

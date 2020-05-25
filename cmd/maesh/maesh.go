@@ -81,6 +81,16 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 
 	log.SetLevel(logLevel)
 
+	// configure log format
+	var formatter logrus.Formatter
+	if iConfig.LogFormat == "json" {
+		formatter = &logrus.JSONFormatter{}
+	} else {
+		formatter = &logrus.TextFormatter{DisableColors: false, FullTimestamp: true, DisableSorting: true}
+	}
+
+	log.SetFormatter(formatter)
+
 	log.Debugln("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)

@@ -36,6 +36,16 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 
 	log.SetLevel(logLevel)
 
+	// configure log format
+	var formatter logrus.Formatter
+	if cConfig.LogFormat == "json" {
+		formatter = &logrus.JSONFormatter{}
+	} else {
+		formatter = &logrus.TextFormatter{DisableColors: false, FullTimestamp: true, DisableSorting: true}
+	}
+
+	log.SetFormatter(formatter)
+
 	log.Debugln("Starting maesh cleanup...")
 	log.Debugf("Using masterURL: %q", cConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", cConfig.KubeConfig)
