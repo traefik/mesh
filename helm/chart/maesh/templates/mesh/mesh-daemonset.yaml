@@ -171,8 +171,8 @@ spec:
             - "--serversTransport.forwardingTimeouts.idleConnTimeout={{ .Values.mesh.forwardingTimeouts.idleConnTimeout }}"
               {{- end }}
             {{- end }}
-            {{- if .Values.mesh.logLevel }}
-            - "--log.level={{ .Values.mesh.logLevel }}"
+            {{- if or .Values.mesh.logLevel .Values.logLevel }}
+            - "--log.level={{ or .Values.mesh.logLevel .Values.logLevel }}"
             {{- end }}
             {{- if .Values.metrics.prometheus.enabled }}
             - "--metrics.prometheus"
