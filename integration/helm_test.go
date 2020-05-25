@@ -27,7 +27,7 @@ func (s *HelmSuite) TestACLDisabled(c *check.C) {
 	err := s.installHelmMaesh(c, false, false)
 	c.Assert(err, checker.IsNil)
 
-	defer s.unInstallHelmMaesh(c)
+	defer s.uninstallHelmMaesh(c)
 
 	s.waitForMaeshControllerStarted(c)
 	s.waitForMaeshProxyStarted(c)
@@ -37,7 +37,7 @@ func (s *HelmSuite) TestACLEnabled(c *check.C) {
 	err := s.installHelmMaesh(c, true, false)
 	c.Assert(err, checker.IsNil)
 
-	defer s.unInstallHelmMaesh(c)
+	defer s.uninstallHelmMaesh(c)
 
 	s.waitForMaeshControllerStarted(c)
 	s.waitForMaeshProxyStarted(c)
@@ -47,7 +47,7 @@ func (s *HelmSuite) TestKubeDNSEnabled(c *check.C) {
 	err := s.installHelmMaesh(c, false, true)
 	c.Assert(err, checker.IsNil)
 
-	defer s.unInstallHelmMaesh(c)
+	defer s.uninstallHelmMaesh(c)
 
 	s.waitForMaeshControllerStarted(c)
 	s.waitForMaeshProxyStarted(c)
