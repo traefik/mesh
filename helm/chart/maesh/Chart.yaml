@@ -7,7 +7,10 @@ description: Maesh - Simpler Service Mesh
 keywords:
   - traefik
   - mesh
-home: https://containo.us/
+  - smi
+home: https://mae.sh/
+sources:
+  - https://github.com/containous/maesh/
 maintainers:
   - name: emilevauge
     email: emile@vauge.com
