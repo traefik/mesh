@@ -26,22 +26,4 @@ data:
         reload
         loadbalance
     }
-
-    maesh:53 {
-        errors
-        rewrite continue {
-            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh {{ .Release.Namespace }}-{1}-6d61657368-{2}.{{ .Release.Namespace }}.svc.{{ default "cluster.local" .Values.clusterDomain }}
-            answer name {{ .Release.Namespace }}-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.{{ .Release.Namespace }}\.svc\.{{ default "cluster.local" .Values.clusterDomain | replace "." "\\." }} {1}.{2}.maesh
-        }
-        kubernetes {{ default "cluster.local" .Values.clusterDomain }} in-addr.arpa ip6.arpa {
-            pods insecure
-            upstream
-            fallthrough in-addr.arpa ip6.arpa
-        }
-        forward . /etc/resolv.conf
-        cache 30
-        loop
-        reload
-        loadbalance
-    }
 {{- end }}
