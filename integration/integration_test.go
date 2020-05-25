@@ -357,9 +357,9 @@ func (s *BaseSuite) installHelmMaesh(c *check.C, acl bool, kubeDNS bool) error {
 	return s.try.WaitCommandExecute("helm", argSlice, "powpow", 10*time.Second)
 }
 
-func (s *BaseSuite) unInstallHelmMaesh(c *check.C) {
+func (s *BaseSuite) uninstallHelmMaesh(c *check.C) {
 	c.Log("Uninstalling Maesh via helm...")
-	// Install the helm chart.
+	// Uninstall the helm chart.
 	argSlice := []string{"uninstall", "powpow", "--namespace", maeshNamespace}
 	err := s.try.WaitCommandExecute("helm", argSlice, "uninstalled", 10*time.Second)
 	c.Assert(err, checker.IsNil)
