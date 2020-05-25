@@ -38,10 +38,10 @@ controller:
   affinity: {}
 
 mesh:
-  pollInterval: 1s
-  pollTimeout: 1s
   # defaultMode: http
   # logLevel: error
+  # pollInterval: 1s
+  # pollTimeout: 1s
   # forwardingTimeouts:
   #   dialTimeout: 30s
   #   (Optional)
