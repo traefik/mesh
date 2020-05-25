@@ -40,16 +40,16 @@ func New(endpoint string, pollInterval time.Duration, pollTimeout time.Duration)
 
 // Init the provider.
 func (p *Provider) Init() error {
-	if len(p.Endpoint) == 0 {
+	if p.Endpoint == "" {
 		return fmt.Errorf("a non-empty endpoint is required")
 	}
 
 	if p.PollInterval == 0 {
-		p.PollInterval = 15 * time.Second
+		p.PollInterval = 1 * time.Second
 	}
 
 	if p.PollTimeout == 0 {
-		p.PollTimeout = 15 * time.Second
+		p.PollTimeout = 1 * time.Second
 	}
 
 	p.httpClient = &http.Client{Timeout: p.PollTimeout}
@@ -59,7 +59,7 @@ func (p *Provider) Init() error {
 
 // Provide allows the provider to provide configurations to traefik
 // using the given configuration channel.
-//nolint:gocognit // This requires a refactor that will come in its own PR.
+// nolint:gocognit // This requires a refactor that will come in its own PR.
 func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.Pool) error {
 	pool.GoCtx(func(routineCtx context.Context) {
 		ctxLog := log.With(routineCtx, log.Str(log.ProviderName, providerName))
