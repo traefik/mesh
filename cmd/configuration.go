@@ -82,6 +82,8 @@ type ProxyConfiguration struct {
 // NewProxyConfiguration creates a ProxyConfiguration with default values.
 func NewProxyConfiguration() *ProxyConfiguration {
 	return &ProxyConfiguration{
+		PollInterval: 1 * time.Second,
+		PollTimeout:  1 * time.Second,
 		Configuration: static.Configuration{
 			Global: &static.Global{
 				CheckNewVersion: false,
