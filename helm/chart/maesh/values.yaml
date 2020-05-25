@@ -14,6 +14,8 @@ image:
 
 # clusterDomain: cluster.local
 
+# logLevel: error
+
 limits:
   http: 10
   tcp: 25
