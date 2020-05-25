@@ -4,7 +4,7 @@ This document outlines the guidelines for developing, managing and extending the
 
 ## Optionality
 
-All non-critical features (features not mandatory to starting a cluster) in the Helm Chart must be optional.
+All non-critical features (features not mandatory to start Maesh) in the Helm Chart must be optional.
 All non-critical features should be disabled (commented out) in the `values.yaml` file.
 All optional non-critical features should be disabled (commented out) in the `values.yaml` file, and have a comment `# (Optional)` in the line above.
 This allows minimal configuration, and ease of extension.
