@@ -2,13 +2,11 @@ package prepare
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/prepare"
 	"github.com/containous/traefik/v2/pkg/cli"
-	"github.com/sirupsen/logrus"
 )
 
 // NewCmd builds a new Prepare command.
@@ -25,33 +23,10 @@ func NewCmd(pConfig *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
-	log := logrus.New()
-
-	log.SetOutput(os.Stdout)
-
-	logLevelStr := pConfig.LogLevel
-	if pConfig.Debug {
-		logLevelStr = "debug"
-
-		log.Warnf("Debug flag is deprecated, please consider using --loglevel=DEBUG instead")
-	}
-
-	logLevel, err := logrus.ParseLevel(logLevelStr)
+	log, err := cmd.BuildLogger(pConfig.LogFormat, pConfig.LogLevel, pConfig.Debug)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not build logger: %v", err)
 	}
-
-	log.SetLevel(logLevel)
-
-	// configure log format
-	var formatter logrus.Formatter
-	if pConfig.LogFormat == "json" {
-		formatter = &logrus.JSONFormatter{}
-	} else {
-		formatter = &logrus.TextFormatter{DisableColors: false, FullTimestamp: true, DisableSorting: true}
-	}
-
-	log.SetFormatter(formatter)
 
 	log.Debugln("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)

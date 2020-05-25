@@ -15,6 +15,7 @@ image:
 # clusterDomain: cluster.local
 
 # logLevel: error
+# logFormat: common
 
 limits:
   http: 10
@@ -23,6 +24,7 @@ limits:
 
 controller:
   # logLevel: error
+  # logFormat: common
   # ignoreNamespaces:
   #  - example
 
@@ -42,6 +44,7 @@ controller:
 mesh:
   # defaultMode: http
   # logLevel: error
+  # logFormat: common
   # pollInterval: 1s
   # pollTimeout: 1s
   # forwardingTimeouts:
