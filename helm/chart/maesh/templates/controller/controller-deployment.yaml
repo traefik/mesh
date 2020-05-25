@@ -67,6 +67,9 @@ spec:
             {{- if or .Values.controller.logLevel .Values.logLevel }}
             - "--logLevel={{ or .Values.controller.logLevel .Values.logLevel }}"
             {{- end }}
+            {{- if or .Values.controller.logFormat .Values.logFormat }}
+            - "--logFormat={{ or .Values.controller.logFormat .Values.logFormat }}"
+            {{- end }}
             {{- if .Values.mesh.defaultMode }}
             - "--defaultMode={{ .Values.mesh.defaultMode }}"
             {{- end }}
@@ -110,6 +113,9 @@ spec:
             - "prepare"
             {{- if or .Values.controller.logLevel .Values.logLevel }}
             - "--logLevel={{ or .Values.controller.logLevel .Values.logLevel }}"
+            {{- end }}
+            {{- if or .Values.controller.logFormat .Values.logFormat }}
+            - "--logFormat={{ or .Values.controller.logFormat .Values.logFormat }}"
             {{- end }}
             {{- if .Values.acl }}
             - "--acl"

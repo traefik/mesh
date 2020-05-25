@@ -9,6 +9,8 @@ The static configuration is configured when the service mesh is installed and is
 
 - Logging level for controller and proxies can be defined.
 
+- Logging format for controller and proxies can be defined.
+
 - The default mesh mode can be configured. If this is not set, the default mode will be HTTP.
   This means that new mesh services that are not specified will default to operate in HTTP mode.
 

@@ -15,7 +15,6 @@ import (
 	preparepkg "github.com/containous/maesh/pkg/prepare"
 	"github.com/containous/maesh/pkg/signals"
 	"github.com/containous/traefik/v2/pkg/cli"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -63,23 +62,10 @@ func main() {
 }
 
 func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
-	log := logrus.New()
-
-	log.SetOutput(os.Stdout)
-
-	logLevelStr := iConfig.LogLevel
-	if iConfig.Debug {
-		logLevelStr = "debug"
-
-		log.Warnf("Debug flag is deprecated, please consider using --loglevel=DEBUG instead")
-	}
-
-	logLevel, err := logrus.ParseLevel(logLevelStr)
+	log, err := cmd.BuildLogger(iConfig.LogFormat, iConfig.LogLevel, iConfig.Debug)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not build logger: %v", err)
 	}
-
-	log.SetLevel(logLevel)
 
 	log.Debugln("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
