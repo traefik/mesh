@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/containous/maesh/pkg/annotations"
-	"github.com/containous/maesh/pkg/api"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/provider"
 	"github.com/containous/maesh/pkg/topology"
-	"github.com/containous/traefik/v2/pkg/safe"
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
 	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
@@ -46,6 +45,13 @@ type PortMapper interface {
 	Remove(svc k8s.ServiceWithPort) (int32, error)
 }
 
+// SharedStore is capable sharing a state of the controller.
+type SharedStore interface {
+	SetConfig(cfg *dynamic.Configuration)
+	SetTopology(topo *topology.Topology)
+	SetReadiness(isReady bool)
+}
+
 // TopologyBuilder builds Topologies.
 type TopologyBuilder interface {
 	Build(ignoredResources k8s.IgnoreWrapper) (*topology.Topology, error)
@@ -57,8 +63,6 @@ type Config struct {
 	DefaultMode      string
 	Namespace        string
 	IgnoreNamespaces []string
-	APIPort          int32
-	APIHost          string
 	MinHTTPPort      int32
 	MaxHTTPPort      int32
 	MinTCPPort       int32
@@ -70,7 +74,6 @@ type Config struct {
 // Controller hold controller configuration.
 type Controller struct {
 	cfg                  Config
-	handler              cache.ResourceEventHandler
 	workQueue            workqueue.RateLimitingInterface
 	shadowServiceManager *ShadowServiceManager
 	provider             *provider.Provider
@@ -78,9 +81,9 @@ type Controller struct {
 	tcpStateTable        PortMapper
 	udpStateTable        PortMapper
 	topologyBuilder      TopologyBuilder
-	currentConfiguration *safe.Safe
-	api                  api.Interface
+	store                SharedStore
 	logger               logrus.FieldLogger
+	stop                 chan struct{}
 
 	clients              k8s.Client
 	kubernetesFactory    informers.SharedInformerFactory
@@ -98,7 +101,7 @@ type Controller struct {
 
 // NewMeshController builds the informers and other required components of the mesh controller, and returns an
 // initialized mesh controller object.
-func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger) (*Controller, error) {
+func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger logrus.FieldLogger) (*Controller, error) {
 	ignoredResources := k8s.NewIgnored()
 
 	for _, ns := range cfg.IgnoreNamespaces {
@@ -126,6 +129,8 @@ func NewMeshController(clients k8s.Client, cfg Config, logger logrus.FieldLogger
 		ignoredResources: ignoredResources,
 		tcpStateTable:    tcpStateTable,
 		udpStateTable:    udpStateTable,
+		store:            store,
+		stop:             make(chan struct{}),
 	}
 
 	c.init()
@@ -143,7 +148,7 @@ func (c *Controller) init() {
 
 	// Create the work queue and the enqueue handler.
 	c.workQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-	c.handler = cache.FilteringResourceEventHandler{
+	handler := cache.FilteringResourceEventHandler{
 		FilterFunc: c.isWatchedResource,
 		Handler:    &enqueueWorkHandler{logger: c.logger, workQueue: c.workQueue},
 	}
@@ -153,9 +158,9 @@ func (c *Controller) init() {
 	c.endpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
 	c.trafficSplitLister = c.splitFactory.Split().V1alpha2().TrafficSplits().Lister()
 
-	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(c.handler)
-	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(c.handler)
-	c.splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(c.handler)
+	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(handler)
+	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(handler)
+	c.splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(handler)
 
 	// Create SharedInformers, listers and register the event handler for ACL related resources.
 	if c.cfg.ACLEnabled {
@@ -166,15 +171,11 @@ func (c *Controller) init() {
 		c.httpRouteGroupLister = c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
 		c.tcpRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
 
-		c.accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(c.handler)
-		c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(c.handler)
-		c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(c.handler)
-		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(c.handler)
+		c.accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(handler)
+		c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(handler)
+		c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(handler)
+		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(handler)
 	}
-
-	c.currentConfiguration = safe.New(provider.NewDefaultDynamicConfig())
-
-	c.api = api.NewAPI(c.logger, c.cfg.APIPort, c.cfg.APIHost, c.currentConfiguration, c.podLister, c.cfg.Namespace)
 
 	c.topologyBuilder = &topology.Builder{
 		ServiceLister:        c.serviceLister,
@@ -199,7 +200,18 @@ func (c *Controller) init() {
 }
 
 // Run is the main entrypoint for the controller.
-func (c *Controller) Run(stopCh <-chan struct{}) error {
+func (c *Controller) Run(ctx context.Context) error {
+	stopCh := make(chan struct{})
+
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-c.stop:
+		}
+
+		close(stopCh)
+	}()
+
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
@@ -208,24 +220,27 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 
 	c.logger.Debug("Initializing mesh controller")
 
-	// Start the api.
-	c.api.Start()
-
 	// Start the informers.
 	if err := c.startInformers(stopCh, 10*time.Second); err != nil {
 		return fmt.Errorf("could not start informers: %w", err)
 	}
 
 	// Enable API readiness endpoint, informers are started and default conf is available.
-	c.api.EnableReadiness()
+	c.store.SetReadiness(true)
 
 	// Start to poll work from the queue.
 	go wait.Until(c.runWorker, time.Second, stopCh)
 
 	<-stopCh
+
 	c.logger.Info("Shutting down workers")
 
 	return nil
+}
+
+// Stop stops the controller.
+func (c *Controller) Stop() {
+	c.stop <- struct{}{}
 }
 
 // startInformers starts the controller informers.
@@ -332,7 +347,9 @@ func (c *Controller) processNextWorkItem() bool {
 	}
 
 	conf := c.provider.BuildConfig(topo)
-	c.currentConfiguration.Set(conf)
+
+	c.store.SetTopology(topo)
+	c.store.SetConfig(conf)
 
 	c.workQueue.Forget(key)
 

@@ -1,39 +1,39 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
+	"github.com/containous/maesh/pkg/k8s"
+	"github.com/containous/maesh/pkg/provider"
+	"github.com/containous/maesh/pkg/topology"
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
-// Ensure the API fits the interface.
-var _ Interface = (*API)(nil)
-
-// Interface is an interface to interact with the REST API.
-type Interface interface {
-	Start()
-	EnableReadiness()
-}
-
 // API is an implementation of an api.
 type API struct {
-	log                  logrus.FieldLogger
-	router               *mux.Router
-	readiness            bool
-	currentConfiguration *safe.Safe
-	apiPort              int32
-	apiHost              string
-	meshNamespace        string
-	podLister            listers.PodLister
+	http.Server
+
+	readiness     *safe.Safe
+	configuration *safe.Safe
+	topology      *safe.Safe
+
+	meshNamespace string
+	podLister     listers.PodLister
+	log           logrus.FieldLogger
 }
 
 type podInfo struct {
@@ -43,95 +43,123 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, currentConfiguration *safe.Safe, podLister listers.PodLister, meshNamespace string) *API {
+func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, client kubernetes.Interface, meshNamespace string) (*API, error) {
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{"component": "maesh-mesh"},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to create label selector: %w", err)
+	}
+
+	informerFactory := informers.NewSharedInformerFactoryWithOptions(client, k8s.ResyncPeriod,
+		informers.WithNamespace(meshNamespace),
+		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+			options.LabelSelector = selector.String()
+		}))
+
+	podLister := informerFactory.Core().V1().Pods().Lister()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	informerFactory.Start(ctx.Done())
+
+	for t, ok := range informerFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			return nil, fmt.Errorf("timed out while waiting for informer cache to sync: %s", t)
+		}
+	}
+
+	router := mux.NewRouter()
+
 	a := &API{
-		log:                  log,
-		readiness:            false,
-		currentConfiguration: currentConfiguration,
-		apiPort:              apiPort,
-		apiHost:              apiHost,
-		podLister:            podLister,
-		meshNamespace:        meshNamespace,
+		Server: http.Server{
+			Addr:         fmt.Sprintf("%s:%d", apiHost, apiPort),
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 5 * time.Second,
+			Handler:      router,
+		},
+		configuration: safe.New(provider.NewDefaultDynamicConfig()),
+		topology:      safe.New(topology.NewTopology()),
+		readiness:     safe.New(false),
+		podLister:     podLister,
+		meshNamespace: meshNamespace,
+		log:           log,
 	}
 
-	if err := a.Init(); err != nil {
-		log.Errorln("Could not initialize API")
+	router.HandleFunc("/api/configuration/current", a.getCurrentConfiguration)
+	router.HandleFunc("/api/topology/current", a.getCurrentTopology)
+	router.HandleFunc("/api/status/nodes", a.getMeshNodes)
+	router.HandleFunc("/api/status/node/{node}/configuration", a.getMeshNodeConfiguration)
+	router.HandleFunc("/api/status/readiness", a.getReadiness)
+
+	return a, nil
+}
+
+// SetReadiness sets the readiness flag in the API.
+func (a *API) SetReadiness(isReady bool) {
+	readiness, ok := a.readiness.Get().(bool)
+
+	if ok && readiness == isReady {
+		return
 	}
 
-	return a
-}
+	a.readiness.Set(isReady)
 
-// Init handles any api initialization.
-func (a *API) Init() error {
-	a.log.Debugln("Initializing API")
-
-	a.router = mux.NewRouter()
-
-	a.router.HandleFunc("/api/configuration/current", a.getCurrentConfiguration)
-	a.router.HandleFunc("/api/status/nodes", a.getMeshNodes)
-	a.router.HandleFunc("/api/status/node/{node}/configuration", a.getMeshNodeConfiguration)
-	a.router.HandleFunc("/api/status/readiness", a.getReadiness)
-
-	return nil
-}
-
-// Start runs the API.
-func (a *API) Start() {
-	a.log.Debug("Starting API")
-
-	go a.Run()
-}
-
-// Run wraps the listenAndServe method.
-func (a *API) Run() {
-	a.log.Error(http.ListenAndServe(fmt.Sprintf("%s:%d", a.apiHost, a.apiPort), a.router))
-}
-
-// EnableReadiness enables the readiness flag in the API.
-func (a *API) EnableReadiness() {
-	if !a.readiness {
+	if isReady {
 		a.log.Debug("API readiness enabled")
-
-		a.readiness = true
+	} else {
+		a.log.Debug("API readiness disabled")
 	}
+}
+
+// SetConfig sets the current dynamic configuration.
+func (a *API) SetConfig(cfg *dynamic.Configuration) {
+	a.configuration.Set(cfg)
+}
+
+// SetTopology sets the current topology.
+func (a *API) SetTopology(topo *topology.Topology) {
+	a.topology.Set(topo)
 }
 
 // getCurrentConfiguration returns the current configuration.
-func (a *API) getCurrentConfiguration(w http.ResponseWriter, r *http.Request) {
+func (a *API) getCurrentConfiguration(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if err := json.NewEncoder(w).Encode(a.currentConfiguration.Get()); err != nil {
+	if err := json.NewEncoder(w).Encode(a.configuration.Get()); err != nil {
+		a.log.Error(err)
+	}
+}
+
+// getCurrentTopology returns the current topology.
+func (a *API) getCurrentTopology(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(a.topology.Get()); err != nil {
 		a.log.Error(err)
 	}
 }
 
 // getReadiness returns the current readiness value, and sets the status code to 500 if not ready.
-func (a *API) getReadiness(w http.ResponseWriter, r *http.Request) {
-	if !a.readiness {
+func (a *API) getReadiness(w http.ResponseWriter, _ *http.Request) {
+	isReady, _ := a.readiness.Get().(bool)
+	if !isReady {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 
-	if err := json.NewEncoder(w).Encode(a.readiness); err != nil {
+	if err := json.NewEncoder(w).Encode(isReady); err != nil {
 		a.log.Error(err)
 	}
 }
 
 // getMeshNodes returns a list of mesh nodes visible from the controller, and some basic readiness info.
-func (a *API) getMeshNodes(w http.ResponseWriter, r *http.Request) {
+func (a *API) getMeshNodes(w http.ResponseWriter, _ *http.Request) {
 	podInfoList := []podInfo{}
 
-	sel := labels.Everything()
-
-	requirement, err := labels.NewRequirement("component", selection.Equals, []string{"maesh-mesh"})
-	if err != nil {
-		a.log.Error(err)
-	}
-
-	sel = sel.Add(*requirement)
-
-	podList, err := a.podLister.Pods(a.meshNamespace).List(sel)
+	podList, err := a.podLister.List(labels.Everything())
 	if err != nil {
 		a.writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod list: %v", err), http.StatusInternalServerError)
 		return

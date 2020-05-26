@@ -1,19 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	stdlog "log"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/cmd/cleanup"
 	"github.com/containous/maesh/cmd/prepare"
 	"github.com/containous/maesh/cmd/proxy"
 	"github.com/containous/maesh/cmd/version"
+	"github.com/containous/maesh/pkg/api"
 	"github.com/containous/maesh/pkg/controller"
 	"github.com/containous/maesh/pkg/k8s"
 	preparepkg "github.com/containous/maesh/pkg/prepare"
-	"github.com/containous/maesh/pkg/signals"
 	"github.com/containous/traefik/v2/pkg/cli"
 )
 
@@ -62,6 +65,8 @@ func main() {
 }
 
 func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
+	ctx := cmd.ContextWithSignal(context.Background())
+
 	log, err := cmd.BuildLogger(iConfig.LogFormat, iConfig.LogLevel, iConfig.Debug)
 	if err != nil {
 		return fmt.Errorf("could not build logger: %w", err)
@@ -92,34 +97,72 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	}
 
 	aclEnabled := iConfig.ACL || iConfig.SMI
-
 	log.Debugf("ACL mode enabled: %t", aclEnabled)
 
-	// Create a new stop Channel
-	stopCh := signals.SetupSignalHandler()
-	// Create a new ctr.
+	apiManager, err := api.NewAPI(log, iConfig.APIPort, iConfig.APIHost, clients.KubernetesClient(), iConfig.Namespace)
+	if err != nil {
+		return fmt.Errorf("unable to create the API: %w", err)
+	}
+
 	ctr, err := controller.NewMeshController(clients, controller.Config{
 		ACLEnabled:       aclEnabled,
 		DefaultMode:      iConfig.DefaultMode,
 		Namespace:        iConfig.Namespace,
 		IgnoreNamespaces: iConfig.IgnoreNamespaces,
-		APIPort:          iConfig.APIPort,
-		APIHost:          iConfig.APIHost,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
 		MinTCPPort:       minTCPPort,
 		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       minUDPPort + iConfig.LimitUDPPort,
-	}, log)
+	}, apiManager, log)
 	if err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)
 	}
 
-	// run the ctr loop to process items
-	if err := ctr.Run(stopCh); err != nil {
-		return fmt.Errorf("error during controller operation: %w", err)
+	errCh := make(chan error, 2)
+
+	var wg sync.WaitGroup
+
+	// Start the API.
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		if err := apiManager.ListenAndServe(); err != nil {
+			errCh <- fmt.Errorf("API has stopped unexpectedly: %w", err)
+		}
+	}()
+
+	// Start the Controller.
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		ctr.Run(ctx)
+	}()
+
+	// Wait for a stop event.
+	select {
+	case <-ctx.Done():
+	case err := <-errCh:
+		log.Error(err)
 	}
+
+	// Shutdown gracefully the API and the Controller.
+	go ctr.Stop()
+	go func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		if err := apiManager.Shutdown(stopCtx); err != nil {
+			log.Errorf("Unable to stop the API: %v", err)
+		}
+	}()
+
+	wg.Wait()
 
 	return nil
 }
