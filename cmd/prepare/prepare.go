@@ -25,7 +25,7 @@ func NewCmd(pConfig *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cl
 func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 	log, err := cmd.BuildLogger(pConfig.LogFormat, pConfig.LogLevel, pConfig.Debug)
 	if err != nil {
-		return fmt.Errorf("could not build logger: %v", err)
+		return fmt.Errorf("could not build logger: %w", err)
 	}
 
 	log.Debugln("Starting maesh prepare...")

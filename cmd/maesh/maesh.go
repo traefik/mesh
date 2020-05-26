@@ -64,7 +64,7 @@ func main() {
 func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	log, err := cmd.BuildLogger(iConfig.LogFormat, iConfig.LogLevel, iConfig.Debug)
 	if err != nil {
-		return fmt.Errorf("could not build logger: %v", err)
+		return fmt.Errorf("could not build logger: %w", err)
 	}
 
 	log.Debugln("Starting maesh prepare...")
