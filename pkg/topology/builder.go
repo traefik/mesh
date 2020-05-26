@@ -256,7 +256,7 @@ func (b *Builder) validateServiceAndBackendPorts(svcPorts []corev1.ServicePort, 
 // traffic-splits may form a graph, it has to be done once all the traffic-splits have been processed. To avoid runtime
 // issues, this method detects cycles in the graph.
 func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topology) {
-	loopDetected := make(map[*Service][]Key)
+	loopCausingTrafficSplitsByService := make(map[*Service][]Key)
 
 	for _, svc := range topology.Services {
 		for _, tsKey := range svc.TrafficSplits {
@@ -268,7 +268,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 
 			pods, err := b.getIncomingPodsForTrafficSplit(topology, ts, map[Key]struct{}{})
 			if err != nil {
-				loopDetected[svc] = append(loopDetected[svc], tsKey)
+				loopCausingTrafficSplitsByService[svc] = append(loopCausingTrafficSplitsByService[svc], tsKey)
 
 				err = fmt.Errorf("unable to get incoming pods: %v", err)
 				ts.AddError(err)
@@ -281,8 +281,8 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 		}
 	}
 
-	// Remove the TrafficSplits that causes a loop.
-	removeTrafficSplitsLoop(loopDetected)
+	// Remove the TrafficSplits that were detected to cause a loop.
+	removeLoopCausingTrafficSplits(loopCausingTrafficSplitsByService)
 }
 
 func (b *Builder) getIncomingPodsForTrafficSplit(topology *Topology, ts *TrafficSplit, visited map[Key]struct{}) ([]Key, error) {
@@ -758,8 +758,8 @@ func mapCopy(m map[Key]struct{}) map[Key]struct{} {
 	return cpy
 }
 
-func removeTrafficSplitsLoop(loopDetected map[*Service][]Key) {
-	for svc, tss := range loopDetected {
+func removeLoopCausingTrafficSplits(loopCausingTrafficSplitsByService map[*Service][]Key) {
+	for svc, tss := range loopCausingTrafficSplitsByService {
 		for _, loopTS := range tss {
 			for i, ts := range svc.TrafficSplits {
 				if ts == loopTS {
