@@ -101,30 +101,24 @@ type Controller struct {
 // NewMeshController builds the informers and other required components of the mesh controller, and returns an
 // initialized mesh controller object.
 func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger logrus.FieldLogger) (*Controller, error) {
-	ignoredResources := k8s.NewIgnored()
+	c := &Controller{
+		logger:  logger,
+		cfg:     cfg,
+		clients: clients,
+		store:   store,
+	}
+
+	// Initialize the ignored resources.
+	c.ignoredResources = k8s.NewIgnored()
 
 	for _, ns := range cfg.IgnoreNamespaces {
-		ignoredResources.AddIgnoredNamespace(ns)
+		c.ignoredResources.AddIgnoredNamespace(ns)
 	}
 
-	ignoredResources.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
-	ignoredResources.AddIgnoredNamespace(metav1.NamespaceSystem)
-	ignoredResources.AddIgnoredApps("maesh", "jaeger")
+	c.ignoredResources.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
+	c.ignoredResources.AddIgnoredNamespace(metav1.NamespaceSystem)
+	c.ignoredResources.AddIgnoredApps("maesh", "jaeger")
 
-	c := &Controller{
-		logger:           logger,
-		cfg:              cfg,
-		clients:          clients,
-		ignoredResources: ignoredResources,
-		store:            store,
-	}
-
-	c.init()
-
-	return c, nil
-}
-
-func (c *Controller) init() {
 	// Create the work queue and the enqueue handler.
 	c.workQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 	handler := cache.FilteringResourceEventHandler{
@@ -196,6 +190,8 @@ func (c *Controller) init() {
 	}
 
 	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddlewares, providerCfg, c.logger)
+
+	return c, nil
 }
 
 // Run is the main entrypoint for the controller.
