@@ -15,6 +15,7 @@ type MaeshConfiguration struct {
 	KubeConfig       string   `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL        string   `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	LogLevel         string   `description:"The log level." export:"true"`
+	LogFormat        string   `description:"The log format." export:"true"`
 	Debug            bool     `description:"Debug mode, deprecated, use --loglevel=debug instead." export:"true"`
 	ACL              bool     `description:"Enable ACL mode." export:"true"`
 	SMI              bool     `description:"Enable SMI operation, deprecated, use --acl instead." export:"true"`
@@ -34,6 +35,7 @@ func NewMaeshConfiguration() *MaeshConfiguration {
 		ConfigFile:    "",
 		KubeConfig:    os.Getenv("KUBECONFIG"),
 		LogLevel:      "error",
+		LogFormat:     "common",
 		Debug:         false,
 		ACL:           false,
 		SMI:           false,
@@ -52,6 +54,7 @@ type PrepareConfiguration struct {
 	KubeConfig    string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL     string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	LogLevel      string `description:"The log level." export:"true"`
+	LogFormat     string `description:"The log format." export:"true"`
 	Debug         bool   `description:"Debug mode, deprecated, use --loglevel=debug instead." export:"true"`
 	Namespace     string `description:"The namespace that maesh is installed in." export:"true"`
 	ClusterDomain string `description:"Your internal K8s cluster domain." export:"true"`
@@ -64,6 +67,7 @@ func NewPrepareConfiguration() *PrepareConfiguration {
 	return &PrepareConfiguration{
 		KubeConfig:    os.Getenv("KUBECONFIG"),
 		LogLevel:      "error",
+		LogFormat:     "common",
 		Debug:         false,
 		Namespace:     "maesh",
 		ClusterDomain: "cluster.local",
@@ -105,6 +109,7 @@ type CleanupConfiguration struct {
 	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	Namespace  string `description:"The namespace that maesh is installed in." export:"true"`
 	LogLevel   string `description:"The log level." export:"true"`
+	LogFormat  string `description:"The log format." export:"true"`
 }
 
 // NewCleanupConfiguration creates CleanupConfiguration.
@@ -113,5 +118,6 @@ func NewCleanupConfiguration() *CleanupConfiguration {
 		KubeConfig: os.Getenv("KUBECONFIG"),
 		Namespace:  "maesh",
 		LogLevel:   "error",
+		LogFormat:  "common",
 	}
 }

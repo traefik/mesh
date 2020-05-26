@@ -2,13 +2,11 @@ package cleanup
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/pkg/cleanup"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/traefik/v2/pkg/cli"
-	"github.com/sirupsen/logrus"
 )
 
 // NewCmd builds a new Cleanup command.
@@ -25,16 +23,10 @@ func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
-	log := logrus.New()
-
-	log.SetOutput(os.Stdout)
-
-	logLevel, err := logrus.ParseLevel(cConfig.LogLevel)
+	log, err := cmd.BuildLogger(cConfig.LogFormat, cConfig.LogLevel, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not build logger: %w", err)
 	}
-
-	log.SetLevel(logLevel)
 
 	log.Debugln("Starting maesh cleanup...")
 	log.Debugf("Using masterURL: %q", cConfig.MasterURL)
