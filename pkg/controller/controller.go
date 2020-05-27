@@ -78,8 +78,8 @@ type Controller struct {
 	shadowServiceManager *ShadowServiceManager
 	provider             *provider.Provider
 	ignoredResources     k8s.IgnoreWrapper
-	tcpStateTable        *k8s.PortMapping
-	udpStateTable        *k8s.PortMapping
+	tcpStateTable        *PortMapping
+	udpStateTable        *PortMapping
 	topologyBuilder      TopologyBuilder
 	store                SharedStore
 	logger               logrus.FieldLogger
