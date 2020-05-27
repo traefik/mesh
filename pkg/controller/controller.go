@@ -41,9 +41,9 @@ const (
 
 // PortMapper is capable of storing and retrieving a port mapping for a given service.
 type PortMapper interface {
-	Find(svc k8s.ServiceWithPort) (int32, bool)
-	Add(svc *k8s.ServiceWithPort) (int32, error)
-	Remove(svc k8s.ServiceWithPort) (int32, error)
+	Find(svc k8s.ServicePort) (int32, bool)
+	Add(svc *k8s.ServicePort) (int32, error)
+	Remove(svc k8s.ServicePort) (int32, error)
 }
 
 // TopologyBuilder builds Topologies.

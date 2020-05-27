@@ -61,7 +61,7 @@ func (p *PortMapping) LoadState() error {
 					return err
 				}
 
-				p.table[targetPort] = &k8s.ServiceWithPort{
+				p.table[targetPort] = &k8s.ServicePort{
 					Namespace: namespace,
 					Name:      name,
 					Port:      port.Port,
@@ -73,8 +73,8 @@ func (p *PortMapping) LoadState() error {
 	return nil
 }
 
-// Find searches for the port which is associated with the given ServiceWithPort.
-func (p *PortMapping) Find(svc k8s.ServiceWithPort) (int32, bool) {
+// Find searches for the port which is associated with the given ServicePort.
+func (p *PortMapping) Find(svc k8s.ServicePort) (int32, bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -87,9 +87,9 @@ func (p *PortMapping) Find(svc k8s.ServiceWithPort) (int32, bool) {
 	return 0, false
 }
 
-// Add adds a new mapping between the given ServiceWithPort and the first port available in the range defined
+// Add adds a new mapping between the given ServicePort and the first port available in the range defined
 // within minPort and maxPort. If there's no port left, an error will be returned.
-func (p *PortMapping) Add(svc *k8s.ServiceWithPort) (int32, error) {
+func (p *PortMapping) Add(svc *k8s.ServicePort) (int32, error) {
 	for i := p.minPort; i < p.maxPort+1; i++ {
 		// Skip until an available port is found
 		if _, exists := p.table[i]; exists {
@@ -106,8 +106,8 @@ func (p *PortMapping) Add(svc *k8s.ServiceWithPort) (int32, error) {
 	return 0, errors.New("unable to find an available port")
 }
 
-// Remove removes the mapping associated with the given ServiceWithPort.
-func (p *PortMapping) Remove(svc k8s.ServiceWithPort) (int32, error) {
+// Remove removes the mapping associated with the given ServicePort.
+func (p *PortMapping) Remove(svc k8s.ServicePort) (int32, error) {
 	port, ok := p.Find(svc)
 	if !ok {
 		return 0, fmt.Errorf("unable to find port mapping for service %s/%s on port %d", svc.Namespace, svc.Name, svc.Port)

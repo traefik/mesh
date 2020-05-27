@@ -19,7 +19,7 @@ type MiddlewareBuilder func(annotations map[string]string) (map[string]*dynamic.
 
 // PortFinder finds service port mappings.
 type PortFinder interface {
-	Find(k8s.ServiceWithPort) (int32, bool)
+	Find(k8s.ServicePort) (int32, bool)
 }
 
 // When multiple Traefik Routers listen to the same entrypoint and have the same Rule, the chosen router is the one
@@ -581,7 +581,7 @@ func (p Provider) buildHTTPEntrypoint(portID int) (string, error) {
 }
 
 func (p Provider) buildTCPEntrypoint(svc *topology.Service, port int32) (string, error) {
-	meshPort, ok := p.tcpStateTable.Find(k8s.ServiceWithPort{
+	meshPort, ok := p.tcpStateTable.Find(k8s.ServicePort{
 		Namespace: svc.Namespace,
 		Name:      svc.Name,
 		Port:      port,
@@ -595,7 +595,7 @@ func (p Provider) buildTCPEntrypoint(svc *topology.Service, port int32) (string,
 }
 
 func (p Provider) buildUDPEntrypoint(svc *topology.Service, port int32) (string, error) {
-	meshPort, ok := p.udpStateTable.Find(k8s.ServiceWithPort{
+	meshPort, ok := p.udpStateTable.Find(k8s.ServicePort{
 		Namespace: svc.Namespace,
 		Name:      svc.Name,
 		Port:      port,

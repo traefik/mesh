@@ -156,7 +156,7 @@ func (s *ShadowServiceManager) removeServicePortMapping(namespace, name string, 
 		return
 	}
 
-	svcWithPort := k8s.ServiceWithPort{
+	svcWithPort := k8s.ServicePort{
 		Namespace: namespace,
 		Name:      name,
 		Port:      svcPort.Port,
@@ -235,7 +235,7 @@ func (s *ShadowServiceManager) getHTTPPort(portID int) (int32, error) {
 
 // getMappedPort returns the port associated with the given service information in the given port mapper.
 func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, svcName, svcNamespace string, svcPort int32) (int32, error) {
-	svc := k8s.ServiceWithPort{
+	svc := k8s.ServicePort{
 		Namespace: svcNamespace,
 		Name:      svcName,
 		Port:      svcPort,

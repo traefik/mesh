@@ -1,16 +1,16 @@
 package k8s
 
-// Service holds a combination of service name and namespace.
-type Service struct {
-	Namespace string
-	Name      string
-}
-
-// ServiceWithPort holds a combination of service name and namespace and port.
-type ServiceWithPort struct {
+// ServicePort holds a combination of service namespace, name and port.
+type ServicePort struct {
 	Namespace string
 	Name      string
 	Port      int32
+}
+
+// Service holds a combination of service namespace and name.
+type Service struct {
+	Namespace string
+	Name      string
 }
 
 // Services holds a list of type Service.

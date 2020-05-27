@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type stateTableMock func(svcPort mk8s.ServiceWithPort) (int32, bool)
+type stateTableMock func(svcPort mk8s.ServicePort) (int32, bool)
 
-func (t stateTableMock) Find(svcPort mk8s.ServiceWithPort) (int32, bool) {
+func (t stateTableMock) Find(svcPort mk8s.ServicePort) (int32, bool) {
 	return t(svcPort)
 }
 
@@ -24,8 +24,8 @@ func TestProvider_BuildConfig(t *testing.T) {
 		desc               string
 		acl                bool
 		defaultTrafficType string
-		tcpStateTable      map[mk8s.ServiceWithPort]int32
-		udpStateTable      map[mk8s.ServiceWithPort]int32
+		tcpStateTable      map[mk8s.ServicePort]int32
+		udpStateTable      map[mk8s.ServicePort]int32
 		topology           string
 		wantConfig         string
 	}{
@@ -33,10 +33,10 @@ func TestProvider_BuildConfig(t *testing.T) {
 			desc:               "Annotations: traffic-type",
 			acl:                false,
 			defaultTrafficType: "http",
-			tcpStateTable: map[mk8s.ServiceWithPort]int32{
+			tcpStateTable: map[mk8s.ServicePort]int32{
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 5000,
 			},
-			udpStateTable: map[mk8s.ServiceWithPort]int32{
+			udpStateTable: map[mk8s.ServicePort]int32{
 				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 15000,
 			},
 			topology:   "testdata/annotations-traffic-type-topology.json",
@@ -60,7 +60,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 			desc:               "ACL disabled: basic TCP service",
 			acl:                false,
 			defaultTrafficType: "tcp",
-			tcpStateTable: map[mk8s.ServiceWithPort]int32{
+			tcpStateTable: map[mk8s.ServicePort]int32{
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 5000,
 			},
 			topology:   "testdata/acl-disabled-tcp-basic-topology.json",
@@ -70,7 +70,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 			desc:               "ACL disabled: basic UDP service",
 			acl:                false,
 			defaultTrafficType: "udp",
-			udpStateTable: map[mk8s.ServiceWithPort]int32{
+			udpStateTable: map[mk8s.ServicePort]int32{
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 15000,
 			},
 			topology:   "testdata/acl-disabled-udp-basic-topology.json",
@@ -94,7 +94,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 			desc:               "ACL enabled: basic TCP service",
 			acl:                true,
 			defaultTrafficType: "tcp",
-			tcpStateTable: map[mk8s.ServiceWithPort]int32{
+			tcpStateTable: map[mk8s.ServicePort]int32{
 				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 5000,
 			},
 			topology:   "testdata/acl-enabled-tcp-basic-topology.json",
@@ -127,7 +127,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 				DefaultTrafficType: defaultTrafficType,
 			}
 
-			tcpStateTable := func(port mk8s.ServiceWithPort) (int32, bool) {
+			tcpStateTable := func(port mk8s.ServicePort) (int32, bool) {
 				if test.tcpStateTable == nil {
 					return 0, false
 				}
@@ -135,7 +135,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 				p, ok := test.tcpStateTable[port]
 				return p, ok
 			}
-			udpStateTable := func(port mk8s.ServiceWithPort) (int32, bool) {
+			udpStateTable := func(port mk8s.ServicePort) (int32, bool) {
 				if test.udpStateTable == nil {
 					return 0, false
 				}
