@@ -117,7 +117,9 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	}
 
 	// run the ctr loop to process items
-	ctr.Run(stopCh)
+	if err := ctr.Run(stopCh); err != nil {
+		return fmt.Errorf("error during controller operation: %w", err)
+	}
 
 	return nil
 }
