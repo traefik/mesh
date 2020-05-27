@@ -99,7 +99,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	aclEnabled := iConfig.ACL || iConfig.SMI
 	log.Debugf("ACL mode enabled: %t", aclEnabled)
 
-	apiManager, err := api.NewAPI(log, iConfig.APIPort, iConfig.APIHost, clients.KubernetesClient(), iConfig.Namespace)
+	apiServer, err := api.NewAPI(log, iConfig.APIPort, iConfig.APIHost, clients.KubernetesClient(), iConfig.Namespace)
 	if err != nil {
 		return fmt.Errorf("unable to create the API: %w", err)
 	}
@@ -115,7 +115,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       minUDPPort + iConfig.LimitUDPPort,
-	}, apiManager, log)
+	}, apiServer, log)
 	if err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)
 	}
@@ -130,7 +130,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	go func() {
 		defer wg.Done()
 
-		if err := apiManager.ListenAndServe(); err != nil {
+		if err := apiServer.ListenAndServe(); err != nil {
 			errCh <- fmt.Errorf("API has stopped unexpectedly: %w", err)
 		}
 	}()
@@ -157,7 +157,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		if err := apiManager.Shutdown(stopCtx); err != nil {
+		if err := apiServer.Shutdown(stopCtx); err != nil {
 			log.Errorf("Unable to stop the API: %v", err)
 		}
 	}()
