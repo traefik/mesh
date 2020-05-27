@@ -1,8 +1,9 @@
-package k8s
+package controller
 
 import (
 	"testing"
 
+	"github.com/containous/maesh/pkg/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,8 +18,8 @@ func TestPortMapping_GetEmptyState(t *testing.T) {
 func TestPortMapping_GetWithState(t *testing.T) {
 	p := NewPortMapping("maesh", nil, 10000, 10200)
 
-	p.table[10000] = &ServiceWithPort{Namespace: "my-ns", Name: "my-app", Port: 9090}
-	p.table[10001] = &ServiceWithPort{Namespace: "my-ns", Name: "my-app2", Port: 9092}
+	p.table[10000] = &k8s.ServiceWithPort{Namespace: "my-ns", Name: "my-app", Port: 9090}
+	p.table[10001] = &k8s.ServiceWithPort{Namespace: "my-ns", Name: "my-app2", Port: 9092}
 
 	svc := p.table[10000]
 	require.NotNil(t, svc)
@@ -36,7 +37,7 @@ func TestPortMapping_GetWithState(t *testing.T) {
 func TestPortMapping_AddEmptyState(t *testing.T) {
 	p := NewPortMapping("maesh", nil, 10000, 10200)
 
-	wantSvc := &ServiceWithPort{
+	wantSvc := &k8s.ServiceWithPort{
 		Namespace: "my-ns",
 		Name:      "my-app",
 		Port:      9090,
@@ -53,7 +54,7 @@ func TestPortMapping_AddEmptyState(t *testing.T) {
 func TestPortMapping_AddOverflow(t *testing.T) {
 	p := NewPortMapping("maesh", nil, 10000, 10001)
 
-	wantSvc := &ServiceWithPort{
+	wantSvc := &k8s.ServiceWithPort{
 		Namespace: "my-ns",
 		Name:      "my-app",
 		Port:      9090,
@@ -85,10 +86,10 @@ func TestPortMapping_AddOverflow(t *testing.T) {
 func TestPortMapping_FindWithState(t *testing.T) {
 	p := NewPortMapping("maesh", nil, 10000, 10200)
 
-	p.table[10000] = &ServiceWithPort{Namespace: "my-ns", Name: "my-app", Port: 9090}
-	p.table[10002] = &ServiceWithPort{Namespace: "my-ns", Name: "my-app2", Port: 9092}
+	p.table[10000] = &k8s.ServiceWithPort{Namespace: "my-ns", Name: "my-app", Port: 9090}
+	p.table[10002] = &k8s.ServiceWithPort{Namespace: "my-ns", Name: "my-app2", Port: 9092}
 
-	svc := ServiceWithPort{
+	svc := k8s.ServiceWithPort{
 		Namespace: "my-ns",
 		Name:      "my-app",
 		Port:      9090,
@@ -97,7 +98,7 @@ func TestPortMapping_FindWithState(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, int32(10000), port)
 
-	svc = ServiceWithPort{
+	svc = k8s.ServiceWithPort{
 		Namespace: "my-ns2",
 		Name:      "my-app",
 		Port:      9090,
@@ -117,9 +118,9 @@ func TestPortMapping_FindWithState(t *testing.T) {
 func TestPortMapping_Remove(t *testing.T) {
 	p := NewPortMapping("maesh", nil, 10000, 10200)
 
-	p.table[10000] = &ServiceWithPort{Namespace: "my-ns", Name: "my-app", Port: 9090}
+	p.table[10000] = &k8s.ServiceWithPort{Namespace: "my-ns", Name: "my-app", Port: 9090}
 
-	svc := ServiceWithPort{
+	svc := k8s.ServiceWithPort{
 		Namespace: "my-ns",
 		Name:      "my-app",
 		Port:      9090,
@@ -131,7 +132,7 @@ func TestPortMapping_Remove(t *testing.T) {
 	_, err = p.Remove(svc)
 	assert.Error(t, err)
 
-	unknownSvc := ServiceWithPort{
+	unknownSvc := k8s.ServiceWithPort{
 		Namespace: "my-unknown-ns",
 		Name:      "my-unknown-app",
 		Port:      8088,
