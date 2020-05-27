@@ -73,7 +73,7 @@ tracing:
   deploy: true
   jaeger:
     image:
-      name: groundnuty/k8s-wait-for:v1.2
+      name: groundnuty/k8s-wait-for:v1.3
     enabled: true
     localagenthostport: ""
     samplingserverurl: ""
