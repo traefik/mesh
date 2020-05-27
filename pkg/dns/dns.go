@@ -142,10 +142,10 @@ func (c *Client) kubeDNSMatch() (bool, error) {
 }
 
 // ConfigureCoreDNS patches the CoreDNS configuration for Maesh.
-func (c *Client) ConfigureCoreDNS(clusterDomain, maeshNamespace string) error {
+func (c *Client) ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespace string) error {
 	c.log.Debug("Patching CoreDNS")
 
-	deployment, err := c.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+	deployment, err := c.client.KubernetesClient().AppsV1().Deployments(coreDNSNamespace).Get("coredns", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -242,7 +242,7 @@ func (c *Client) getCorefileConfigMap(coreDeployment *appsv1.Deployment) (*corev
 }
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
-func (c *Client) ConfigureKubeDNS(maeshNamespace string) error {
+func (c *Client) ConfigureKubeDNS(clusterDomain, maeshNamespace string) error {
 	c.log.Debug("Patching KubeDNS")
 
 	deployment, err := c.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
@@ -280,6 +280,12 @@ func (c *Client) ConfigureKubeDNS(maeshNamespace string) error {
 	c.log.Debug("Patching KubeDNS configmap with IP", serviceIP)
 
 	if err := c.patchKubeDNSConfigMap(configMap, deployment.Namespace, serviceIP); err != nil {
+		return err
+	}
+
+	c.log.Debug("Patching CoreDNS configmap")
+
+	if err := c.ConfigureCoreDNS(maeshNamespace, clusterDomain, maeshNamespace); err != nil {
 		return err
 	}
 

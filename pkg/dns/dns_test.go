@@ -117,7 +117,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 			client := NewClient(log, clt)
-			err := client.ConfigureCoreDNS("titi", "toto")
+			err := client.ConfigureCoreDNS("kube-system", "titi", "toto")
 			if test.expectedErr {
 				assert.Error(t, err)
 				return
@@ -172,7 +172,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 			client := NewClient(log, clt)
-			err := client.ConfigureKubeDNS("maesh")
+			err := client.ConfigureKubeDNS("cluster.local", "maesh")
 			if test.expectedErr {
 				assert.Error(t, err)
 				return
