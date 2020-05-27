@@ -199,7 +199,7 @@ func (c *Controller) init() {
 }
 
 // Run is the main entrypoint for the controller.
-func (c *Controller) Run(stopCh <-chan struct{}) {
+func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
@@ -212,7 +212,9 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	c.api.Start()
 
 	// Start the informers.
-	c.startInformers(stopCh, 10*time.Second)
+	if err := c.startInformers(stopCh, 10*time.Second); err != nil {
+		return fmt.Errorf("could not start informers: %w", err)
+	}
 
 	// Enable API readiness endpoint, informers are started and default conf is available.
 	c.api.EnableReadiness()
@@ -222,28 +224,37 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 
 	<-stopCh
 	c.logger.Info("Shutting down workers")
+
+	return nil
 }
 
 // startInformers starts the controller informers.
-func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Duration) {
+func (c *Controller) startInformers(stopCh <-chan struct{}, syncTimeout time.Duration) error {
 	// Start the informers with a timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
 	defer cancel()
 
 	c.logger.Debug("Starting Informers")
-	c.startBaseInformers(ctx, stopCh)
+
+	if err := c.startBaseInformers(ctx, stopCh); err != nil {
+		return err
+	}
 
 	if c.cfg.ACLEnabled {
-		c.startACLInformers(ctx, stopCh)
+		if err := c.startACLInformers(ctx, stopCh); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (c *Controller) startBaseInformers(ctx context.Context, stopCh <-chan struct{}) {
+func (c *Controller) startBaseInformers(ctx context.Context, stopCh <-chan struct{}) error {
 	c.kubernetesFactory.Start(stopCh)
 
 	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
@@ -251,17 +262,19 @@ func (c *Controller) startBaseInformers(ctx context.Context, stopCh <-chan struc
 
 	for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
+
+	return nil
 }
 
-func (c *Controller) startACLInformers(ctx context.Context, stopCh <-chan struct{}) {
+func (c *Controller) startACLInformers(ctx context.Context, stopCh <-chan struct{}) error {
 	c.accessFactory.Start(stopCh)
 
 	for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
@@ -269,9 +282,11 @@ func (c *Controller) startACLInformers(ctx context.Context, stopCh <-chan struct
 
 	for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
-			c.logger.Errorf("Timed out waiting for controller caches to sync: %s", t)
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
+
+	return nil
 }
 
 // isWatchedResource returns true if the given resource is not ignored, false otherwise.
