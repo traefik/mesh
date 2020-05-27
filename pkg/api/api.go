@@ -128,7 +128,10 @@ func (a *API) getCurrentConfiguration(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(a.configuration.Get()); err != nil {
-		a.log.Error(err)
+		a.log.Errorf("Unable to serialize dynamic configuration: %v", err)
+		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
+
+		return
 	}
 }
 
@@ -137,7 +140,10 @@ func (a *API) getCurrentTopology(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(a.topology.Get()); err != nil {
-		a.log.Error(err)
+		a.log.Errorf("Unable to serialize topology: %v", err)
+		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
+
+		return
 	}
 }
 
@@ -145,23 +151,30 @@ func (a *API) getCurrentTopology(w http.ResponseWriter, _ *http.Request) {
 func (a *API) getReadiness(w http.ResponseWriter, _ *http.Request) {
 	isReady, _ := a.readiness.Get().(bool)
 	if !isReady {
-		w.WriteHeader(http.StatusInternalServerError)
+		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(isReady); err != nil {
-		a.log.Error(err)
+		a.log.Errorf("Unable to serialize readiness: %v", err)
+		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
+
+		return
 	}
 }
 
 // getMeshNodes returns a list of mesh nodes visible from the controller, and some basic readiness info.
 func (a *API) getMeshNodes(w http.ResponseWriter, _ *http.Request) {
-	podInfoList := []podInfo{}
+	// Make sure it returns an empty array and not "null".
+	podInfoList := make([]podInfo, 0)
 
 	podList, err := a.podLister.List(labels.Everything())
 	if err != nil {
-		a.writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod list: %v", err), http.StatusInternalServerError)
+		a.log.Errorf("Unable to retrieve pod list: %v", err)
+		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
+
 		return
 	}
 
@@ -187,7 +200,10 @@ func (a *API) getMeshNodes(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(podInfoList); err != nil {
-		a.log.Error(err)
+		a.log.Errorf("Unable to serialize mesh nodes: %v", err)
+		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
+
+		return
 	}
 }
 
@@ -198,43 +214,57 @@ func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 	pod, err := a.podLister.Pods(a.meshNamespace).Get(vars["node"])
 	if err != nil {
 		if kubeerror.IsNotFound(err) {
-			a.writeErrorResponse(w, fmt.Sprintf("unable to find pod: %s", vars["node"]), http.StatusNotFound)
+			a.writeErrorResponse(w, fmt.Errorf("unable to find pod: %s", vars["node"]), http.StatusNotFound)
 			return
 		}
 
-		a.writeErrorResponse(w, fmt.Sprintf("unable to retrieve pod: %v", err), http.StatusInternalServerError)
+		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
 
 		return
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://%s:8080/api/rawdata", pod.Status.PodIP))
 	if err != nil {
-		a.writeErrorResponse(w, fmt.Sprintf("unable to get configuration from pod: %v", err), http.StatusBadGateway)
+		a.log.Errorf("Unable to get configuration from pod: %v", err)
+		a.writeErrorResponse(w, nil, http.StatusBadGateway)
+
 		return
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			a.log.Errorf("Unable to close response body: %w", closeErr)
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		a.writeErrorResponse(w, fmt.Sprintf("unable to get configuration response body from pod: %v", err), http.StatusBadGateway)
+		a.log.Errorf("Unable to get configuration response body from pod: %v", err)
+		a.writeErrorResponse(w, nil, http.StatusBadGateway)
+
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 
 	if _, err := w.Write(body); err != nil {
-		a.log.Error(err)
+		a.log.Errorf("Unable to write mesh nodes: %v", err)
+		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
+
+		return
 	}
 }
 
-func (a *API) writeErrorResponse(w http.ResponseWriter, errorMessage string, status int) {
+func (a *API) writeErrorResponse(w http.ResponseWriter, err error, status int) {
 	w.WriteHeader(status)
-	a.log.Error(errorMessage)
+
+	if err == nil {
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=us-ascii")
 
-	if _, err := w.Write([]byte(errorMessage)); err != nil {
+	if _, err = w.Write([]byte(err.Error())); err != nil {
 		a.log.Error(err)
 	}
 }
