@@ -23,3 +23,49 @@ metadata:
   namespace: maesh
 spec:
   clusterIP: "1.2.3.4"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: maesh
+spec:
+  template:
+    spec:
+      volumes:
+        - configMap:
+            name: "other-cfgmap"
+        - configMap:
+            name: "coredns-cfgmap"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: other-cfgmap
+  namespace: maesh
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-cfgmap
+  namespace: maesh
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+        prometheus :9153
+        forward . /etc/resolv.conf
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
