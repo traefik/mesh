@@ -8,32 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPortMapping_GetEmptyState(t *testing.T) {
-	p := NewPortMapping("maesh", nil, 10000, 10200)
-
-	svc := p.table[8080]
-	assert.Nil(t, svc)
-}
-
-func TestPortMapping_GetWithState(t *testing.T) {
-	p := NewPortMapping("maesh", nil, 10000, 10200)
-
-	p.table[10000] = &k8s.ServicePort{Namespace: "my-ns", Name: "my-app", Port: 9090}
-	p.table[10001] = &k8s.ServicePort{Namespace: "my-ns", Name: "my-app2", Port: 9092}
-
-	svc := p.table[10000]
-	require.NotNil(t, svc)
-	assert.Equal(t, "my-ns", svc.Namespace)
-	assert.Equal(t, "my-app", svc.Name)
-	assert.Equal(t, int32(9090), svc.Port)
-
-	svc = p.table[10001]
-	require.NotNil(t, svc)
-	assert.Equal(t, "my-ns", svc.Namespace)
-	assert.Equal(t, "my-app2", svc.Name)
-	assert.Equal(t, int32(9092), svc.Port)
-}
-
 func TestPortMapping_AddEmptyState(t *testing.T) {
 	p := NewPortMapping("maesh", nil, 10000, 10200)
 
