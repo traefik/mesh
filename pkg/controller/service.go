@@ -16,6 +16,13 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
+// PortMapper is capable of storing and retrieving a port mapping for a given service.
+type PortMapper interface {
+	Find(svc k8s.ServicePort) (int32, bool)
+	Add(svc *k8s.ServicePort) (int32, error)
+	Remove(svc k8s.ServicePort) (int32, error)
+}
+
 // ShadowServiceManager manages shadow services.
 type ShadowServiceManager struct {
 	logger             logrus.FieldLogger

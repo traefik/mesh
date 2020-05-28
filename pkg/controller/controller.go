@@ -38,13 +38,6 @@ const (
 	maxRetries = 12
 )
 
-// PortMapper is capable of storing and retrieving a port mapping for a given service.
-type PortMapper interface {
-	Find(svc k8s.ServicePort) (int32, bool)
-	Add(svc *k8s.ServicePort) (int32, error)
-	Remove(svc k8s.ServicePort) (int32, error)
-}
-
 // SharedStore is used to share the controller state.
 type SharedStore interface {
 	SetConfig(cfg *dynamic.Configuration)
