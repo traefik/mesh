@@ -26,7 +26,7 @@ spec:
         prometheus.io/port: "8080"
     spec:
       serviceAccountName: maesh-mesh
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
@@ -48,7 +48,9 @@ spec:
         - name: wait-for-jaeger-init
           image: {{ .Values.tracing.jaeger.image.name | quote }}
           imagePullPolicy: {{ .Values.tracing.jaeger.image.pullPolicy | default "IfNotPresent" }}
-          args: ["service", "-lapp.kubernetes.io/name=jaeger-agent"]
+          args:
+            - "service"
+            - "-lapp.kubernetes.io/name=jaeger,app.kubernetes.io/component=agent"
           resources:
             requests:
               memory: "10Mi"
