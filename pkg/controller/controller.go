@@ -45,7 +45,7 @@ type PortMapper interface {
 	Remove(svc k8s.ServiceWithPort) (int32, error)
 }
 
-// SharedStore is capable sharing a state of the controller.
+// SharedStore is used to share the controller state.
 type SharedStore interface {
 	SetConfig(cfg *dynamic.Configuration)
 	SetTopology(topo *topology.Topology)
@@ -200,18 +200,7 @@ func (c *Controller) init() {
 }
 
 // Run is the main entrypoint for the controller.
-func (c *Controller) Run(ctx context.Context) error {
-	stopCh := make(chan struct{})
-
-	go func() {
-		select {
-		case <-ctx.Done():
-		case <-c.stop:
-		}
-
-		close(stopCh)
-	}()
-
+func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
@@ -236,11 +225,6 @@ func (c *Controller) Run(ctx context.Context) error {
 	c.logger.Info("Shutting down workers")
 
 	return nil
-}
-
-// Stop stops the controller.
-func (c *Controller) Stop() {
-	c.stop <- struct{}{}
 }
 
 // startInformers starts the controller informers.
