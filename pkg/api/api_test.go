@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/containous/maesh/pkg/k8s"
-	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/containous/traefik/v2/pkg/testhelpers"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var (
@@ -21,19 +22,20 @@ var (
 )
 
 func TestEnableReadiness(t *testing.T) {
-	config := safe.Safe{}
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	api := NewAPI(log, 9000, localhost, &config, nil, "foo")
+	client := fake.NewSimpleClientset()
+	api, err := NewAPI(log, 9000, localhost, client, "foo")
 
-	assert.Equal(t, false, api.readiness)
+	require.NoError(t, err)
+	assert.Equal(t, false, api.readiness.Get().(bool))
 
-	api.EnableReadiness()
+	api.SetReadiness(true)
 
-	assert.Equal(t, true, api.readiness)
+	assert.Equal(t, true, api.readiness.Get().(bool))
 }
 
 func TestGetReadiness(t *testing.T) {
@@ -58,14 +60,16 @@ func TestGetReadiness(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			config := safe.Safe{}
 			log := logrus.New()
 
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			api := NewAPI(log, 9000, localhost, &config, nil, "foo")
-			api.readiness = test.readiness
+			client := fake.NewSimpleClientset()
+			api, err := NewAPI(log, 9000, localhost, client, "foo")
+
+			require.NoError(t, err)
+			api.readiness.Set(test.readiness)
 
 			res := httptest.NewRecorder()
 			req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/readiness", nil)
@@ -78,15 +82,16 @@ func TestGetReadiness(t *testing.T) {
 }
 
 func TestGetCurrentConfiguration(t *testing.T) {
-	config := safe.Safe{}
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	api := NewAPI(log, 9000, localhost, &config, nil, "foo")
+	client := fake.NewSimpleClientset()
+	api, err := NewAPI(log, 9000, localhost, client, "foo")
 
-	config.Set("foo")
+	require.NoError(t, err)
+	api.configuration.Set("foo")
 
 	res := httptest.NewRecorder()
 	req := testhelpers.MustNewRequest(http.MethodGet, "/api/configuration/current", nil)
@@ -128,7 +133,6 @@ func TestGetMeshNodes(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			config := safe.Safe{}
 			log := logrus.New()
 
 			log.SetOutput(os.Stdout)
@@ -138,7 +142,10 @@ func TestGetMeshNodes(t *testing.T) {
 			defer cancel()
 
 			clientMock := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
-			api := NewAPI(log, 9000, localhost, &config, clientMock.PodLister, "foo")
+			api, err := NewAPI(log, 9000, localhost, clientMock.KubernetesClient(), "foo")
+
+			require.NoError(t, err)
+
 			res := httptest.NewRecorder()
 			req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/nodes", nil)
 
@@ -176,31 +183,35 @@ func TestGetMeshNodeConfiguration(t *testing.T) {
 	defer apiServer.Close()
 
 	for _, test := range testCases {
-		config := safe.Safe{}
-		log := logrus.New()
+		t.Run(test.desc, func(t *testing.T) {
+			log := logrus.New()
 
-		log.SetOutput(os.Stdout)
-		log.SetLevel(logrus.DebugLevel)
+			log.SetOutput(os.Stdout)
+			log.SetLevel(logrus.DebugLevel)
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-		clientMock := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
-		api := NewAPI(log, 9000, localhost, &config, clientMock.PodLister, "foo")
-		res := httptest.NewRecorder()
-		req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/node/mesh-pod-1/configuration", nil)
+			clientMock := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
+			api, err := NewAPI(log, 9000, localhost, clientMock.KubernetesClient(), "foo")
 
-		//fake gorilla/mux vars
-		vars := map[string]string{
-			"node": "mesh-pod-1",
-		}
+			require.NoError(t, err)
 
-		req = mux.SetURLVars(req, vars)
+			res := httptest.NewRecorder()
+			req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/node/mesh-pod-1/configuration", nil)
 
-		api.getMeshNodeConfiguration(res, req)
+			//fake gorilla/mux vars
+			vars := map[string]string{
+				"node": "mesh-pod-1",
+			}
 
-		assert.Equal(t, test.expectedBody, res.Body.String())
-		assert.Equal(t, test.expectedStatusCode, res.Code)
+			req = mux.SetURLVars(req, vars)
+
+			api.getMeshNodeConfiguration(res, req)
+
+			assert.Equal(t, test.expectedBody, res.Body.String())
+			assert.Equal(t, test.expectedStatusCode, res.Code)
+		})
 	}
 }
 
