@@ -31,9 +31,9 @@ type API struct {
 	configuration *safe.Safe
 	topology      *safe.Safe
 
-	meshNamespace string
-	podLister     listers.PodLister
-	log           logrus.FieldLogger
+	namespace string
+	podLister listers.PodLister
+	log       logrus.FieldLogger
 }
 
 type podInfo struct {
@@ -43,7 +43,7 @@ type podInfo struct {
 }
 
 // NewAPI creates a new api.
-func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, client kubernetes.Interface, meshNamespace string) (*API, error) {
+func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, client kubernetes.Interface, namespace string) (*API, error) {
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{"component": "maesh-mesh"},
 	})
@@ -52,7 +52,7 @@ func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, client kubern
 	}
 
 	informerFactory := informers.NewSharedInformerFactoryWithOptions(client, k8s.ResyncPeriod,
-		informers.WithNamespace(meshNamespace),
+		informers.WithNamespace(namespace),
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = selector.String()
 		}))
@@ -72,7 +72,7 @@ func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, client kubern
 
 	router := mux.NewRouter()
 
-	a := &API{
+	api := &API{
 		Server: http.Server{
 			Addr:         fmt.Sprintf("%s:%d", apiHost, apiPort),
 			ReadTimeout:  5 * time.Second,
@@ -83,34 +83,23 @@ func NewAPI(log logrus.FieldLogger, apiPort int32, apiHost string, client kubern
 		topology:      safe.New(topology.NewTopology()),
 		readiness:     safe.New(false),
 		podLister:     podLister,
-		meshNamespace: meshNamespace,
+		namespace:     namespace,
 		log:           log,
 	}
 
-	router.HandleFunc("/api/configuration/current", a.getCurrentConfiguration)
-	router.HandleFunc("/api/topology/current", a.getCurrentTopology)
-	router.HandleFunc("/api/status/nodes", a.getMeshNodes)
-	router.HandleFunc("/api/status/node/{node}/configuration", a.getMeshNodeConfiguration)
-	router.HandleFunc("/api/status/readiness", a.getReadiness)
+	router.HandleFunc("/api/configuration/current", api.getCurrentConfiguration)
+	router.HandleFunc("/api/topology/current", api.getCurrentTopology)
+	router.HandleFunc("/api/status/nodes", api.getMeshNodes)
+	router.HandleFunc("/api/status/node/{node}/configuration", api.getMeshNodeConfiguration)
+	router.HandleFunc("/api/status/readiness", api.getReadiness)
 
-	return a, nil
+	return api, nil
 }
 
 // SetReadiness sets the readiness flag in the API.
 func (a *API) SetReadiness(isReady bool) {
-	readiness, ok := a.readiness.Get().(bool)
-
-	if ok && readiness == isReady {
-		return
-	}
-
 	a.readiness.Set(isReady)
-
-	if isReady {
-		a.log.Debug("API readiness enabled")
-	} else {
-		a.log.Debug("API readiness disabled")
-	}
+	a.log.Debugf("API readiness: %s", isReady)
 }
 
 // SetConfig sets the current dynamic configuration.
@@ -130,8 +119,6 @@ func (a *API) getCurrentConfiguration(w http.ResponseWriter, _ *http.Request) {
 	if err := json.NewEncoder(w).Encode(a.configuration.Get()); err != nil {
 		a.log.Errorf("Unable to serialize dynamic configuration: %v", err)
 		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
-
-		return
 	}
 }
 
@@ -142,8 +129,6 @@ func (a *API) getCurrentTopology(w http.ResponseWriter, _ *http.Request) {
 	if err := json.NewEncoder(w).Encode(a.topology.Get()); err != nil {
 		a.log.Errorf("Unable to serialize topology: %v", err)
 		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
-
-		return
 	}
 }
 
@@ -160,16 +145,11 @@ func (a *API) getReadiness(w http.ResponseWriter, _ *http.Request) {
 	if err := json.NewEncoder(w).Encode(isReady); err != nil {
 		a.log.Errorf("Unable to serialize readiness: %v", err)
 		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
-
-		return
 	}
 }
 
 // getMeshNodes returns a list of mesh nodes visible from the controller, and some basic readiness info.
 func (a *API) getMeshNodes(w http.ResponseWriter, _ *http.Request) {
-	// Make sure it returns an empty array and not "null".
-	podInfoList := make([]podInfo, 0)
-
 	podList, err := a.podLister.List(labels.Everything())
 	if err != nil {
 		a.log.Errorf("Unable to retrieve pod list: %v", err)
@@ -178,7 +158,9 @@ func (a *API) getMeshNodes(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	for _, pod := range podList {
+	podInfoList := make([]podInfo, len(podList))
+
+	for i, pod := range podList {
 		readiness := true
 
 		for _, status := range pod.Status.ContainerStatuses {
@@ -189,12 +171,11 @@ func (a *API) getMeshNodes(w http.ResponseWriter, _ *http.Request) {
 			}
 		}
 
-		p := podInfo{
+		podInfoList[i] = podInfo{
 			Name:  pod.Name,
 			IP:    pod.Status.PodIP,
 			Ready: readiness,
 		}
-		podInfoList = append(podInfoList, p)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -202,8 +183,6 @@ func (a *API) getMeshNodes(w http.ResponseWriter, _ *http.Request) {
 	if err := json.NewEncoder(w).Encode(podInfoList); err != nil {
 		a.log.Errorf("Unable to serialize mesh nodes: %v", err)
 		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
-
-		return
 	}
 }
 
@@ -211,7 +190,7 @@ func (a *API) getMeshNodes(w http.ResponseWriter, _ *http.Request) {
 func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	pod, err := a.podLister.Pods(a.meshNamespace).Get(vars["node"])
+	pod, err := a.podLister.Pods(a.namespace).Get(vars["node"])
 	if err != nil {
 		if kubeerror.IsNotFound(err) {
 			a.writeErrorResponse(w, fmt.Errorf("unable to find pod: %s", vars["node"]), http.StatusNotFound)
@@ -250,8 +229,6 @@ func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(body); err != nil {
 		a.log.Errorf("Unable to write mesh nodes: %v", err)
 		a.writeErrorResponse(w, nil, http.StatusInternalServerError)
-
-		return
 	}
 }
 
