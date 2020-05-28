@@ -18,6 +18,7 @@ import (
 	"github.com/containous/maesh/pkg/k8s"
 	preparepkg "github.com/containous/maesh/pkg/prepare"
 	"github.com/containous/traefik/v2/pkg/cli"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -101,7 +102,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 
 	apiServer, err := api.NewAPI(log, iConfig.APIPort, iConfig.APIHost, clients.KubernetesClient(), iConfig.Namespace)
 	if err != nil {
-		return fmt.Errorf("unable to create the API: %w", err)
+		return fmt.Errorf("unable to create the API server: %w", err)
 	}
 
 	ctr, err := controller.NewMeshController(clients, controller.Config{
@@ -120,18 +121,20 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		return fmt.Errorf("unable to create controller: %w", err)
 	}
 
-	errCh := make(chan error, 2)
-
 	var wg sync.WaitGroup
 
-	// Start the API.
+	apiErrCh := make(chan error)
+	ctrlErrCh := make(chan error)
+	ctrlStopCh := make(chan struct{})
+
+	// Start the API server.
 	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
 
 		if err := apiServer.ListenAndServe(); err != nil {
-			errCh <- fmt.Errorf("API has stopped unexpectedly: %w", err)
+			apiErrCh <- fmt.Errorf("API has stopped unexpectedly: %w", err)
 		}
 	}()
 
@@ -141,28 +144,34 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	go func() {
 		defer wg.Done()
 
-		ctr.Run(ctx)
-	}()
-
-	// Wait for a stop event.
-	select {
-	case <-ctx.Done():
-	case err := <-errCh:
-		log.Error(err)
-	}
-
-	// Shutdown gracefully the API and the Controller.
-	go ctr.Stop()
-	go func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-
-		if err := apiServer.Shutdown(stopCtx); err != nil {
-			log.Errorf("Unable to stop the API: %v", err)
+		if err := ctr.Run(ctrlStopCh); err != nil {
+			ctrlErrCh <- fmt.Errorf("controller has stopped unexpectedly: %w", err)
 		}
 	}()
+
+	// Wait for a stop event and shutdown servers.
+	select {
+	case <-ctx.Done():
+		ctrlStopCh <- struct{}{}
+		stopAPIServer(apiServer, log)
+	case err := <-apiErrCh:
+		log.Error(err)
+		ctrlStopCh <- struct{}{}
+	case err := <-ctrlErrCh:
+		log.Error(err)
+		stopAPIServer(apiServer, log)
+	}
 
 	wg.Wait()
 
 	return nil
+}
+
+func stopAPIServer(apiServer *api.API, log logrus.FieldLogger) {
+	stopCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := apiServer.Shutdown(stopCtx); err != nil {
+		log.Errorf("Unable to stop the API server: %v", err)
+	}
 }
