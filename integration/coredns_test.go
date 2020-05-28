@@ -23,7 +23,6 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	s.startk3s(c, requiredImages)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
-	s.createResources(c, "testdata/state-table/")
 	s.createResources(c, "testdata/smi/crds/")
 }
 
