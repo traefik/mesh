@@ -83,7 +83,6 @@ type Controller struct {
 	topologyBuilder      TopologyBuilder
 	store                SharedStore
 	logger               logrus.FieldLogger
-	stop                 chan struct{}
 
 	clients              k8s.Client
 	kubernetesFactory    informers.SharedInformerFactory
@@ -130,7 +129,6 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 		tcpStateTable:    tcpStateTable,
 		udpStateTable:    udpStateTable,
 		store:            store,
-		stop:             make(chan struct{}),
 	}
 
 	c.init()
