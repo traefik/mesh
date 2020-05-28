@@ -65,6 +65,10 @@ mesh:
   # Added so we can launch on nodes with restrictions
   nodeSelector: {}
   tolerations: []
+  # Additional deployment annotations (e.g. for jaeger-operator sidecar injection)
+  annotations: {}
+  # Additional pod annotations (e.g. for mesh injection or prometheus scraping)
+  podAnnotations: {}
 
 #
 # Tracing configuration

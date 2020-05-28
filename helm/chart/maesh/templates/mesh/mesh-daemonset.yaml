@@ -9,6 +9,10 @@ metadata:
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
+    {{- with .Values.mesh.annotations }}
+  annotations:
+{{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   selector:
     matchLabels:
@@ -24,6 +28,9 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
+        {{- with .Values.mesh.podAnnotations }}
+{{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: maesh-mesh
       automountServiceAccountToken: true
