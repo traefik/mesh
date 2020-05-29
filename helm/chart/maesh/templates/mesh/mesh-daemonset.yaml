@@ -9,10 +9,10 @@ metadata:
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
-    {{- with .Values.mesh.annotations }}
+  {{- with .Values.mesh.annotations }}
   annotations:
 {{- toYaml . | nindent 4 }}
-    {{- end }}
+  {{- end }}
 spec:
   selector:
     matchLabels:
