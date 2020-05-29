@@ -17,6 +17,8 @@ image:
 # logLevel: error
 # logFormat: common
 
+# defaultMode: http
+
 limits:
   http: 10
   tcp: 25
@@ -42,6 +44,7 @@ controller:
   affinity: {}
 
 mesh:
+  # (Deprecated)
   # defaultMode: http
   # logLevel: error
   # logFormat: common

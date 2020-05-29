@@ -20,3 +20,10 @@ and `mesh.logLevel` options to configure the logging level for the controller an
 
 The `smi.enable` option has been deprecated and removed. You should use the new and backward compatible ACL mode 
 option as described in the [documentation](../install.md#access-control-list). 
+
+## v2.0 to v2.1
+
+### Default Mode
+
+The `controller.mesh.defaultMode` option has been deprecated and will be removed in a future major release.
+You should use the new `defaultMode` option to configure the default traffic mode for Maesh services.
