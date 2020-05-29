@@ -16,9 +16,4 @@ const (
 	SpecsObjectKinds = "HTTPRouteGroup|TCPRoute"
 	// SplitObjectKinds is a filter for objects to process by the split client.
 	SplitObjectKinds = "TrafficSplit"
-
-	// TCPStateConfigMapName TCP config map name.
-	TCPStateConfigMapName string = "tcp-state-table"
-	// UDPStateConfigMapName UDP config map name.
-	UDPStateConfigMapName string = "udp-state-table"
 )

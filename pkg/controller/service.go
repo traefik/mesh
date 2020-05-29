@@ -16,6 +16,13 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
+// PortMapper is capable of storing and retrieving a port mapping for a given service.
+type PortMapper interface {
+	Find(svc k8s.ServicePort) (int32, bool)
+	Add(svc *k8s.ServicePort) (int32, error)
+	Remove(svc k8s.ServicePort) (int32, error)
+}
+
 // ShadowServiceManager manages shadow services.
 type ShadowServiceManager struct {
 	logger             logrus.FieldLogger
@@ -156,7 +163,7 @@ func (s *ShadowServiceManager) removeServicePortMapping(namespace, name string, 
 		return
 	}
 
-	svcWithPort := k8s.ServiceWithPort{
+	svcWithPort := k8s.ServicePort{
 		Namespace: namespace,
 		Name:      name,
 		Port:      svcPort.Port,
@@ -175,7 +182,7 @@ func (s *ShadowServiceManager) removeServicePortMapping(namespace, name string, 
 	}
 }
 
-// getShadowServiceName returns the shadow service name corresponding to the given service name and namespace.
+// getShadowServiceName returns the shadow service shadowSvcName corresponding to the given service shadowSvcName and namespace.
 func (s *ShadowServiceManager) getShadowServiceName(namespace, name string) string {
 	return fmt.Sprintf("%s-%s-6d61657368-%s", s.namespace, name, namespace)
 }
@@ -235,7 +242,7 @@ func (s *ShadowServiceManager) getHTTPPort(portID int) (int32, error) {
 
 // getMappedPort returns the port associated with the given service information in the given port mapper.
 func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, svcName, svcNamespace string, svcPort int32) (int32, error) {
-	svc := k8s.ServiceWithPort{
+	svc := k8s.ServicePort{
 		Namespace: svcNamespace,
 		Name:      svcName,
 		Port:      svcPort,

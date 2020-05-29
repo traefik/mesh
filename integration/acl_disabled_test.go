@@ -19,7 +19,6 @@ func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
-	s.createResources(c, "testdata/state-table/")
 	s.createResources(c, "testdata/smi/crds/")
 }
 
