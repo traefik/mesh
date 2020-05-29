@@ -147,9 +147,9 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(handler)
 	}
 
-	c.tcpStateTable = k8s.NewPortMapping(c.cfg.Namespace, c.serviceLister, c.cfg.MinTCPPort, c.cfg.MaxTCPPort)
+	c.tcpStateTable = NewPortMapping(c.cfg.Namespace, c.serviceLister, logger, c.cfg.MinTCPPort, c.cfg.MaxTCPPort)
 
-	c.udpStateTable = k8s.NewPortMapping(c.cfg.Namespace, c.serviceLister, c.cfg.MinUDPPort, c.cfg.MaxUDPPort)
+	c.udpStateTable = NewPortMapping(c.cfg.Namespace, c.serviceLister, logger, c.cfg.MinUDPPort, c.cfg.MaxUDPPort)
 
 	c.shadowServiceManager = NewShadowServiceManager(
 		c.logger,

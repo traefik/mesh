@@ -182,7 +182,7 @@ func (s *ShadowServiceManager) removeServicePortMapping(namespace, name string, 
 	}
 }
 
-// getShadowServiceName returns the shadow service name corresponding to the given service name and namespace.
+// getShadowServiceName returns the shadow service shadowSvcName corresponding to the given service shadowSvcName and namespace.
 func (s *ShadowServiceManager) getShadowServiceName(namespace, name string) string {
 	return fmt.Sprintf("%s-%s-6d61657368-%s", s.namespace, name, namespace)
 }
