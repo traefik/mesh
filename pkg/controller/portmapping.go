@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/containous/maesh/pkg/k8s"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	listers "k8s.io/client-go/listers/core/v1"
 )
@@ -19,16 +20,18 @@ type PortMapping struct {
 	maxPort       int32
 	mu            sync.RWMutex
 	table         map[int32]*k8s.ServicePort
+	logger        logrus.FieldLogger
 }
 
 // NewPortMapping creates and returns a new PortMapping instance.
-func NewPortMapping(namespace string, serviceLister listers.ServiceLister, minPort, maxPort int32) *PortMapping {
+func NewPortMapping(namespace string, serviceLister listers.ServiceLister, logger logrus.FieldLogger, minPort, maxPort int32) *PortMapping {
 	return &PortMapping{
 		namespace:     namespace,
 		serviceLister: serviceLister,
 		minPort:       minPort,
 		maxPort:       maxPort,
 		table:         make(map[int32]*k8s.ServicePort),
+		logger:        logger,
 	}
 }
 
@@ -52,15 +55,16 @@ func (p *PortMapping) LoadState() error {
 	defer p.mu.Unlock()
 
 	for _, shadowService := range shadowServices {
+		namespace, name, err := p.parseServiceNamespaceAndName(shadowService.Name)
+		if err != nil {
+			p.logger.Error("Unable to parse shadow service shadowSvcName %q: %v", shadowService.Name, err)
+			continue
+		}
+
 		for _, port := range shadowService.Spec.Ports {
 			targetPort := port.TargetPort.IntVal
 
 			if targetPort >= p.minPort && targetPort <= p.maxPort {
-				namespace, name, err := p.parseServiceNamespaceAndName(shadowService.Name)
-				if err != nil {
-					return err
-				}
-
 				p.table[targetPort] = &k8s.ServicePort{
 					Namespace: namespace,
 					Name:      name,
@@ -121,7 +125,7 @@ func (p *PortMapping) Remove(svc k8s.ServicePort) (int32, error) {
 	return port, nil
 }
 
-// parseServiceNamespaceAndName parses and returns the service namespace and name associated to the given shadow service name.
+// parseServiceNamespaceAndName parses and returns the service namespace and shadowSvcName from the given shadow service shadowSvcName.
 func (p *PortMapping) parseServiceNamespaceAndName(shadowServiceName string) (namespace string, name string, err error) {
 	expr := fmt.Sprintf(`%s-(.*)-6d61657368-(.*)`, p.namespace)
 
@@ -132,7 +136,7 @@ func (p *PortMapping) parseServiceNamespaceAndName(shadowServiceName string) (na
 
 	parts := regex.FindStringSubmatch(shadowServiceName)
 	if len(parts) != 3 {
-		return "", "", fmt.Errorf("unable to parse service namespace and name")
+		return "", "", fmt.Errorf("unable to parse service namespace and shadowSvcName")
 	}
 
 	return parts[2], parts[1], nil
