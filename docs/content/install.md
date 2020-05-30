@@ -30,9 +30,6 @@ You will then be able to use the tagged image as your image in your `values.yaml
 
 ### Deploy Helm Chart
 
-??? Note "Helm V3"
-    Please keep in mind, that our current Helm Chart (v1.1.0) is v3 compatible only.
-
 To deploy the Helm Chart, run:
 
 ```shell
