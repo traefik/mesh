@@ -203,7 +203,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	}
 
 	// Load the TCP and UDP port mapper states.
-	if err := c.loadPortMapperStates(); err != nil {
+	if err := c.loadPortMappersState(); err != nil {
 		return fmt.Errorf("could not load port mapper states: %w", err)
 	}
 
@@ -281,8 +281,8 @@ func (c *Controller) startACLInformers(ctx context.Context, stopCh <-chan struct
 	return nil
 }
 
-// loadPortMapperStates loads the TCP and UDP port mapper states.
-func (c *Controller) loadPortMapperStates() error {
+// loadPortMappersState loads the TCP and UDP port mapper states.
+func (c *Controller) loadPortMappersState() error {
 	if err := c.tcpStateTable.LoadState(); err != nil {
 		return fmt.Errorf("unable to load TCP state table: %w", err)
 	}
