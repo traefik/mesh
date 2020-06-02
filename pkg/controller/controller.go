@@ -38,13 +38,6 @@ const (
 	maxRetries = 12
 )
 
-// PortMapper is capable of storing and retrieving a port mapping for a given service.
-type PortMapper interface {
-	Find(svc k8s.ServiceWithPort) (int32, bool)
-	Add(svc *k8s.ServiceWithPort) (int32, error)
-	Remove(svc k8s.ServiceWithPort) (int32, error)
-}
-
 // SharedStore is used to share the controller state.
 type SharedStore interface {
 	SetConfig(cfg *dynamic.Configuration)
@@ -78,8 +71,8 @@ type Controller struct {
 	shadowServiceManager *ShadowServiceManager
 	provider             *provider.Provider
 	ignoredResources     k8s.IgnoreWrapper
-	tcpStateTable        PortMapper
-	udpStateTable        PortMapper
+	tcpStateTable        *PortMapping
+	udpStateTable        *PortMapping
 	topologyBuilder      TopologyBuilder
 	store                SharedStore
 	logger               logrus.FieldLogger
@@ -100,49 +93,24 @@ type Controller struct {
 
 // NewMeshController builds the informers and other required components of the mesh controller, and returns an
 // initialized mesh controller object.
-func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger logrus.FieldLogger) (*Controller, error) {
-	ignoredResources := k8s.NewIgnored()
+func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger logrus.FieldLogger) *Controller {
+	c := &Controller{
+		logger:  logger,
+		cfg:     cfg,
+		clients: clients,
+		store:   store,
+	}
+
+	// Initialize the ignored resources.
+	c.ignoredResources = k8s.NewIgnored()
 
 	for _, ns := range cfg.IgnoreNamespaces {
-		ignoredResources.AddIgnoredNamespace(ns)
+		c.ignoredResources.AddIgnoredNamespace(ns)
 	}
 
-	ignoredResources.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
-	ignoredResources.AddIgnoredNamespace(metav1.NamespaceSystem)
-	ignoredResources.AddIgnoredApps("maesh", "jaeger")
-
-	tcpStateTable, err := k8s.NewPortMapping(clients.KubernetesClient(), cfg.Namespace, k8s.TCPStateConfigMapName, cfg.MinTCPPort, cfg.MaxTCPPort)
-	if err != nil {
-		return nil, err
-	}
-
-	udpStateTable, err := k8s.NewPortMapping(clients.KubernetesClient(), cfg.Namespace, k8s.UDPStateConfigMapName, cfg.MinUDPPort, cfg.MaxUDPPort)
-	if err != nil {
-		return nil, err
-	}
-
-	c := &Controller{
-		logger:           logger,
-		cfg:              cfg,
-		clients:          clients,
-		ignoredResources: ignoredResources,
-		tcpStateTable:    tcpStateTable,
-		udpStateTable:    udpStateTable,
-		store:            store,
-	}
-
-	c.init()
-
-	return c, nil
-}
-
-func (c *Controller) init() {
-	// Create SharedInformers for non-ACL related resources.
-	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubernetesClient(), k8s.ResyncPeriod)
-	c.splitFactory = splitinformer.NewSharedInformerFactoryWithOptions(c.clients.SplitClient(), k8s.ResyncPeriod)
-
-	c.serviceLister = c.kubernetesFactory.Core().V1().Services().Lister()
-	c.shadowServiceManager = NewShadowServiceManager(c.logger, c.serviceLister, c.cfg.Namespace, c.tcpStateTable, c.udpStateTable, c.cfg.DefaultMode, c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort, c.clients.KubernetesClient())
+	c.ignoredResources.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
+	c.ignoredResources.AddIgnoredNamespace(metav1.NamespaceSystem)
+	c.ignoredResources.AddIgnoredApps("maesh", "jaeger")
 
 	// Create the work queue and the enqueue handler.
 	c.workQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
@@ -151,9 +119,13 @@ func (c *Controller) init() {
 		Handler:    &enqueueWorkHandler{logger: c.logger, workQueue: c.workQueue},
 	}
 
-	// Create listers and register the event handler to informers that are not ACL related.
+	// Create SharedInformers, listers and register the event handler to informers that are not ACL related.
+	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubernetesClient(), k8s.ResyncPeriod)
+	c.splitFactory = splitinformer.NewSharedInformerFactoryWithOptions(c.clients.SplitClient(), k8s.ResyncPeriod)
+
 	c.podLister = c.kubernetesFactory.Core().V1().Pods().Lister()
 	c.endpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
+	c.serviceLister = c.kubernetesFactory.Core().V1().Services().Lister()
 	c.trafficSplitLister = c.splitFactory.Split().V1alpha2().TrafficSplits().Lister()
 
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(handler)
@@ -175,6 +147,22 @@ func (c *Controller) init() {
 		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(handler)
 	}
 
+	c.tcpStateTable = NewPortMapping(c.cfg.Namespace, c.serviceLister, logger, c.cfg.MinTCPPort, c.cfg.MaxTCPPort)
+
+	c.udpStateTable = NewPortMapping(c.cfg.Namespace, c.serviceLister, logger, c.cfg.MinUDPPort, c.cfg.MaxUDPPort)
+
+	c.shadowServiceManager = NewShadowServiceManager(
+		c.logger,
+		c.serviceLister,
+		c.cfg.Namespace,
+		c.tcpStateTable,
+		c.udpStateTable,
+		c.cfg.DefaultMode,
+		c.cfg.MinHTTPPort,
+		c.cfg.MaxHTTPPort,
+		c.clients.KubernetesClient(),
+	)
+
 	c.topologyBuilder = &topology.Builder{
 		ServiceLister:        c.serviceLister,
 		EndpointsLister:      c.endpointsLister,
@@ -195,6 +183,8 @@ func (c *Controller) init() {
 	}
 
 	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddlewares, providerCfg, c.logger)
+
+	return c
 }
 
 // Run is the main entrypoint for the controller.
@@ -210,6 +200,11 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Start the informers.
 	if err := c.startInformers(stopCh, 10*time.Second); err != nil {
 		return fmt.Errorf("could not start informers: %w", err)
+	}
+
+	// Load the TCP and UDP port mapper states.
+	if err := c.loadPortMappersState(); err != nil {
+		return fmt.Errorf("could not load port mapper states: %w", err)
 	}
 
 	// Enable API readiness endpoint, informers are started and default conf is available.
@@ -281,6 +276,19 @@ func (c *Controller) startACLInformers(ctx context.Context, stopCh <-chan struct
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
+	}
+
+	return nil
+}
+
+// loadPortMappersState loads the TCP and UDP port mapper states.
+func (c *Controller) loadPortMappersState() error {
+	if err := c.tcpStateTable.LoadState(); err != nil {
+		return fmt.Errorf("unable to load TCP state table: %w", err)
+	}
+
+	if err := c.udpStateTable.LoadState(); err != nil {
+		return fmt.Errorf("unable to load UDP state table: %w", err)
 	}
 
 	return nil

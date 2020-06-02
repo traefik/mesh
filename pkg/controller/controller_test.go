@@ -10,7 +10,6 @@ import (
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -41,7 +40,7 @@ func TestController_NewMeshController(t *testing.T) {
 	log.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with base HTTP mode.
-	controller, err := NewMeshController(clientMock, Config{
+	controller := NewMeshController(clientMock, Config{
 		ACLEnabled:       false,
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,
@@ -54,7 +53,6 @@ func TestController_NewMeshController(t *testing.T) {
 		MaxUDPPort:       maxUDPPort,
 	}, store, log)
 
-	require.NoError(t, err)
 	assert.NotNil(t, controller)
 }
 
@@ -70,7 +68,7 @@ func TestController_NewMeshControllerWithSMI(t *testing.T) {
 	log.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with base HTTP mode, in SMI mode.
-	controller, err := NewMeshController(clientMock, Config{
+	controller := NewMeshController(clientMock, Config{
 		ACLEnabled:       true,
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,
@@ -83,6 +81,5 @@ func TestController_NewMeshControllerWithSMI(t *testing.T) {
 		MaxUDPPort:       maxUDPPort,
 	}, store, log)
 
-	require.NoError(t, err)
 	assert.NotNil(t, controller)
 }

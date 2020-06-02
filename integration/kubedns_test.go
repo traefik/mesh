@@ -27,7 +27,6 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
-	s.createResources(c, "testdata/state-table/")
 	s.createResources(c, "testdata/smi/crds/")
 }
 
