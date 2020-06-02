@@ -131,6 +131,9 @@ func TestPortMapping_Remove(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int32(10000), port)
 
+	_, exists := p.table[10000]
+	assert.False(t, exists)
+
 	_, err = p.Remove(sp)
 	assert.Error(t, err)
 

@@ -93,7 +93,7 @@ type Controller struct {
 
 // NewMeshController builds the informers and other required components of the mesh controller, and returns an
 // initialized mesh controller object.
-func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger logrus.FieldLogger) (*Controller, error) {
+func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger logrus.FieldLogger) *Controller {
 	c := &Controller{
 		logger:  logger,
 		cfg:     cfg,
@@ -184,7 +184,7 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 
 	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddlewares, providerCfg, c.logger)
 
-	return c, nil
+	return c
 }
 
 // Run is the main entrypoint for the controller.
