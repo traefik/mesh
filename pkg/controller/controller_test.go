@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/containous/maesh/pkg/k8s"
+	"github.com/containous/maesh/pkg/topology"
+	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,10 +23,17 @@ const (
 	maxUDPPort           = int32(15005)
 )
 
+type storeMock struct{}
+
+func (a *storeMock) SetConfig(cfg *dynamic.Configuration) {}
+func (a *storeMock) SetTopology(topo *topology.Topology)  {}
+func (a *storeMock) SetReadiness(isReady bool)            {}
+
 func TestController_NewMeshController(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	store := &storeMock{}
 	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", false)
 	log := logrus.New()
 
@@ -37,14 +46,13 @@ func TestController_NewMeshController(t *testing.T) {
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,
 		IgnoreNamespaces: []string{},
-		APIPort:          9000,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,
 		MinTCPPort:       minTCPPort,
 		MaxTCPPort:       maxTCPPort,
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       maxUDPPort,
-	}, log)
+	}, store, log)
 
 	require.NoError(t, err)
 	assert.NotNil(t, controller)
@@ -54,6 +62,7 @@ func TestController_NewMeshControllerWithSMI(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	store := &storeMock{}
 	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", true)
 	log := logrus.New()
 
@@ -66,14 +75,13 @@ func TestController_NewMeshControllerWithSMI(t *testing.T) {
 		DefaultMode:      "http",
 		Namespace:        meshNamespace,
 		IgnoreNamespaces: []string{},
-		APIPort:          9000,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,
 		MinTCPPort:       minTCPPort,
 		MaxTCPPort:       maxTCPPort,
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       maxUDPPort,
-	}, log)
+	}, store, log)
 
 	require.NoError(t, err)
 	assert.NotNil(t, controller)
