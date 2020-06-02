@@ -105,7 +105,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		return fmt.Errorf("unable to create the API server: %w", err)
 	}
 
-	ctr, err := controller.NewMeshController(clients, controller.Config{
+	ctr := controller.NewMeshController(clients, controller.Config{
 		ACLEnabled:       aclEnabled,
 		DefaultMode:      iConfig.DefaultMode,
 		Namespace:        iConfig.Namespace,
@@ -117,9 +117,6 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       minUDPPort + iConfig.LimitUDPPort,
 	}, apiServer, log)
-	if err != nil {
-		return fmt.Errorf("unable to create controller: %w", err)
-	}
 
 	var wg sync.WaitGroup
 
