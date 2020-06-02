@@ -174,7 +174,7 @@ func TestGetMeshNodeConfiguration(t *testing.T) {
 		{
 			desc:               "pod not found",
 			mockFile:           "getmeshnodeconfiguration_empty.yaml",
-			expectedBody:       "unable to find pod: mesh-pod-1",
+			expectedBody:       "\n",
 			expectedStatusCode: http.StatusNotFound,
 		},
 	}

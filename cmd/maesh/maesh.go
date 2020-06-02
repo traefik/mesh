@@ -134,7 +134,7 @@ func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 		defer wg.Done()
 
 		if err := apiServer.ListenAndServe(); err != nil {
-			apiErrCh <- fmt.Errorf("API has stopped unexpectedly: %w", err)
+			apiErrCh <- fmt.Errorf("API server has stopped unexpectedly: %w", err)
 		}
 	}()
 
