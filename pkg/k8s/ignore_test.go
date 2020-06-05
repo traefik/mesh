@@ -4,107 +4,110 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestIgnoredNamespace(t *testing.T) {
+func TestIgnoreWrapper_IsIgnored(t *testing.T) {
 	testCases := []struct {
-		desc      string
-		namespace string
-		expected  bool
+		desc string
+		obj  metav1.Object
+		want bool
 	}{
 		{
-			desc:      "empty ignored",
-			namespace: "",
-			expected:  false,
+			desc: "object is ignored when namespace is ignored",
+			obj: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: "ignored-ns",
+				},
+			},
+			want: true,
 		},
 		{
-			desc:      "not ignored namespace",
-			namespace: "foo",
-			expected:  false,
+			desc: "object is ignored when app is ignored",
+			obj: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: "ns",
+					Labels: map[string]string{
+						"app": "ignored-app",
+					},
+				},
+			},
+			want: true,
 		},
 		{
-			desc:      "ignored namespace",
-			namespace: "someNamespace",
-			expected:  true,
+			desc: "object is ignored when service is ignored",
+			obj: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ignored-svc",
+					Namespace: "ns",
+				},
+				Spec: v1.ServiceSpec{
+					Type: "ClusterIP",
+				},
+			},
+			want: true,
 		},
 		{
-			desc:      "ignored mesh namespace",
-			namespace: "maesh",
-			expected:  false,
+			desc: "object is not ignored when it's a pod with the same name as an ignored service",
+			obj: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ignored-svc",
+					Namespace: "ns",
+				},
+			},
+			want: false,
+		},
+		{
+			desc: "object is ignored if it's a service of type ExternalName",
+			obj: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "svc-a",
+					Namespace: "ns",
+				},
+				Spec: v1.ServiceSpec{
+					Type:         "ExternalName",
+					ExternalName: "hello.com",
+				},
+			},
+			want: true,
+		},
+		{
+			desc: "pod is not ignored pods is doesn't match criteria",
+			obj: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: "ns",
+				},
+			},
+			want: false,
+		},
+		{
+			desc: "service is not ignored pods is doesn't match criteria",
+			obj: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "svc",
+					Namespace: "ns",
+				},
+				Spec: v1.ServiceSpec{
+					Type: "ClusterIP",
+				},
+			},
+			want: false,
 		},
 	}
+	i := NewIgnored()
+	i.AddIgnoredNamespace("ignored-ns")
+	i.AddIgnoredService("ignored-svc", "ns")
+	i.AddIgnoredApps("ignored-app")
 
 	for _, test := range testCases {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
-			i := NewIgnored()
-			i.AddIgnoredNamespace("someNamespace")
-			actual := i.IsIgnoredNamespace(test.namespace)
-			assert.Equal(t, test.expected, actual)
+			got := i.IsIgnored(test.obj)
+
+			assert.Equal(t, test.want, got)
 		})
-	}
-}
-
-func TestIgnoredService(t *testing.T) {
-	testCases := []struct {
-		desc      string
-		name      string
-		namespace string
-		app       string
-		expected  bool
-	}{
-		{
-			desc:      "empty ignored",
-			name:      "",
-			namespace: "",
-			app:       "",
-			expected:  false,
-		},
-		{
-			desc:      "ignored service due to namespace",
-			name:      "foo",
-			namespace: "someNamespace",
-			app:       "notignored",
-			expected:  true,
-		},
-		{
-			desc:      "explicit ignored service",
-			name:      "foo",
-			namespace: "bar",
-			app:       "notignored",
-			expected:  true,
-		},
-		{
-			desc:      "ignored app",
-			name:      "omg",
-			namespace: "foo",
-			app:       "ignoredapp",
-			expected:  true,
-		},
-	}
-
-	for _, test := range testCases {
-		test := test
-		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
-			i := NewIgnored()
-			i.AddIgnoredNamespace("someNamespace")
-			i.AddIgnoredService("foo", "bar")
-			i.AddIgnoredApps("ignoredapp")
-			actual := i.IsIgnored(buildMeta(test.name, test.namespace, test.app))
-			assert.Equal(t, test.expected, actual)
-		})
-	}
-}
-
-func buildMeta(name, ns, app string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      name,
-		Namespace: ns,
-		Labels: map[string]string{
-			"app": app,
-		},
 	}
 }
