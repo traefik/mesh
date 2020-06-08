@@ -36,7 +36,7 @@ func (i *IgnoreWrapper) AddIgnoredApps(app ...string) {
 	i.Apps = append(i.Apps, app...)
 }
 
-// IsIgnored returns if the object events should be ignored.
+// IsIgnored returns true if the object events should be ignored.
 func (i *IgnoreWrapper) IsIgnored(obj interface{}) bool {
 	accessor, err := meta.Accessor(obj)
 	if err != nil {
@@ -56,7 +56,7 @@ func (i *IgnoreWrapper) IsIgnored(obj interface{}) bool {
 	}
 
 	if svc, ok := obj.(*corev1.Service); ok {
-		// Is the object explicitly ignored?
+		// Is the service explicitly ignored?
 		if i.Services.Contains(pMeta.GetName(), pMeta.GetNamespace()) {
 			return true
 		}
