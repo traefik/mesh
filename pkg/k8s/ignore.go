@@ -1,9 +1,8 @@
 package k8s
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 )
 
 // IgnoreWrapper holds namespaces and services to ignore.
@@ -37,41 +36,36 @@ func (i *IgnoreWrapper) AddIgnoredApps(app ...string) {
 	i.Apps = append(i.Apps, app...)
 }
 
-// LabelSelector returns the labels.Selector image of the ignored object.
-func (i *IgnoreWrapper) LabelSelector() (labels.Selector, error) {
-	sel := labels.Everything()
-
-	r, err := labels.NewRequirement("app", selection.NotIn, i.Apps)
+// IsIgnored returns true if the object events should be ignored.
+func (i *IgnoreWrapper) IsIgnored(obj interface{}) bool {
+	accessor, err := meta.Accessor(obj)
 	if err != nil {
-		return nil, err
+		return false
 	}
 
-	sel = sel.Add(*r)
+	pMeta := meta.AsPartialObjectMetadata(accessor)
 
-	return sel, nil
-}
-
-// IsIgnored returns if the object events should be ignored.
-func (i *IgnoreWrapper) IsIgnored(obj metav1.ObjectMeta) bool {
 	// Is the object's namespace ignored?
-	if i.Namespaces.Contains(obj.GetNamespace()) {
+	if i.Namespaces.Contains(pMeta.GetNamespace()) {
 		return true
 	}
 
-	// Is the object explicitly ignored?
-	if i.Services.Contains(obj.GetName(), obj.GetNamespace()) {
+	// Is the app ignored?
+	if contains(i.Apps, pMeta.GetLabels()["app"]) {
 		return true
 	}
 
-	// Is the app ignored ?
-	if contains(i.Apps, obj.GetLabels()["app"]) {
-		return true
+	if svc, ok := obj.(*corev1.Service); ok {
+		// Is the service explicitly ignored?
+		if i.Services.Contains(pMeta.GetName(), pMeta.GetNamespace()) {
+			return true
+		}
+
+		// Ignore ExternalName services.
+		if svc.Spec.Type == corev1.ServiceTypeExternalName {
+			return true
+		}
 	}
 
 	return false
-}
-
-// IsIgnoredNamespace returns if the service's events should be ignored.
-func (i *IgnoreWrapper) IsIgnoredNamespace(namespace string) bool {
-	return i.Namespaces.Contains(namespace)
 }

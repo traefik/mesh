@@ -18,7 +18,6 @@ import (
 	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -296,14 +295,7 @@ func (c *Controller) loadPortMappersState() error {
 
 // isWatchedResource returns true if the given resource is not ignored, false otherwise.
 func (c *Controller) isWatchedResource(obj interface{}) bool {
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return false
-	}
-
-	pMeta := meta.AsPartialObjectMetadata(accessor)
-
-	return !c.ignoredResources.IsIgnored(pMeta.ObjectMeta)
+	return !c.ignoredResources.IsIgnored(obj)
 }
 
 // runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and
