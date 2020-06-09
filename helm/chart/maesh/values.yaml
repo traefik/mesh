@@ -1,4 +1,4 @@
-## Default values for maesh
+# Default values for Maesh.
 image:
   name: containous/maesh
   # (Optional)
@@ -39,7 +39,7 @@ controller:
       mem: 50Mi
       cpu: 100m
 
-  # Added so we can launch on nodes with restrictions
+  # Added so we can launch on nodes with restrictions.
   nodeSelector: {}
   tolerations: []
   affinity: {}
@@ -77,18 +77,18 @@ mesh:
       mem: 50Mi
       cpu: 100m
 
-  # Added so we can launch on nodes with restrictions
+  # Added so we can launch on nodes with restrictions.
   nodeSelector: {}
   tolerations: []
 
-  # Additional deployment annotations
+  # Additional deployment annotations.
   # annotations: {}
 
-  # Additional pod annotations
+  # Additional pod annotations.
   # podAnnotations: {}
 
 #
-# Tracing configuration
+# Tracing configuration.
 #
 tracing:
   deploy: true
@@ -133,7 +133,7 @@ tracing:
     # baggagePrefixHeaderName: "sample"
 
 #
-# Metrics configuration
+# Metrics configuration.
 #
 metrics:
   deploy: true
