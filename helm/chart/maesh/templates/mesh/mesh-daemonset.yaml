@@ -257,6 +257,11 @@ spec:
             - "--metrics.statsd.pushInterval={{ .Values.metrics.statsd.pushInterval }}"
               {{- end }}
             {{- end }}
+            {{- with .Values.mesh.additionalArguments }}
+            {{- range . }}
+            - {{ . | quote }}
+            {{- end }}
+            {{- end }}
           ports:
             - name: readiness
               containerPort: 1081
