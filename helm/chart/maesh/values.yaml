@@ -56,6 +56,12 @@ mesh:
   #   responseHeaderTimeout: 0s
   #   (Optional)
   #   idleConnTimeout: 1s
+  # env:
+  #   - name: NAME
+  #     value: "value"
+  # envFrom:
+  #   - configMapRef:
+  #       name: config
 
   resources:
     limit:
