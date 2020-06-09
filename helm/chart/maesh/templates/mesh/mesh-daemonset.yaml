@@ -70,6 +70,14 @@ spec:
         - name: maesh-mesh
           image: {{ include "maesh.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          {{- with .Values.mesh.env }}
+          env:
+{{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.mesh.envFrom }}
+          envFrom:
+{{- toYaml . | nindent 12 }}
+          {{- end }}
           args:
             - "proxy"
             - "--entryPoints.readiness.address=:1081"
