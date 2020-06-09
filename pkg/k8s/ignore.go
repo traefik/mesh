@@ -40,7 +40,7 @@ func (i *IgnoreWrapper) AddIgnoredApps(app ...string) {
 func (i *IgnoreWrapper) IsIgnored(obj interface{}) bool {
 	accessor, err := meta.Accessor(obj)
 	if err != nil {
-		return false
+		return true
 	}
 
 	pMeta := meta.AsPartialObjectMetadata(accessor)
