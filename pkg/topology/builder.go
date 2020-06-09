@@ -620,7 +620,7 @@ func (b *Builder) loadServices(ignoredResources mk8s.IgnoreWrapper, res *resourc
 	}
 
 	for _, svc := range svcs {
-		if ignoredResources.IsIgnored(svc.ObjectMeta) {
+		if ignoredResources.IsIgnored(svc) {
 			continue
 		}
 
@@ -656,7 +656,7 @@ func (r *resources) indexPods(ignoredResources mk8s.IgnoreWrapper, pods []*corev
 
 func (r *resources) indexPodsByServiceAccount(ignoredResources mk8s.IgnoreWrapper, pods []*corev1.Pod, podsByName map[Key]*corev1.Pod) {
 	for _, pod := range pods {
-		if ignoredResources.IsIgnored(pod.ObjectMeta) {
+		if ignoredResources.IsIgnored(pod) {
 			continue
 		}
 
@@ -670,7 +670,7 @@ func (r *resources) indexPodsByServiceAccount(ignoredResources mk8s.IgnoreWrappe
 
 func (r *resources) indexPodsByService(ignoredResources mk8s.IgnoreWrapper, eps []*corev1.Endpoints, podsByName map[Key]*corev1.Pod) {
 	for _, ep := range eps {
-		if ignoredResources.IsIgnored(ep.ObjectMeta) {
+		if ignoredResources.IsIgnored(ep) {
 			continue
 		}
 
@@ -707,7 +707,7 @@ func (r *resources) indexPodByService(ep *corev1.Endpoints, address corev1.Endpo
 
 func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts []*access.TrafficTarget, tss []*split.TrafficSplit, tcpRts []*spec.TCPRoute, httpRtGrps []*spec.HTTPRouteGroup) {
 	for _, httpRouteGroup := range httpRtGrps {
-		if ignoredResources.IsIgnored(httpRouteGroup.ObjectMeta) {
+		if ignoredResources.IsIgnored(httpRouteGroup) {
 			continue
 		}
 
@@ -716,7 +716,7 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 	}
 
 	for _, tcpRoute := range tcpRts {
-		if ignoredResources.IsIgnored(tcpRoute.ObjectMeta) {
+		if ignoredResources.IsIgnored(tcpRoute) {
 			continue
 		}
 
@@ -725,7 +725,7 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 	}
 
 	for _, trafficTarget := range tts {
-		if ignoredResources.IsIgnored(trafficTarget.ObjectMeta) {
+		if ignoredResources.IsIgnored(trafficTarget) {
 			continue
 		}
 
@@ -739,7 +739,7 @@ func (r *resources) indexSMIResources(ignoredResources mk8s.IgnoreWrapper, tts [
 	}
 
 	for _, trafficSplit := range tss {
-		if ignoredResources.IsIgnored(trafficSplit.ObjectMeta) {
+		if ignoredResources.IsIgnored(trafficSplit) {
 			continue
 		}
 
