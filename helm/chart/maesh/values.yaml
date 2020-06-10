@@ -1,4 +1,4 @@
-## Default values for maesh
+# Default values for Maesh.
 image:
   name: containous/maesh
   # (Optional)
@@ -27,6 +27,7 @@ limits:
 controller:
   # logLevel: error
   # logFormat: common
+
   # ignoreNamespaces:
   #  - example
 
@@ -38,7 +39,7 @@ controller:
       mem: 50Mi
       cpu: 100m
 
-  # Added so we can launch on nodes with restrictions
+  # Added so we can launch on nodes with restrictions.
   nodeSelector: {}
   tolerations: []
   affinity: {}
@@ -46,16 +47,30 @@ controller:
 mesh:
   # (Deprecated)
   # defaultMode: http
+
   # logLevel: error
   # logFormat: common
+
   # pollInterval: 1s
   # pollTimeout: 1s
+
   # forwardingTimeouts:
   #   dialTimeout: 30s
   #   (Optional)
   #   responseHeaderTimeout: 0s
   #   (Optional)
   #   idleConnTimeout: 1s
+
+  # env:
+  #   - name: NAME
+  #     value: "value"
+
+  # envFrom:
+  #   - configMapRef:
+  #       name: config
+
+  # additionalArguments:
+  #   - "--name=value"
 
   resources:
     limit:
@@ -65,18 +80,18 @@ mesh:
       mem: 50Mi
       cpu: 100m
 
-  # Added so we can launch on nodes with restrictions
+  # Added so we can launch on nodes with restrictions.
   nodeSelector: {}
   tolerations: []
-  # Additional deployment annotations
-  # (Optional)
+
+  # Additional deployment annotations.
   # annotations: {}
-  # Additional pod annotations
-  # (Optional)
+
+  # Additional pod annotations.
   # podAnnotations: {}
 
 #
-# Tracing configuration
+# Tracing configuration.
 #
 tracing:
   deploy: true
@@ -121,7 +136,7 @@ tracing:
     # baggagePrefixHeaderName: "sample"
 
 #
-# Metrics configuration
+# Metrics configuration.
 #
 metrics:
   deploy: true
