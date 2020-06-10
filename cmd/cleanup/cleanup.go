@@ -23,7 +23,7 @@ func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
-	log, err := cmd.BuildLogger(cConfig.LogFormat, cConfig.LogLevel, false)
+	log, err := cmd.NewLogger(cConfig.LogFormat, cConfig.LogLevel, false)
 	if err != nil {
 		return fmt.Errorf("could not build logger: %w", err)
 	}
