@@ -23,7 +23,7 @@ import (
 
 func main() {
 	maeshConfig := cmd.NewMaeshConfiguration()
-	maeshLoaders := []cli.ResourceLoader{&cli.FlagLoader{}, &cmd.EnvLoader{}}
+	maeshLoaders := []cli.ResourceLoader{&cmd.FileLoader{}, &cli.FlagLoader{}, &cmd.EnvLoader{}}
 
 	cmdMaesh := &cli.Command{
 		Name:          "maesh",
