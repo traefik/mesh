@@ -23,12 +23,12 @@ func NewCmd(pConfig *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
-	log, err := cmd.BuildLogger(pConfig.LogFormat, pConfig.LogLevel, pConfig.Debug)
+	log, err := cmd.NewLogger(pConfig.LogFormat, pConfig.LogLevel, pConfig.Debug)
 	if err != nil {
 		return fmt.Errorf("could not build logger: %w", err)
 	}
 
-	log.Debugln("Starting maesh prepare...")
+	log.Debug("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
