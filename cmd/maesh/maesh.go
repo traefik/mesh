@@ -68,7 +68,7 @@ func main() {
 func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	log, err := cmd.BuildLogger(iConfig.LogFormat, iConfig.LogLevel, iConfig.Debug)
+	log, err := cmd.NewLogger(iConfig.LogFormat, iConfig.LogLevel, iConfig.Debug)
 	if err != nil {
 		return fmt.Errorf("could not build logger: %w", err)
 	}
