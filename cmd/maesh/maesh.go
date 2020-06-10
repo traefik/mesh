@@ -71,7 +71,7 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 
 	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel, config.Debug)
 	if err != nil {
-		return fmt.Errorf("could not build logger: %w", err)
+		return fmt.Errorf("could not create logger: %w", err)
 	}
 
 	log.Debug("Starting maesh prepare...")
@@ -80,14 +80,14 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 
 	clients, err := k8s.NewClient(log, config.MasterURL, config.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("error building clients: %v", err)
+		return fmt.Errorf("error building clients: %w", err)
 	}
 
 	prep := preparepkg.NewPrepare(log, clients)
 
 	_, err = prep.CheckDNSProvider()
 	if err != nil {
-		return fmt.Errorf("no valid DNS provider found: %v", err)
+		return fmt.Errorf("no valid DNS provider found: %w", err)
 	}
 
 	minHTTPPort := int32(5000)
@@ -95,7 +95,7 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 	minUDPPort := int32(15000)
 
 	if config.SMI {
-		log.Warnf("SMI mode is deprecated, please consider using --acl instead")
+		log.Warn("SMI mode is deprecated, please consider using --acl instead")
 	}
 
 	aclEnabled := config.ACL || config.SMI

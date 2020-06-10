@@ -25,7 +25,7 @@ func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cl
 func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 	log, err := cmd.NewLogger(cConfig.LogFormat, cConfig.LogLevel, false)
 	if err != nil {
-		return fmt.Errorf("could not build logger: %w", err)
+		return fmt.Errorf("could not create logger: %w", err)
 	}
 
 	log.Debug("Starting maesh cleanup...")
