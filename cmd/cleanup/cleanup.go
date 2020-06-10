@@ -28,7 +28,7 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 		return fmt.Errorf("could not build logger: %w", err)
 	}
 
-	log.Debugln("Starting maesh cleanup...")
+	log.Debug("Starting maesh cleanup...")
 	log.Debugf("Using masterURL: %q", cConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", cConfig.KubeConfig)
 

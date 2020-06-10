@@ -28,7 +28,7 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 		return fmt.Errorf("could not build logger: %w", err)
 	}
 
-	log.Debugln("Starting maesh prepare...")
+	log.Debug("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
