@@ -22,32 +22,33 @@ import (
 )
 
 func main() {
-	iConfig := cmd.NewMaeshConfiguration()
-	loaders := []cli.ResourceLoader{&cli.FileLoader{}, &cli.FlagLoader{}, &cli.EnvLoader{}}
+	maeshConfig := cmd.NewMaeshConfiguration()
+	maeshLoaders := []cli.ResourceLoader{&cmd.FileLoader{}, &cli.FlagLoader{}, &cmd.EnvLoader{}}
 
 	cmdMaesh := &cli.Command{
 		Name:          "maesh",
 		Description:   `maesh`,
-		Configuration: iConfig,
-		Resources:     loaders,
+		Configuration: maeshConfig,
+		Resources:     maeshLoaders,
 		Run: func(_ []string) error {
-			return maeshCommand(iConfig)
+			return maeshCommand(maeshConfig)
 		},
 	}
 
-	pConfig := cmd.NewPrepareConfiguration()
-	if err := cmdMaesh.AddCommand(prepare.NewCmd(pConfig, loaders)); err != nil {
+	prepareConfig := cmd.NewPrepareConfiguration()
+	if err := cmdMaesh.AddCommand(prepare.NewCmd(prepareConfig, maeshLoaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	cConfig := cmd.NewCleanupConfiguration()
-	if err := cmdMaesh.AddCommand(cleanup.NewCmd(cConfig, loaders)); err != nil {
+	cleanupConfig := cmd.NewCleanupConfiguration()
+	if err := cmdMaesh.AddCommand(cleanup.NewCmd(cleanupConfig, maeshLoaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	if err := cmdMaesh.AddCommand(proxy.NewCmd(loaders)); err != nil {
+	traefikLoaders := []cli.ResourceLoader{&cli.FileLoader{}, &cli.FlagLoader{}, &cli.EnvLoader{}}
+	if err := cmdMaesh.AddCommand(proxy.NewCmd(traefikLoaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
@@ -65,57 +66,57 @@ func main() {
 	os.Exit(0)
 }
 
-func maeshCommand(iConfig *cmd.MaeshConfiguration) error {
+func maeshCommand(config *cmd.MaeshConfiguration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	log, err := cmd.BuildLogger(iConfig.LogFormat, iConfig.LogLevel, iConfig.Debug)
+	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel, config.Debug)
 	if err != nil {
-		return fmt.Errorf("could not build logger: %w", err)
+		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debugln("Starting maesh prepare...")
-	log.Debugf("Using masterURL: %q", iConfig.MasterURL)
-	log.Debugf("Using kubeconfig: %q", iConfig.KubeConfig)
+	log.Debug("Starting maesh prepare...")
+	log.Debugf("Using masterURL: %q", config.MasterURL)
+	log.Debugf("Using kubeconfig: %q", config.KubeConfig)
 
-	clients, err := k8s.NewClient(log, iConfig.MasterURL, iConfig.KubeConfig)
+	clients, err := k8s.NewClient(log, config.MasterURL, config.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("error building clients: %v", err)
+		return fmt.Errorf("error building clients: %w", err)
 	}
 
 	prep := preparepkg.NewPrepare(log, clients)
 
 	_, err = prep.CheckDNSProvider()
 	if err != nil {
-		return fmt.Errorf("no valid DNS provider found: %v", err)
+		return fmt.Errorf("no valid DNS provider found: %w", err)
 	}
 
 	minHTTPPort := int32(5000)
 	minTCPPort := int32(10000)
 	minUDPPort := int32(15000)
 
-	if iConfig.SMI {
-		log.Warnf("SMI mode is deprecated, please consider using --acl instead")
+	if config.SMI {
+		log.Warn("SMI mode is deprecated, please consider using --acl instead")
 	}
 
-	aclEnabled := iConfig.ACL || iConfig.SMI
+	aclEnabled := config.ACL || config.SMI
 	log.Debugf("ACL mode enabled: %t", aclEnabled)
 
-	apiServer, err := api.NewAPI(log, iConfig.APIPort, iConfig.APIHost, clients.KubernetesClient(), iConfig.Namespace)
+	apiServer, err := api.NewAPI(log, config.APIPort, config.APIHost, clients.KubernetesClient(), config.Namespace)
 	if err != nil {
 		return fmt.Errorf("unable to create the API server: %w", err)
 	}
 
 	ctr := controller.NewMeshController(clients, controller.Config{
 		ACLEnabled:       aclEnabled,
-		DefaultMode:      iConfig.DefaultMode,
-		Namespace:        iConfig.Namespace,
-		IgnoreNamespaces: iConfig.IgnoreNamespaces,
+		DefaultMode:      config.DefaultMode,
+		Namespace:        config.Namespace,
+		IgnoreNamespaces: config.IgnoreNamespaces,
 		MinHTTPPort:      minHTTPPort,
-		MaxHTTPPort:      minHTTPPort + iConfig.LimitHTTPPort,
+		MaxHTTPPort:      minHTTPPort + config.LimitHTTPPort,
 		MinTCPPort:       minTCPPort,
-		MaxTCPPort:       minTCPPort + iConfig.LimitTCPPort,
+		MaxTCPPort:       minTCPPort + config.LimitTCPPort,
 		MinUDPPort:       minUDPPort,
-		MaxUDPPort:       minUDPPort + iConfig.LimitUDPPort,
+		MaxUDPPort:       minUDPPort + config.LimitUDPPort,
 	}, apiServer, log)
 
 	var wg sync.WaitGroup

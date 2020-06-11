@@ -23,18 +23,18 @@ func NewCmd(pConfig *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
-	log, err := cmd.BuildLogger(pConfig.LogFormat, pConfig.LogLevel, pConfig.Debug)
+	log, err := cmd.NewLogger(pConfig.LogFormat, pConfig.LogLevel, pConfig.Debug)
 	if err != nil {
-		return fmt.Errorf("could not build logger: %w", err)
+		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debugln("Starting maesh prepare...")
+	log.Debug("Starting maesh prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
 	clients, err := k8s.NewClient(log, pConfig.MasterURL, pConfig.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("error building clients: %v", err)
+		return fmt.Errorf("error building clients: %w", err)
 	}
 
 	p := prepare.NewPrepare(log, clients)
@@ -48,7 +48,7 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 	log.Debugf("ACL mode enabled: %t", aclEnabled)
 
 	if err = p.StartInformers(aclEnabled); err != nil {
-		return fmt.Errorf("error during informer check: %v, this can be caused by pre-existing objects in your cluster that do not conform to the spec", err)
+		return fmt.Errorf("error during informer check: %w, this can be caused by pre-existing objects in your cluster that do not conform to the spec", err)
 	}
 
 	if err = p.ConfigureDNS(pConfig.ClusterDomain, pConfig.Namespace); err != nil {

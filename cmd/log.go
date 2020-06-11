@@ -24,8 +24,8 @@ func parseLogFormat(format string) (logrus.Formatter, error) {
 	}
 }
 
-// BuildLogger returns a formatted fieldlogger from the provided format, level, and debug configurations.
-func BuildLogger(format, level string, debug bool) (logrus.FieldLogger, error) {
+// NewLogger returns a new field logger with the provided format, level, and debug configurations.
+func NewLogger(format, level string, debug bool) (logrus.FieldLogger, error) {
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
