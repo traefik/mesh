@@ -105,7 +105,7 @@ func (w *ClientWrapper) SplitClient() splitclient.Interface {
 
 // buildClient returns a useable kubernetes client.
 func buildKubernetesClient(log logrus.FieldLogger, config *rest.Config) (*kubernetes.Clientset, error) {
-	log.Debugln("Building Kubernetes Client...")
+	log.Debug("Building Kubernetes Client...")
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -117,7 +117,7 @@ func buildKubernetesClient(log logrus.FieldLogger, config *rest.Config) (*kubern
 
 // buildSmiAccessClient returns a client to manage SMI Access objects.
 func buildSmiAccessClient(log logrus.FieldLogger, config *rest.Config) (*accessclient.Clientset, error) {
-	log.Debugln("Building SMI Access Client...")
+	log.Debug("Building SMI Access Client...")
 
 	client, err := accessclient.NewForConfig(config)
 	if err != nil {
@@ -129,7 +129,7 @@ func buildSmiAccessClient(log logrus.FieldLogger, config *rest.Config) (*accessc
 
 // buildSmiSpecsClient returns a client to manage SMI Specs objects.
 func buildSmiSpecsClient(log logrus.FieldLogger, config *rest.Config) (*specsclient.Clientset, error) {
-	log.Debugln("Building SMI Specs Client...")
+	log.Debug("Building SMI Specs Client...")
 
 	client, err := specsclient.NewForConfig(config)
 	if err != nil {
@@ -141,7 +141,7 @@ func buildSmiSpecsClient(log logrus.FieldLogger, config *rest.Config) (*specscli
 
 // buildSmiSplitClient returns a client to manage SMI Split objects.
 func buildSmiSplitClient(log logrus.FieldLogger, config *rest.Config) (*splitclient.Clientset, error) {
-	log.Debugln("Building SMI Split Client...")
+	log.Debug("Building SMI Split Client...")
 
 	client, err := splitclient.NewForConfig(config)
 	if err != nil {
