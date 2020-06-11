@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	stdlog "log"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -131,7 +132,7 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 	go func() {
 		defer wg.Done()
 
-		if err := apiServer.ListenAndServe(); err != nil {
+		if err := apiServer.ListenAndServe(); err != http.ErrServerClosed {
 			apiErrCh <- fmt.Errorf("API server has stopped unexpectedly: %w", err)
 		}
 	}()
@@ -150,12 +151,11 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 	// Wait for a stop event and shutdown servers.
 	select {
 	case <-ctx.Done():
-		ctrlStopCh <- struct{}{}
-
+		close(ctrlStopCh)
 		stopAPIServer(apiServer, log)
 	case err := <-apiErrCh:
 		log.Error(err)
-		ctrlStopCh <- struct{}{}
+		close(ctrlStopCh)
 	case err := <-ctrlErrCh:
 		log.Error(err)
 		stopAPIServer(apiServer, log)
