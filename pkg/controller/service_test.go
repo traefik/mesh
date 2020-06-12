@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,33 +19,33 @@ import (
 )
 
 type portMapperMock struct {
-	findFunc   func(svc k8s.ServicePort) (int32, bool)
-	addFunc    func(svc *k8s.ServicePort) (int32, error)
-	removeFunc func(svc k8s.ServicePort) (int32, error)
+	findFunc   func(ns, name string, port int32) (int32, bool)
+	addFunc    func(ns, name string, port int32) (int32, error)
+	removeFunc func(ns, name string, port int32) (int32, error)
 }
 
-func (t portMapperMock) Find(svc k8s.ServicePort) (int32, bool) {
+func (t portMapperMock) Find(ns, name string, port int32) (int32, bool) {
 	if t.findFunc == nil {
 		return 0, false
 	}
 
-	return t.findFunc(svc)
+	return t.findFunc(ns, name, port)
 }
 
-func (t portMapperMock) Add(svc *k8s.ServicePort) (int32, error) {
+func (t portMapperMock) Add(ns, name string, port int32) (int32, error) {
 	if t.addFunc == nil {
 		return 0, nil
 	}
 
-	return t.addFunc(svc)
+	return t.addFunc(ns, name, port)
 }
 
-func (t portMapperMock) Remove(svc k8s.ServicePort) (int32, error) {
+func (t portMapperMock) Remove(ns, name string, port int32) (int32, error) {
 	if t.removeFunc == nil {
 		return 0, nil
 	}
 
-	return t.removeFunc(svc)
+	return t.removeFunc(ns, name, port)
 }
 
 func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
@@ -202,13 +201,13 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			client, lister := newFakeClient(currentShadowServices...)
 
 			tcpPortMapperMock := portMapperMock{
-				findFunc: func(svc k8s.ServicePort) (int32, bool) {
+				findFunc: func(ns, name string, port int32) (int32, bool) {
 					return 0, false
 				},
-				addFunc: func(svc *k8s.ServicePort) (int32, error) {
+				addFunc: func(ns, name string, port int32) (int32, error) {
 					return 10000, nil
 				},
-				removeFunc: func(svc k8s.ServicePort) (int32, error) {
+				removeFunc: func(ns, name string, port int32) (int32, error) {
 					return 10000, nil
 				},
 			}
@@ -325,19 +324,19 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			removedUDPPorts := make(map[k8s.ServicePort]bool)
+			removedUDPPorts := make(map[servicePort]bool)
 			udpPortMapperMock := portMapperMock{
-				removeFunc: func(svc k8s.ServicePort) (port int32, err error) {
-					removedUDPPorts[svc] = true
-					return
+				removeFunc: func(ns, name string, port int32) (int32, error) {
+					removedUDPPorts[servicePort{Namespace: ns, Name: name, Port: port}] = true
+					return 0, nil
 				},
 			}
 
-			removedTCPPorts := make(map[k8s.ServicePort]bool)
+			removedTCPPorts := make(map[servicePort]bool)
 			tcpPortMapperMock := portMapperMock{
-				removeFunc: func(svc k8s.ServicePort) (port int32, err error) {
-					removedTCPPorts[svc] = true
-					return
+				removeFunc: func(ns, name string, port int32) (int32, error) {
+					removedTCPPorts[servicePort{Namespace: ns, Name: name, Port: port}] = true
+					return 0, nil
 				},
 			}
 
@@ -370,7 +369,7 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 			}
 
 			for _, svcPort := range test.currentShadowSvc.Spec.Ports {
-				svcWithPort := k8s.ServicePort{
+				svcWithPort := servicePort{
 					Namespace: test.namespace,
 					Name:      test.name,
 					Port:      svcPort.Port,

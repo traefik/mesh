@@ -29,12 +29,12 @@ func TestPortMapping_AddEmptyState(t *testing.T) {
 
 	p := NewPortMapping("maesh", serviceLister, logger, 10000, 10200)
 
-	wantSp := &k8s.ServicePort{
+	wantSp := &servicePort{
 		Namespace: "my-ns",
 		Name:      "my-app",
 		Port:      9090,
 	}
-	port, err := p.Add(wantSp)
+	port, err := p.Add(wantSp.Namespace, wantSp.Name, wantSp.Port)
 	require.NoError(t, err)
 	assert.Equal(t, int32(10000), port)
 
@@ -52,21 +52,21 @@ func TestPortMapping_AddOverflow(t *testing.T) {
 
 	p := NewPortMapping("maesh", serviceLister, logger, 10000, 10001)
 
-	wantSp := &k8s.ServicePort{
+	wantSp := &servicePort{
 		Namespace: "my-ns",
 		Name:      "my-app",
 		Port:      9090,
 	}
 
-	port, err := p.Add(wantSp)
+	port, err := p.Add(wantSp.Namespace, wantSp.Name, wantSp.Port)
 	require.NoError(t, err)
 	assert.Equal(t, int32(10000), port)
 
-	port, err = p.Add(wantSp)
+	port, err = p.Add(wantSp.Namespace, wantSp.Name, wantSp.Port)
 	require.NoError(t, err)
 	assert.Equal(t, int32(10001), port)
 
-	_, err = p.Add(wantSp)
+	_, err = p.Add(wantSp.Namespace, wantSp.Name, wantSp.Port)
 	assert.Error(t, err)
 
 	gotSp := p.table[10000]
@@ -90,24 +90,14 @@ func TestPortMapping_FindWithState(t *testing.T) {
 
 	p := NewPortMapping("maesh", serviceLister, logger, 10000, 10200)
 
-	p.table[10000] = &k8s.ServicePort{Namespace: "my-ns", Name: "my-app", Port: 9090}
-	p.table[10002] = &k8s.ServicePort{Namespace: "my-ns", Name: "my-app2", Port: 9092}
+	p.table[10000] = &servicePort{Namespace: "my-ns", Name: "my-app", Port: 9090}
+	p.table[10002] = &servicePort{Namespace: "my-ns", Name: "my-app2", Port: 9092}
 
-	sp := k8s.ServicePort{
-		Namespace: "my-ns",
-		Name:      "my-app",
-		Port:      9090,
-	}
-	port, ok := p.Find(sp)
+	port, ok := p.Find("my-ns", "my-app", 9090)
 	require.True(t, ok)
 	assert.Equal(t, int32(10000), port)
 
-	sp = k8s.ServicePort{
-		Namespace: "my-ns2",
-		Name:      "my-app",
-		Port:      9090,
-	}
-	_, ok = p.Find(sp)
+	_, ok = p.Find("my-ns2", "my-app", 9090)
 	assert.False(t, ok)
 }
 
@@ -120,29 +110,19 @@ func TestPortMapping_Remove(t *testing.T) {
 
 	p := NewPortMapping("maesh", serviceLister, logger, 10000, 10200)
 
-	p.table[10000] = &k8s.ServicePort{Namespace: "my-ns", Name: "my-app", Port: 9090}
+	p.table[10000] = &servicePort{Namespace: "my-ns", Name: "my-app", Port: 9090}
 
-	sp := k8s.ServicePort{
-		Namespace: "my-ns",
-		Name:      "my-app",
-		Port:      9090,
-	}
-	port, err := p.Remove(sp)
+	port, err := p.Remove("my-ns", "my-app", 9090)
 	require.NoError(t, err)
 	assert.Equal(t, int32(10000), port)
 
 	_, exists := p.table[10000]
 	assert.False(t, exists)
 
-	_, err = p.Remove(sp)
+	_, err = p.Remove("my-ns", "my-app", 9090)
 	assert.Error(t, err)
 
-	unknownSp := k8s.ServicePort{
-		Namespace: "my-unknown-ns",
-		Name:      "my-unknown-app",
-		Port:      8088,
-	}
-	_, err = p.Remove(unknownSp)
+	_, err = p.Remove("unknown-ns", "unknown-app", 8088)
 	assert.Error(t, err)
 }
 
