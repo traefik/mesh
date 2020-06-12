@@ -15,6 +15,17 @@ Define the templated image with tag.
 {{- end -}}
 
 {{/*
+Define the watchNamespaces List.
+*/}}
+{{- define "maesh.controllerWatchNamespaces" -}}
+    --watchNamespaces=
+    {{- range $idx, $ns := .Values.controller.watchNamespaces }}
+        {{- if $idx }},{{ end }}
+            {{- $ns }}
+    {{- end -}}
+{{- end -}}
+
+{{/*
 Define the ignoreNamespaces List.
 */}}
 {{- define "maesh.controllerIgnoreNamespaces" -}}

@@ -31,6 +31,9 @@ controller:
   # ignoreNamespaces:
   #  - example
 
+  # watchNamespaces:
+  #  - example
+
   resources:
     limit:
       mem: 100Mi
