@@ -5,6 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 )
 
+// ResourceFilter holds resource filtering rules.
 type ResourceFilter struct {
 	watchedNamespaces []string
 	ignoredNamespaces []string
@@ -17,26 +18,32 @@ type namespaceName struct {
 	Namespace string
 }
 
+// ResourceFilterOption adds a filtering rule to the given ResourceFilter.
 type ResourceFilterOption func(filter *ResourceFilter)
 
+// WatchNamespaces add the given namespaces to the list of namespaces to watch.
 func WatchNamespaces(namespaces ...string) ResourceFilterOption {
 	return func(filter *ResourceFilter) {
 		filter.watchedNamespaces = append(filter.watchedNamespaces, namespaces...)
 	}
 }
 
+// IgnoreNamespaces adds the given namespaces to the list of namespaces to ignore.
 func IgnoreNamespaces(namespaces ...string) ResourceFilterOption {
 	return func(filter *ResourceFilter) {
 		filter.ignoredNamespaces = append(filter.ignoredNamespaces, namespaces...)
 	}
 }
 
+// IgnoreApps add the given apps to the list of apps to ignore. An app is a Kubernetes object
+// with an "app" label, the name of the app being the value of the label.
 func IgnoreApps(apps ...string) ResourceFilterOption {
 	return func(filter *ResourceFilter) {
 		filter.ignoredApps = append(filter.ignoredApps, apps...)
 	}
 }
 
+// IgnoreService adds the service to the list of service to ignore.
 func IgnoreService(ns, name string) ResourceFilterOption {
 	return func(filter *ResourceFilter) {
 		filter.ignoredServices = append(filter.ignoredServices, namespaceName{
@@ -46,6 +53,7 @@ func IgnoreService(ns, name string) ResourceFilterOption {
 	}
 }
 
+// NewResourceFilter creates a new ResourceFilter, configured with the given options.
 func NewResourceFilter(opts ...ResourceFilterOption) *ResourceFilter {
 	var filter ResourceFilter
 
@@ -56,6 +64,7 @@ func NewResourceFilter(opts ...ResourceFilterOption) *ResourceFilter {
 	return &filter
 }
 
+// IsIgnored returns true if the resource should be ignored.
 func (f *ResourceFilter) IsIgnored(obj interface{}) bool {
 	accessor, err := meta.Accessor(obj)
 	if err != nil {
