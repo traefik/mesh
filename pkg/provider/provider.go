@@ -39,7 +39,6 @@ const (
 
 // Config holds the Provider configuration.
 type Config struct {
-	IgnoredResources   k8s.IgnoreWrapper
 	MinHTTPPort        int32
 	MaxHTTPPort        int32
 	ACL                bool

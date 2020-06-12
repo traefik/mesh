@@ -46,7 +46,7 @@ type SharedStore interface {
 
 // TopologyBuilder builds Topologies.
 type TopologyBuilder interface {
-	Build(ignoredResources k8s.IgnoreWrapper) (*topology.Topology, error)
+	Build(ignoredResources *k8s.ResourceFilter) (*topology.Topology, error)
 }
 
 // Config holds the configuration of the controller.
@@ -54,6 +54,7 @@ type Config struct {
 	ACLEnabled       bool
 	DefaultMode      string
 	Namespace        string
+	WatchNamespaces  []string
 	IgnoreNamespaces []string
 	MinHTTPPort      int32
 	MaxHTTPPort      int32
@@ -69,7 +70,7 @@ type Controller struct {
 	workQueue            workqueue.RateLimitingInterface
 	shadowServiceManager *ShadowServiceManager
 	provider             *provider.Provider
-	ignoredResources     k8s.IgnoreWrapper
+	resourceFilter       *k8s.ResourceFilter
 	tcpStateTable        *PortMapping
 	udpStateTable        *PortMapping
 	topologyBuilder      TopologyBuilder
@@ -100,16 +101,13 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 		store:   store,
 	}
 
-	// Initialize the ignored resources.
-	c.ignoredResources = k8s.NewIgnored()
-
-	for _, ns := range cfg.IgnoreNamespaces {
-		c.ignoredResources.AddIgnoredNamespace(ns)
-	}
-
-	c.ignoredResources.AddIgnoredService("kubernetes", metav1.NamespaceDefault)
-	c.ignoredResources.AddIgnoredNamespace(metav1.NamespaceSystem)
-	c.ignoredResources.AddIgnoredApps("maesh", "jaeger")
+	// Initialize the ignored and watched resources.
+	c.resourceFilter = k8s.NewResourceFilter(
+		k8s.WatchNamespaces(cfg.WatchNamespaces...),
+		k8s.IgnoreNamespaces(cfg.IgnoreNamespaces...),
+		k8s.IgnoreNamespaces(metav1.NamespaceSystem),
+		k8s.IgnoreService("kubernetes", metav1.NamespaceDefault),
+		k8s.IgnoreApps("maesh", "jaeger"))
 
 	// Create the work queue and the enqueue handler.
 	c.workQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
@@ -174,7 +172,6 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 	}
 
 	providerCfg := provider.Config{
-		IgnoredResources:   c.ignoredResources,
 		MinHTTPPort:        c.cfg.MinHTTPPort,
 		MaxHTTPPort:        c.cfg.MaxHTTPPort,
 		ACL:                c.cfg.ACLEnabled,
@@ -295,7 +292,7 @@ func (c *Controller) loadPortMappersState() error {
 
 // isWatchedResource returns true if the given resource is not ignored, false otherwise.
 func (c *Controller) isWatchedResource(obj interface{}) bool {
-	return !c.ignoredResources.IsIgnored(obj)
+	return !c.resourceFilter.IsIgnored(obj)
 }
 
 // runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and
@@ -322,7 +319,7 @@ func (c *Controller) processNextWorkItem() bool {
 	}
 
 	// Build and store config.
-	topo, err := c.topologyBuilder.Build(c.ignoredResources)
+	topo, err := c.topologyBuilder.Build(c.resourceFilter)
 	if err != nil {
 		c.handleErr(key, fmt.Errorf("unable to build topology: %w", err))
 		return true
