@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/containous/maesh/pkg/annotations"
-	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,9 +17,9 @@ import (
 
 // PortMapper is capable of storing and retrieving a port mapping for a given service.
 type PortMapper interface {
-	Find(svc k8s.ServicePort) (int32, bool)
-	Add(svc *k8s.ServicePort) (int32, error)
-	Remove(svc k8s.ServicePort) (int32, error)
+	Find(ns, name string, port int32) (int32, bool)
+	Add(ns, name string, port int32) (int32, error)
+	Remove(ns, name string, port int32) (int32, error)
 }
 
 // ShadowServiceManager manages shadow services.
@@ -157,27 +156,21 @@ func (s *ShadowServiceManager) removeUnusedPortMappings(shadowSvc, svc *corev1.S
 	}
 }
 
-func (s *ShadowServiceManager) removeServicePortMapping(namespace, name string, svcPort corev1.ServicePort) {
+func (s *ShadowServiceManager) removeServicePortMapping(ns, name string, svcPort corev1.ServicePort) {
 	// Nothing to do here as there is no port table for HTTP ports.
 	if svcPort.TargetPort.IntVal < s.maxHTTPPort {
 		return
 	}
 
-	svcWithPort := k8s.ServicePort{
-		Namespace: namespace,
-		Name:      name,
-		Port:      svcPort.Port,
-	}
-
 	switch svcPort.Protocol {
 	case corev1.ProtocolTCP:
-		if _, err := s.tcpStateTable.Remove(svcWithPort); err != nil {
-			s.logger.Warnf("Unable to remove TCP port mapping for %s/%s on port %d", namespace, name, svcPort.Port)
+		if _, err := s.tcpStateTable.Remove(ns, name, svcPort.Port); err != nil {
+			s.logger.Warnf("Unable to remove TCP port mapping for %s/%s on port %d", ns, name, svcPort.Port)
 		}
 
 	case corev1.ProtocolUDP:
-		if _, err := s.udpStateTable.Remove(svcWithPort); err != nil {
-			s.logger.Warnf("Unable to remove UDP port mapping for %s/%s on port %d", namespace, name, svcPort.Port)
+		if _, err := s.udpStateTable.Remove(ns, name, svcPort.Port); err != nil {
+			s.logger.Warnf("Unable to remove UDP port mapping for %s/%s on port %d", ns, name, svcPort.Port)
 		}
 	}
 }
@@ -241,26 +234,21 @@ func (s *ShadowServiceManager) getHTTPPort(portID int) (int32, error) {
 }
 
 // getMappedPort returns the port associated with the given service information in the given port mapper.
-func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, svcName, svcNamespace string, svcPort int32) (int32, error) {
-	svc := k8s.ServicePort{
-		Namespace: svcNamespace,
-		Name:      svcName,
-		Port:      svcPort,
-	}
-	if port, ok := stateTable.Find(svc); ok {
-		return port, nil
+func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, name, ns string, port int32) (int32, error) {
+	if mappedPort, ok := stateTable.Find(ns, name, port); ok {
+		return mappedPort, nil
 	}
 
-	s.logger.Debugf("No match found for %s/%s %d - Add a new port", svcName, svcNamespace, svcPort)
+	s.logger.Debugf("No match found for %s/%s %d - Add a new port", ns, name, port)
 
-	port, err := stateTable.Add(&svc)
+	mappedPort, err := stateTable.Add(ns, name, port)
 	if err != nil {
 		return 0, fmt.Errorf("unable to add service to the TCP state table: %w", err)
 	}
 
-	s.logger.Debugf("Service %s/%s %d as been assigned port %d", svcName, svcNamespace, svcPort, port)
+	s.logger.Debugf("Service %s/%s %d as been assigned port %d", ns, name, port, mappedPort)
 
-	return port, nil
+	return mappedPort, nil
 }
 
 func isPortSuitable(trafficType string, sp corev1.ServicePort) bool {
