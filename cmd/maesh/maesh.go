@@ -110,6 +110,7 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 		ACLEnabled:       aclEnabled,
 		DefaultMode:      config.DefaultMode,
 		Namespace:        config.Namespace,
+		WatchNamespaces:  config.WatchNamespaces,
 		IgnoreNamespaces: config.IgnoreNamespaces,
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      minHTTPPort + config.LimitHTTPPort,
