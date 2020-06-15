@@ -106,7 +106,7 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 		k8s.WatchNamespaces(cfg.WatchNamespaces...),
 		k8s.IgnoreNamespaces(cfg.IgnoreNamespaces...),
 		k8s.IgnoreNamespaces(metav1.NamespaceSystem),
-		k8s.IgnoreService("kubernetes", metav1.NamespaceDefault),
+		k8s.IgnoreService(metav1.NamespaceDefault, "kubernetes"),
 		k8s.IgnoreApps("maesh", "jaeger"),
 	)
 
