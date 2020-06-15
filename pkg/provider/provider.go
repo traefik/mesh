@@ -611,14 +611,10 @@ func (p Provider) buildUDPEntrypoint(svc *topology.Service, port int32) (string,
 func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topology.Service, scheme string, port int32) *dynamic.Service {
 	var servers []dynamic.Server
 
-	containMissingPod := false
-
 	for _, podKey := range svc.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			containMissingPod = true
-
-			p.logger.Errorf("Unable to find Pod %q for service %s@%s", podKey, svc.Name, svc.Namespace)
+			p.logger.Errorf("Unable to find Pod %q for HTTP service from service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
 
 			continue
 		}
@@ -628,10 +624,6 @@ func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topolo
 		servers = append(servers, dynamic.Server{
 			URL: fmt.Sprintf("%s://%s", scheme, url),
 		})
-	}
-
-	if containMissingPod {
-		p.logger.Errorf("HTTP service build is incomplete for service %s@%s", svc.Name, svc.Namespace)
 	}
 
 	return &dynamic.Service{
@@ -645,14 +637,10 @@ func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topolo
 func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, scheme string, port int32) *dynamic.Service {
 	servers := make([]dynamic.Server, len(tt.Destination.Pods))
 
-	containMissingPod := false
-
 	for i, podKey := range tt.Destination.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			containMissingPod = true
-
-			p.logger.Errorf("Unable to find Pod %q for service traffic target %s@%s", podKey, tt.Name, tt.Namespace)
+			p.logger.Errorf("Unable to find Pod %q for HTTP service from service traffic target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
 
 			continue
 		}
@@ -660,10 +648,6 @@ func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *t
 		url := net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
 
 		servers[i].URL = fmt.Sprintf("%s://%s", scheme, url)
-	}
-
-	if containMissingPod {
-		p.logger.Errorf("HTTP service build is incomplete for service traffic target %s@%s", tt.Name, tt.Namespace)
 	}
 
 	return &dynamic.Service{
@@ -677,14 +661,10 @@ func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *t
 func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topology.Service, port int32) *dynamic.TCPService {
 	var servers []dynamic.TCPServer
 
-	containMissingPod := false
-
 	for _, podKey := range svc.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			containMissingPod = true
-
-			p.logger.Errorf("Unable to find Pod %q for service %s@%s", podKey, svc.Name, svc.Namespace)
+			p.logger.Errorf("Unable to find Pod %q for TCP service from service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
 
 			continue
 		}
@@ -694,10 +674,6 @@ func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topolog
 		servers = append(servers, dynamic.TCPServer{
 			Address: address,
 		})
-	}
-
-	if containMissingPod {
-		p.logger.Errorf("TCP service build is incomplete for service %s@%s", svc.Name, svc.Namespace)
 	}
 
 	return &dynamic.TCPService{
@@ -710,14 +686,10 @@ func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topolog
 func (p *Provider) buildUDPServiceFromService(t *topology.Topology, svc *topology.Service, port int32) *dynamic.UDPService {
 	var servers []dynamic.UDPServer
 
-	containMissingPod := false
-
 	for _, podKey := range svc.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			containMissingPod = true
-
-			p.logger.Errorf("Unable to find Pod %q for service %s@%s", podKey, svc.Name, svc.Namespace)
+			p.logger.Errorf("Unable to find Pod %q for UDP service from service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
 
 			continue
 		}
@@ -727,10 +699,6 @@ func (p *Provider) buildUDPServiceFromService(t *topology.Topology, svc *topolog
 		servers = append(servers, dynamic.UDPServer{
 			Address: address,
 		})
-	}
-
-	if containMissingPod {
-		p.logger.Errorf("UDP service build is incomplete for service %s@%s", svc.Name, svc.Namespace)
 	}
 
 	return &dynamic.UDPService{
@@ -743,23 +711,15 @@ func (p *Provider) buildUDPServiceFromService(t *topology.Topology, svc *topolog
 func (p *Provider) buildTCPServiceFromTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, port int32) *dynamic.TCPService {
 	servers := make([]dynamic.TCPServer, len(tt.Destination.Pods))
 
-	containMissingPod := false
-
 	for i, podKey := range tt.Destination.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			containMissingPod = true
-
-			p.logger.Errorf("Unable to find Pod %q for service traffic target %s@%s", podKey, tt.Name, tt.Namespace)
+			p.logger.Errorf("Unable to find Pod %q for TCP service from service traffic target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
 
 			continue
 		}
 
 		servers[i].Address = net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
-	}
-
-	if containMissingPod {
-		p.logger.Errorf("TCP service build is incomplete for service traffic target %s@%s", tt.Name, tt.Namespace)
 	}
 
 	return &dynamic.TCPService{
@@ -775,25 +735,17 @@ func (p *Provider) buildTCPServiceFromTrafficTarget(t *topology.Topology, tt *to
 func (p *Provider) buildWhitelistMiddlewareFromTrafficTargetDirect(t *topology.Topology, tt *topology.ServiceTrafficTarget) *dynamic.Middleware {
 	var IPs []string
 
-	containMissingPod := false
-
 	for _, source := range tt.Sources {
 		for _, podKey := range source.Pods {
 			pod, ok := t.Pods[podKey]
 			if !ok {
-				containMissingPod = true
-
-				p.logger.Errorf("Unable to find Pod %q for service traffic target %s@%s", podKey, tt.Name, tt.Namespace)
+				p.logger.Errorf("Unable to find Pod %q for middleware from service traffic target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
 
 				continue
 			}
 
 			IPs = append(IPs, pod.IP)
 		}
-	}
-
-	if containMissingPod {
-		p.logger.Errorf("Whitelist middleware build is incomplete for service traffic target %s@%s", tt.Name, tt.Namespace)
 	}
 
 	return &dynamic.Middleware{
@@ -809,23 +761,15 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficTargetDirect(t *topology.T
 func (p *Provider) buildWhitelistMiddlewareFromTrafficSplitDirect(t *topology.Topology, ts *topology.TrafficSplit) *dynamic.Middleware {
 	var IPs []string
 
-	containMissingPod := false
-
 	for _, podKey := range ts.Incoming {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			containMissingPod = true
-
-			p.logger.Errorf("Unable to find Pod %q for traffic split %s@%s", podKey, ts.Name, ts.Namespace)
+			p.logger.Errorf("Unable to find Pod %q for middleware from traffic split %s@%s", podKey, topology.Key{Name: ts.Name, Namespace: ts.Namespace})
 
 			continue
 		}
 
 		IPs = append(IPs, pod.IP)
-	}
-
-	if containMissingPod {
-		p.logger.Errorf("Whitelist middleware build is incomplete for traffic split %s@%s", ts.Name, ts.Namespace)
 	}
 
 	return &dynamic.Middleware{
