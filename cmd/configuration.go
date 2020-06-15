@@ -21,7 +21,7 @@ type MaeshConfiguration struct {
 	DefaultMode      string   `description:"Default mode for mesh services." export:"true"`
 	Namespace        string   `description:"The namespace that maesh is installed in." export:"true"`
 	WatchNamespaces  []string `description:"Namespaces to watch." export:"true"`
-	IgnoreNamespaces []string `description:"Namespaces to not watch." export:"true"`
+	IgnoreNamespaces []string `description:"Namespaces to ignore." export:"true"`
 	APIPort          int32    `description:"API port for the controller." export:"true"`
 	APIHost          string   `description:"API host for the controller to bind to." export:"true"`
 	LimitHTTPPort    int32    `description:"Number of HTTP ports allocated." export:"true"`
