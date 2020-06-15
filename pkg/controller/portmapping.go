@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	listers "k8s.io/client-go/listers/core/v1"
@@ -19,8 +18,15 @@ type PortMapping struct {
 	minPort       int32
 	maxPort       int32
 	mu            sync.RWMutex
-	table         map[int32]*k8s.ServicePort
+	table         map[int32]*servicePort
 	logger        logrus.FieldLogger
+}
+
+// servicePort holds a combination of service namespace, name and port.
+type servicePort struct {
+	Namespace string
+	Name      string
+	Port      int32
 }
 
 // NewPortMapping creates and returns a new PortMapping instance.
@@ -30,7 +36,7 @@ func NewPortMapping(namespace string, serviceLister listers.ServiceLister, logge
 		serviceLister: serviceLister,
 		minPort:       minPort,
 		maxPort:       maxPort,
-		table:         make(map[int32]*k8s.ServicePort),
+		table:         make(map[int32]*servicePort),
 		logger:        logger,
 	}
 }
@@ -65,7 +71,7 @@ func (p *PortMapping) LoadState() error {
 			targetPort := port.TargetPort.IntVal
 
 			if targetPort >= p.minPort && targetPort <= p.maxPort {
-				p.table[targetPort] = &k8s.ServicePort{
+				p.table[targetPort] = &servicePort{
 					Namespace: namespace,
 					Name:      name,
 					Port:      port.Port,
@@ -77,23 +83,23 @@ func (p *PortMapping) LoadState() error {
 	return nil
 }
 
-// Find searches for the port which is associated with the given ServicePort.
-func (p *PortMapping) Find(svc k8s.ServicePort) (int32, bool) {
+// Find searches for the port which is associated with the given servicePort.
+func (p *PortMapping) Find(ns, name string, port int32) (int32, bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	for port, v := range p.table {
-		if v.Name == svc.Name && v.Namespace == svc.Namespace && v.Port == svc.Port {
-			return port, true
+	for mappedPort, v := range p.table {
+		if v.Name == name && v.Namespace == ns && v.Port == port {
+			return mappedPort, true
 		}
 	}
 
 	return 0, false
 }
 
-// Add adds a new mapping between the given ServicePort and the first port available in the range defined
+// Add adds a new mapping between the given servicePort and the first port available in the range defined
 // within minPort and maxPort. If there's no port left, an error will be returned.
-func (p *PortMapping) Add(svc *k8s.ServicePort) (int32, error) {
+func (p *PortMapping) Add(ns, name string, port int32) (int32, error) {
 	for i := p.minPort; i < p.maxPort+1; i++ {
 		// Skip until an available port is found
 		if _, exists := p.table[i]; exists {
@@ -101,7 +107,11 @@ func (p *PortMapping) Add(svc *k8s.ServicePort) (int32, error) {
 		}
 
 		p.mu.Lock()
-		p.table[i] = svc
+		p.table[i] = &servicePort{
+			Namespace: ns,
+			Name:      name,
+			Port:      port,
+		}
 		p.mu.Unlock()
 
 		return i, nil
@@ -110,11 +120,11 @@ func (p *PortMapping) Add(svc *k8s.ServicePort) (int32, error) {
 	return 0, errors.New("unable to find an available port")
 }
 
-// Remove removes the mapping associated with the given ServicePort.
-func (p *PortMapping) Remove(svc k8s.ServicePort) (int32, error) {
-	port, ok := p.Find(svc)
+// Remove removes the mapping associated with the given servicePort.
+func (p *PortMapping) Remove(ns, name string, port int32) (int32, error) {
+	port, ok := p.Find(ns, name, port)
 	if !ok {
-		return 0, fmt.Errorf("unable to find port mapping for service %s/%s on port %d", svc.Namespace, svc.Name, svc.Port)
+		return 0, fmt.Errorf("unable to find port mapping for service %s/%s on port %d", ns, name, port)
 	}
 
 	p.mu.Lock()
