@@ -739,7 +739,7 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficTargetDirect(t *topology.T
 		for _, podKey := range source.Pods {
 			pod, ok := t.Pods[podKey]
 			if !ok {
-				p.logger.Errorf("Unable to find Pod %q for Middleware from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
+				p.logger.Errorf("Unable to find Pod %q for WhitelistMiddleware from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
 
 				continue
 			}
@@ -764,7 +764,7 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficSplitDirect(t *topology.To
 	for _, podKey := range ts.Incoming {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			p.logger.Errorf("Unable to find Pod %q for Middleware from Traffic Split %s@%s", podKey, topology.Key{Name: ts.Name, Namespace: ts.Namespace})
+			p.logger.Errorf("Unable to find Pod %q for WhitelistMiddleware from Traffic Split %s@%s", podKey, topology.Key{Name: ts.Name, Namespace: ts.Namespace})
 
 			continue
 		}
