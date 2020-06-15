@@ -45,7 +45,7 @@ helm install maesh maesh/maesh --set kubedns=true
 ```
 
 With this parameter Maesh will install a CoreDNS as a daemonset.
-KubeDNS will be patched with [stubDomains](https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#example).
+KubeDNS will be patched with [stubDomains](https://v1-17.docs.kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#example-stub-domain).
 
 ## Custom cluster domain
 
