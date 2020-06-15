@@ -83,13 +83,13 @@ func (p *PortMapping) LoadState() error {
 	return nil
 }
 
-// Find searches for the port which is associated with the given servicePort.
-func (p *PortMapping) Find(ns, name string, port int32) (int32, bool) {
+// Find searches the port mapped to the given service port.
+func (p *PortMapping) Find(namespace, name string, port int32) (int32, bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
 	for mappedPort, v := range p.table {
-		if v.Name == name && v.Namespace == ns && v.Port == port {
+		if v.Name == name && v.Namespace == namespace && v.Port == port {
 			return mappedPort, true
 		}
 	}
@@ -97,9 +97,9 @@ func (p *PortMapping) Find(ns, name string, port int32) (int32, bool) {
 	return 0, false
 }
 
-// Add adds a new mapping between the given servicePort and the first port available in the range defined
+// Add adds a new mapping between the given service port and the first port available in the range defined
 // within minPort and maxPort. If there's no port left, an error will be returned.
-func (p *PortMapping) Add(ns, name string, port int32) (int32, error) {
+func (p *PortMapping) Add(namespace, name string, port int32) (int32, error) {
 	for i := p.minPort; i < p.maxPort+1; i++ {
 		// Skip until an available port is found
 		if _, exists := p.table[i]; exists {
@@ -108,7 +108,7 @@ func (p *PortMapping) Add(ns, name string, port int32) (int32, error) {
 
 		p.mu.Lock()
 		p.table[i] = &servicePort{
-			Namespace: ns,
+			Namespace: namespace,
 			Name:      name,
 			Port:      port,
 		}
@@ -121,10 +121,10 @@ func (p *PortMapping) Add(ns, name string, port int32) (int32, error) {
 }
 
 // Remove removes the mapping associated with the given servicePort.
-func (p *PortMapping) Remove(ns, name string, port int32) (int32, error) {
-	port, ok := p.Find(ns, name, port)
+func (p *PortMapping) Remove(namespace, name string, port int32) (int32, error) {
+	port, ok := p.Find(namespace, name, port)
 	if !ok {
-		return 0, fmt.Errorf("unable to find port mapping for service %s/%s on port %d", ns, name, port)
+		return 0, fmt.Errorf("unable to find port mapping for service %s/%s on port %d", namespace, name, port)
 	}
 
 	p.mu.Lock()

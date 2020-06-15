@@ -44,10 +44,10 @@ func IgnoreApps(apps ...string) ResourceFilterOption {
 }
 
 // IgnoreService adds the service to the list of service to ignore.
-func IgnoreService(ns, name string) ResourceFilterOption {
+func IgnoreService(namespace, name string) ResourceFilterOption {
 	return func(filter *ResourceFilter) {
 		filter.ignoredServices = append(filter.ignoredServices, namespaceName{
-			Namespace: ns,
+			Namespace: namespace,
 			Name:      name,
 		})
 	}
@@ -55,13 +55,13 @@ func IgnoreService(ns, name string) ResourceFilterOption {
 
 // NewResourceFilter creates a new ResourceFilter, configured with the given options.
 func NewResourceFilter(opts ...ResourceFilterOption) *ResourceFilter {
-	var filter ResourceFilter
+	filter := &ResourceFilter{}
 
 	for _, opt := range opts {
-		opt(&filter)
+		opt(filter)
 	}
 
-	return &filter
+	return filter
 }
 
 // IsIgnored returns true if the resource should be ignored.
@@ -89,7 +89,7 @@ func (f *ResourceFilter) IsIgnored(obj interface{}) bool {
 	}
 
 	if svc, ok := obj.(*corev1.Service); ok {
-		// Check if the service is nt explicitly ignored.
+		// Check if the service is not explicitly ignored.
 		if containsNamespaceName(f.ignoredServices, namespaceName{Namespace: svc.Namespace, Name: svc.Name}) {
 			return true
 		}
@@ -103,9 +103,9 @@ func (f *ResourceFilter) IsIgnored(obj interface{}) bool {
 	return false
 }
 
-func contains(sources []string, target string) bool {
-	for _, source := range sources {
-		if source == target {
+func contains(slice []string, str string) bool {
+	for _, item := range slice {
+		if item == str {
 			return true
 		}
 	}
@@ -113,9 +113,9 @@ func contains(sources []string, target string) bool {
 	return false
 }
 
-func containsNamespaceName(sources []namespaceName, target namespaceName) bool {
-	for _, source := range sources {
-		if source.Namespace == target.Namespace && source.Name == target.Name {
+func containsNamespaceName(slice []namespaceName, nn namespaceName) bool {
+	for _, item := range slice {
+		if item.Namespace == nn.Namespace && item.Name == nn.Name {
 			return true
 		}
 	}
