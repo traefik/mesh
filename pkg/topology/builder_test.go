@@ -70,10 +70,9 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	ignoredResources.AddIgnoredNamespace("ignored-ns")
+	resourceFilter := mk8s.NewResourceFilter(mk8s.IgnoreNamespaces("ignored-ns"))
 
-	got, err := builder.Build(ignoredResources)
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	want := &Topology{
@@ -144,8 +143,8 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assert.Len(t, got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits, 0)
@@ -203,8 +202,8 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	svcKey := nn(svcB.Name, svcB.Namespace)
@@ -271,8 +270,8 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	svcKey := nn(svcB.Name, svcB.Namespace)
@@ -345,8 +344,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-basic.json", got)
@@ -384,8 +383,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-spec-with-empty-match.json", got)
@@ -426,8 +425,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-empty-destination-port.json", got)
@@ -464,8 +463,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndMismatchServicePort(t *testing
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-traffic-target-service-port-mismatch.json", got)
@@ -503,8 +502,8 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-multi-sources-destinations.json", got)
@@ -536,8 +535,8 @@ func TestTopologyBuilder_EmptyTrafficTargetDestinationNamespace(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	res, err := builder.loadResources(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	res, err := builder.loadResources(resourceFilter)
 	require.NoError(t, err)
 
 	actual, exists := res.TrafficTargets[Key{Name: "test", Namespace: namespace}]
