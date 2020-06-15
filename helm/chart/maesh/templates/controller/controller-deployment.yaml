@@ -77,6 +77,9 @@ spec:
             - "--acl"
             {{- end }}
             - "--namespace={{ .Release.Namespace }}"
+            {{- if .Values.controller.watchNamespaces }}
+            - {{ include "maesh.controllerWatchNamespaces" . | quote }}
+            {{- end }}
             {{- if .Values.controller.ignoreNamespaces }}
             - {{ include "maesh.controllerIgnoreNamespaces" . | quote }}
             {{- end }}
