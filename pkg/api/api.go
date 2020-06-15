@@ -99,7 +99,7 @@ func NewAPI(log logrus.FieldLogger, port int32, host string, client kubernetes.I
 // SetReadiness sets the readiness flag in the API.
 func (a *API) SetReadiness(isReady bool) {
 	a.readiness.Set(isReady)
-	a.log.Debugf("API readiness: %s", isReady)
+	a.log.Debugf("API readiness: %t", isReady)
 }
 
 // SetConfig sets the current dynamic configuration.
