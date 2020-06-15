@@ -18,7 +18,7 @@ type MiddlewareBuilder func(annotations map[string]string) (map[string]*dynamic.
 
 // PortFinder finds service port mappings.
 type PortFinder interface {
-	Find(ns, name string, port int32) (int32, bool)
+	Find(namespace, name string, port int32) (int32, bool)
 }
 
 // When multiple Traefik Routers listen to the same entrypoint and have the same Rule, the chosen router is the one

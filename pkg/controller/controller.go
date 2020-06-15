@@ -46,7 +46,7 @@ type SharedStore interface {
 
 // TopologyBuilder builds Topologies.
 type TopologyBuilder interface {
-	Build(ignoredResources *k8s.ResourceFilter) (*topology.Topology, error)
+	Build(resourceFilter *k8s.ResourceFilter) (*topology.Topology, error)
 }
 
 // Config holds the configuration of the controller.
@@ -107,7 +107,8 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 		k8s.IgnoreNamespaces(cfg.IgnoreNamespaces...),
 		k8s.IgnoreNamespaces(metav1.NamespaceSystem),
 		k8s.IgnoreService("kubernetes", metav1.NamespaceDefault),
-		k8s.IgnoreApps("maesh", "jaeger"))
+		k8s.IgnoreApps("maesh", "jaeger"),
+	)
 
 	// Create the work queue and the enqueue handler.
 	c.workQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())

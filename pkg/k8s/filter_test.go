@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestNewResourceFilter(t *testing.T) {
+func TestResourceFilter_New(t *testing.T) {
 	var (
 		firstOptionCallCounter  int
 		secondOptionCallCounter int
