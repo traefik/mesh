@@ -640,7 +640,7 @@ func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *t
 	for i, podKey := range tt.Destination.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			p.logger.Errorf("Unable to find Pod %q for HTTP service from Service Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
+			p.logger.Errorf("Unable to find Pod %q for HTTP service from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
 
 			continue
 		}
@@ -714,7 +714,7 @@ func (p *Provider) buildTCPServiceFromTrafficTarget(t *topology.Topology, tt *to
 	for i, podKey := range tt.Destination.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			p.logger.Errorf("Unable to find Pod %q for TCP service from Service Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
+			p.logger.Errorf("Unable to find Pod %q for TCP service from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
 
 			continue
 		}
@@ -739,7 +739,7 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficTargetDirect(t *topology.T
 		for _, podKey := range source.Pods {
 			pod, ok := t.Pods[podKey]
 			if !ok {
-				p.logger.Errorf("Unable to find Pod %q for Middleware from Service Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
+				p.logger.Errorf("Unable to find Pod %q for Middleware from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
 
 				continue
 			}
