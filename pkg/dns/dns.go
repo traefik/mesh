@@ -77,7 +77,7 @@ func (c *Client) CheckDNSProvider() (Provider, error) {
 		return KubeDNS, nil
 	}
 
-	return UnknownDNS, fmt.Errorf("no supported DNS service available for installing maesh: %w", err)
+	return UnknownDNS, errors.New("no supported DNS service available for installing maesh")
 }
 
 func (c *Client) coreDNSMatch() (bool, error) {
