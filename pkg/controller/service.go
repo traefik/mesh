@@ -215,10 +215,23 @@ func (s *ShadowServiceManager) getTargetPort(trafficType string, portID int, nam
 	switch trafficType {
 	case annotations.ServiceTypeHTTP:
 		return s.getHTTPPort(portID)
+
 	case annotations.ServiceTypeTCP:
-		return s.getMappedPort(s.tcpStateTable, name, namespace, port)
+		mappedPort, err := s.getMappedPort(s.tcpStateTable, name, namespace, port)
+		if err != nil {
+			return 0, fmt.Errorf("unable to map TCP service port: %w", err)
+		}
+
+		return mappedPort, nil
+
 	case annotations.ServiceTypeUDP:
-		return s.getMappedPort(s.udpStateTable, name, namespace, port)
+		mappedPort, err := s.getMappedPort(s.udpStateTable, name, namespace, port)
+		if err != nil {
+			return 0, fmt.Errorf("unable to map UDP service port: %w", err)
+		}
+
+		return mappedPort, nil
+
 	default:
 		return 0, errors.New("unknown service mode")
 	}
@@ -243,7 +256,7 @@ func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, name, namesp
 
 	mappedPort, err := stateTable.Add(namespace, name, port)
 	if err != nil {
-		return 0, fmt.Errorf("unable to add service to the TCP state table: %w", err)
+		return 0, fmt.Errorf("unable to add service port to the state table: %w", err)
 	}
 
 	s.logger.Debugf("Service %s/%s %d as been assigned port %d", namespace, name, port, mappedPort)
