@@ -70,10 +70,9 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	ignoredResources.AddIgnoredNamespace("ignored-ns")
+	resourceFilter := mk8s.NewResourceFilter(mk8s.IgnoreNamespaces("ignored-ns"))
 
-	got, err := builder.Build(ignoredResources)
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	want := &Topology{
@@ -144,8 +143,8 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assert.Len(t, got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits, 0)
@@ -203,8 +202,8 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	svcKey := nn(svcB.Name, svcB.Namespace)
@@ -271,8 +270,8 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	svcKey := nn(svcB.Name, svcB.Namespace)
@@ -345,8 +344,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-basic.json", got)
@@ -384,8 +383,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-spec-with-empty-match.json", got)
@@ -426,8 +425,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-empty-destination-port.json", got)
@@ -464,8 +463,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndMismatchServicePort(t *testing
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-traffic-target-service-port-mismatch.json", got)
@@ -503,8 +502,8 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	got, err := builder.Build(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
 	assertTopology(t, "testdata/topology-multi-sources-destinations.json", got)
@@ -536,8 +535,8 @@ func TestTopologyBuilder_EmptyTrafficTargetDestinationNamespace(t *testing.T) {
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
 
-	ignoredResources := mk8s.NewIgnored()
-	res, err := builder.loadResources(ignoredResources)
+	resourceFilter := mk8s.NewResourceFilter()
+	res, err := builder.loadResources(resourceFilter)
 	require.NoError(t, err)
 
 	actual, exists := res.TrafficTargets[Key{Name: "test", Namespace: namespace}]
@@ -626,14 +625,14 @@ func svcPort(name string, port, targetPort int32) corev1.ServicePort {
 	}
 }
 
-func createTrafficSplit(ns, name string, svc *corev1.Service, backend1 *corev1.Service, backend2 *corev1.Service) *split.TrafficSplit {
+func createTrafficSplit(namespace, name string, svc *corev1.Service, backend1 *corev1.Service, backend2 *corev1.Service) *split.TrafficSplit {
 	return &split.TrafficSplit{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TrafficSplit",
 			APIVersion: "split.smi-spec.io/v1alpha2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
+			Namespace: namespace,
 			Name:      name,
 		},
 		Spec: split.TrafficSplitSpec{
@@ -652,7 +651,7 @@ func createTrafficSplit(ns, name string, svc *corev1.Service, backend1 *corev1.S
 	}
 }
 
-func createTrafficTarget(ns, name string, destSa *corev1.ServiceAccount, destPort string, srcsSa []*corev1.ServiceAccount, rtGrp *spec.HTTPRouteGroup, rtGrpMatches []string) *access.TrafficTarget {
+func createTrafficTarget(namespace, name string, destSa *corev1.ServiceAccount, destPort string, srcsSa []*corev1.ServiceAccount, rtGrp *spec.HTTPRouteGroup, rtGrpMatches []string) *access.TrafficTarget {
 	sources := make([]access.IdentityBindingSubject, len(srcsSa))
 	for i, sa := range srcsSa {
 		sources[i] = access.IdentityBindingSubject{
@@ -678,7 +677,7 @@ func createTrafficTarget(ns, name string, destSa *corev1.ServiceAccount, destPor
 			APIVersion: "access.smi-spec.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
+			Namespace: namespace,
 			Name:      name,
 		},
 		Destination: access.IdentityBindingSubject{
@@ -692,14 +691,14 @@ func createTrafficTarget(ns, name string, destSa *corev1.ServiceAccount, destPor
 	}
 }
 
-func createHTTPRouteGroup(ns, name string, matches []spec.HTTPMatch) *spec.HTTPRouteGroup {
+func createHTTPRouteGroup(namespace, name string, matches []spec.HTTPMatch) *spec.HTTPRouteGroup {
 	return &spec.HTTPRouteGroup{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "HTTPRouteGroup",
 			APIVersion: "specs.smi-spec.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
+			Namespace: namespace,
 			Name:      name,
 		},
 		Matches: matches,
@@ -714,14 +713,14 @@ func createHTTPMatch(name string, methods []string, pathPrefix string) spec.HTTP
 	}
 }
 
-func createService(ns, name string, annotations map[string]string, targetPorts []corev1.ServicePort, selector map[string]string, clusterIP string) *corev1.Service {
+func createService(namespace, name string, annotations map[string]string, targetPorts []corev1.ServicePort, selector map[string]string, clusterIP string) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   ns,
+			Namespace:   namespace,
 			Name:        name,
 			Annotations: annotations,
 		},
@@ -776,7 +775,7 @@ func createEndpoints(svc *corev1.Service, pods []*corev1.Pod) *corev1.Endpoints 
 	}
 }
 
-func createPod(ns, name string, sa *corev1.ServiceAccount, selector map[string]string, podIP string) *corev1.Pod {
+func createPod(namespace, name string, sa *corev1.ServiceAccount, selector map[string]string, podIP string) *corev1.Pod {
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
@@ -784,7 +783,7 @@ func createPod(ns, name string, sa *corev1.ServiceAccount, selector map[string]s
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: ns,
+			Namespace: namespace,
 			Labels:    selector,
 		},
 		Spec: corev1.PodSpec{
@@ -796,14 +795,14 @@ func createPod(ns, name string, sa *corev1.ServiceAccount, selector map[string]s
 	}
 }
 
-func createServiceAccount(ns, name string) *corev1.ServiceAccount {
+func createServiceAccount(namespace, name string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
+			Namespace: namespace,
 			Name:      name,
 		},
 	}
