@@ -19,33 +19,33 @@ import (
 )
 
 type portMapperMock struct {
-	findFunc   func(ns, name string, port int32) (int32, bool)
-	addFunc    func(ns, name string, port int32) (int32, error)
-	removeFunc func(ns, name string, port int32) (int32, error)
+	findFunc   func(namespace, name string, port int32) (int32, bool)
+	addFunc    func(namespace, name string, port int32) (int32, error)
+	removeFunc func(namespace, name string, port int32) (int32, error)
 }
 
-func (t portMapperMock) Find(ns, name string, port int32) (int32, bool) {
+func (t portMapperMock) Find(namespace, name string, port int32) (int32, bool) {
 	if t.findFunc == nil {
 		return 0, false
 	}
 
-	return t.findFunc(ns, name, port)
+	return t.findFunc(namespace, name, port)
 }
 
-func (t portMapperMock) Add(ns, name string, port int32) (int32, error) {
+func (t portMapperMock) Add(namespace, name string, port int32) (int32, error) {
 	if t.addFunc == nil {
 		return 0, nil
 	}
 
-	return t.addFunc(ns, name, port)
+	return t.addFunc(namespace, name, port)
 }
 
-func (t portMapperMock) Remove(ns, name string, port int32) (int32, error) {
+func (t portMapperMock) Remove(namespace, name string, port int32) (int32, error) {
 	if t.removeFunc == nil {
 		return 0, nil
 	}
 
-	return t.removeFunc(ns, name, port)
+	return t.removeFunc(namespace, name, port)
 }
 
 func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
@@ -201,13 +201,13 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			client, lister := newFakeClient(currentShadowServices...)
 
 			tcpPortMapperMock := portMapperMock{
-				findFunc: func(ns, name string, port int32) (int32, bool) {
+				findFunc: func(namespace, name string, port int32) (int32, bool) {
 					return 0, false
 				},
-				addFunc: func(ns, name string, port int32) (int32, error) {
+				addFunc: func(namespace, name string, port int32) (int32, error) {
 					return 10000, nil
 				},
-				removeFunc: func(ns, name string, port int32) (int32, error) {
+				removeFunc: func(namespace, name string, port int32) (int32, error) {
 					return 10000, nil
 				},
 			}
@@ -326,16 +326,16 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 
 			removedUDPPorts := make(map[servicePort]bool)
 			udpPortMapperMock := portMapperMock{
-				removeFunc: func(ns, name string, port int32) (int32, error) {
-					removedUDPPorts[servicePort{Namespace: ns, Name: name, Port: port}] = true
+				removeFunc: func(namespace, name string, port int32) (int32, error) {
+					removedUDPPorts[servicePort{Namespace: namespace, Name: name, Port: port}] = true
 					return 0, nil
 				},
 			}
 
 			removedTCPPorts := make(map[servicePort]bool)
 			tcpPortMapperMock := portMapperMock{
-				removeFunc: func(ns, name string, port int32) (int32, error) {
-					removedTCPPorts[servicePort{Namespace: ns, Name: name, Port: port}] = true
+				removeFunc: func(namespace, name string, port int32) (int32, error) {
+					removedTCPPorts[servicePort{Namespace: namespace, Name: name, Port: port}] = true
 					return 0, nil
 				},
 			}

@@ -120,7 +120,7 @@ func (p *PortMapping) Add(namespace, name string, port int32) (int32, error) {
 	return 0, errors.New("unable to find an available port")
 }
 
-// Remove removes the mapping associated with the given servicePort.
+// Remove removes the mapping associated with the given service port.
 func (p *PortMapping) Remove(namespace, name string, port int32) (int32, error) {
 	port, ok := p.Find(namespace, name, port)
 	if !ok {
