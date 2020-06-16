@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type stateTableMock func(ns, name string, port int32) (int32, bool)
+type stateTableMock func(namespace, name string, port int32) (int32, bool)
 
-func (t stateTableMock) Find(ns, name string, port int32) (int32, bool) {
-	return t(ns, name, port)
+func (t stateTableMock) Find(namespace, name string, port int32) (int32, bool) {
+	return t(namespace, name, port)
 }
 
 type servicePort struct {
@@ -131,20 +131,20 @@ func TestProvider_BuildConfig(t *testing.T) {
 				DefaultTrafficType: defaultTrafficType,
 			}
 
-			tcpStateTable := func(ns, name string, port int32) (int32, bool) {
+			tcpStateTable := func(namespace, name string, port int32) (int32, bool) {
 				if test.tcpStateTable == nil {
 					return 0, false
 				}
 
-				p, ok := test.tcpStateTable[servicePort{Namespace: ns, Name: name, Port: port}]
+				p, ok := test.tcpStateTable[servicePort{Namespace: namespace, Name: name, Port: port}]
 				return p, ok
 			}
-			udpStateTable := func(ns, name string, port int32) (int32, bool) {
+			udpStateTable := func(namespace, name string, port int32) (int32, bool) {
 				if test.udpStateTable == nil {
 					return 0, false
 				}
 
-				p, ok := test.udpStateTable[servicePort{Namespace: ns, Name: name, Port: port}]
+				p, ok := test.udpStateTable[servicePort{Namespace: namespace, Name: name, Port: port}]
 				return p, ok
 			}
 			middlewareBuilder := func(a map[string]string) (map[string]*dynamic.Middleware, error) {
