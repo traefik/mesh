@@ -183,9 +183,13 @@ metadata:
   annotations:
     prometheus.io/scrape: 'true'
 spec:
-  type: NodePort
+  type: {{ .Values.prometheus.service.type }}
   ports:
-    - port: 9090
+    - port: {{ .Values.prometheus.service.port }}
+      targetPort: webui
+      {{- if .Values.prometheus.service.nodePort }}
+      nodePort: {{ .Values.prometheus.service.nodePort }}
+      {{- end }}
       protocol: TCP
       name: webui
   selector:
