@@ -587,11 +587,18 @@ func getOrCreatePod(topology *Topology, pod *corev1.Pod) Key {
 	podKey := Key{pod.Name, pod.Namespace}
 
 	if _, ok := topology.Pods[podKey]; !ok {
+		var containerPorts []corev1.ContainerPort
+
+		for _, container := range pod.Spec.Containers {
+			containerPorts = append(containerPorts, container.Ports...)
+		}
+
 		topology.Pods[podKey] = &Pod{
 			Name:            pod.Name,
 			Namespace:       pod.Namespace,
 			ServiceAccount:  pod.Spec.ServiceAccountName,
 			OwnerReferences: pod.OwnerReferences,
+			ContainerPorts:  containerPorts,
 			IP:              pod.Status.PodIP,
 		}
 	}
