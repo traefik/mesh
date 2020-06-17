@@ -603,14 +603,12 @@ func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topolo
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for HTTP service from Service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
-
 			continue
 		}
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
 			p.logger.Warnf("Unable to resolve HTTP service port %q in Pod %q", svcPort.Name, podKey)
-
 			continue
 		}
 
@@ -636,14 +634,12 @@ func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *t
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for HTTP service from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
-
 			continue
 		}
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
 			p.logger.Warnf("Unable to resolve HTTP service port %q in Pod %q", svcPort.TargetPort, podKey)
-
 			continue
 		}
 
@@ -667,14 +663,12 @@ func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topolog
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for TCP service from Service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
-
 			continue
 		}
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
 			p.logger.Warnf("Unable to resolve TCP service port %q in Pod %q", svcPort.Name, podKey)
-
 			continue
 		}
 
@@ -697,14 +691,12 @@ func (p *Provider) buildTCPServiceFromTrafficTarget(t *topology.Topology, tt *to
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for TCP service from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
-
 			continue
 		}
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
 			p.logger.Warnf("Unable to resolve TCP service port %q in Pod %q", svcPort.Name, podKey)
-
 			continue
 		}
 
@@ -725,14 +717,12 @@ func (p *Provider) buildUDPServiceFromService(t *topology.Topology, svc *topolog
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for UDP service from Service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
-
 			continue
 		}
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
 			p.logger.Warnf("Unable to resolve UDP service port %q in Pod %q", svcPort.Name, podKey)
-
 			continue
 		}
 
@@ -759,7 +749,6 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficTargetDirect(t *topology.T
 			pod, ok := t.Pods[podKey]
 			if !ok {
 				p.logger.Errorf("Unable to find Pod %q for WhitelistMiddleware from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
-
 				continue
 			}
 
@@ -784,7 +773,6 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficSplitDirect(t *topology.To
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for WhitelistMiddleware from Traffic Split %s@%s", podKey, topology.Key{Name: ts.Name, Namespace: ts.Namespace})
-
 			continue
 		}
 
