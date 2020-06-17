@@ -44,14 +44,14 @@ func (b *Builder) Build(resourceFilter *mk8s.ResourceFilter) (*Topology, error) 
 		b.evaluateService(res, topology, svc)
 	}
 
-	// Populate services with traffic-target definitions.
-	for _, tt := range res.TrafficTargets {
-		b.evaluateTrafficTarget(res, topology, tt)
-	}
-
 	// Populate services with traffic-split definitions.
 	for _, ts := range res.TrafficSplits {
 		b.evaluateTrafficSplit(topology, ts)
+	}
+
+	// Populate services with traffic-target definitions.
+	for _, tt := range res.TrafficTargets {
+		b.evaluateTrafficTarget(res, topology, tt)
 	}
 
 	b.populateTrafficSplitsAuthorizedIncomingTraffic(topology)
@@ -106,13 +106,22 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			Service:       svcKey,
 			TrafficTarget: Key{tt.Name, tt.Namespace},
 		}
-		topology.ServiceTrafficTargets[svcTTKey] = stt
 
 		svc, ok := topology.Services[svcKey]
+		// In the current version of the spec, the traffic will always go to a TrafficSplit. So we don't need to evaluate
+		// Pods if there's already a TrafficSplit on the Service.
+		if ok && len(svc.TrafficSplits) > 0 {
+			b.Logger.Warnf("Service %q already has a TrafficSplit attached, TrafficTarget %q won't be evaluated on this service", svcKey, svcTTKey.TrafficTarget)
+
+			return
+		}
+
+		topology.ServiceTrafficTargets[svcTTKey] = stt
+
 		if !ok {
 			err := fmt.Errorf("unable to find Service %q", svcKey)
 			stt.AddError(err)
-			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
+			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", svcTTKey.TrafficTarget, err)
 
 			continue
 		}
@@ -190,9 +199,17 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 	}
 
 	tsKey := Key{trafficSplit.Name, trafficSplit.Namespace}
-	topology.TrafficSplits[tsKey] = ts
 
 	svc, ok := topology.Services[svcKey]
+	// The current version of the spec doesn't support having more than one TrafficSplit attached to a service.
+	if ok && len(svc.TrafficSplits) > 0 {
+		b.Logger.Warnf("Service %q already has a TrafficSplit attached, TrafficSplit %q won't be evaluated", svcKey, tsKey)
+
+		return
+	}
+
+	topology.TrafficSplits[tsKey] = ts
+
 	if !ok {
 		err := fmt.Errorf("unable to find root Service %q", svcKey)
 		ts.AddError(err)
