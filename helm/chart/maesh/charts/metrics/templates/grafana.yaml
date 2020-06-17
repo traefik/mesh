@@ -127,7 +127,7 @@ data:
     - name: prometheus
       type: prometheus
       orgId: 1
-      url: http://prometheus.{{ .Release.Namespace }}.svc.{{ default "cluster.local" .Values.clusterDomain }}:9090
+      url: http://prometheus.{{ .Release.Namespace }}.svc.{{ default "cluster.local" .Values.clusterDomain }}:{{ .Values.prometheus.service.port }}
       isDefault: true
       access: proxy
       jsonData:
@@ -161,9 +161,13 @@ metadata:
     heritage: {{ .Release.Service | quote }}
     component: grafana
 spec:
-  type: NodePort
+  type: {{ .Values.grafana.service.type }}
   ports:
-    - port: 3000
+    - port: {{ .Values.grafana.service.port }}
+      targetPort: web
+      {{- if .Values.grafana.service.nodePort }}
+      nodePort: {{ .Values.grafana.service.nodePort }}
+      {{- end }}
   selector:
     app: grafana
     component: core
