@@ -9,6 +9,14 @@
         "rule": "Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
         "priority": 1001
       },
+      "my-ns-svc-a-8081": {
+        "entryPoints": [
+          "http-10001"
+        ],
+        "service": "my-ns-svc-a-8081",
+        "rule": "Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
+        "priority": 1001
+      },
       "readiness": {
         "entryPoints": [
           "readiness"
@@ -31,6 +39,19 @@
             },
             {
               "url": "http://10.10.2.2:8080"
+            }
+          ],
+          "passHostHeader": true
+        }
+      },
+      "my-ns-svc-a-8081": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://10.10.2.1:8080"
+            },
+            {
+              "url": "http://10.10.2.2:8081"
             }
           ],
           "passHostHeader": true
