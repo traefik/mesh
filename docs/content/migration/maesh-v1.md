@@ -7,10 +7,10 @@ Maesh v1
 
 ### Debug
 
-The `--debug` CLI flag is deprecated and will be removed in a futur Major release. Instead, you should use the new 
+The `--debug` CLI flag is deprecated and will be removed in a future major release. Instead, you should use the new 
 `--logLevel` flag with `debug` as value.
 
 ### SMI Mode
 
-The `--smi` CLI flag is deprecated and will be removed in a future Major release. Instead, you should use the new and 
+The `--smi` CLI flag is deprecated and will be removed in a future major release. Instead, you should use the new and 
 backward compatible `--acl` flag.
