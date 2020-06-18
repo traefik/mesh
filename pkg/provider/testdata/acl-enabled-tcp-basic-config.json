@@ -44,6 +44,13 @@
         ],
         "service": "my-ns-svc-b-8080",
         "rule": "HostSNI(`*`)"
+      },
+      "my-ns-svc-b-8081": {
+        "entryPoints": [
+          "tcp-5001"
+        ],
+        "service": "my-ns-svc-b-8081",
+        "rule": "HostSNI(`*`)"
       }
     },
     "services": {
@@ -52,6 +59,15 @@
           "servers": [
             {
               "address": "10.10.3.1:8080"
+            }
+          ]
+        }
+      },
+      "my-ns-svc-b-8081": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "address": "10.10.3.1:8081"
             }
           ]
         }
