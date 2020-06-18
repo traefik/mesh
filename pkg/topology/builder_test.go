@@ -286,6 +286,7 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	incoming := got.TrafficSplits[tsKeys[0]].Incoming
 
 	assert.Equal(t, 1, len(incoming))
+
 	if tsKeys[0].Name == "ts2" {
 		assert.Equal(t, "10.10.1.2", got.Pods[incoming[0]].IP)
 	} else {
