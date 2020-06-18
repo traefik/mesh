@@ -59,7 +59,7 @@ func (b *Builder) Build(resourceFilter *mk8s.ResourceFilter) (*Topology, error) 
 	return topology, nil
 }
 
-// evaluateService evaluates the given service. It adds the Service to the topology and it's selected Pods.
+// evaluateService evaluates the given service. It adds the Service to the topology and its selected Pods.
 func (b *Builder) evaluateService(res *resources, topology *Topology, svc *corev1.Service) {
 	svcKey := Key{svc.Name, svc.Namespace}
 
@@ -104,10 +104,10 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 		}
 
 		svc, ok := topology.Services[svcKey]
-		// In the current version of the spec, the traffic will always go to a TrafficSplit. So we don't need to evaluate
-		// Pods if there's already a TrafficSplit on the Service.
+		// Since in the current version of the spec, the traffic will always go to a TrafficSplit, we don't need to evaluate
+		// Pods if there is already a TrafficSplit on the Service.
 		if ok && len(svc.TrafficSplits) > 0 {
-			b.Logger.Warnf("Service %q already has a TrafficSplit attached, TrafficTarget %q won't be evaluated on this service", svcKey, svcTTKey.TrafficTarget)
+			b.Logger.Warnf("Service %q already has a TrafficSplit attached, TrafficTarget %q will not be evaluated on this service", svcKey, svcTTKey.TrafficTarget)
 
 			return
 		}
@@ -177,7 +177,7 @@ func (b *Builder) buildTrafficTargetDestination(topology *Topology, tt *access.T
 func addSourceAndDestinationToPods(topology *Topology, sources []ServiceTrafficTargetSource, svcTTKey ServiceTrafficTargetKey) {
 	for _, source := range sources {
 		for _, podKey := range source.Pods {
-			// Skip pods which haven't been added to the topology.
+			// Skip pods which have not been added to the topology.
 			if _, ok := topology.Pods[podKey]; !ok {
 				continue
 			}
@@ -187,7 +187,7 @@ func addSourceAndDestinationToPods(topology *Topology, sources []ServiceTrafficT
 	}
 
 	for _, podKey := range topology.ServiceTrafficTargets[svcTTKey].Destination.Pods {
-		// Skip pods which haven't been added to the topology.
+		// Skip pods which have not been added to the topology.
 		if _, ok := topology.Pods[podKey]; !ok {
 			continue
 		}
@@ -209,9 +209,9 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 	tsKey := Key{trafficSplit.Name, trafficSplit.Namespace}
 
 	svc, ok := topology.Services[svcKey]
-	// The current version of the spec doesn't support having more than one TrafficSplit attached to a service.
+	// The current version of the spec does not support having more than one TrafficSplit attached to the same service.
 	if ok && len(svc.TrafficSplits) > 0 {
-		b.Logger.Warnf("Service %q already has a TrafficSplit attached, TrafficSplit %q won't be evaluated", svcKey, tsKey)
+		b.Logger.Warnf("Service %q already has a TrafficSplit attached, TrafficSplit %q will not be evaluated", svcKey, tsKey)
 
 		return
 	}
