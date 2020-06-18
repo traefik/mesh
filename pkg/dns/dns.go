@@ -268,7 +268,7 @@ func (c *Client) ConfigureKubeDNS(clusterDomain, maeshNamespace string) error {
 
 		serviceIP = svc.Spec.ClusterIP
 		return nil
-	}), ebo); err != nil {
+	}), backoff.WithMaxRetries(ebo, 12)); err != nil {
 		return fmt.Errorf("unable get the service %q in namespace %q: %w", "coredns", "maesh", err)
 	}
 
