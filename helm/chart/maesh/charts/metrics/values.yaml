@@ -11,7 +11,7 @@ grafana:
     ## Specify the nodePort value for the NodePort service types.
     ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#nodeport
     ##
-    # nodePort: null
+    # nodePort: 30030
 
   ## storageClassName: "" disables dynamic provisioning
   ## if undefined or null, no storageClassName spec is
@@ -34,7 +34,7 @@ prometheus:
     ## Specify the nodePort value for the NodePort service types.
     ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#nodeport
     ##
-    # nodePort: null
+    # nodePort: 30090
 
   ## storageClassName: "" disables dynamic provisioning
   ## if undefined or null, no storageClassName spec is

@@ -1,7 +1,7 @@
 ---
 apiVersion: v2
 name: maesh
-version: 2.0.1
+version: 2.0.0
 appVersion: v1.2.0
 description: Maesh - Simpler Service Mesh
 keywords:
@@ -25,5 +25,5 @@ dependencies:
     version: 0.0.3
     condition: tracing.deploy
   - name: metrics
-    version: 0.1.0
+    version: 0.0.6
     condition: metrics.deploy
