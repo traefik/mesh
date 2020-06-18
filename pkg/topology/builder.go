@@ -96,10 +96,6 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			Namespace: tt.Namespace,
 			Service:   svcKey,
 			Sources:   sources,
-			Destination: ServiceTrafficTargetDestination{
-				ServiceAccount: tt.Destination.Name,
-				Namespace:      tt.Destination.Namespace,
-			},
 		}
 
 		svcTTKey := ServiceTrafficTargetKey{
@@ -126,8 +122,9 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			continue
 		}
 
-		// Build the TrafficTarget Specs.
-		specs, err := b.buildTrafficTargetSpecs(res, tt)
+		var err error
+
+		stt.Specs, err = b.buildTrafficTargetSpecs(res, tt)
 		if err != nil {
 			err = fmt.Errorf("unable to build spec: %v", err)
 			stt.AddError(err)
@@ -136,34 +133,45 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			continue
 		}
 
-		stt.Specs = specs
-
-		// Find out which are the destination pods.
-		for _, pod := range pods {
-			if pod.Status.PodIP == "" {
-				continue
-			}
-
-			stt.Destination.Pods = append(stt.Destination.Pods, getOrCreatePod(topology, pod))
-		}
-
-		// Find out which ports can be used on the destination service.
-		destPorts, err := b.getTrafficTargetDestinationPorts(svc, tt)
+		stt.Destination, err = b.buildTrafficTargetDestination(topology, tt, pods, svc)
 		if err != nil {
-			err = fmt.Errorf("unable to find destination ports on Service %q: %w", svcKey, err)
 			stt.AddError(err)
 			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
 			continue
 		}
 
-		stt.Destination.Ports = destPorts
-
 		svc.TrafficTargets = append(svc.TrafficTargets, svcTTKey)
 
 		// Add the ServiceTrafficTarget to the source and destination pods.
 		addSourceAndDestinationToPods(topology, sources, svcTTKey)
 	}
+}
+
+func (b *Builder) buildTrafficTargetDestination(topology *Topology, tt *access.TrafficTarget, pods []*corev1.Pod, svc *Service) (ServiceTrafficTargetDestination, error) {
+	dest := ServiceTrafficTargetDestination{
+		ServiceAccount: tt.Destination.Name,
+		Namespace:      tt.Destination.Namespace,
+	}
+
+	// Find out which are the destination pods.
+	for _, pod := range pods {
+		if pod.Status.PodIP == "" {
+			continue
+		}
+
+		dest.Pods = append(dest.Pods, getOrCreatePod(topology, pod))
+	}
+
+	var err error
+
+	// Find out which ports can be used on the destination service.
+	dest.Ports, err = b.getTrafficTargetDestinationPorts(svc, tt)
+	if err != nil {
+		return dest, fmt.Errorf("unable to find destination ports on Service %q: %w", Key{Namespace: svc.Namespace, Name: svc.Name}, err)
+	}
+
+	return dest, nil
 }
 
 func addSourceAndDestinationToPods(topology *Topology, sources []ServiceTrafficTargetSource, svcTTKey ServiceTrafficTargetKey) {
