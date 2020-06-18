@@ -212,6 +212,8 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	assert.Equal(t, 0, len(got.TrafficSplits[tsKey].Incoming))
 }
 
+// TestTopologyBuilder_EvaluatesIncomingTrafficSplit makes sure a topology can be built with TrafficSplits. It also
+// checks that if multiple TrafficSplits are applied to the same Service, only one will be used.
 func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	selectorAppA := map[string]string{"app": "app-a"}
 	selectorAppB := map[string]string{"app": "app-b"}
@@ -277,24 +279,62 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	svcKey := nn(svcB.Name, svcB.Namespace)
 	tsKeys := got.Services[svcKey].TrafficSplits
 
-	assert.Equal(t, 1, len(got.TrafficSplits[tsKeys[0]].Incoming))
-	assert.Equal(t, 1, len(got.TrafficSplits[tsKeys[1]].Incoming))
+	// Make sure the resulting Topology only has a single TrafficSplit.
+	assert.Len(t, tsKeys, 1)
+	assert.Len(t, got.TrafficSplits, 1)
 
-	for _, tsKey := range tsKeys {
-		ts := got.TrafficSplits[tsKey]
-		pod := got.Pods[ts.Incoming[0]]
+	incoming := got.TrafficSplits[tsKeys[0]].Incoming
 
-		if ts.Name == "ts2" {
-			assert.Equal(t, "10.10.1.2", pod.IP)
-		} else {
-			assert.Equal(t, "10.10.1.1", pod.IP)
-		}
+	assert.Equal(t, 1, len(incoming))
+
+	if tsKeys[0].Name == "ts2" {
+		assert.Equal(t, "10.10.1.2", got.Pods[incoming[0]].IP)
+	} else {
+		assert.Equal(t, "10.10.1.1", got.Pods[incoming[0]].IP)
 	}
 }
 
-// TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit makes sure the topology can be built with TrafficTargets
-// and TrafficSplits.
-func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit(t *testing.T) {
+// TestTopologyBuilder_BuildWithTrafficTarget makes sure a topology can be built using TrafficTargets.
+func TestTopologyBuilder_BuildWithTrafficTarget(t *testing.T) {
+	selectorAppA := map[string]string{"app": "app-a"}
+	selectorAppB := map[string]string{"app": "app-b"}
+	annotations := map[string]string{}
+	svcPorts := []corev1.ServicePort{svcPort("port-8080", 8080, 8080)}
+
+	saA := createServiceAccount("my-ns", "service-account-a")
+	podA := createPod("my-ns", "app-a", saA, selectorAppA, "10.10.1.1")
+
+	saB := createServiceAccount("my-ns", "service-account-b")
+	svcB := createService("my-ns", "svc-b", annotations, svcPorts, selectorAppB, "10.10.1.16")
+	podB := createPod("my-ns", "app-b", saB, svcB.Spec.Selector, "10.10.2.1")
+
+	epB := createEndpoints(svcB, []*corev1.Pod{podB})
+
+	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
+	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
+	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
+
+	ttMatch := []string{apiMatch.Name}
+	tt := createTrafficTarget("my-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
+
+	k8sClient := fake.NewSimpleClientset(saA, saB, podA, podB, svcB, epB)
+	smiAccessClient := accessfake.NewSimpleClientset(tt)
+	smiSplitClient := splitfake.NewSimpleClientset()
+	smiSpecClient := specfake.NewSimpleClientset(rtGrp)
+
+	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
+	require.NoError(t, err)
+
+	resourceFilter := mk8s.NewResourceFilter()
+	got, err := builder.Build(resourceFilter)
+	require.NoError(t, err)
+
+	assertTopology(t, "testdata/topology-traffic-target.json", got)
+}
+
+// TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService makes sure a TrafficTarget won't be applied on
+// a service if there is already a TrafficSplit applied to it.
+func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *testing.T) {
 	selectorAppA := map[string]string{"app": "app-a"}
 	selectorAppB := map[string]string{"app": "app-b"}
 	selectorAppC := map[string]string{"app": "app-c"}
@@ -348,7 +388,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplit(t *testing.T) {
 	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
-	assertTopology(t, "testdata/topology-basic.json", got)
+	assertTopology(t, "testdata/topology-traffic-split-traffic-target.json", got)
 }
 
 // TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch makes sure that when TrafficTarget.Spec.Matches is empty,
