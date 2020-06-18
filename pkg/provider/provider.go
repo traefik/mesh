@@ -249,7 +249,7 @@ func (p *Provider) buildServicesAndRoutersForHTTPService(t *topology.Topology, c
 		}
 
 		key := getServiceRouterKeyFromService(svc, svcPort.Port)
-		cfg.HTTP.Services[key] = p.buildHTTPServiceFromService(t, svc, scheme, svcPort.TargetPort.IntVal)
+		cfg.HTTP.Services[key] = p.buildHTTPServiceFromService(t, svc, scheme, svcPort)
 		cfg.HTTP.Routers[key] = buildHTTPRouter(httpRule, entrypoint, middlewares, key, priorityService)
 	}
 }
@@ -268,7 +268,7 @@ func (p *Provider) buildServicesAndRoutersForTCPService(t *topology.Topology, cf
 		}
 
 		key := getServiceRouterKeyFromService(svc, svcPort.Port)
-		cfg.TCP.Services[key] = p.buildTCPServiceFromService(t, svc, svcPort.TargetPort.IntVal)
+		cfg.TCP.Services[key] = p.buildTCPServiceFromService(t, svc, svcPort)
 		cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
 	}
 }
@@ -285,7 +285,7 @@ func (p *Provider) buildServicesAndRoutersForUDPService(t *topology.Topology, cf
 		}
 
 		key := getServiceRouterKeyFromService(svc, svcPort.Port)
-		cfg.UDP.Services[key] = p.buildUDPServiceFromService(t, svc, svcPort.TargetPort.IntVal)
+		cfg.UDP.Services[key] = p.buildUDPServiceFromService(t, svc, svcPort)
 		cfg.UDP.Routers[key] = buildUDPRouter(entrypoint, key)
 	}
 }
@@ -332,7 +332,7 @@ func (p *Provider) buildHTTPServicesAndRoutersForTrafficTarget(t *topology.Topol
 		}
 
 		svcKey := getServiceKeyFromTrafficTarget(tt, svcPort.Port)
-		cfg.HTTP.Services[svcKey] = p.buildHTTPServiceFromTrafficTarget(t, tt, scheme, svcPort.TargetPort.IntVal)
+		cfg.HTTP.Services[svcKey] = p.buildHTTPServiceFromTrafficTarget(t, tt, scheme, svcPort)
 
 		rtrMiddlewares := addToSliceCopy(middlewares, whitelistDirectKey)
 
@@ -373,7 +373,7 @@ func (p *Provider) buildTCPServicesAndRoutersForTrafficTarget(t *topology.Topolo
 		}
 
 		key := getServiceRouterKeyFromService(ttSvc, svcPort.Port)
-		cfg.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(t, tt, svcPort.TargetPort.IntVal)
+		cfg.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(t, tt, svcPort)
 		cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
 	}
 }
@@ -596,21 +596,26 @@ func (p Provider) buildUDPEntrypoint(svc *topology.Service, port int32) (string,
 	return fmt.Sprintf("udp-%d", meshPort), nil
 }
 
-func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topology.Service, scheme string, port int32) *dynamic.Service {
+func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topology.Service, scheme string, svcPort corev1.ServicePort) *dynamic.Service {
 	var servers []dynamic.Server
 
 	for _, podKey := range svc.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for HTTP service from Service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
-
 			continue
 		}
 
-		url := net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
+		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
+		if !ok {
+			p.logger.Warnf("Unable to resolve HTTP service port %q in Pod %q", svcPort.Name, podKey)
+			continue
+		}
+
+		address := net.JoinHostPort(pod.IP, strconv.Itoa(int(hostPort)))
 
 		servers = append(servers, dynamic.Server{
-			URL: fmt.Sprintf("%s://%s", scheme, url),
+			URL: fmt.Sprintf("%s://%s", scheme, address),
 		})
 	}
 
@@ -622,20 +627,25 @@ func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topolo
 	}
 }
 
-func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, scheme string, port int32) *dynamic.Service {
+func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, scheme string, svcPort corev1.ServicePort) *dynamic.Service {
 	servers := make([]dynamic.Server, len(tt.Destination.Pods))
 
 	for i, podKey := range tt.Destination.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for HTTP service from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
-
 			continue
 		}
 
-		url := net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
+		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
+		if !ok {
+			p.logger.Warnf("Unable to resolve HTTP service port %q in Pod %q", svcPort.TargetPort, podKey)
+			continue
+		}
 
-		servers[i].URL = fmt.Sprintf("%s://%s", scheme, url)
+		address := net.JoinHostPort(pod.IP, strconv.Itoa(int(hostPort)))
+
+		servers[i].URL = fmt.Sprintf("%s://%s", scheme, address)
 	}
 
 	return &dynamic.Service{
@@ -646,22 +656,25 @@ func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *t
 	}
 }
 
-func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topology.Service, port int32) *dynamic.TCPService {
+func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topology.Service, svcPort corev1.ServicePort) *dynamic.TCPService {
 	var servers []dynamic.TCPServer
 
 	for _, podKey := range svc.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for TCP service from Service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
-
 			continue
 		}
 
-		address := net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
+		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
+		if !ok {
+			p.logger.Warnf("Unable to resolve TCP service port %q in Pod %q", svcPort.Name, podKey)
+			continue
+		}
 
-		servers = append(servers, dynamic.TCPServer{
-			Address: address,
-		})
+		address := net.JoinHostPort(pod.IP, strconv.Itoa(int(hostPort)))
+
+		servers = append(servers, dynamic.TCPServer{Address: address})
 	}
 
 	return &dynamic.TCPService{
@@ -671,47 +684,55 @@ func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topolog
 	}
 }
 
-func (p *Provider) buildUDPServiceFromService(t *topology.Topology, svc *topology.Service, port int32) *dynamic.UDPService {
-	var servers []dynamic.UDPServer
-
-	for _, podKey := range svc.Pods {
-		pod, ok := t.Pods[podKey]
-		if !ok {
-			p.logger.Errorf("Unable to find Pod %q for UDP service from Service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
-
-			continue
-		}
-
-		address := net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
-
-		servers = append(servers, dynamic.UDPServer{
-			Address: address,
-		})
-	}
-
-	return &dynamic.UDPService{
-		LoadBalancer: &dynamic.UDPServersLoadBalancer{
-			Servers: servers,
-		},
-	}
-}
-
-func (p *Provider) buildTCPServiceFromTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, port int32) *dynamic.TCPService {
+func (p *Provider) buildTCPServiceFromTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, svcPort corev1.ServicePort) *dynamic.TCPService {
 	servers := make([]dynamic.TCPServer, len(tt.Destination.Pods))
 
 	for i, podKey := range tt.Destination.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for TCP service from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
-
 			continue
 		}
 
-		servers[i].Address = net.JoinHostPort(pod.IP, strconv.Itoa(int(port)))
+		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
+		if !ok {
+			p.logger.Warnf("Unable to resolve TCP service port %q in Pod %q", svcPort.Name, podKey)
+			continue
+		}
+
+		servers[i].Address = net.JoinHostPort(pod.IP, strconv.Itoa(int(hostPort)))
 	}
 
 	return &dynamic.TCPService{
 		LoadBalancer: &dynamic.TCPServersLoadBalancer{
+			Servers: servers,
+		},
+	}
+}
+
+func (p *Provider) buildUDPServiceFromService(t *topology.Topology, svc *topology.Service, svcPort corev1.ServicePort) *dynamic.UDPService {
+	var servers []dynamic.UDPServer
+
+	for _, podKey := range svc.Pods {
+		pod, ok := t.Pods[podKey]
+		if !ok {
+			p.logger.Errorf("Unable to find Pod %q for UDP service from Service %s@%s", podKey, topology.Key{Name: svc.Name, Namespace: svc.Namespace})
+			continue
+		}
+
+		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
+		if !ok {
+			p.logger.Warnf("Unable to resolve UDP service port %q in Pod %q", svcPort.Name, podKey)
+			continue
+		}
+
+		address := net.JoinHostPort(pod.IP, strconv.Itoa(int(hostPort)))
+
+		servers = append(servers, dynamic.UDPServer{Address: address})
+	}
+
+	return &dynamic.UDPService{
+		LoadBalancer: &dynamic.UDPServersLoadBalancer{
 			Servers: servers,
 		},
 	}
@@ -728,7 +749,6 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficTargetDirect(t *topology.T
 			pod, ok := t.Pods[podKey]
 			if !ok {
 				p.logger.Errorf("Unable to find Pod %q for WhitelistMiddleware from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
-
 				continue
 			}
 
@@ -753,7 +773,6 @@ func (p *Provider) buildWhitelistMiddlewareFromTrafficSplitDirect(t *topology.To
 		pod, ok := t.Pods[podKey]
 		if !ok {
 			p.logger.Errorf("Unable to find Pod %q for WhitelistMiddleware from Traffic Split %s@%s", podKey, topology.Key{Name: ts.Name, Namespace: ts.Namespace})
-
 			continue
 		}
 

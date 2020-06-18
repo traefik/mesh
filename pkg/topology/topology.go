@@ -7,6 +7,7 @@ import (
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Key references a resource.
@@ -202,11 +203,12 @@ type TrafficSpec struct {
 
 // Pod is a node of the graph representing a kubernetes pod.
 type Pod struct {
-	Name            string              `json:"name"`
-	Namespace       string              `json:"namespace"`
-	ServiceAccount  string              `json:"serviceAccount"`
-	OwnerReferences []v1.OwnerReference `json:"ownerReferences,omitempty"`
-	IP              string              `json:"ip"`
+	Name            string                 `json:"name"`
+	Namespace       string                 `json:"namespace"`
+	ServiceAccount  string                 `json:"serviceAccount"`
+	OwnerReferences []v1.OwnerReference    `json:"ownerReferences,omitempty"`
+	ContainerPorts  []corev1.ContainerPort `json:"containerPorts,omitempty"`
+	IP              string                 `json:"ip"`
 
 	SourceOf      []ServiceTrafficTargetKey `json:"sourceOf,omitempty"`
 	DestinationOf []ServiceTrafficTargetKey `json:"destinationOf,omitempty"`
@@ -235,4 +237,24 @@ func (ts *TrafficSplit) AddError(err error) {
 type TrafficSplitBackend struct {
 	Weight  int `json:"weight"`
 	Service Key `json:"service"`
+}
+
+// ResolveServicePort resolves the given service port against the given container port list, as described in the
+// Kubernetes documentation, and returns true if it has been successfully resolved, false otherwise.
+//
+// The Kubernetes documentation says: Port definitions in Pods have names, and you can reference these names in the
+// targetPort attribute of a Service. This works even if there is a mixture of Pods in the Service using a single
+// configured name, with the same network protocol available via different port numbers.
+func ResolveServicePort(svcPort corev1.ServicePort, containerPorts []corev1.ContainerPort) (int32, bool) {
+	if svcPort.TargetPort.Type == intstr.Int {
+		return svcPort.TargetPort.IntVal, true
+	}
+
+	for _, containerPort := range containerPorts {
+		if svcPort.TargetPort.StrVal == containerPort.Name && svcPort.Protocol == containerPort.Protocol {
+			return containerPort.ContainerPort, true
+		}
+	}
+
+	return 0, false
 }

@@ -19,14 +19,37 @@ import (
 
 // Builder builds Topology objects based on the current state of a kubernetes cluster.
 type Builder struct {
-	ServiceLister        listers.ServiceLister
-	EndpointsLister      listers.EndpointsLister
-	PodLister            listers.PodLister
-	TrafficTargetLister  accesslister.TrafficTargetLister
-	TrafficSplitLister   splitlister.TrafficSplitLister
-	HTTPRouteGroupLister speclister.HTTPRouteGroupLister
-	TCPRoutesLister      speclister.TCPRouteLister
-	Logger               logrus.FieldLogger
+	serviceLister        listers.ServiceLister
+	endpointsLister      listers.EndpointsLister
+	podLister            listers.PodLister
+	trafficTargetLister  accesslister.TrafficTargetLister
+	trafficSplitLister   splitlister.TrafficSplitLister
+	httpRouteGroupLister speclister.HTTPRouteGroupLister
+	tcpRoutesLister      speclister.TCPRouteLister
+	logger               logrus.FieldLogger
+}
+
+// NewBuilder creates and returns a new topology Builder instance.
+func NewBuilder(
+	serviceLister listers.ServiceLister,
+	endpointLister listers.EndpointsLister,
+	podLister listers.PodLister,
+	trafficTargetLister accesslister.TrafficTargetLister,
+	trafficSplitLister splitlister.TrafficSplitLister,
+	httpRouteGroupLister speclister.HTTPRouteGroupLister,
+	tcpRoutesLister speclister.TCPRouteLister,
+	logger logrus.FieldLogger,
+) *Builder {
+	return &Builder{
+		serviceLister:        serviceLister,
+		endpointsLister:      endpointLister,
+		podLister:            podLister,
+		trafficTargetLister:  trafficTargetLister,
+		trafficSplitLister:   trafficSplitLister,
+		httpRouteGroupLister: httpRouteGroupLister,
+		tcpRoutesLister:      tcpRoutesLister,
+		logger:               logger,
+	}
 }
 
 // Build builds a graph representing the possible interactions between Pods and Services based on the current state
@@ -112,7 +135,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 		if !ok {
 			err := fmt.Errorf("unable to find Service %q", svcKey)
 			stt.AddError(err)
-			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
+			b.logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
 			continue
 		}
@@ -122,7 +145,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 		if err != nil {
 			err = fmt.Errorf("unable to build spec: %v", err)
 			stt.AddError(err)
-			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
+			b.logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
 			continue
 		}
@@ -143,7 +166,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 		if err != nil {
 			err = fmt.Errorf("unable to find destination ports on Service %q: %w", svcKey, err)
 			stt.AddError(err)
-			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
+			b.logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
 			continue
 		}
@@ -196,7 +219,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 	if !ok {
 		err := fmt.Errorf("unable to find root Service %q", svcKey)
 		ts.AddError(err)
-		b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+		b.logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
 
 		return
 	}
@@ -208,7 +231,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 		if !ok {
 			err := fmt.Errorf("unable to find backend Service %q", backendSvcKey)
 			ts.AddError(err)
-			b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+			b.logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
 
 			continue
 		}
@@ -217,7 +240,7 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 		// which the TrafficSplit is.
 		if err := b.validateServiceAndBackendPorts(svc.Ports, backendSvc.Ports); err != nil {
 			ts.AddError(err)
-			b.Logger.Errorf("Error building topology for TrafficSplit %q: backend %q and service %q ports mismatch: %v", tsKey, backendSvcKey, svcKey, err)
+			b.logger.Errorf("Error building topology for TrafficSplit %q: backend %q and service %q ports mismatch: %v", tsKey, backendSvcKey, svcKey, err)
 
 			continue
 		}
@@ -262,7 +285,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 		for _, tsKey := range svc.TrafficSplits {
 			ts, ok := topology.TrafficSplits[tsKey]
 			if !ok {
-				b.Logger.Errorf("Unable to find TrafficSplit %q", tsKey)
+				b.logger.Errorf("Unable to find TrafficSplit %q", tsKey)
 				continue
 			}
 
@@ -272,7 +295,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 
 				err = fmt.Errorf("unable to get incoming pods: %v", err)
 				ts.AddError(err)
-				b.Logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
+				b.logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
 
 				continue
 			}
@@ -539,11 +562,18 @@ func getOrCreatePod(topology *Topology, pod *corev1.Pod) Key {
 	podKey := Key{pod.Name, pod.Namespace}
 
 	if _, ok := topology.Pods[podKey]; !ok {
+		var containerPorts []corev1.ContainerPort
+
+		for _, container := range pod.Spec.Containers {
+			containerPorts = append(containerPorts, container.Ports...)
+		}
+
 		topology.Pods[podKey] = &Pod{
 			Name:            pod.Name,
 			Namespace:       pod.Namespace,
 			ServiceAccount:  pod.Spec.ServiceAccountName,
 			OwnerReferences: pod.OwnerReferences,
+			ContainerPorts:  containerPorts,
 			IP:              pod.Status.PodIP,
 		}
 	}
@@ -568,40 +598,40 @@ func (b *Builder) loadResources(resourceFilter *mk8s.ResourceFilter) (*resources
 		return nil, fmt.Errorf("unable to load Services: %w", err)
 	}
 
-	pods, err := b.PodLister.List(labels.Everything())
+	pods, err := b.podLister.List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to list Pods: %w", err)
 	}
 
-	eps, err := b.EndpointsLister.List(labels.Everything())
+	eps, err := b.endpointsLister.List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to list Endpoints: %w", err)
 	}
 
-	tss, err := b.TrafficSplitLister.List(labels.Everything())
+	tss, err := b.trafficSplitLister.List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("unable to list TrafficSplits: %w", err)
 	}
 
 	var httpRtGrps []*spec.HTTPRouteGroup
-	if b.HTTPRouteGroupLister != nil {
-		httpRtGrps, err = b.HTTPRouteGroupLister.List(labels.Everything())
+	if b.httpRouteGroupLister != nil {
+		httpRtGrps, err = b.httpRouteGroupLister.List(labels.Everything())
 		if err != nil {
 			return nil, fmt.Errorf("unable to list HTTPRouteGroups: %w", err)
 		}
 	}
 
 	var tcpRts []*spec.TCPRoute
-	if b.TCPRoutesLister != nil {
-		tcpRts, err = b.TCPRoutesLister.List(labels.Everything())
+	if b.tcpRoutesLister != nil {
+		tcpRts, err = b.tcpRoutesLister.List(labels.Everything())
 		if err != nil {
 			return nil, fmt.Errorf("unable to list TCPRouteGroups: %w", err)
 		}
 	}
 
 	var tts []*access.TrafficTarget
-	if b.TrafficTargetLister != nil {
-		tts, err = b.TrafficTargetLister.List(labels.Everything())
+	if b.trafficTargetLister != nil {
+		tts, err = b.trafficTargetLister.List(labels.Everything())
 		if err != nil {
 			return nil, fmt.Errorf("unable to list TrafficTargets: %w", err)
 		}
@@ -614,7 +644,7 @@ func (b *Builder) loadResources(resourceFilter *mk8s.ResourceFilter) (*resources
 }
 
 func (b *Builder) loadServices(resourceFilter *mk8s.ResourceFilter, res *resources) error {
-	svcs, err := b.ServiceLister.List(labels.Everything())
+	svcs, err := b.serviceLister.List(labels.Everything())
 	if err != nil {
 		return fmt.Errorf("unable to list Services: %w", err)
 	}
