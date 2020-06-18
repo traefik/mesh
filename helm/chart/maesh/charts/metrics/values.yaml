@@ -4,6 +4,15 @@ image:
   configmapReload: jimmidyson/configmap-reload:v0.2.2
 
 grafana:
+  service:
+    type: ClusterIP
+    port: 3000
+
+    ## Specify the nodePort value for the NodePort service types.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#nodeport
+    ##
+    # nodePort: 30030
+
   ## storageClassName: "" disables dynamic provisioning
   ## if undefined or null, no storageClassName spec is
   ##   set, choosing the default provisioner
@@ -18,6 +27,15 @@ grafana:
   #     cpu: "100m"
 
 prometheus:
+  service:
+    type: ClusterIP
+    port: 9090
+
+    ## Specify the nodePort value for the NodePort service types.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#nodeport
+    ##
+    # nodePort: 30090
+
   ## storageClassName: "" disables dynamic provisioning
   ## if undefined or null, no storageClassName spec is
   ##   set, choosing the default provisioner
