@@ -108,7 +108,7 @@ func (k *ServiceTrafficTargetKey) UnmarshalJSON(data []byte) error {
 	return k.UnmarshalText(data)
 }
 
-// Topology holds the graph and represents the different path a request can follow. Each Pods and services are nodes
+// Topology holds the graph and represents the different paths a request can follow. Each Pods and services are nodes
 // of the graph.
 type Topology struct {
 	Services              map[Key]*Service                                  `json:"services"`

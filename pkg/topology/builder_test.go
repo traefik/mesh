@@ -279,7 +279,7 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	svcKey := nn(svcB.Name, svcB.Namespace)
 	tsKeys := got.Services[svcKey].TrafficSplits
 
-	// Make sure only one TrafficSplit will be present.
+	// Make sure the resulting Topology only has a single TrafficSplit.
 	assert.Len(t, tsKeys, 1)
 	assert.Len(t, got.TrafficSplits, 1)
 
