@@ -44,14 +44,14 @@ func (b *Builder) Build(resourceFilter *mk8s.ResourceFilter) (*Topology, error) 
 		b.evaluateService(res, topology, svc)
 	}
 
-	// Populate services with traffic-target definitions.
-	for _, tt := range res.TrafficTargets {
-		b.evaluateTrafficTarget(res, topology, tt)
-	}
-
 	// Populate services with traffic-split definitions.
 	for _, ts := range res.TrafficSplits {
 		b.evaluateTrafficSplit(topology, ts)
+	}
+
+	// Populate services with traffic-target definitions.
+	for _, tt := range res.TrafficTargets {
+		b.evaluateTrafficTarget(res, topology, tt)
 	}
 
 	b.populateTrafficSplitsAuthorizedIncomingTraffic(topology)
@@ -59,7 +59,7 @@ func (b *Builder) Build(resourceFilter *mk8s.ResourceFilter) (*Topology, error) 
 	return topology, nil
 }
 
-// evaluateService evaluates the given service. It adds the Service to the topology and it's selected Pods.
+// evaluateService evaluates the given service. It adds the Service to the topology and its selected Pods.
 func (b *Builder) evaluateService(res *resources, topology *Topology, svc *corev1.Service) {
 	svcKey := Key{svc.Name, svc.Namespace}
 
@@ -96,29 +96,35 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			Namespace: tt.Namespace,
 			Service:   svcKey,
 			Sources:   sources,
-			Destination: ServiceTrafficTargetDestination{
-				ServiceAccount: tt.Destination.Name,
-				Namespace:      tt.Destination.Namespace,
-			},
 		}
 
 		svcTTKey := ServiceTrafficTargetKey{
 			Service:       svcKey,
 			TrafficTarget: Key{tt.Name, tt.Namespace},
 		}
-		topology.ServiceTrafficTargets[svcTTKey] = stt
 
 		svc, ok := topology.Services[svcKey]
+		// Since in the current version of the spec, the traffic will always go to a TrafficSplit, we don't need to evaluate
+		// Pods if there is already a TrafficSplit on the Service.
+		if ok && len(svc.TrafficSplits) > 0 {
+			b.Logger.Warnf("Service %q already has a TrafficSplit attached, TrafficTarget %q will not be evaluated on this service", svcKey, svcTTKey.TrafficTarget)
+
+			return
+		}
+
+		topology.ServiceTrafficTargets[svcTTKey] = stt
+
 		if !ok {
 			err := fmt.Errorf("unable to find Service %q", svcKey)
 			stt.AddError(err)
-			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
+			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", svcTTKey.TrafficTarget, err)
 
 			continue
 		}
 
-		// Build the TrafficTarget Specs.
-		specs, err := b.buildTrafficTargetSpecs(res, tt)
+		var err error
+
+		stt.Specs, err = b.buildTrafficTargetSpecs(res, tt)
 		if err != nil {
 			err = fmt.Errorf("unable to build spec: %v", err)
 			stt.AddError(err)
@@ -127,28 +133,13 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			continue
 		}
 
-		stt.Specs = specs
-
-		// Find out which are the destination pods.
-		for _, pod := range pods {
-			if pod.Status.PodIP == "" {
-				continue
-			}
-
-			stt.Destination.Pods = append(stt.Destination.Pods, getOrCreatePod(topology, pod))
-		}
-
-		// Find out which ports can be used on the destination service.
-		destPorts, err := b.getTrafficTargetDestinationPorts(svc, tt)
+		stt.Destination, err = b.buildTrafficTargetDestination(topology, tt, pods, svc)
 		if err != nil {
-			err = fmt.Errorf("unable to find destination ports on Service %q: %w", svcKey, err)
 			stt.AddError(err)
 			b.Logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
 			continue
 		}
-
-		stt.Destination.Ports = destPorts
 
 		svc.TrafficTargets = append(svc.TrafficTargets, svcTTKey)
 
@@ -157,10 +148,36 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 	}
 }
 
+func (b *Builder) buildTrafficTargetDestination(topology *Topology, tt *access.TrafficTarget, pods []*corev1.Pod, svc *Service) (ServiceTrafficTargetDestination, error) {
+	dest := ServiceTrafficTargetDestination{
+		ServiceAccount: tt.Destination.Name,
+		Namespace:      tt.Destination.Namespace,
+	}
+
+	// Find out which are the destination pods.
+	for _, pod := range pods {
+		if pod.Status.PodIP == "" {
+			continue
+		}
+
+		dest.Pods = append(dest.Pods, getOrCreatePod(topology, pod))
+	}
+
+	var err error
+
+	// Find out which ports can be used on the destination service.
+	dest.Ports, err = b.getTrafficTargetDestinationPorts(svc, tt)
+	if err != nil {
+		return dest, fmt.Errorf("unable to find destination ports on Service %q: %w", Key{Namespace: svc.Namespace, Name: svc.Name}, err)
+	}
+
+	return dest, nil
+}
+
 func addSourceAndDestinationToPods(topology *Topology, sources []ServiceTrafficTargetSource, svcTTKey ServiceTrafficTargetKey) {
 	for _, source := range sources {
 		for _, podKey := range source.Pods {
-			// Skip pods which haven't been added to the topology.
+			// Skip pods which have not been added to the topology.
 			if _, ok := topology.Pods[podKey]; !ok {
 				continue
 			}
@@ -170,7 +187,7 @@ func addSourceAndDestinationToPods(topology *Topology, sources []ServiceTrafficT
 	}
 
 	for _, podKey := range topology.ServiceTrafficTargets[svcTTKey].Destination.Pods {
-		// Skip pods which haven't been added to the topology.
+		// Skip pods which have not been added to the topology.
 		if _, ok := topology.Pods[podKey]; !ok {
 			continue
 		}
@@ -190,9 +207,17 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 	}
 
 	tsKey := Key{trafficSplit.Name, trafficSplit.Namespace}
-	topology.TrafficSplits[tsKey] = ts
 
 	svc, ok := topology.Services[svcKey]
+	// The current version of the spec does not support having more than one TrafficSplit attached to the same service.
+	if ok && len(svc.TrafficSplits) > 0 {
+		b.Logger.Warnf("Service %q already has a TrafficSplit attached, TrafficSplit %q will not be evaluated", svcKey, tsKey)
+
+		return
+	}
+
+	topology.TrafficSplits[tsKey] = ts
+
 	if !ok {
 		err := fmt.Errorf("unable to find root Service %q", svcKey)
 		ts.AddError(err)
