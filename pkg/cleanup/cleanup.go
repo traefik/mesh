@@ -11,21 +11,21 @@ import (
 
 // Cleanup holds the clients for the various resource controllers.
 type Cleanup struct {
-	client    k8s.Client
-	log       logrus.FieldLogger
 	namespace string
-	dns       *dns.Client
+	client    k8s.Client
+	dnsClient *dns.Client
+	logger    logrus.FieldLogger
 }
 
 // NewCleanup returns an initialized cleanup object.
-func NewCleanup(log logrus.FieldLogger, client k8s.Client, namespace string) *Cleanup {
-	dns := dns.NewClient(log, client)
+func NewCleanup(logger logrus.FieldLogger, client k8s.Client, namespace string) *Cleanup {
+	dnsClient := dns.NewClient(logger, client.KubernetesClient())
 
 	return &Cleanup{
 		client:    client,
-		log:       log,
+		logger:    logger,
 		namespace: namespace,
-		dns:       dns,
+		dnsClient: dnsClient,
 	}
 }
 
@@ -49,7 +49,7 @@ func (c *Cleanup) CleanShadowServices() error {
 
 // RestoreDNSConfig restores the configmap and restarts the DNS pods.
 func (c *Cleanup) RestoreDNSConfig() error {
-	provider, err := c.dns.CheckDNSProvider()
+	provider, err := c.dnsClient.CheckDNSProvider()
 	if err != nil {
 		return err
 	}
@@ -57,11 +57,11 @@ func (c *Cleanup) RestoreDNSConfig() error {
 	// Restore configmaps based on DNS provider.
 	switch provider {
 	case dns.CoreDNS:
-		if err := c.dns.RestoreCoreDNS(); err != nil {
+		if err := c.dnsClient.RestoreCoreDNS(); err != nil {
 			return fmt.Errorf("unable to restore CoreDNS: %w", err)
 		}
 	case dns.KubeDNS:
-		if err := c.dns.RestoreKubeDNS(); err != nil {
+		if err := c.dnsClient.RestoreKubeDNS(); err != nil {
 			return fmt.Errorf("unable to restore KubeDNS: %w", err)
 		}
 	}

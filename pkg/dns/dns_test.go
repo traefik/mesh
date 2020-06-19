@@ -58,7 +58,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
-			client := NewClient(log, clt)
+			client := NewClient(log, clt.KubernetesClient())
 			provider, err := client.CheckDNSProvider()
 
 			if test.expectedErr {
@@ -116,7 +116,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
-			client := NewClient(log, clt)
+			client := NewClient(log, clt.KubernetesClient())
 			err := client.ConfigureCoreDNS("kube-system", "titi", "toto")
 			if test.expectedErr {
 				assert.Error(t, err)
@@ -171,7 +171,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
-			client := NewClient(log, clt)
+			client := NewClient(log, clt.KubernetesClient())
 			err := client.ConfigureKubeDNS("cluster.local", "maesh")
 			if test.expectedErr {
 				assert.Error(t, err)
@@ -219,7 +219,7 @@ func TestRestoreCoreDNS(t *testing.T) {
 
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
-			client := NewClient(log, clt)
+			client := NewClient(log, clt.KubernetesClient())
 			err := client.RestoreCoreDNS()
 			assert.NoError(t, err)
 
@@ -262,7 +262,7 @@ func TestRestoreKubeDNS(t *testing.T) {
 
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
-			client := NewClient(log, clt)
+			client := NewClient(log, clt.KubernetesClient())
 			err := client.RestoreKubeDNS()
 			assert.NoError(t, err)
 
