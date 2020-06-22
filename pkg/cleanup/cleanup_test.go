@@ -8,6 +8,7 @@ import (
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -16,13 +17,13 @@ func TestCleanup_New(t *testing.T) {
 	defer cancel()
 
 	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", false)
-	log := logrus.New()
+	logger := logrus.New()
 
-	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.DebugLevel)
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logrus.DebugLevel)
 
-	cln := NewCleanup(log, clientMock, metav1.NamespaceDefault)
-	assert.NotNil(t, cln)
+	cleanup := NewCleanup(logger, clientMock.KubernetesClient(), metav1.NamespaceDefault)
+	require.NotNil(t, cleanup)
 }
 
 func TestCleanup_CleanShadowServices(t *testing.T) {
@@ -30,24 +31,24 @@ func TestCleanup_CleanShadowServices(t *testing.T) {
 	defer cancel()
 
 	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", false)
-	log := logrus.New()
+	logger := logrus.New()
 
-	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.DebugLevel)
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logrus.DebugLevel)
 
-	cln := NewCleanup(log, clientMock, "maesh")
-	assert.NotNil(t, cln)
+	cleanup := NewCleanup(logger, clientMock.KubernetesClient(), "maesh")
+	require.NotNil(t, cleanup)
 
-	err := cln.CleanShadowServices()
-	assert.NoError(t, err)
+	err := cleanup.CleanShadowServices()
+	require.NoError(t, err)
 
-	sl, err := clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{
+	serviceList, err := clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{
 		LabelSelector: "app=maesh,type=shadow",
 	})
-	assert.NoError(t, err)
-	assert.Len(t, sl.Items, 0)
+	require.NoError(t, err)
+	assert.Len(t, serviceList.Items, 0)
 
-	srv, err := clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{})
-	assert.NoError(t, err)
-	assert.Len(t, srv.Items, 2)
+	serviceList, err = clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{})
+	require.NoError(t, err)
+	assert.Len(t, serviceList.Items, 2)
 }
