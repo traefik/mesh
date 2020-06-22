@@ -8,15 +8,37 @@ spec:
     spec:
       volumes:
         - configMap:
-            name: "other-cfgmap"
+            name: "coredns-custom"
         - configMap:
             name: "coredns-cfgmap"
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: other-cfgmap
+  name: coredns-custom
   namespace: kube-system
+data:
+  test.server: must be present
+  maesh.server: |
+    #### Begin Maesh Block
+    maesh:53 {
+        errors
+        rewrite continue {
+            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh toto-{1}-6d61657368-{2}.toto.svc.titi
+            answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.toto\.svc\.titi {1}.{2}.maesh
+        }
+        kubernetes titi in-addr.arpa ip6.arpa {
+            pods insecure
+            upstream
+            fallthrough in-addr.arpa ip6.arpa
+        }
+        forward . /etc/resolv.conf
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
+    #### End Maesh Block
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -43,22 +65,3 @@ data:
             reload
             loadbalance
         }
-    #### Begin Maesh Block
-    maesh:53 {
-        errors
-        rewrite continue {
-            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh toto-{1}-6d61657368-{2}.toto.svc.titi
-            answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.toto\.svc\.titi {1}.{2}.maesh
-        }
-        kubernetes titi in-addr.arpa ip6.arpa {
-            pods insecure
-            upstream
-            fallthrough in-addr.arpa ip6.arpa
-        }
-        forward . /etc/resolv.conf
-        cache 30
-        loop
-        reload
-        loadbalance
-    }
-    #### End Maesh Block
