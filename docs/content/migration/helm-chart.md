@@ -27,3 +27,9 @@ option as described in the [documentation](../install.md#access-control-list).
 
 The `controller.mesh.defaultMode` option has been deprecated and will be removed in a future major release.
 You should use the new `defaultMode` option to configure the default traffic mode for Maesh services.
+
+### Prometheus and Grafana services
+
+Prior to version `v2.1`, when the Metrics chart is deployed, Prometheus and Grafana services are exposed by default through 
+a `NodePort`. For security reasons, those services are not exposed by default anymore. To expose them you should use the 
+new `prometheus.service` and `grafana.service` options, more details in the corresponding [values.yaml](https://github.com/containous/maesh/blob/e59b861ac91261b950663410a6223a02fc7e2290/helm/chart/maesh/charts/metrics/values.yaml).
