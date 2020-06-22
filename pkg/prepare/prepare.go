@@ -18,19 +18,19 @@ import (
 
 // Prepare holds the clients for the various resource controllers.
 type Prepare struct {
-	client k8s.Client
-	log    logrus.FieldLogger
-	dns    *dns.Client
+	client    k8s.Client
+	dnsClient *dns.Client
+	logger    logrus.FieldLogger
 }
 
 // NewPrepare returns an initialized prepare object.
-func NewPrepare(log logrus.FieldLogger, client k8s.Client) *Prepare {
-	dns := dns.NewClient(log, client)
+func NewPrepare(logger logrus.FieldLogger, client k8s.Client) *Prepare {
+	dnsClient := dns.NewClient(logger, client.KubernetesClient())
 
 	return &Prepare{
-		client: client,
-		log:    log,
-		dns:    dns,
+		client:    client,
+		logger:    logger,
+		dnsClient: dnsClient,
 	}
 }
 
@@ -121,17 +121,17 @@ func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{})
 
 // CheckDNSProvider checks if the required informers can start and sync in a reasonable time.
 func (p *Prepare) CheckDNSProvider() (dns.Provider, error) {
-	return p.dns.CheckDNSProvider()
+	return p.dnsClient.CheckDNSProvider()
 }
 
 // ConfigureCoreDNS patches the CoreDNS configuration for Maesh.
 func (p *Prepare) ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespace string) error {
-	return p.dns.ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespace)
+	return p.dnsClient.ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespace)
 }
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
 func (p *Prepare) ConfigureKubeDNS(clusterDomain, maeshNamespace string) error {
-	return p.dns.ConfigureKubeDNS(clusterDomain, maeshNamespace)
+	return p.dnsClient.ConfigureKubeDNS(clusterDomain, maeshNamespace)
 }
 
 // ConfigureDNS configures and patches the DNS system.
