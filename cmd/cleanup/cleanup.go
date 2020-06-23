@@ -23,21 +23,21 @@ func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
-	log, err := cmd.NewLogger(cConfig.LogFormat, cConfig.LogLevel, false)
+	logger, err := cmd.NewLogger(cConfig.LogFormat, cConfig.LogLevel, false)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debug("Starting maesh cleanup...")
-	log.Debugf("Using masterURL: %q", cConfig.MasterURL)
-	log.Debugf("Using kubeconfig: %q", cConfig.KubeConfig)
+	logger.Debug("Starting maesh cleanup...")
+	logger.Debugf("Using masterURL: %q", cConfig.MasterURL)
+	logger.Debugf("Using kubeconfig: %q", cConfig.KubeConfig)
 
-	clients, err := k8s.NewClient(log, cConfig.MasterURL, cConfig.KubeConfig)
+	clients, err := k8s.NewClient(logger, cConfig.MasterURL, cConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %w", err)
 	}
 
-	c := cleanup.NewCleanup(log, clients, cConfig.Namespace)
+	c := cleanup.NewCleanup(logger, clients.KubernetesClient(), cConfig.Namespace)
 
 	if err := c.CleanShadowServices(); err != nil {
 		return fmt.Errorf("error encountered during cluster cleanup: %w", err)
