@@ -12,6 +12,17 @@
         "rule": "Host(`svc-b.my-ns.maesh`) || Host(`10.10.14.1`)",
         "priority": 1
       },
+      "my-ns-svc-b-8081": {
+        "entryPoints": [
+          "http-10001"
+        ],
+        "middlewares": [
+          "block-all-middleware"
+        ],
+        "service": "block-all-service",
+        "rule": "Host(`svc-b.my-ns.maesh`) || Host(`10.10.14.1`)",
+        "priority": 1
+      },
       "my-ns-svc-b-tt-8080-traffic-target-direct": {
         "entryPoints": [
           "http-10000"
@@ -20,6 +31,17 @@
           "my-ns-svc-b-tt-whitelist-traffic-target-direct"
         ],
         "service": "my-ns-svc-b-tt-8080-traffic-target",
+        "rule": "Host(`svc-b.my-ns.maesh`) || Host(`10.10.14.1`)",
+        "priority": 2001
+      },
+      "my-ns-svc-b-tt-8081-traffic-target-direct": {
+        "entryPoints": [
+          "http-10001"
+        ],
+        "middlewares": [
+          "my-ns-svc-b-tt-whitelist-traffic-target-direct"
+        ],
+        "service": "my-ns-svc-b-tt-8081-traffic-target",
         "rule": "Host(`svc-b.my-ns.maesh`) || Host(`10.10.14.1`)",
         "priority": 2001
       },
@@ -42,6 +64,16 @@
           "servers": [
             {
               "url": "http://10.10.3.1:8080"
+            }
+          ],
+          "passHostHeader": true
+        }
+      },
+      "my-ns-svc-b-tt-8081-traffic-target": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://10.10.3.1:8081"
             }
           ],
           "passHostHeader": true
