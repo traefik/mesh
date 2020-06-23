@@ -38,14 +38,13 @@ helm install maesh helm/chart/maesh --set image.pullPolicy=IfNotPresent --set im
 
 ## KubeDNS support
 
-Maesh can support KubeDNS:
+Maesh supports KubeDNS:
 
 ```bash
 helm install maesh maesh/maesh --set kubedns=true
 ```
 
-With this parameter Maesh will install a CoreDNS as a daemonset.
-KubeDNS will be patched with [stubDomains](https://v1-17.docs.kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#example-stub-domain).
+With the `kubedns` parameter Maesh will install CoreDNS and patch KubeDNS to use it as a [stubDomain](https://v1-17.docs.kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#example-stub-domain).
 
 ## Custom cluster domain
 
