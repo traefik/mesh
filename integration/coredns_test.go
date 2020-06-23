@@ -18,6 +18,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 		"coredns/coredns:1.4.0",
 		"coredns/coredns:1.5.2",
 		"coredns/coredns:1.6.3",
+		"coredns/coredns:1.7.0",
 		"giantswarm/tiny-tools:3.9",
 	}
 	s.startk3s(c, requiredImages)
@@ -87,6 +88,10 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		{
 			desc:    "CoreDNS 1.6.3",
 			version: "1.6.3",
+		},
+		{
+			desc:    "CoreDNS 1.7.0",
+			version: "1.7.0",
 		},
 	}
 
