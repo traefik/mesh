@@ -67,6 +67,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 			defaultTrafficType: "tcp",
 			tcpStateTable: map[servicePort]int32{
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 5000,
+				{Namespace: "my-ns", Name: "svc-a", Port: 8081}: 5001,
 			},
 			topology:   "testdata/acl-disabled-tcp-basic-topology.json",
 			wantConfig: "testdata/acl-disabled-tcp-basic-config.json",
@@ -77,6 +78,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 			defaultTrafficType: "udp",
 			udpStateTable: map[servicePort]int32{
 				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 15000,
+				{Namespace: "my-ns", Name: "svc-a", Port: 8081}: 15001,
 			},
 			topology:   "testdata/acl-disabled-udp-basic-topology.json",
 			wantConfig: "testdata/acl-disabled-udp-basic-config.json",
@@ -101,6 +103,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 			defaultTrafficType: "tcp",
 			tcpStateTable: map[servicePort]int32{
 				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 5000,
+				{Namespace: "my-ns", Name: "svc-b", Port: 8081}: 5001,
 			},
 			topology:   "testdata/acl-enabled-tcp-basic-topology.json",
 			wantConfig: "testdata/acl-enabled-tcp-basic-config.json",

@@ -638,14 +638,14 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 	logger.SetOutput(ioutil.Discard)
 
 	return &Builder{
-		ServiceLister:        svcLister,
-		EndpointsLister:      epLister,
-		PodLister:            podLister,
-		TrafficTargetLister:  trafficTargetLister,
-		TrafficSplitLister:   trafficSplitLister,
-		HTTPRouteGroupLister: httpRouteGroupLister,
-		TCPRoutesLister:      tcpRouteLister,
-		Logger:               logger,
+		serviceLister:        svcLister,
+		endpointsLister:      epLister,
+		podLister:            podLister,
+		trafficTargetLister:  trafficTargetLister,
+		trafficSplitLister:   trafficSplitLister,
+		httpRouteGroupLister: httpRouteGroupLister,
+		tcpRoutesLister:      tcpRouteLister,
+		logger:               logger,
 	}, nil
 }
 
