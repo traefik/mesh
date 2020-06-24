@@ -608,7 +608,7 @@ func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topolo
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
-			p.logger.Warnf("Unable to resolve HTTP service port %q in Pod %q", svcPort.Name, podKey)
+			p.logger.Warnf("Unable to resolve HTTP service port %q for Pod %q", svcPort.Name, podKey)
 			continue
 		}
 
@@ -633,13 +633,17 @@ func (p *Provider) buildHTTPServiceFromTrafficTarget(t *topology.Topology, tt *t
 	for _, podKey := range tt.Destination.Pods {
 		pod, ok := t.Pods[podKey]
 		if !ok {
-			p.logger.Errorf("Unable to find Pod %q for HTTP service from Traffic Target %s@%s", podKey, topology.Key{Name: tt.Name, Namespace: tt.Namespace})
+			p.logger.Errorf("Unable to find Pod %q for HTTP service from Traffic Target %q", podKey, topology.ServiceTrafficTargetKey{
+				Service:       tt.Service,
+				TrafficTarget: topology.Key{Name: tt.Name, Namespace: tt.Namespace},
+			})
+
 			continue
 		}
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
-			p.logger.Warnf("Unable to resolve HTTP service port %q in Pod %q", svcPort.TargetPort, podKey)
+			p.logger.Warnf("Unable to resolve HTTP service port %q for Pod %q", svcPort.TargetPort, podKey)
 			continue
 		}
 
@@ -670,7 +674,7 @@ func (p *Provider) buildTCPServiceFromService(t *topology.Topology, svc *topolog
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
-			p.logger.Warnf("Unable to resolve TCP service port %q in Pod %q", svcPort.Name, podKey)
+			p.logger.Warnf("Unable to resolve TCP service port %q for Pod %q", svcPort.Name, podKey)
 			continue
 		}
 
@@ -700,7 +704,7 @@ func (p *Provider) buildTCPServiceFromTrafficTarget(t *topology.Topology, tt *to
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
-			p.logger.Warnf("Unable to resolve TCP service port %q in Pod %q", svcPort.Name, podKey)
+			p.logger.Warnf("Unable to resolve TCP service port %q for Pod %q", svcPort.Name, podKey)
 			continue
 		}
 
@@ -730,7 +734,7 @@ func (p *Provider) buildUDPServiceFromService(t *topology.Topology, svc *topolog
 
 		hostPort, ok := topology.ResolveServicePort(svcPort, pod.ContainerPorts)
 		if !ok {
-			p.logger.Warnf("Unable to resolve UDP service port %q in Pod %q", svcPort.Name, podKey)
+			p.logger.Warnf("Unable to resolve UDP service port %q for Pod %q", svcPort.Name, podKey)
 			continue
 		}
 

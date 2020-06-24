@@ -259,7 +259,7 @@ func (s *ShadowServiceManager) getMappedPort(stateTable PortMapper, name, namesp
 		return 0, fmt.Errorf("unable to add service port to the state table: %w", err)
 	}
 
-	s.logger.Debugf("Service %s/%s %d as been assigned port %d", namespace, name, port, mappedPort)
+	s.logger.Debugf("Service %s/%s %d has been assigned port %d", namespace, name, port, mappedPort)
 
 	return mappedPort, nil
 }
