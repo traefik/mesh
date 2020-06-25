@@ -115,10 +115,10 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 	svcE := createService("my-ns", "svc-e", annotations, svcPorts, selectorAppE, "10.10.1.19")
 	podE := createPod("my-ns", "app-e", saE, svcE.Spec.Selector, "10.10.2.4")
 
-	epB := createEndpoints(svcB, []*corev1.Pod{podB})
-	epC := createEndpoints(svcC, []*corev1.Pod{podC})
-	epD := createEndpoints(svcD, []*corev1.Pod{podD})
-	epE := createEndpoints(svcE, []*corev1.Pod{podE})
+	epB := createEndpoints(svcB, createEndpointSubset(svcPorts, podB))
+	epC := createEndpoints(svcC, createEndpointSubset(svcPorts, podC))
+	epD := createEndpoints(svcD, createEndpointSubset(svcPorts, podD))
+	epE := createEndpoints(svcE, createEndpointSubset(svcPorts, podE))
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
@@ -180,9 +180,9 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	svcD := createService("my-ns", "svc-d", annotations, svcPorts, selectorAppD, "10.10.1.18")
 	podD := createPod("my-ns", "app-d", saD, svcD.Spec.Selector, "10.10.2.3")
 
-	epB := createEndpoints(svcB, []*corev1.Pod{podB})
-	epC := createEndpoints(svcC, []*corev1.Pod{podC})
-	epD := createEndpoints(svcD, []*corev1.Pod{podD})
+	epB := createEndpoints(svcB, createEndpointSubset(svcPorts, podB))
+	epC := createEndpoints(svcC, createEndpointSubset(svcPorts, podC))
+	epD := createEndpoints(svcD, createEndpointSubset(svcPorts, podD))
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
@@ -244,10 +244,10 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	svcE := createService("my-ns", "svc-e", annotations, svcPorts, selectorAppE, "10.10.1.19")
 	podE := createPod("my-ns", "app-e", saE, svcE.Spec.Selector, "10.10.2.4")
 
-	epB := createEndpoints(svcB, []*corev1.Pod{podB})
-	epC := createEndpoints(svcC, []*corev1.Pod{podC})
-	epD := createEndpoints(svcD, []*corev1.Pod{podD})
-	epE := createEndpoints(svcE, []*corev1.Pod{podE})
+	epB := createEndpoints(svcB, createEndpointSubset(svcPorts, podB))
+	epC := createEndpoints(svcC, createEndpointSubset(svcPorts, podC))
+	epD := createEndpoints(svcD, createEndpointSubset(svcPorts, podD))
+	epE := createEndpoints(svcE, createEndpointSubset(svcPorts, podE))
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
@@ -308,7 +308,7 @@ func TestTopologyBuilder_BuildWithTrafficTarget(t *testing.T) {
 	svcB := createService("my-ns", "svc-b", annotations, svcPorts, selectorAppB, "10.10.1.16")
 	podB := createPod("my-ns", "app-b", saB, svcB.Spec.Selector, "10.10.2.1")
 
-	epB := createEndpoints(svcB, []*corev1.Pod{podB})
+	epB := createEndpoints(svcB, createEndpointSubset(svcPorts, podB))
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
@@ -361,9 +361,9 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *t
 	svcD := createService("my-ns", "svc-d", annotations, svcPorts, selectorAppD, "10.10.1.18")
 	podD := createPod("my-ns", "app-d", saD, svcD.Spec.Selector, "10.10.2.3")
 
-	epB := createEndpoints(svcB, []*corev1.Pod{podB})
-	epC := createEndpoints(svcC, []*corev1.Pod{podC})
-	epD := createEndpoints(svcD, []*corev1.Pod{podD})
+	epB := createEndpoints(svcB, createEndpointSubset(svcPorts, podB))
+	epC := createEndpoints(svcC, createEndpointSubset(svcPorts, podC))
+	epD := createEndpoints(svcD, createEndpointSubset(svcPorts, podD))
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
@@ -407,7 +407,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 	svcB := createService("my-ns", "svc-b", annotations, svcbPorts, selectorAppB, "10.10.1.16")
 	podB := createPod("my-ns", "app-b", saB, svcB.Spec.Selector, "10.10.2.1")
 
-	epB := createEndpoints(svcB, []*corev1.Pod{podB})
+	epB := createEndpoints(svcB, createEndpointSubset(svcbPorts, podB))
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
@@ -453,7 +453,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	svcB := createService("my-ns", "svc-b", annotations, svcbPorts, selectorAppB, "10.10.1.16")
 	podB := createPod("my-ns", "app-b", saB, svcB.Spec.Selector, "10.10.2.1")
 
-	epB := createEndpoints(svcB, []*corev1.Pod{podB})
+	epB := createEndpoints(svcB, createEndpointSubset(svcbPorts, podB))
 
 	tt := createTrafficTarget("my-ns", "tt", saB, "", []*corev1.ServiceAccount{saA}, nil, []string{})
 
@@ -485,13 +485,13 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndMismatchServicePort(t *testing
 	svcB1Ports := []corev1.ServicePort{svcPort("port-8080", 8080, 8080)}
 	podB1 := createPod("my-ns", "app-b1", saB, selectorAppB1, "10.10.1.2")
 	svcB1 := createService("my-ns", "svc-b1", annotations, svcB1Ports, selectorAppB1, "10.10.1.16")
-	epB1 := createEndpoints(svcB1, []*corev1.Pod{podB1})
+	epB1 := createEndpoints(svcB1, createEndpointSubset(svcB1Ports, podB1))
 
 	selectorAppB2 := map[string]string{"app": "app-b2"}
 	svcB2Ports := []corev1.ServicePort{svcPort("port-80", 80, 80)}
 	podB2 := createPod("my-ns", "app-b2", saB, selectorAppB2, "10.10.1.3")
 	svcB2 := createService("my-ns", "svc-b2", annotations, svcB2Ports, selectorAppB2, "10.10.1.17")
-	epB2 := createEndpoints(svcB2, []*corev1.Pod{podB2})
+	epB2 := createEndpoints(svcB2, createEndpointSubset(svcB2Ports, podB2))
 
 	tt := createTrafficTarget("my-ns", "tt", saB, "80", []*corev1.ServiceAccount{saA}, nil, []string{})
 
@@ -530,7 +530,7 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 	podC1 := createPod("my-ns", "app-c-1", saC, svcC.Spec.Selector, "10.10.3.1")
 	podC2 := createPod("my-ns", "app-c-2", saC, svcC.Spec.Selector, "10.10.3.2")
 
-	epC := createEndpoints(svcC, []*corev1.Pod{podC1, podC2})
+	epC := createEndpoints(svcC, createEndpointSubset(svccPorts, podC1, podC2))
 
 	tt := createTrafficTarget("my-ns", "tt", saC, "8080", []*corev1.ServiceAccount{saA, saB}, nil, []string{})
 
@@ -582,6 +582,68 @@ func TestTopologyBuilder_EmptyTrafficTargetDestinationNamespace(t *testing.T) {
 	actual, exists := res.TrafficTargets[Key{Name: "test", Namespace: namespace}]
 	assert.Equal(t, true, exists)
 	assert.Equal(t, namespace, actual.Destination.Namespace)
+}
+
+func TestTopologyBuilder_BuildServiceWithPodPortMixture(t *testing.T) {
+	serviceAccount := createServiceAccount("my-ns", "service-account")
+
+	podV1 := createPod(
+		"my-ns",
+		"pod-v1",
+		serviceAccount,
+		map[string]string{"app": "my-app", "version": "v1"},
+		"10.10.1.1",
+	)
+
+	podV2 := createPod(
+		"my-ns",
+		"pod-v2",
+		serviceAccount,
+		map[string]string{"app": "my-app", "version": "v2"},
+		"10.10.1.2",
+	)
+
+	svcPorts := []corev1.ServicePort{
+		{
+			Name:       "port-80",
+			Port:       80,
+			TargetPort: intstr.FromString("name"),
+		},
+		{
+			Name:       "port-8080",
+			Port:       8080,
+			TargetPort: intstr.FromInt(8080),
+		},
+	}
+
+	svc := createService(
+		"my-ns",
+		"svc",
+		nil,
+		svcPorts,
+		map[string]string{"app": "my-app"},
+		"10.10.1.3",
+	)
+
+	endpoints := createEndpoints(svc,
+		createEndpointSubset([]corev1.ServicePort{svcPorts[0]}, podV1),
+		createEndpointSubset([]corev1.ServicePort{svcPorts[1]}, podV1, podV2),
+	)
+
+	k8sClient := fake.NewSimpleClientset(endpoints, svc, podV1, podV2)
+	smiAccessClient := accessfake.NewSimpleClientset()
+	smiSplitClient := splitfake.NewSimpleClientset()
+	smiSpecClient := specfake.NewSimpleClientset()
+
+	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
+	require.NoError(t, err)
+
+	resourceFilter := mk8s.NewResourceFilter()
+
+	got, err := builder.Build(resourceFilter)
+	require.NoError(t, err)
+
+	assertTopology(t, "testdata/topology-service-with-pod-port-mixture.json", got)
 }
 
 // createBuilder initializes the different k8s factories and start them, initializes listers and create
@@ -773,9 +835,9 @@ func createService(namespace, name string, annotations map[string]string, target
 	}
 }
 
-func createEndpoints(svc *corev1.Service, pods []*corev1.Pod) *corev1.Endpoints {
-	ports := make([]corev1.EndpointPort, len(svc.Spec.Ports))
-	for i, port := range svc.Spec.Ports {
+func createEndpointSubset(svcPorts []corev1.ServicePort, pods ...*corev1.Pod) corev1.EndpointSubset {
+	ports := make([]corev1.EndpointPort, len(svcPorts))
+	for i, port := range svcPorts {
 		ports[i] = corev1.EndpointPort{
 			Name:     port.Name,
 			Port:     port.TargetPort.IntVal,
@@ -797,6 +859,13 @@ func createEndpoints(svc *corev1.Service, pods []*corev1.Pod) *corev1.Endpoints 
 		}
 	}
 
+	return corev1.EndpointSubset{
+		Addresses: addresses,
+		Ports:     ports,
+	}
+}
+
+func createEndpoints(svc *corev1.Service, subsets ...corev1.EndpointSubset) *corev1.Endpoints {
 	return &corev1.Endpoints{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Endpoints",
@@ -806,12 +875,7 @@ func createEndpoints(svc *corev1.Service, pods []*corev1.Pod) *corev1.Endpoints 
 			Name:      svc.Name,
 			Namespace: svc.Namespace,
 		},
-		Subsets: []corev1.EndpointSubset{
-			{
-				Addresses: addresses,
-				Ports:     ports,
-			},
-		},
+		Subsets: subsets,
 	}
 }
 
