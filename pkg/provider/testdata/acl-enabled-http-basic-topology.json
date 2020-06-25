@@ -11,13 +11,21 @@
           "protocol": "TCP",
           "port": 8080,
           "targetPort": 8080
+        },
+        {
+          "name": "port-8081",
+          "protocol": "TCP",
+          "port": 8081,
+          "targetPort": "web"
         }
       ],
       "clusterIp": "10.10.14.1",
       "pods": [
         "pod-b@my-ns"
       ],
-      "trafficTargets": ["svc-b@my-ns:tt@my-ns"]
+      "trafficTargets": [
+        "svc-b@my-ns:tt@my-ns"
+      ]
     }
   },
   "pods": {
@@ -31,7 +39,14 @@
       "name": "pod-b",
       "namespace": "my-ns",
       "serviceAccount": "server",
-      "ip": "10.10.3.1"
+      "ip": "10.10.3.1",
+      "containerPorts": [
+        {
+          "name": "web",
+          "protocol": "TCP",
+          "containerPort": 8081
+        }
+      ]
     }
   },
   "serviceTrafficTargets": {
@@ -57,6 +72,12 @@
             "protocol": "TCP",
             "port": 8080,
             "targetPort": 8080
+          },
+          {
+            "name": "port-8081",
+            "protocol": "TCP",
+            "port": 8081,
+            "targetPort": "web"
           }
         ],
         "pods": [

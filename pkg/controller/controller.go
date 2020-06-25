@@ -161,16 +161,16 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 		c.clients.KubernetesClient(),
 	)
 
-	c.topologyBuilder = &topology.Builder{
-		ServiceLister:        c.serviceLister,
-		EndpointsLister:      c.endpointsLister,
-		PodLister:            c.podLister,
-		TrafficTargetLister:  c.trafficTargetLister,
-		TrafficSplitLister:   c.trafficSplitLister,
-		HTTPRouteGroupLister: c.httpRouteGroupLister,
-		TCPRoutesLister:      c.tcpRouteLister,
-		Logger:               c.logger,
-	}
+	c.topologyBuilder = topology.NewBuilder(
+		c.serviceLister,
+		c.endpointsLister,
+		c.podLister,
+		c.trafficTargetLister,
+		c.trafficSplitLister,
+		c.httpRouteGroupLister,
+		c.tcpRouteLister,
+		c.logger,
+	)
 
 	providerCfg := provider.Config{
 		MinHTTPPort:        c.cfg.MinHTTPPort,

@@ -11,6 +11,12 @@
           "protocol": "TCP",
           "port": 8080,
           "targetPort": 8080
+        },
+        {
+          "name": "port-8081",
+          "protocol": "TCP",
+          "port": 8081,
+          "targetPort": "web"
         }
       ],
       "clusterIp": "10.10.14.1",
@@ -25,13 +31,27 @@
       "name": "pod-a1",
       "namespace": "my-ns",
       "serviceAccount": "default",
-      "ip": "10.10.2.1"
+      "ip": "10.10.2.1",
+      "containerPorts": [
+        {
+          "name": "web",
+          "protocol": "TCP",
+          "containerPort": 8080
+        }
+      ]
     },
     "pod-a2@my-ns": {
       "name": "pod-a2",
       "namespace": "my-ns",
       "serviceAccount": "default",
-      "ip": "10.10.2.2"
+      "ip": "10.10.2.2",
+      "containerPorts": [
+        {
+          "name": "web",
+          "protocol": "TCP",
+          "containerPort": 8081
+        }
+      ]
     }
   },
   "serviceTrafficTargets": {},
