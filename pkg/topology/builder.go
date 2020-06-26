@@ -729,20 +729,28 @@ func (r *resources) indexPodsByService(resourceFilter *mk8s.ResourceFilter, eps 
 			continue
 		}
 
+		// This map keeps track of service pods already indexed. A service pod can be listed in multiple endpoint
+		// subset in function of the matched service ports.
+		indexedServicePods := make(map[Key]struct{})
+
 		for _, subset := range ep.Subsets {
 			for _, address := range subset.Addresses {
-				r.indexPodByService(ep, address, podsByName)
+				r.indexPodByService(ep, address, podsByName, indexedServicePods)
 			}
 		}
 	}
 }
 
-func (r *resources) indexPodByService(ep *corev1.Endpoints, address corev1.EndpointAddress, podsByName map[Key]*corev1.Pod) {
+func (r *resources) indexPodByService(ep *corev1.Endpoints, address corev1.EndpointAddress, podsByName map[Key]*corev1.Pod, indexedServicePods map[Key]struct{}) {
 	if address.TargetRef == nil {
 		return
 	}
 
 	keyPod := Key{Name: address.TargetRef.Name, Namespace: address.TargetRef.Namespace}
+
+	if _, exists := indexedServicePods[keyPod]; exists {
+		return
+	}
 
 	pod, ok := podsByName[keyPod]
 	if !ok {
@@ -752,12 +760,14 @@ func (r *resources) indexPodByService(ep *corev1.Endpoints, address corev1.Endpo
 	keySA := Key{Name: pod.Spec.ServiceAccountName, Namespace: pod.Namespace}
 	keyEP := Key{Name: ep.Name, Namespace: ep.Namespace}
 
-	if _, ok := r.PodsBySvcBySa[keySA]; !ok {
+	if _, exists := r.PodsBySvcBySa[keySA]; !exists {
 		r.PodsBySvcBySa[keySA] = make(map[Key][]*corev1.Pod)
 	}
 
 	r.PodsBySvcBySa[keySA][keyEP] = append(r.PodsBySvcBySa[keySA][keyEP], pod)
 	r.PodsBySvc[keyEP] = append(r.PodsBySvc[keyEP], pod)
+
+	indexedServicePods[keyPod] = struct{}{}
 }
 
 func (r *resources) indexSMIResources(resourceFilter *mk8s.ResourceFilter, tts []*access.TrafficTarget, tss []*split.TrafficSplit, tcpRts []*spec.TCPRoute, httpRtGrps []*spec.HTTPRouteGroup) {

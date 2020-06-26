@@ -1,0 +1,47 @@
+{
+  "services": {
+    "svc@my-ns": {
+      "name": "svc",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "my-app"
+      },
+      "ports": [
+        {
+          "name": "port-80",
+          "port": 80,
+          "targetPort": "name"
+        },
+        {
+          "name": "port-8080",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.3",
+      "pods": [
+        "pod-v1@my-ns",
+        "pod-v2@my-ns"
+      ],
+      "trafficTargets": []
+    }
+  },
+  "pods": {
+    "pod-v1@my-ns": {
+      "name": "pod-v1",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account",
+      "ip": "10.10.1.1",
+      "sourceOf": []
+    },
+    "pod-v2@my-ns": {
+      "name": "pod-v2",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account",
+      "ip": "10.10.1.2",
+      "destinationOf": []
+    }
+  },
+  "serviceTrafficTargets": {},
+  "trafficSplits": {}
+}
