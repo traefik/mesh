@@ -114,11 +114,11 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 		WatchNamespaces:  config.WatchNamespaces,
 		IgnoreNamespaces: config.IgnoreNamespaces,
 		MinHTTPPort:      minHTTPPort,
-		MaxHTTPPort:      minHTTPPort + config.LimitHTTPPort,
+		MaxHTTPPort:      minHTTPPort + config.LimitHTTPPort - 1,
 		MinTCPPort:       minTCPPort,
-		MaxTCPPort:       minTCPPort + config.LimitTCPPort,
+		MaxTCPPort:       minTCPPort + config.LimitTCPPort - 1,
 		MinUDPPort:       minUDPPort,
-		MaxUDPPort:       minUDPPort + config.LimitUDPPort,
+		MaxUDPPort:       minUDPPort + config.LimitUDPPort - 1,
 	}, apiServer, log)
 
 	var wg sync.WaitGroup

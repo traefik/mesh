@@ -571,7 +571,7 @@ func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topolog
 
 func (p Provider) buildHTTPEntrypoint(portID int) (string, error) {
 	port := p.config.MinHTTPPort + int32(portID)
-	if port >= p.config.MaxHTTPPort {
+	if port > p.config.MaxHTTPPort {
 		return "", errors.New("too many HTTP entrypoints")
 	}
 
