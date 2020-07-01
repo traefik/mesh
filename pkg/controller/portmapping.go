@@ -100,7 +100,7 @@ func (p *PortMapping) Find(namespace, name string, port int32) (int32, bool) {
 // Add adds a new mapping between the given service port and the first port available in the range defined
 // within minPort and maxPort. If there's no port left, an error will be returned.
 func (p *PortMapping) Add(namespace, name string, port int32) (int32, error) {
-	for i := p.minPort; i < p.maxPort+1; i++ {
+	for i := p.minPort; i <= p.maxPort; i++ {
 		// Skip until an available port is found
 		if _, exists := p.table[i]; exists {
 			continue

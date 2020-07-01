@@ -426,7 +426,7 @@ func TestShadowServiceManager_getHTTPPort(t *testing.T) {
 	}{
 		{
 			desc:        "should return an error if no HTTP port mapping is available",
-			portID:      2,
+			portID:      3,
 			expectedErr: true,
 		},
 		{
