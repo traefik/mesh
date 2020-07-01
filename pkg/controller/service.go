@@ -158,7 +158,7 @@ func (s *ShadowServiceManager) removeUnusedPortMappings(shadowSvc, svc *corev1.S
 
 func (s *ShadowServiceManager) removeServicePortMapping(namespace, name string, svcPort corev1.ServicePort) {
 	// Nothing to do here as there is no port table for HTTP ports.
-	if svcPort.TargetPort.IntVal < s.maxHTTPPort {
+	if svcPort.TargetPort.IntVal <= s.maxHTTPPort {
 		return
 	}
 
@@ -239,7 +239,7 @@ func (s *ShadowServiceManager) getTargetPort(trafficType string, portID int, nam
 
 // getHTTPPort returns the HTTP port associated with the given portID.
 func (s *ShadowServiceManager) getHTTPPort(portID int) (int32, error) {
-	if s.minHTTPPort+int32(portID) >= s.maxHTTPPort {
+	if s.minHTTPPort+int32(portID) > s.maxHTTPPort {
 		return 0, errors.New("unable to find an available HTTP port")
 	}
 
