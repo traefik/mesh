@@ -8,12 +8,12 @@ spec:
     spec:
       volumes:
         - configMap:
-            name: "kubedns-cfgmap"
+            name: "kube-dns"
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kubedns-cfgmap
+  name: kube-dns
   namespace: kube-system
 ---
 apiVersion: v1
