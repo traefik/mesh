@@ -9,12 +9,7 @@ spec:
       volumes:
         - configMap:
             name: "kube-dns"
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kube-dns
-  namespace: kube-system
+            optional: true
 ---
 apiVersion: v1
 kind: Service
