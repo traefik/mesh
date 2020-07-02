@@ -15,9 +15,15 @@ maintainers:
   - name: emilevauge
     email: emile@vauge.com
   - name: dtomcej
-    email: daniel@containo.us
+    email: daniel.tomcej@gmail.com
   - name: mmatur
     email: michael@containo.us
+  - name: santode
+    email: manuel@containo.us
+  - name: jspdown
+    email: harold@containo.us
+  - name: kevinpollet
+    email: kevin@containo.us
 engine: gotpl
 icon: https://raw.githubusercontent.com/containous/maesh/v1.2/docs/content/assets/img/maesh.png
 dependencies:
