@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/containous/maesh/pkg/annotations"
@@ -189,8 +190,14 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
-	// Tell processNextWorkItem to exit when the control loop ends.
-	defer c.workQueue.ShutDown()
+	waitGroup := sync.WaitGroup{}
+
+	defer func() {
+		c.logger.Info("Shutting down workers")
+		c.workQueue.ShutDown()
+
+		waitGroup.Wait()
+	}()
 
 	c.logger.Debug("Initializing mesh controller")
 
@@ -208,11 +215,16 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	c.store.SetReadiness(true)
 
 	// Start to poll work from the queue.
-	go wait.Until(c.runWorker, time.Second, stopCh)
+	waitGroup.Add(1)
+
+	runWorker := func() {
+		defer waitGroup.Done()
+		c.runWorker()
+	}
+
+	go wait.Until(runWorker, time.Second, stopCh)
 
 	<-stopCh
-
-	c.logger.Info("Shutting down workers")
 
 	return nil
 }
