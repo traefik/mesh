@@ -22,6 +22,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	minHTTPPort = int32(5000)
+	minTCPPort  = int32(10000)
+	minUDPPort  = int32(15000)
+)
+
 func main() {
 	maeshConfig := cmd.NewMaeshConfiguration()
 	maeshLoaders := []cli.ResourceLoader{&cmd.FileLoader{}, &cli.FlagLoader{}, &cmd.EnvLoader{}}
@@ -91,10 +97,6 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 		return fmt.Errorf("no valid DNS provider found: %w", err)
 	}
 
-	minHTTPPort := int32(5000)
-	minTCPPort := int32(10000)
-	minUDPPort := int32(15000)
-
 	if config.SMI {
 		log.Warn("SMI mode is deprecated, please consider using --acl instead")
 	}
@@ -114,11 +116,11 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 		WatchNamespaces:  config.WatchNamespaces,
 		IgnoreNamespaces: config.IgnoreNamespaces,
 		MinHTTPPort:      minHTTPPort,
-		MaxHTTPPort:      minHTTPPort + config.LimitHTTPPort - 1,
+		MaxHTTPPort:      getMaxPort(minHTTPPort, config.LimitHTTPPort),
 		MinTCPPort:       minTCPPort,
-		MaxTCPPort:       minTCPPort + config.LimitTCPPort - 1,
+		MaxTCPPort:       getMaxPort(minTCPPort, config.LimitTCPPort),
 		MinUDPPort:       minUDPPort,
-		MaxUDPPort:       minUDPPort + config.LimitUDPPort - 1,
+		MaxUDPPort:       getMaxPort(minUDPPort, config.LimitUDPPort),
 	}, apiServer, log)
 
 	var wg sync.WaitGroup
@@ -175,4 +177,8 @@ func stopAPIServer(apiServer *api.API, log logrus.FieldLogger) {
 	if err := apiServer.Shutdown(stopCtx); err != nil {
 		log.Errorf("Unable to stop the API server: %v", err)
 	}
+}
+
+func getMaxPort(min int32, limit int32) int32 {
+	return min + limit - 1
 }
