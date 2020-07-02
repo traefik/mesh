@@ -125,7 +125,6 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 
 	apiErrCh := make(chan error)
 	ctrlErrCh := make(chan error)
-	ctrlStopCh := make(chan struct{})
 
 	// Start the API server.
 	wg.Add(1)
@@ -144,7 +143,7 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 	go func() {
 		defer wg.Done()
 
-		if err := ctr.Run(ctrlStopCh); err != nil {
+		if err := ctr.Run(ctx); err != nil {
 			ctrlErrCh <- fmt.Errorf("controller has stopped unexpectedly: %w", err)
 		}
 	}()
@@ -152,11 +151,13 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 	// Wait for a stop event and shutdown servers.
 	select {
 	case <-ctx.Done():
-		close(ctrlStopCh)
+		ctr.Shutdown()
 		stopAPIServer(apiServer, log)
+
 	case err := <-apiErrCh:
 		log.Error(err)
-		close(ctrlStopCh)
+		ctr.Shutdown()
+
 	case err := <-ctrlErrCh:
 		log.Error(err)
 		stopAPIServer(apiServer, log)
