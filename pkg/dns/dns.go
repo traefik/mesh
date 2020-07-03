@@ -55,8 +55,7 @@ func NewClient(logger logrus.FieldLogger, kubeClient kubernetes.Interface) *Clie
 	}
 }
 
-// CheckDNSProvider checks that the DNS provider that is deployed in the cluster
-// is supported and returns it.
+// CheckDNSProvider checks that the DNS provider deployed in the cluster is supported and returns it.
 func (c *Client) CheckDNSProvider() (Provider, error) {
 	c.logger.Info("Checking DNS provider")
 
@@ -134,7 +133,7 @@ func (c *Client) kubeDNSMatch() (bool, error) {
 	}
 
 	if err != nil {
-		return false, fmt.Errorf("unable to get KubeDNS deployment in namesapce %q: %w", metav1.NamespaceSystem, err)
+		return false, fmt.Errorf("unable to get KubeDNS deployment in namespace %q: %w", metav1.NamespaceSystem, err)
 	}
 
 	c.logger.Info("KubeDNS match")
@@ -170,7 +169,7 @@ func (c *Client) ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespac
 }
 
 func (c *Client) patchCoreDNSConfig(deployment *appsv1.Deployment, clusterDomain, maeshNamespace string) (*corev1.ConfigMap, error) {
-	customConfigMap, err := c.getConfigMap(deployment.Namespace, "coredns-custom")
+	customConfigMap, err := c.getConfigMap(deployment, "coredns-custom")
 
 	// For AKS the CoreDNS config have to be added to the coredns-custom ConfigMap.
 	// See https://docs.microsoft.com/en-us/azure/aks/coredns-custom
@@ -184,11 +183,7 @@ func (c *Client) patchCoreDNSConfig(deployment *appsv1.Deployment, clusterDomain
 		return customConfigMap, nil
 	}
 
-	if !kerrors.IsNotFound(err) {
-		return nil, fmt.Errorf("unable to get coredns-custom configmap: %w", err)
-	}
-
-	coreDNSConfigMap, err := c.getCorefileConfigMap(deployment)
+	coreDNSConfigMap, err := c.getConfigMap(deployment, "coredns")
 	if err != nil {
 		return nil, err
 	}
@@ -245,102 +240,75 @@ maesh:53 {
 func (c *Client) ConfigureKubeDNS(clusterDomain, maeshNamespace string) error {
 	c.logger.Debug("Patching KubeDNS")
 
-	deployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
+	kubeDNSDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-
-	var (
-		serviceIP string
-		ebo       = backoff.NewConstantBackOff(10 * time.Second)
-	)
 
 	c.logger.Debug("Getting CoreDNS service IP")
 
-	if err = backoff.Retry(safe.OperationWithRecover(func() error {
-		svc, errSvc := c.kubeClient.CoreV1().Services(maeshNamespace).Get("coredns", metav1.GetOptions{})
-		if errSvc != nil {
-			return fmt.Errorf("unable get the service %q in namespace %q: %w", "coredns", "maesh", errSvc)
+	var coreDNSServiceIP string
+
+	operation := func() error {
+		svc, svcErr := c.kubeClient.CoreV1().Services(maeshNamespace).Get("coredns", metav1.GetOptions{})
+		if svcErr != nil {
+			return fmt.Errorf("unable to get coredns service in namespace %q: %w", maeshNamespace, err)
 		}
+
 		if svc.Spec.ClusterIP == "" {
-			return fmt.Errorf("service %q has no clusterIP", "coredns")
+			return fmt.Errorf("coredns service in namespace %q has no clusterip", maeshNamespace)
 		}
 
-		serviceIP = svc.Spec.ClusterIP
+		coreDNSServiceIP = svc.Spec.ClusterIP
+
 		return nil
-	}), backoff.WithMaxRetries(ebo, 12)); err != nil {
-		return fmt.Errorf("unable get the service %q in namespace %q: %w", "coredns", "maesh", err)
 	}
 
-	configMap, err := c.getKubeDNSConfigMap(deployment)
-	if err != nil {
+	if err = backoff.Retry(safe.OperationWithRecover(operation), backoff.WithMaxRetries(backoff.NewConstantBackOff(10*time.Second), 12)); err != nil {
 		return err
 	}
 
-	c.logger.Debug("Patching KubeDNS configmap with IP", serviceIP)
+	c.logger.Debugf("Patching KubeDNS ConfigMap with CoreDNS service IP %q", coreDNSServiceIP)
 
-	if err := c.patchKubeDNSConfigMap(configMap, deployment.Namespace, serviceIP); err != nil {
+	if err := c.patchKubeDNSConfig(kubeDNSDeployment, coreDNSServiceIP); err != nil {
 		return err
 	}
-
-	c.logger.Debug("Patching CoreDNS configmap")
 
 	if err := c.ConfigureCoreDNS(maeshNamespace, clusterDomain, maeshNamespace); err != nil {
 		return err
 	}
 
-	if err := c.restartPods(deployment); err != nil {
+	if err := c.restartPods(kubeDNSDeployment); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// getKubeDNSConfigMap parses the deployment and returns the associated configuration configmap.
-func (c *Client) getKubeDNSConfigMap(kubeDeployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
-	for _, volume := range kubeDeployment.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap == nil {
-			continue
-		}
-
-		cfgMap, err := c.kubeClient.CoreV1().ConfigMaps(kubeDeployment.Namespace).Get(volume.ConfigMap.Name, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-
-		return cfgMap, nil
-	}
-
-	return nil, errors.New("corefile configmap not found")
-}
-
-func (c *Client) patchKubeDNSConfigMap(kubeConfigMap *corev1.ConfigMap, namespace, coreDNSIp string) error {
-	originalBlock, exist := kubeConfigMap.Data["stubDomains"]
-	if !exist {
-		originalBlock = "{}"
-	}
-
-	stubDomains := make(map[string][]string)
-	if err := json.Unmarshal([]byte(originalBlock), &stubDomains); err != nil {
-		return err
-	}
-
-	stubDomains["maesh"] = []string{coreDNSIp}
-
-	var newData []byte
-
-	newData, err := json.Marshal(stubDomains)
+func (c *Client) patchKubeDNSConfig(deployment *appsv1.Deployment, coreDNSServiceIP string) error {
+	configMap, err := c.getOrCreateConfigMap(deployment, "kube-dns")
 	if err != nil {
 		return err
 	}
 
-	if kubeConfigMap.Data == nil {
-		kubeConfigMap.Data = make(map[string]string)
+	stubDomains := make(map[string][]string)
+
+	if stubDomainsStr := configMap.Data["stubDomains"]; stubDomainsStr != "" {
+		if err = json.Unmarshal([]byte(stubDomainsStr), &stubDomains); err != nil {
+			return fmt.Errorf("unable to unmarshal stub domains: %w", err)
+		}
 	}
 
-	kubeConfigMap.Data["stubDomains"] = string(newData)
+	stubDomains["maesh"] = []string{coreDNSServiceIP}
 
-	if _, err := c.kubeClient.CoreV1().ConfigMaps(namespace).Update(kubeConfigMap); err != nil {
+	configMapData, err := json.Marshal(stubDomains)
+	if err != nil {
+		return fmt.Errorf("unable to marshal stub domains: %w", err)
+	}
+
+	configMap.Data["stubDomains"] = string(configMapData)
+
+	if _, err := c.kubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(configMap); err != nil {
 		return err
 	}
 
@@ -388,7 +356,7 @@ func (c *Client) RestoreCoreDNS() error {
 }
 
 func (c *Client) unpatchCoreDNSConfig(deployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
-	customConfigMap, err := c.getConfigMap(deployment.Namespace, "coredns-custom")
+	customConfigMap, err := c.getConfigMap(deployment, "coredns-custom")
 
 	// For AKS the CoreDNS config have to be removed from the coredns-custom ConfigMap.
 	// See https://docs.microsoft.com/en-us/azure/aks/coredns-custom
@@ -397,11 +365,7 @@ func (c *Client) unpatchCoreDNSConfig(deployment *appsv1.Deployment) (*corev1.Co
 		return customConfigMap, nil
 	}
 
-	if !kerrors.IsNotFound(err) {
-		return nil, fmt.Errorf("unable to get coredns-custom configmap: %w", err)
-	}
-
-	coreDNSConfigMap, err := c.getCorefileConfigMap(deployment)
+	coreDNSConfigMap, err := c.getConfigMap(deployment, "coredns")
 	if err != nil {
 		return nil, err
 	}
@@ -427,78 +391,89 @@ func (c *Client) unpatchCoreDNSConfig(deployment *appsv1.Deployment) (*corev1.Co
 
 // RestoreKubeDNS restores the KubeDNS configuration to pre-install state.
 func (c *Client) RestoreKubeDNS() error {
-	deployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
+	kubeDNSDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get("kube-dns", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
 	// Get the currently loaded KubeDNS ConfigMap.
-	configMap, err := c.getKubeDNSConfigMap(deployment)
+	configMap, err := c.getConfigMap(kubeDNSDeployment, "kube-dns")
 	if err != nil {
 		return err
 	}
 
 	// Check if stubDomains are still defined.
-	originalBlock, exist := configMap.Data["stubDomains"]
-	if !exist {
+	stubDomainsStr := configMap.Data["stubDomains"]
+	if stubDomainsStr == "" {
 		return nil
 	}
 
 	stubDomains := make(map[string][]string)
-	if err = json.Unmarshal([]byte(originalBlock), &stubDomains); err != nil {
-		return fmt.Errorf("could not unmarshal stubdomains: %w", err)
+	if err = json.Unmarshal([]byte(stubDomainsStr), &stubDomains); err != nil {
+		return fmt.Errorf("unable to unmarshal stubdomains: %w", err)
 	}
 
 	// Delete our stubDomain.
 	delete(stubDomains, "maesh")
 
-	newData, err := json.Marshal(stubDomains)
+	configMapData, err := json.Marshal(stubDomains)
 	if err != nil {
 		return err
 	}
 
-	// If there are no stubDomains left, delete the field.
-	if string(newData) == "{}" {
-		delete(configMap.Data, "stubDomains")
-	} else {
-		configMap.Data["stubDomains"] = string(newData)
-	}
+	configMap.Data["stubDomains"] = string(configMapData)
 
-	// Update the KubeDNS configmap to the backup.
 	if _, err := c.kubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(configMap); err != nil {
 		return err
 	}
 
-	if err := c.restartPods(deployment); err != nil {
+	if err := c.restartPods(kubeDNSDeployment); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *Client) getCorefileConfigMap(deployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
-	for _, volume := range deployment.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap == nil {
-			continue
-		}
-
-		configMap, err := c.getConfigMap(deployment.Namespace, volume.ConfigMap.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		if _, exists := configMap.Data["Corefile"]; !exists {
-			continue
-		}
-
-		return configMap, nil
+// getOrCreateConfigMap parses the deployment and returns the ConfigMap with the given name. This method will create the
+// corresponding ConfigMap if the associated volume is marked as optional and the ConfigMap is not found.
+func (c *Client) getOrCreateConfigMap(deployment *appsv1.Deployment, name string) (*corev1.ConfigMap, error) {
+	volumeSrc, err := getConfigMapVolumeSource(deployment, name)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("corefile configmap not found")
+	configMap, err := c.kubeClient.CoreV1().ConfigMaps(deployment.Namespace).Get(volumeSrc.Name, metav1.GetOptions{})
+
+	if kerrors.IsNotFound(err) && volumeSrc.Optional != nil && *volumeSrc.Optional {
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: deployment.Namespace,
+			},
+		}
+
+		configMap, err = c.kubeClient.CoreV1().ConfigMaps(deployment.Namespace).Create(configMap)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if configMap.Data == nil {
+		configMap.Data = make(map[string]string)
+	}
+
+	return configMap, err
 }
 
-func (c *Client) getConfigMap(namespace, name string) (*corev1.ConfigMap, error) {
-	configMap, err := c.kubeClient.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+// getConfigMap parses the deployment and returns the ConfigMap with the given name.
+func (c *Client) getConfigMap(deployment *appsv1.Deployment, name string) (*corev1.ConfigMap, error) {
+	volumeSrc, err := getConfigMapVolumeSource(deployment, name)
+	if err != nil {
+		return nil, err
+	}
+
+	configMap, err := c.kubeClient.CoreV1().ConfigMaps(deployment.Namespace).Get(volumeSrc.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -508,4 +483,21 @@ func (c *Client) getConfigMap(namespace, name string) (*corev1.ConfigMap, error)
 	}
 
 	return configMap, nil
+}
+
+// getConfigMapVolumeSource returns the ConfigMapVolumeSource corresponding to the ConfigMap with the given name.
+func getConfigMapVolumeSource(deployment *appsv1.Deployment, name string) (*corev1.ConfigMapVolumeSource, error) {
+	for _, volume := range deployment.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap == nil {
+			continue
+		}
+
+		if volume.ConfigMap.Name != name {
+			continue
+		}
+
+		return volume.ConfigMap, nil
+	}
+
+	return nil, fmt.Errorf("configmap %q cannot be found", name)
 }

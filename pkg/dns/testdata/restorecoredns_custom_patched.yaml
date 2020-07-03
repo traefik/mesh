@@ -10,7 +10,7 @@ spec:
         - configMap:
             name: "coredns-custom"
         - configMap:
-            name: "coredns-cfgmap"
+            name: "coredns"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -43,7 +43,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: coredns-cfgmap
+  name: coredns
   namespace: kube-system
 data:
   Corefile: |
