@@ -139,7 +139,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-cfgmap", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedCorefile, cfgMap.Data["Corefile"])
@@ -162,20 +162,24 @@ func TestConfigureKubeDNS(t *testing.T) {
 		expectedErr         bool
 	}{
 		{
-			desc:                "First time config of KubeDNS",
+			desc:        "should return an error if kube-dns deployment does not exist",
+			mockFile:    "configurekubedns_missing_deployment.yaml",
+			expectedErr: true,
+		},
+		{
+			desc:                "should add maesh stubdomain config in kube-dns configmap",
 			mockFile:            "configurekubedns_not_patched.yaml",
-			expectedErr:         false,
 			expectedStubDomains: `{"maesh":["1.2.3.4"]}`,
 		},
 		{
-			desc:                "Already patched",
+			desc:                "should replace maesh stubdomain config in kube-dns configmap",
 			mockFile:            "configurekubedns_already_patched.yaml",
 			expectedStubDomains: `{"maesh":["1.2.3.4"]}`,
 		},
 		{
-			desc:        "Missing KubeDNS deployment",
-			mockFile:    "configurekubedns_missing_deployment.yaml",
-			expectedErr: true,
+			desc:                "should create optional kube-dns configmap and add maesh stubdomain config",
+			mockFile:            "configurekubedns_optional_configmap.yaml",
+			expectedStubDomains: `{"maesh":["1.2.3.4"]}`,
 		},
 	}
 
@@ -201,7 +205,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("kubedns-cfgmap", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("kube-dns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedStubDomains, cfgMap.Data["stubDomains"])
@@ -257,7 +261,7 @@ func TestRestoreCoreDNS(t *testing.T) {
 			err := client.RestoreCoreDNS()
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-cfgmap", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedCorefile, cfgMap.Data["Corefile"])
@@ -311,7 +315,7 @@ func TestRestoreKubeDNS(t *testing.T) {
 			err := client.RestoreKubeDNS()
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("kubedns-cfgmap", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("kube-dns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedStubDomains, cfgMap.Data["stubDomains"])

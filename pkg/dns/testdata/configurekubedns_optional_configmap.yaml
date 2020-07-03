@@ -1,28 +1,49 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: coredns
+  name: kube-dns
   namespace: kube-system
 spec:
   template:
     spec:
       volumes:
         - configMap:
-            name: "coredns"
+            name: "kube-dns"
+            optional: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns
+  namespace: maesh
+spec:
+  clusterIP: "1.2.3.4"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: maesh
+spec:
+  template:
+    spec:
+      volumes:
         - configMap:
-            name: "coredns-custom"
+            name: "other-cfgmap"
+        - configMap:
+            name: "coredns"
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: coredns-custom
-  namespace: kube-system
+  name: other-cfgmap
+  namespace: maesh
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: coredns
-  namespace: kube-system
+  namespace: maesh
 data:
   Corefile: |
     .:53 {
