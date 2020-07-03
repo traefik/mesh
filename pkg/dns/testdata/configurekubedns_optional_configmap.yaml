@@ -31,7 +31,7 @@ spec:
         - configMap:
             name: "other-cfgmap"
         - configMap:
-            name: "coredns-cfgmap"
+            name: "coredns"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -42,7 +42,7 @@ metadata:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: coredns-cfgmap
+  name: coredns
   namespace: maesh
 data:
   Corefile: |

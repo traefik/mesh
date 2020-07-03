@@ -139,7 +139,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-cfgmap", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedCorefile, cfgMap.Data["Corefile"])
@@ -261,7 +261,7 @@ func TestRestoreCoreDNS(t *testing.T) {
 			err := client.RestoreCoreDNS()
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-cfgmap", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedCorefile, cfgMap.Data["Corefile"])
