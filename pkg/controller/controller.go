@@ -67,6 +67,9 @@ type Config struct {
 
 // Controller hold controller configuration.
 type Controller struct {
+	mu     sync.Mutex
+	stopCh chan struct{}
+
 	cfg                  Config
 	workQueue            workqueue.RateLimitingInterface
 	shadowServiceManager *ShadowServiceManager
@@ -77,7 +80,6 @@ type Controller struct {
 	topologyBuilder      TopologyBuilder
 	store                SharedStore
 	logger               logrus.FieldLogger
-	stopCh               chan struct{}
 
 	clients              k8s.Client
 	kubernetesFactory    informers.SharedInformerFactory
@@ -188,7 +190,7 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 }
 
 // Run is the main controller loop.
-func (c *Controller) Run(ctx context.Context) error {
+func (c *Controller) Run() error {
 	// Handle a panic with logging and exiting.
 	defer utilruntime.HandleCrash()
 
@@ -204,7 +206,7 @@ func (c *Controller) Run(ctx context.Context) error {
 	c.logger.Debug("Initializing mesh controller")
 
 	// Start the informers.
-	if err := c.startInformers(ctx, 10*time.Second); err != nil {
+	if err := c.startInformers(10 * time.Second); err != nil {
 		return fmt.Errorf("could not start informers: %w", err)
 	}
 
@@ -226,24 +228,29 @@ func (c *Controller) Run(ctx context.Context) error {
 
 	go wait.Until(runWorker, time.Second, c.stopCh)
 
-	select {
-	case <-c.stopCh:
-	case <-ctx.Done():
-		close(c.stopCh)
-	}
+	<-c.stopCh
 
 	return nil
 }
 
 // Shutdown shut downs the controller.
 func (c *Controller) Shutdown() {
-	close(c.stopCh)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	select {
+	case <-c.stopCh:
+		// Already closed. Don't close again.
+	default:
+		// Safe to close. We're the only closer, guarded by c.mu.
+		close(c.stopCh)
+	}
 }
 
 // startInformers starts the controller informers.
-func (c *Controller) startInformers(ctx context.Context, syncTimeout time.Duration) error {
+func (c *Controller) startInformers(syncTimeout time.Duration) error {
 	// Start the informers with a timeout.
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, syncTimeout)
+	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), syncTimeout)
 	defer cancel()
 
 	c.logger.Debug("Starting Informers")

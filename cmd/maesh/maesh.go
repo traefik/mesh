@@ -145,7 +145,7 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 	go func() {
 		defer wg.Done()
 
-		if err := ctr.Run(ctx); err != nil {
+		if err := ctr.Run(); err != nil {
 			ctrlErrCh <- fmt.Errorf("controller has stopped unexpectedly: %w", err)
 		}
 	}()
