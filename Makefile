@@ -126,7 +126,7 @@ docs-package: pages
 
 helm-package: helm-lint pages
 	helm package --app-version $(TAG_NAME) $(CURDIR)/helm/chart/maesh
-	cp helm/chart/README.md index.md
+	cp helm/chart/maesh/README.md index.md
 	mkdir -p $(CURDIR)/pages/charts
 	mv *.tgz index.md $(CURDIR)/pages/charts/
 	helm repo index $(CURDIR)/pages/charts/
