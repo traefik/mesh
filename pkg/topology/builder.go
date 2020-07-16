@@ -132,7 +132,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 		if ok && len(svc.TrafficSplits) > 0 {
 			b.logger.Warnf("Service %q already has a TrafficSplit attached, TrafficTarget %q will not be evaluated on this service", svcKey, svcTTKey.TrafficTarget)
 
-			return
+			continue
 		}
 
 		topology.ServiceTrafficTargets[svcTTKey] = stt
