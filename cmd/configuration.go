@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/containous/traefik/v2/pkg/config/static"
-	"github.com/containous/traefik/v2/pkg/types"
 )
 
 // MaeshConfiguration wraps the static configuration and extra parameters.
@@ -82,26 +81,6 @@ type ProxyConfiguration struct {
 	Endpoint             string        `description:"Load configuration from this endpoint." json:"endpoint" toml:"endpoint" yaml:"endpoint" export:"true"`
 	PollInterval         time.Duration `description:"Polling interval for endpoint." json:"pollInterval,omitempty" toml:"pollInterval,omitempty" yaml:"pollInterval,omitempty"`
 	PollTimeout          time.Duration `description:"Polling timeout for endpoint." json:"pollTimeout,omitempty" toml:"pollTimeout,omitempty" yaml:"pollTimeout,omitempty"`
-}
-
-// NewProxyConfiguration creates a ProxyConfiguration with default values.
-func NewProxyConfiguration() *ProxyConfiguration {
-	return &ProxyConfiguration{
-		PollInterval: 1 * time.Second,
-		PollTimeout:  1 * time.Second,
-		Configuration: static.Configuration{
-			Global: &static.Global{
-				CheckNewVersion: false,
-			},
-			EntryPoints: make(static.EntryPoints),
-			Providers: &static.Providers{
-				ProvidersThrottleDuration: types.Duration(2 * time.Second),
-			},
-			ServersTransport: &static.ServersTransport{
-				MaxIdleConnsPerHost: 200,
-			},
-		},
-	}
 }
 
 // CleanupConfiguration holds the configuration for the cleanup command.
