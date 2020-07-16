@@ -336,7 +336,8 @@ func TestTopologyBuilder_BuildWithTrafficTarget(t *testing.T) {
 // a service if there is already a TrafficSplit applied to it.
 func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *testing.T) {
 	selectorAppA := map[string]string{"app": "app-a"}
-	selectorAppB := map[string]string{"app": "app-b"}
+	selectorAppB1 := map[string]string{"app": "app-b1"}
+	selectorAppB2 := map[string]string{"app": "app-b2"}
 	selectorAppC := map[string]string{"app": "app-c"}
 	selectorAppD := map[string]string{"app": "app-d"}
 	annotations := map[string]string{
@@ -350,8 +351,10 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *t
 	podA := createPod("my-ns", "app-a", saA, selectorAppA, "10.10.1.1")
 
 	saB := createServiceAccount("my-ns", "service-account-b")
-	svcB := createService("my-ns", "svc-b", annotations, svcPorts, selectorAppB, "10.10.1.16")
-	podB := createPod("my-ns", "app-b", saB, svcB.Spec.Selector, "10.10.2.1")
+	svcB1 := createService("my-ns", "svc-b1", annotations, svcPorts, selectorAppB1, "10.10.1.16")
+	podB1 := createPod("my-ns", "app-b1", saB, svcB1.Spec.Selector, "10.10.2.1")
+	svcB2 := createService("my-ns", "svc-b2", annotations, svcPorts, selectorAppB2, "10.10.3.16")
+	podB2 := createPod("my-ns", "app-b2", saB, svcB2.Spec.Selector, "10.10.3.1")
 
 	saC := createServiceAccount("my-ns", "service-account-c")
 	svcC := createService("my-ns", "svc-c", annotations, svcPorts, selectorAppC, "10.10.1.17")
@@ -361,7 +364,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *t
 	svcD := createService("my-ns", "svc-d", annotations, svcPorts, selectorAppD, "10.10.1.18")
 	podD := createPod("my-ns", "app-d", saD, svcD.Spec.Selector, "10.10.2.3")
 
-	epB := createEndpoints(svcB, createEndpointSubset(svcPorts, podB))
+	epB1 := createEndpoints(svcB1, createEndpointSubset(svcPorts, podB1))
+	epB2 := createEndpoints(svcB2, createEndpointSubset(svcPorts, podB2))
 	epC := createEndpoints(svcC, createEndpointSubset(svcPorts, podC))
 	epD := createEndpoints(svcD, createEndpointSubset(svcPorts, podD))
 
@@ -371,12 +375,12 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *t
 
 	ttMatch := []string{apiMatch.Name}
 	tt := createTrafficTarget("my-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
-	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
+	ts := createTrafficSplit("my-ns", "ts", svcB1, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, saB, saC, saD,
-		podA, podB, podC, podD,
-		svcB, svcC, svcD,
-		epB, epC, epD)
+		podA, podB1, podB2, podC, podD,
+		svcB1, svcB2, svcC, svcD,
+		epB1, epB2, epC, epD)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
 	smiSplitClient := splitfake.NewSimpleClientset(ts)
 	smiSpecClient := specfake.NewSimpleClientset(rtGrp)
