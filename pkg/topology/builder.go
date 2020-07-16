@@ -445,6 +445,7 @@ func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *acc
 		srcSaKey := Key{source.Name, source.Namespace}
 
 		pods := res.PodsByServiceAccounts[srcSaKey]
+
 		var srcPods []Key
 
 		for _, pod := range pods {
