@@ -445,14 +445,14 @@ func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *acc
 		srcSaKey := Key{source.Name, source.Namespace}
 
 		pods := res.PodsByServiceAccounts[srcSaKey]
-		srcPods := make([]Key, len(pods))
+		var srcPods []Key
 
-		for k, pod := range pods {
+		for _, pod := range pods {
 			if pod.Status.PodIP == "" {
 				continue
 			}
 
-			srcPods[k] = getOrCreatePod(t, pod)
+			srcPods = append(srcPods, getOrCreatePod(t, pod))
 		}
 
 		sources[i] = ServiceTrafficTargetSource{
