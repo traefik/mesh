@@ -40,3 +40,9 @@ new `prometheus.service` and `grafana.service` options, more details in the corr
 
 The `mesh.defaultMode` option has been removed. You should use the new `defaultMode` option to configure the default traffic 
 mode for Maesh services.
+
+### Image version
+
+Since version `v1.4`, Maesh uses plain [Traefik](https://github.com/containous/traefik/) Docker image for mesh proxies.
+Therefore, to change the image version used for the controller, or the mesh proxies you should use the `controller.image` 
+and `mesh.image` options.
