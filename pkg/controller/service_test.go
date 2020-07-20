@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,6 +14,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/version"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	listers "k8s.io/client-go/listers/core/v1"
@@ -53,12 +56,47 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 		desc              string
 		defaultMode       string
 		svc               *corev1.Service
+		serverVersion     string
 		currentShadowSvc  *corev1.Service
 		expectedShadowSvc *corev1.Service
 	}{
 		{
 			desc:        "should create a shadow service",
 			defaultMode: "tcp",
+			svc: &corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "bar",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Protocol: corev1.ProtocolTCP,
+							Port:     8080,
+						},
+					},
+				},
+			},
+			expectedShadowSvc: &corev1.Service{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "maesh-foo-6d61657368-bar",
+					Namespace: "maesh",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Protocol:   corev1.ProtocolTCP,
+							Port:       8080,
+							TargetPort: intstr.FromInt(10000),
+						},
+					},
+				},
+			},
+		},
+		{
+			desc:          "should create a shadow service without the topology keys",
+			defaultMode:   "tcp",
+			serverVersion: "v1.16.6-beta.0",
 			svc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "foo",
@@ -198,7 +236,12 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 				currentShadowServices = append(currentShadowServices, test.currentShadowSvc)
 			}
 
-			client, lister := newFakeClient(currentShadowServices...)
+			serverVersionStr := "v1.17"
+			if test.serverVersion != "" {
+				serverVersionStr = test.serverVersion
+			}
+
+			client, lister := newFakeClient(serverVersionStr, currentShadowServices...)
 
 			tcpPortMapperMock := portMapperMock{
 				findFunc: func(namespace, name string, port int32) (int32, bool) {
@@ -225,7 +268,6 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			)
 
 			shadowSvc, err := shadowServiceManager.CreateOrUpdate(test.svc)
-
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedShadowSvc.Name, shadowSvc.Name)
@@ -233,6 +275,13 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 
 			for i, port := range test.expectedShadowSvc.Spec.Ports {
 				assert.Equal(t, port, shadowSvc.Spec.Ports[i])
+			}
+
+			serverVersion, err := goversion.NewVersion(serverVersionStr)
+			require.NoError(t, err)
+
+			if serverVersion.GreaterThanOrEqual(versionTopologyKeys) {
+				assert.True(t, len(shadowSvc.Spec.TopologyKeys) > 0)
 			}
 		})
 	}
@@ -345,7 +394,7 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 				currentShadowServices = append(currentShadowServices, test.currentShadowSvc)
 			}
 
-			client, lister := newFakeClient(currentShadowServices...)
+			client, lister := newFakeClient("v1.17", currentShadowServices...)
 
 			shadowServiceManager := NewShadowServiceManager(
 				log,
@@ -399,7 +448,7 @@ func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	client, lister := newFakeClient()
+	client, lister := newFakeClient("v1.17")
 
 	shadowServiceManager := NewShadowServiceManager(
 		log,
@@ -443,7 +492,7 @@ func TestShadowServiceManager_getHTTPPort(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			client, lister := newFakeClient()
+			client, lister := newFakeClient("v1.17")
 
 			minHTTPPort := int32(5000)
 			maxHTTPPort := int32(5002)
@@ -630,8 +679,13 @@ func TestShadowServiceManager_needsCleanup(t *testing.T) {
 	}
 }
 
-func newFakeClient(objects ...runtime.Object) (*fake.Clientset, listers.ServiceLister) {
+func newFakeClient(serverVersion string, objects ...runtime.Object) (*fake.Clientset, listers.ServiceLister) {
 	client := fake.NewSimpleClientset(objects...)
+
+	discovery, _ := client.Discovery().(*fakediscovery.FakeDiscovery)
+	discovery.FakedServerVersion = &version.Info{
+		GitVersion: serverVersion,
+	}
 
 	informerFactory := informers.NewSharedInformerFactory(client, 5*time.Minute)
 	lister := informerFactory.Core().V1().Services().Lister()
