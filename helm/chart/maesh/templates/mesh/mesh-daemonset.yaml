@@ -38,9 +38,9 @@ spec:
         runAsNonRoot: true
         runAsUser: 999
       terminationGracePeriodSeconds: 30
-      {{- if .Values.image.pullSecret }}
+      {{- if .Values.mesh.image.pullSecret }}
       imagePullSecrets:
-        - name: {{ .Values.image.pullSecret }}
+        - name: {{ .Values.mesh.image.pullSecret }}
       {{- end }}
       {{- with .Values.mesh.nodeSelector }}
       nodeSelector:
@@ -68,8 +68,8 @@ spec:
       {{- end }}
       containers:
         - name: maesh-mesh
-          image: {{ include "maesh.image" . | quote }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          image: {{ include "maesh.meshImage" . | quote }}
+          imagePullPolicy: {{ .Values.mesh.image.pullPolicy | default "IfNotPresent" }}
           {{- with .Values.mesh.env }}
           env:
 {{- toYaml . | nindent 12 }}
@@ -79,7 +79,6 @@ spec:
 {{- toYaml . | nindent 12 }}
           {{- end }}
           args:
-            - "proxy"
             - "--entryPoints.readiness.address=:1081"
             - "--entryPoints.liveness.address=:1082"
             {{- range $i, $port := untilStep 5000 ((add (.Values.limits.http|int) 5000)|int) 1 }}
@@ -93,12 +92,12 @@ spec:
             {{- range $i, $port := untilStep 15000 ((add (.Values.limits.udp|int) 15000)|int) 1 }}
             - {{ printf "\"--entryPoints.udp-%d.address=:%d/udp\"" $port $port }}
             {{- end }}
-            - {{ printf "--endpoint=http://maesh-controller.%s.svc.%s:9000/api/configuration/current" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
+            - {{ printf "--providers.http.endpoint=http://maesh-controller.%s.svc.%s:9000/api/configuration/current" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
             {{- if .Values.mesh.pollInterval }}
-            - "--pollInterval={{ .Values.mesh.pollInterval }}"
+            - "--providers.http.pollInterval={{ .Values.mesh.pollInterval }}"
             {{- end }}
             {{- if .Values.mesh.pollTimeout }}
-            - "--pollTimeout={{ .Values.mesh.pollTimeout }}"
+            - "--providers.http.pollTimeout={{ .Values.mesh.pollTimeout }}"
             {{- end }}
             {{- if .Values.tracing.jaeger.enabled }}
               {{- if .Values.tracing.jaeger.localagenthostport }}
