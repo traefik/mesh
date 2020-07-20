@@ -44,7 +44,7 @@
     "services": {
       "block-all-service": {
         "loadBalancer": {
-          "passHostHeader": null
+          "passHostHeader": false
         }
       },
       "my-ns-svc-a-8080": {
@@ -126,7 +126,5 @@
         }
       }
     }
-  },
-  "tcp": {},
-  "udp": {}
+  }
 }

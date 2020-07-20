@@ -90,7 +90,9 @@ func NewDefaultDynamicConfig() *dynamic.Configuration {
 					},
 				},
 				blockAllServiceKey: {
-					LoadBalancer: &dynamic.ServersLoadBalancer{},
+					LoadBalancer: &dynamic.ServersLoadBalancer{
+						PassHostHeader: getBoolRef(false),
+					},
 				},
 			},
 			Middlewares: map[string]*dynamic.Middleware{
@@ -100,14 +102,6 @@ func NewDefaultDynamicConfig() *dynamic.Configuration {
 					},
 				},
 			},
-		},
-		TCP: &dynamic.TCPConfiguration{
-			Routers:  map[string]*dynamic.TCPRouter{},
-			Services: map[string]*dynamic.TCPService{},
-		},
-		UDP: &dynamic.UDPConfiguration{
-			Routers:  map[string]*dynamic.UDPRouter{},
-			Services: map[string]*dynamic.UDPService{},
 		},
 	}
 }
@@ -249,6 +243,7 @@ func (p *Provider) buildServicesAndRoutersForHTTPService(t *topology.Topology, c
 		}
 
 		key := getServiceRouterKeyFromService(svc, svcPort.Port)
+
 		cfg.HTTP.Services[key] = p.buildHTTPServiceFromService(t, svc, scheme, svcPort)
 		cfg.HTTP.Routers[key] = buildHTTPRouter(httpRule, entrypoint, middlewares, key, priorityService)
 	}
@@ -268,8 +263,9 @@ func (p *Provider) buildServicesAndRoutersForTCPService(t *topology.Topology, cf
 		}
 
 		key := getServiceRouterKeyFromService(svc, svcPort.Port)
-		cfg.TCP.Services[key] = p.buildTCPServiceFromService(t, svc, svcPort)
-		cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
+
+		addTCPService(cfg, key, p.buildTCPServiceFromService(t, svc, svcPort))
+		addTCPRouter(cfg, key, buildTCPRouter(rule, entrypoint, key))
 	}
 }
 
@@ -285,8 +281,9 @@ func (p *Provider) buildServicesAndRoutersForUDPService(t *topology.Topology, cf
 		}
 
 		key := getServiceRouterKeyFromService(svc, svcPort.Port)
-		cfg.UDP.Services[key] = p.buildUDPServiceFromService(t, svc, svcPort)
-		cfg.UDP.Routers[key] = buildUDPRouter(entrypoint, key)
+
+		addUDPService(cfg, key, p.buildUDPServiceFromService(t, svc, svcPort))
+		addUDPRouter(cfg, key, buildUDPRouter(entrypoint, key))
 	}
 }
 
@@ -373,8 +370,9 @@ func (p *Provider) buildTCPServicesAndRoutersForTrafficTarget(t *topology.Topolo
 		}
 
 		key := getServiceRouterKeyFromService(ttSvc, svcPort.Port)
-		cfg.TCP.Services[key] = p.buildTCPServiceFromTrafficTarget(t, tt, svcPort)
-		cfg.TCP.Routers[key] = buildTCPRouter(rule, entrypoint, key)
+
+		addTCPService(cfg, key, p.buildTCPServiceFromTrafficTarget(t, tt, svcPort))
+		addTCPRouter(cfg, key, buildTCPRouter(rule, entrypoint, key))
 	}
 }
 
@@ -477,7 +475,9 @@ func (p *Provider) buildTCPServiceAndRoutersForTrafficSplit(cfg *dynamic.Configu
 
 		for i, backend := range ts.Backends {
 			backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)
-			cfg.TCP.Services[backendSvcKey] = buildTCPSplitTrafficBackendService(backend, svcPort.TargetPort.IntVal)
+
+			addTCPService(cfg, backendSvcKey, buildTCPSplitTrafficBackendService(backend, svcPort.TargetPort.IntVal))
+
 			backendSvcs[i] = dynamic.TCPWRRService{
 				Name:   backendSvcKey,
 				Weight: getIntRef(backend.Weight),
@@ -485,8 +485,9 @@ func (p *Provider) buildTCPServiceAndRoutersForTrafficSplit(cfg *dynamic.Configu
 		}
 
 		key := getServiceRouterKeyFromService(tsSvc, svcPort.Port)
-		cfg.TCP.Services[key] = buildTCPServiceFromTrafficSplit(backendSvcs)
-		cfg.TCP.Routers[key] = buildTCPRouter(tcpRule, entrypoint, key)
+
+		addTCPService(cfg, key, buildTCPServiceFromTrafficSplit(backendSvcs))
+		addTCPRouter(cfg, key, buildTCPRouter(tcpRule, entrypoint, key))
 	}
 }
 
@@ -505,7 +506,9 @@ func (p *Provider) buildUDPServiceAndRoutersForTrafficSplit(cfg *dynamic.Configu
 
 		for i, backend := range ts.Backends {
 			backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)
-			cfg.UDP.Services[backendSvcKey] = buildUDPSplitTrafficBackendService(backend, svcPort.TargetPort.IntVal)
+
+			addUDPService(cfg, backendSvcKey, buildUDPSplitTrafficBackendService(backend, svcPort.TargetPort.IntVal))
+
 			backendSvcs[i] = dynamic.UDPWRRService{
 				Name:   backendSvcKey,
 				Weight: getIntRef(backend.Weight),
@@ -513,8 +516,9 @@ func (p *Provider) buildUDPServiceAndRoutersForTrafficSplit(cfg *dynamic.Configu
 		}
 
 		key := getServiceRouterKeyFromService(tsSvc, svcPort.Port)
-		cfg.UDP.Services[key] = buildUDPServiceFromTrafficSplit(backendSvcs)
-		cfg.UDP.Routers[key] = buildUDPRouter(entrypoint, key)
+
+		addUDPService(cfg, key, buildUDPServiceFromTrafficSplit(backendSvcs))
+		addUDPRouter(cfg, key, buildUDPRouter(entrypoint, key))
 	}
 }
 
@@ -926,6 +930,54 @@ func addToSliceCopy(items []string, item string) []string {
 	cpy[len(items)] = item
 
 	return cpy
+}
+
+func addTCPService(config *dynamic.Configuration, key string, service *dynamic.TCPService) {
+	if config.TCP == nil {
+		config.TCP = &dynamic.TCPConfiguration{}
+	}
+
+	if config.TCP.Services == nil {
+		config.TCP.Services = map[string]*dynamic.TCPService{}
+	}
+
+	config.TCP.Services[key] = service
+}
+
+func addTCPRouter(config *dynamic.Configuration, key string, router *dynamic.TCPRouter) {
+	if config.TCP == nil {
+		config.TCP = &dynamic.TCPConfiguration{}
+	}
+
+	if config.TCP.Routers == nil {
+		config.TCP.Routers = map[string]*dynamic.TCPRouter{}
+	}
+
+	config.TCP.Routers[key] = router
+}
+
+func addUDPService(config *dynamic.Configuration, key string, service *dynamic.UDPService) {
+	if config.UDP == nil {
+		config.UDP = &dynamic.UDPConfiguration{}
+	}
+
+	if config.UDP.Services == nil {
+		config.UDP.Services = map[string]*dynamic.UDPService{}
+	}
+
+	config.UDP.Services[key] = service
+}
+
+func addUDPRouter(config *dynamic.Configuration, key string, router *dynamic.UDPRouter) {
+	if config.UDP == nil {
+		config.UDP = &dynamic.UDPConfiguration{}
+	}
+
+	if config.UDP.Routers == nil {
+		config.UDP.Routers = map[string]*dynamic.UDPRouter{}
+	}
+
+	config.UDP.Routers[key] = router
 }
 
 func getBoolRef(v bool) *bool {
