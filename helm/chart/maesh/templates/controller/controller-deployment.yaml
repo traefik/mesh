@@ -70,8 +70,8 @@ spec:
             {{- if or .Values.controller.logFormat .Values.logFormat }}
             - "--logFormat={{ or .Values.controller.logFormat .Values.logFormat }}"
             {{- end }}
-            {{- if or .Values.mesh.defaultMode .Values.defaultMode }}
-            - "--defaultMode={{ or .Values.mesh.defaultMode .Values.defaultMode }}"
+            {{- if .Values.defaultMode }}
+            - "--defaultMode={{ .Values.defaultMode }}"
             {{- end }}
             {{- if .Values.acl }}
             - "--acl"
