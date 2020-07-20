@@ -33,7 +33,7 @@ You will then be able to use the tagged image as your image in your `values.yaml
 To deploy the Helm Chart, run:
 
 ```shell
-helm install maesh helm/chart/maesh --set image.pullPolicy=IfNotPresent --set image.tag=latest
+helm install maesh helm/chart/maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
 ## KubeDNS support
