@@ -12,7 +12,7 @@
     "services": {
       "block-all-service": {
         "loadBalancer": {
-          "passHostHeader": null
+          "passHostHeader": false
         }
       },
       "readiness": {
@@ -36,7 +36,6 @@
       }
     }
   },
-  "tcp": {},
   "udp": {
     "routers": {
       "test-server-8080": {
