@@ -1,57 +1,33 @@
-## Default values for maesh
-image:
-  name: containous/maesh
-  # (Optional)
-  pullPolicy: IfNotPresent
-  # (Optional)
-  tag: latest
-  # (Optional)
-  # pullSecret: xxx
-
+#
+# Maesh configuration.
+#
 controller:
-  resources:
-    limit:
-      mem: "100Mi"
-      cpu: "200m"
-    request:
-      mem: "50Mi"
-      cpu: "100m"
-  logging:
-    debug: true
+  image:
+    name: containous/maesh
+    pullPolicy: IfNotPresent
+    tag: latest
 
 mesh:
-  resources:
-    limit:
-      mem: "100Mi"
-      cpu: "200m"
-    request:
-      mem: "50Mi"
-      cpu: "100m"
-  logging: ERROR
-  defaultMode: http
-  pollInterval: "100ms"
-  pollTimeout: "100ms"
+  image:
+    name: traefik
+    pullPolicy: IfNotPresent
+    tag: v2.3
+
+  pollInterval: 100ms
+  pollTimeout: 100ms
 
 #
-# Tracing configuration
+# Tracing configuration.
 #
 tracing:
   deploy: false
   jaeger:
     enabled: false
-    localagenthostport: ""
-    samplingserverurl: ""
 
 #
-# Metrics configuration
+# Metrics configuration.
 #
 metrics:
   deploy: false
   prometheus:
     enabled: false
-
-kubedns: false
-
-limits:
-  http: 10
-  tcp: 25

@@ -12,6 +12,7 @@ func (s *HelmSuite) SetUpSuite(c *check.C) {
 	requiredImages := []string{
 		"containous/maesh:latest",
 		"coredns/coredns:1.6.3",
+		"traefik:v2.3",
 	}
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
