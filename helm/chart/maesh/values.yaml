@@ -1,12 +1,4 @@
 # Default values for Maesh.
-image:
-  name: containous/maesh
-  # (Optional)
-  # pullPolicy: IfNotPresent
-  # (Optional)
-  # tag: v1.1.0
-  # (Optional)
-  # pullSecret: xxx
 
 # acl: true
 
@@ -25,6 +17,15 @@ limits:
   udp: 25
 
 controller:
+  image:
+    name: containous/maesh
+    # (Optional)
+    # pullPolicy: IfNotPresent
+    # (Optional)
+    # tag: v1.1.0
+    # (Optional)
+    # pullSecret: xxx
+
   # logLevel: error
   # logFormat: common
 
@@ -48,6 +49,15 @@ controller:
   affinity: {}
 
 mesh:
+  image:
+    name: traefik
+    # (Optional)
+    # pullPolicy: IfNotPresent
+    # (Optional)
+    # tag: v2.3
+    # (Optional)
+    # pullSecret: xxx
+
   # logLevel: error
   # logFormat: common
 
