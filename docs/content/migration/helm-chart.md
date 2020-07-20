@@ -3,7 +3,33 @@
 Helm Chart
 {: .subtitle }
 
+## v2.1 to v3.0
+
+### Image version
+
+Since version `v1.4`, Maesh uses plain [Traefik](https://github.com/containous/traefik/) Docker image for mesh proxies.
+Therefore, to change the image version used for the controller, or the mesh proxies you should use the `controller.image` 
+and `mesh.image` options.
+
+## v2.0 to v2.1
+
+### Default Mode
+
+The `mesh.defaultMode` option has been deprecated and will be removed in a future major release.
+You should use the new `defaultMode` option to configure the default traffic mode for Maesh services.
+
+### Prometheus and Grafana services
+
+Prior to version `v2.1`, when the Metrics chart is deployed, Prometheus and Grafana services are exposed by default through 
+a `NodePort`. For security reasons, those services are not exposed by default anymore. To expose them you should use the 
+new `prometheus.service` and `grafana.service` options, more details in the corresponding [values.yaml](https://github.com/containous/maesh/blob/e59b861ac91261b950663410a6223a02fc7e2290/helm/chart/maesh/charts/metrics/values.yaml).
+
 ## v1.x to v2.0
+
+### Default Mode
+
+The `mesh.defaultMode` option has been removed. You should use the new `defaultMode` option to configure the default traffic 
+mode for Maesh services.
 
 ### Image version
 
@@ -19,30 +45,4 @@ and `mesh.logLevel` options to configure the logging level for the controller an
 ### SMI Mode
 
 The `smi.enable` option has been deprecated and removed. You should use the new and backward compatible ACL mode 
-option as described in the [documentation](../install.md#access-control-list). 
-
-## v2.0 to v2.1
-
-### Default Mode
-
-The `mesh.defaultMode` option has been deprecated and will be removed in a future major release.
-You should use the new `defaultMode` option to configure the default traffic mode for Maesh services.
-
-### Prometheus and Grafana services
-
-Prior to version `v2.1`, when the Metrics chart is deployed, Prometheus and Grafana services are exposed by default through 
-a `NodePort`. For security reasons, those services are not exposed by default anymore. To expose them you should use the 
-new `prometheus.service` and `grafana.service` options, more details in the corresponding [values.yaml](https://github.com/containous/maesh/blob/e59b861ac91261b950663410a6223a02fc7e2290/helm/chart/maesh/charts/metrics/values.yaml).
-
-## v2.1 to v3.0
-
-### Default Mode
-
-The `mesh.defaultMode` option has been removed. You should use the new `defaultMode` option to configure the default traffic 
-mode for Maesh services.
-
-### Image version
-
-Since version `v1.4`, Maesh uses plain [Traefik](https://github.com/containous/traefik/) Docker image for mesh proxies.
-Therefore, to change the image version used for the controller, or the mesh proxies you should use the `controller.image` 
-and `mesh.image` options.
+option as described in the [documentation](../install.md#access-control-list).
