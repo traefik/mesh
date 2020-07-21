@@ -48,9 +48,6 @@ controller:
   affinity: {}
 
 mesh:
-  # (Deprecated)
-  # defaultMode: http
-
   # logLevel: error
   # logFormat: common
 
