@@ -13,7 +13,7 @@ metadata:
     "helm.sh/hook": "post-delete"
     "helm.sh/hook-weight": "5"
     "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
-    
+
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -53,7 +53,7 @@ rules:
     verbs:
       - get
       - update
-   
+
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -74,9 +74,9 @@ roleRef:
   kind: ClusterRole
   name: maesh-cleanup-role
 subjects:
-- kind: ServiceAccount
-  name: maesh-cleanup
-  namespace: {{ .Release.Namespace }}
+  - kind: ServiceAccount
+    name: maesh-cleanup
+    namespace: {{ .Release.Namespace }}
 
 ---
 apiVersion: batch/v1
@@ -105,14 +105,14 @@ spec:
     spec:
       serviceAccountName: maesh-cleanup
       restartPolicy: Never
-      {{- if .Values.image.pullSecret }}
+      {{- if .Values.controller.image.pullSecret }}
       imagePullSecrets:
-        - name: {{ .Values.image.pullSecret }}
+        - name: {{ .Values.controller.image.pullSecret }}
       {{- end }}
       containers:
         - name: maesh-cleanup
-          image: {{ include "maesh.image" . | quote }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          image: {{ include "maesh.controllerImage" . | quote }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "cleanup"
             {{- if or .Values.controller.logLevel .Values.logLevel }}
