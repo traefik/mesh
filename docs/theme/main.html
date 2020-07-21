@@ -33,6 +33,13 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     {% endif %}
     {% if page.toc %}
         <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+            {% if config.repo_url %}
+                <div class="md-flex__cell md-flex__cell--shrink repo_url">
+                    <div class="md-header-nav__source">
+                        {% include "partials/source.html" %}
+                    </div>
+                </div>
+            {% endif %}
             <div class="md-sidebar__scrollwrap">
                 <div class="md-sidebar__inner">
                 {% include "partials/toc.html" %}
