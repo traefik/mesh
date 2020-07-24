@@ -368,6 +368,9 @@ func (c *Controller) processNextWorkItem() bool {
 
 // syncShadowService calls the shadow service manager to keep the shadow service state in sync with the service events received.
 func (c *Controller) syncShadowService(key string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
@@ -375,14 +378,14 @@ func (c *Controller) syncShadowService(key string) error {
 
 	svc, err := c.serviceLister.Services(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		return c.shadowServiceManager.Delete(namespace, name)
+		return c.shadowServiceManager.Delete(ctx, namespace, name)
 	}
 
 	if err != nil {
 		return err
 	}
 
-	_, err = c.shadowServiceManager.CreateOrUpdate(svc)
+	_, err = c.shadowServiceManager.CreateOrUpdate(ctx, svc)
 	if err != nil {
 		return err
 	}
