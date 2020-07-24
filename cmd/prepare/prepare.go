@@ -1,6 +1,7 @@
 package prepare
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/containous/maesh/cmd"
@@ -23,6 +24,8 @@ func NewCmd(pConfig *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
+	ctx := context.Background()
+
 	log, err := cmd.NewLogger(pConfig.LogFormat, pConfig.LogLevel, pConfig.Debug)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
@@ -51,7 +54,7 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 		return fmt.Errorf("error during informer check: %w, this can be caused by pre-existing objects in your cluster that do not conform to the spec", err)
 	}
 
-	if err = p.ConfigureDNS(pConfig.ClusterDomain, pConfig.Namespace); err != nil {
+	if err = p.ConfigureDNS(ctx, pConfig.ClusterDomain, pConfig.Namespace); err != nil {
 		return fmt.Errorf("unable to configure DNS: %w", err)
 	}
 

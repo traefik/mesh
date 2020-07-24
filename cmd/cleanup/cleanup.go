@@ -1,6 +1,7 @@
 package cleanup
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/containous/maesh/cmd"
@@ -23,6 +24,8 @@ func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
+	ctx := context.Background()
+
 	logger, err := cmd.NewLogger(cConfig.LogFormat, cConfig.LogLevel, false)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
@@ -39,11 +42,11 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 
 	c := cleanup.NewCleanup(logger, clients.KubernetesClient(), cConfig.Namespace)
 
-	if err := c.CleanShadowServices(); err != nil {
+	if err := c.CleanShadowServices(ctx); err != nil {
 		return fmt.Errorf("error encountered during cluster cleanup: %w", err)
 	}
 
-	if err := c.RestoreDNSConfig(); err != nil {
+	if err := c.RestoreDNSConfig(ctx); err != nil {
 		return fmt.Errorf("error encountered during DNS restore: %w", err)
 	}
 

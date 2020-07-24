@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -273,15 +274,16 @@ func (s *BaseSuite) deleteResources(c *check.C, dirPath string) {
 }
 
 func (s *BaseSuite) deleteShadowServices(c *check.C) {
+	ctx := context.Background()
 	opts := metav1.ListOptions{
 		LabelSelector: "app=maesh",
 	}
-	svcs, err := s.client.KubernetesClient().CoreV1().Services(maeshNamespace).List(opts)
+	svcs, err := s.client.KubernetesClient().CoreV1().Services(maeshNamespace).List(ctx, opts)
 	c.Assert(err, checker.IsNil)
 
 	for _, svc := range svcs.Items {
 		c.Logf("Deleting shadow service %s.", svc.Name)
-		err = s.client.KubernetesClient().CoreV1().Services(maeshNamespace).Delete(svc.Name, &metav1.DeleteOptions{})
+		err = s.client.KubernetesClient().CoreV1().Services(maeshNamespace).Delete(ctx, svc.Name, metav1.DeleteOptions{})
 		c.Assert(err, checker.IsNil)
 	}
 }
@@ -367,12 +369,13 @@ func (s *BaseSuite) uninstallHelmMaesh(c *check.C) {
 }
 
 func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
+	ctx := context.Background()
 	ebo := backoff.NewExponentialBackOff()
 	ebo.MaxElapsedTime = 60 * time.Second
 
 	err := backoff.Retry(safe.OperationWithRecover(func() error {
 		// Get current coreDNS deployment.
-		deployment, err := s.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+		deployment, err := s.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
 		c.Assert(err, checker.IsNil)
 
 		newDeployment := deployment.DeepCopy()
@@ -397,7 +400,9 @@ func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
 }
 
 func (s *BaseSuite) getToolsPodMaesh(c *check.C) *corev1.Pod {
-	podList, err := s.client.KubernetesClient().CoreV1().Pods(testNamespace).List(metav1.ListOptions{
+	ctx := context.Background()
+
+	podList, err := s.client.KubernetesClient().CoreV1().Pods(testNamespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "app=tiny-tools",
 	})
 	c.Assert(err, checker.IsNil)
@@ -543,28 +548,28 @@ func (s *BaseSuite) digHost(c *check.C, source, namespace, destination string) {
 }
 
 func (s *BaseSuite) getPod(c *check.C, name string) *corev1.Pod {
-	pod, err := s.client.KubernetesClient().CoreV1().Pods(testNamespace).Get(name, metav1.GetOptions{})
+	pod, err := s.client.KubernetesClient().CoreV1().Pods(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return pod
 }
 
 func (s *BaseSuite) getService(c *check.C, name string) *corev1.Service {
-	svc, err := s.client.KubernetesClient().CoreV1().Services(testNamespace).Get(name, metav1.GetOptions{})
+	svc, err := s.client.KubernetesClient().CoreV1().Services(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return svc
 }
 
 func (s *BaseSuite) getTrafficTarget(c *check.C, name string) *access.TrafficTarget {
-	tt, err := s.client.AccessClient().AccessV1alpha1().TrafficTargets(testNamespace).Get(name, metav1.GetOptions{})
+	tt, err := s.client.AccessClient().AccessV1alpha1().TrafficTargets(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return tt
 }
 
 func (s *BaseSuite) getTrafficSplit(c *check.C, name string) *split.TrafficSplit {
-	ts, err := s.client.SplitClient().SplitV1alpha2().TrafficSplits(testNamespace).Get(name, metav1.GetOptions{})
+	ts, err := s.client.SplitClient().SplitV1alpha2().TrafficSplits(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return ts
