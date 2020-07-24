@@ -124,6 +124,13 @@ func (s *BaseSuite) maeshPrepareWithArgs(args ...string) *exec.Cmd {
 	return exec.Command(maeshBinary, args...)
 }
 
+func (s *BaseSuite) maeshCleanupWithArgs(args ...string) *exec.Cmd {
+	cleanupArgSlice := []string{"cleanup", fmt.Sprintf("--masterurl=%s", masterURL), fmt.Sprintf("--kubeconfig=%s", os.Getenv("KUBECONFIG")), "--loglevel=debug", fmt.Sprintf("--namespace=%s", maeshNamespace)}
+	args = append(cleanupArgSlice, args...)
+
+	return exec.Command(maeshBinary, args...)
+}
+
 func (s *BaseSuite) startMaeshBinaryCmd(c *check.C, smi bool, acl bool) *exec.Cmd {
 	args := []string{}
 	if smi {
@@ -147,6 +154,12 @@ func (s *BaseSuite) startMaeshBinaryCmd(c *check.C, smi bool, acl bool) *exec.Cm
 
 func (s *BaseSuite) stopMaeshBinary(c *check.C, process *os.Process) {
 	err := process.Kill()
+	c.Assert(err, checker.IsNil)
+
+	cmd := s.maeshCleanupWithArgs()
+	cmd.Env = os.Environ()
+	output, err := cmd.CombinedOutput()
+	c.Log(string(output))
 	c.Assert(err, checker.IsNil)
 }
 
