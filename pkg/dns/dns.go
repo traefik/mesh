@@ -10,6 +10,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/google/uuid"
+	goversion "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,16 +30,6 @@ const (
 
 	coreFileHeader  = "#### Begin Maesh Block"
 	coreFileTrailer = "#### End Maesh Block"
-)
-
-var (
-	supportedCoreDNSVersions = []string{
-		"1.3",
-		"1.4",
-		"1.5",
-		"1.6",
-		"1.7",
-	}
 )
 
 // Client holds the client for interacting with the k8s DNS system.
@@ -84,6 +75,7 @@ func (c *Client) coreDNSMatch() (bool, error) {
 	c.logger.Info("Checking CoreDNS")
 
 	deployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
+	
 	if kerrors.IsNotFound(err) {
 		c.logger.Debugf("CoreDNS deployment does not exist in namespace %q", metav1.NamespaceSystem)
 		return false, nil
@@ -93,34 +85,23 @@ func (c *Client) coreDNSMatch() (bool, error) {
 		return false, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", metav1.NamespaceSystem, err)
 	}
 
-	var version string
-
-	for _, container := range deployment.Spec.Template.Spec.Containers {
-		if container.Name != "coredns" {
-			continue
-		}
-
-		sp := strings.Split(container.Image, ":")
-		version = sp[len(sp)-1]
+	version, err := c.getCoreDNSVersion(deployment)
+	if err != nil {
+		return false, err
 	}
 
-	if !isCoreDNSVersionSupported(version) {
-		return false, fmt.Errorf("unsupported CoreDNS version %q, (supported versions are: %s)", version, strings.Join(supportedCoreDNSVersions, ","))
+	versionConstraint, err := goversion.NewConstraint(">= 1.3, < 1.8")
+	if err != nil {
+		return false, err
+	}
+
+	if !versionConstraint.Check(version) {
+		return false, fmt.Errorf("unsupported CoreDNS version %q", version)
 	}
 
 	c.logger.Info("CoreDNS match")
 
 	return true, nil
-}
-
-func isCoreDNSVersionSupported(versionLine string) bool {
-	for _, v := range supportedCoreDNSVersions {
-		if strings.Contains(versionLine, v) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (c *Client) kubeDNSMatch() (bool, error) {
@@ -234,6 +215,20 @@ maesh:53 {
 	}
 
 	return coreDNSConfig + stubDomain
+}
+
+func (c *Client) getCoreDNSVersion(deployment *appsv1.Deployment) (*goversion.Version, error) {
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name != "coredns" {
+			continue
+		}
+
+		parts := strings.Split(container.Image, ":")
+
+		return goversion.NewVersion(parts[len(parts)-1])
+	}
+
+	return nil, fmt.Errorf("unable to get CoreDNS container in deployment %q/%q", deployment.Namespace, deployment.Name)
 }
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
