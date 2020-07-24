@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: coredns
-          image: coredns:1.6.0
+          image: coredns:1.7.0
       volumes:
         - configMap:
             name: "other-cfgmap"
