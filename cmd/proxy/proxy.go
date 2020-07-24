@@ -16,6 +16,7 @@ import (
 	"github.com/containous/maesh/pkg/version"
 	"github.com/containous/traefik/v2/pkg/cli"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/config/runtime"
 	"github.com/containous/traefik/v2/pkg/config/static"
 	"github.com/containous/traefik/v2/pkg/log"
 	"github.com/containous/traefik/v2/pkg/metrics"
@@ -131,7 +132,7 @@ func setupServer(proxyConfiguration *cmd.ProxyConfiguration) (*server.Server, er
 	accessLog := setupAccessLog(proxyConfiguration.Configuration.AccessLog)
 	chainBuilder := middleware.NewChainBuilder(proxyConfiguration.Configuration, metricsRegistry, accessLog)
 	managerFactory := service.NewManagerFactory(proxyConfiguration.Configuration, routinesPool, metricsRegistry)
-	routerFactory := server.NewRouterFactory(proxyConfiguration.Configuration, managerFactory, tlsManager, chainBuilder)
+	routerFactory := server.NewRouterFactory(proxyConfiguration.Configuration, managerFactory, tlsManager, chainBuilder, nil)
 
 	defaultEntryPoints := createAndSortDefaultEntrypoints(proxyConfiguration.Configuration.EntryPoints)
 
@@ -185,7 +186,9 @@ func createAndSortDefaultEntrypoints(entryPoints static.EntryPoints) []string {
 
 func switchRouter(routerFactory *server.RouterFactory, serverEntryPointsTCP server.TCPEntryPoints, serverEntryPointsUDP server.UDPEntryPoints) func(conf dynamic.Configuration) {
 	return func(conf dynamic.Configuration) {
-		routers, udpRouters := routerFactory.CreateRouters(conf)
+		rtConf := runtime.NewConfig(conf)
+
+		routers, udpRouters := routerFactory.CreateRouters(rtConf)
 
 		serverEntryPointsTCP.Switch(routers)
 		serverEntryPointsUDP.Switch(udpRouters)
