@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/abronan/valkeyrie v0.0.0-20200127174252-ef4277a138cd
 	github.com/cenkalti/backoff/v4 v4.0.2
-	github.com/containous/traefik/v2 v2.2.7
+	github.com/containous/traefik/v2 v2.3.0-rc2
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
@@ -15,9 +15,9 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.5.1
 	github.com/vdemeester/shakers v0.1.0
-	k8s.io/api v0.18.0
-	k8s.io/apimachinery v0.18.0
-	k8s.io/client-go v0.18.0
+	k8s.io/api v0.18.2
+	k8s.io/apimachinery v0.18.2
+	k8s.io/client-go v0.18.2
 )
 
 replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.20200204220554-5f6d6f3f2203
