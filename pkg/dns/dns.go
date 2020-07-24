@@ -32,6 +32,8 @@ const (
 	coreFileTrailer = "#### End Maesh Block"
 )
 
+var versionCoreDNS117 = goversion.Must(goversion.NewVersion("1.7"))
+
 // Client holds the client for interacting with the k8s DNS system.
 type Client struct {
 	kubeClient kubernetes.Interface
@@ -75,7 +77,7 @@ func (c *Client) coreDNSMatch() (bool, error) {
 	c.logger.Info("Checking CoreDNS")
 
 	deployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get("coredns", metav1.GetOptions{})
-	
+
 	if kerrors.IsNotFound(err) {
 		c.logger.Debugf("CoreDNS deployment does not exist in namespace %q", metav1.NamespaceSystem)
 		return false, nil
@@ -150,6 +152,11 @@ func (c *Client) ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespac
 }
 
 func (c *Client) patchCoreDNSConfig(deployment *appsv1.Deployment, clusterDomain, maeshNamespace string) (*corev1.ConfigMap, error) {
+	coreDNSVersion, err := c.getCoreDNSVersion(deployment)
+	if err != nil {
+		return nil, err
+	}
+
 	customConfigMap, err := c.getConfigMap(deployment, "coredns-custom")
 
 	// For AKS the CoreDNS config have to be added to the coredns-custom ConfigMap.
@@ -159,6 +166,7 @@ func (c *Client) patchCoreDNSConfig(deployment *appsv1.Deployment, clusterDomain
 			clusterDomain,
 			maeshNamespace,
 			"",
+			coreDNSVersion,
 		)
 
 		return customConfigMap, nil
@@ -173,12 +181,18 @@ func (c *Client) patchCoreDNSConfig(deployment *appsv1.Deployment, clusterDomain
 		clusterDomain,
 		maeshNamespace,
 		coreDNSConfigMap.Data["Corefile"],
+		coreDNSVersion,
 	)
 
 	return coreDNSConfigMap, nil
 }
 
-func (c *Client) addMaeshStubDomain(clusterDomain, maeshNamespace, coreDNSConfig string) string {
+func (c *Client) addMaeshStubDomain(clusterDomain, maeshNamespace, coreDNSConfig string, coreDNSVersion *goversion.Version) string {
+	// config already contains the maesh block.
+	if strings.Contains(coreDNSConfig, coreFileHeader) {
+		return coreDNSConfig
+	}
+
 	stubDomainFormat := `
 %[4]s
 maesh:53 {
@@ -189,7 +203,7 @@ maesh:53 {
     }
     kubernetes %[1]s in-addr.arpa ip6.arpa {
         pods insecure
-        upstream
+        %[6]s
         fallthrough in-addr.arpa ip6.arpa
     }
     forward . /etc/resolv.conf
@@ -200,6 +214,10 @@ maesh:53 {
 }
 %[5]s
 `
+	upstream := ""
+	if coreDNSVersion.LessThan(versionCoreDNS117) {
+		upstream = "upstream"
+	}
 
 	stubDomain := fmt.Sprintf(stubDomainFormat,
 		clusterDomain,
@@ -207,12 +225,8 @@ maesh:53 {
 		maeshNamespace,
 		coreFileHeader,
 		coreFileTrailer,
+		upstream,
 	)
-
-	// CoreDNS config already contains the maesh block.
-	if strings.Contains(coreDNSConfig, coreFileHeader) {
-		return coreDNSConfig
-	}
 
 	return coreDNSConfig + stubDomain
 }
