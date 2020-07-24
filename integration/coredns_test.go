@@ -59,7 +59,8 @@ func (s *CoreDNSSuite) TestCoreDNSVersionSafe(c *check.C) {
 
 	for _, test := range testCases {
 		s.WaitForCoreDNS(c)
-		c.Log("Testing compatibility with " + test.desc)
+
+		c.Logf("Testing compatibility with %s", test.desc)
 		s.setCoreDNSVersion(c, test.version)
 
 		cmd := s.maeshPrepareWithArgs()
@@ -70,9 +71,10 @@ func (s *CoreDNSSuite) TestCoreDNSVersionSafe(c *check.C) {
 
 		if test.expectedError {
 			c.Assert(err, checker.NotNil)
-		} else {
-			c.Assert(err, checker.IsNil)
+			continue
 		}
+
+		c.Assert(err, checker.IsNil)
 	}
 }
 
@@ -100,7 +102,8 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 
 	for _, test := range testCases {
 		s.WaitForCoreDNS(c)
-		c.Log("Testing compatibility with " + test.desc)
+
+		c.Logf("Testing compatibility with %s", test.desc)
 		s.setCoreDNSVersion(c, test.version)
 
 		cmd := s.maeshPrepareWithArgs()
@@ -109,22 +112,49 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 
 		c.Log(string(output))
 		c.Assert(err, checker.IsNil)
+
+		cmd = s.maeshCleanupWithArgs()
+		cmd.Env = os.Environ()
+		output, err = cmd.CombinedOutput()
+
+		c.Log(string(output))
+		c.Assert(err, checker.IsNil)
 	}
 }
 
 func (s *CoreDNSSuite) TestCoreDNSDig(c *check.C) {
+	testCases := []struct {
+		desc    string
+		version string
+	}{
+		{
+			desc:    "CoreDNS 1.6.3",
+			version: "1.6.3",
+		},
+		{
+			desc:    "CoreDNS 1.7.0",
+			version: "1.7.0",
+		},
+	}
+
 	s.createResources(c, "testdata/coredns/coredns.yaml")
 	defer s.deleteResources(c, "testdata/coredns/coredns.yaml")
-	s.WaitForCoreDNS(c)
 
-	cmd := s.startMaeshBinaryCmd(c, false, false)
-	err := cmd.Start()
+	for _, test := range testCases {
+		s.WaitForCoreDNS(c)
 
-	c.Assert(err, checker.IsNil)
-	defer s.stopMaeshBinary(c, cmd.Process)
+		c.Logf("Testing dig with %s", test.desc)
+		s.setCoreDNSVersion(c, test.version)
 
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
+		cmd := s.startMaeshBinaryCmd(c, false, false)
 
-	s.digHost(c, pod.Name, pod.Namespace, "whoami.whoami.maesh")
+		err := cmd.Start()
+		c.Assert(err, checker.IsNil)
+
+		pod := s.getToolsPodMaesh(c)
+		c.Assert(pod, checker.NotNil)
+
+		s.digHost(c, pod.Name, pod.Namespace, "whoami.whoami.maesh")
+		s.stopMaeshBinary(c, cmd.Process)
+	}
 }
