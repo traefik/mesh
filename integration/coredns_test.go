@@ -21,6 +21,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 		"coredns/coredns:1.7.0",
 		"giantswarm/tiny-tools:3.9",
 	}
+
 	s.startk3s(c, requiredImages)
 	s.startWhoami(c)
 	s.installTinyToolsMaesh(c)
@@ -54,12 +55,11 @@ func (s *CoreDNSSuite) TestCoreDNSVersionSafe(c *check.C) {
 		},
 	}
 
-	s.createResources(c, "testdata/coredns/corednssafe.yaml")
-	defer s.deleteResources(c, "testdata/coredns/corednssafe.yaml")
-
 	for _, test := range testCases {
+		s.createResources(c, "testdata/coredns/corednssafe.yaml")
 		s.WaitForCoreDNS(c)
-		c.Log("Testing compatibility with " + test.desc)
+
+		c.Logf("Testing compatibility with %s", test.desc)
 		s.setCoreDNSVersion(c, test.version)
 
 		cmd := s.maeshPrepareWithArgs()
@@ -73,6 +73,8 @@ func (s *CoreDNSSuite) TestCoreDNSVersionSafe(c *check.C) {
 		} else {
 			c.Assert(err, checker.IsNil)
 		}
+
+		s.deleteResources(c, "testdata/coredns/corednssafe.yaml")
 	}
 }
 
@@ -95,12 +97,11 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 		},
 	}
 
-	s.createResources(c, "testdata/coredns/coredns.yaml")
-	defer s.deleteResources(c, "testdata/coredns/coredns.yaml")
-
 	for _, test := range testCases {
+		s.createResources(c, "testdata/coredns/coredns.yaml")
 		s.WaitForCoreDNS(c)
-		c.Log("Testing compatibility with " + test.desc)
+
+		c.Logf("Testing compatibility with %s", test.desc)
 		s.setCoreDNSVersion(c, test.version)
 
 		cmd := s.maeshPrepareWithArgs()
@@ -109,22 +110,44 @@ func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
 
 		c.Log(string(output))
 		c.Assert(err, checker.IsNil)
+
+		s.deleteResources(c, "testdata/coredns/coredns.yaml")
 	}
 }
 
 func (s *CoreDNSSuite) TestCoreDNSDig(c *check.C) {
-	s.createResources(c, "testdata/coredns/coredns.yaml")
-	defer s.deleteResources(c, "testdata/coredns/coredns.yaml")
-	s.WaitForCoreDNS(c)
+	testCases := []struct {
+		desc    string
+		version string
+	}{
+		{
+			desc:    "CoreDNS 1.6.3",
+			version: "1.6.3",
+		},
+		{
+			desc:    "CoreDNS 1.7.0",
+			version: "1.7.0",
+		},
+	}
 
-	cmd := s.startMaeshBinaryCmd(c, false, false)
-	err := cmd.Start()
+	for _, test := range testCases {
+		s.createResources(c, "testdata/coredns/coredns.yaml")
+		s.WaitForCoreDNS(c)
 
-	c.Assert(err, checker.IsNil)
-	defer s.stopMaeshBinary(c, cmd.Process)
+		c.Logf("Testing dig with %s", test.desc)
+		s.setCoreDNSVersion(c, test.version)
 
-	pod := s.getToolsPodMaesh(c)
-	c.Assert(pod, checker.NotNil)
+		cmd := s.startMaeshBinaryCmd(c, false, false)
 
-	s.digHost(c, pod.Name, pod.Namespace, "whoami.whoami.maesh")
+		err := cmd.Start()
+		c.Assert(err, checker.IsNil)
+
+		pod := s.getToolsPodMaesh(c)
+		c.Assert(pod, checker.NotNil)
+
+		s.digHost(c, pod.Name, pod.Namespace, "whoami.whoami.maesh")
+		s.stopMaeshBinary(c, cmd.Process)
+
+		s.deleteResources(c, "testdata/coredns/coredns.yaml")
+	}
 }
