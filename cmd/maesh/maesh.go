@@ -85,7 +85,7 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 
 	prep := preparepkg.NewPrepare(log, clients)
 
-	_, err = prep.CheckDNSProvider()
+	_, err = prep.CheckDNSProvider(ctx)
 	if err != nil {
 		return fmt.Errorf("no valid DNS provider found: %w", err)
 	}
