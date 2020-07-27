@@ -8,7 +8,7 @@ metadata:
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
-  name: coredns
+  name: maesh-coredns-role
   namespace: {{ .Release.Namespace }}
 rules:
   - apiGroups:
@@ -39,12 +39,12 @@ metadata:
     heritage: {{ .Release.Service | quote}}
   annotations:
     rbac.authorization.kubernetes.io/autoupdate: "true"
-  name: coredns
+  name: maesh-coredns
   namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: coredns
+  name: maesh-coredns-role
 subjects:
   - kind: ServiceAccount
     name: coredns
