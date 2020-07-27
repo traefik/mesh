@@ -25,7 +25,7 @@ spec:
       labels:
         k8s-app: coredns
     spec:
-      serviceAccountName: coredns
+      serviceAccountName: maesh-coredns
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

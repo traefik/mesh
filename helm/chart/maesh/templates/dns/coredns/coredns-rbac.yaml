@@ -32,6 +32,8 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
+  name: maesh-coredns
+  namespace: {{ .Release.Namespace }}
   labels:
     kubernetes.io/bootstrapping: rbac-defaults
     chart: {{ include "maesh.chartLabel" . | quote }}
@@ -39,14 +41,12 @@ metadata:
     heritage: {{ .Release.Service | quote}}
   annotations:
     rbac.authorization.kubernetes.io/autoupdate: "true"
-  name: maesh-coredns
-  namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: maesh-coredns-role
 subjects:
   - kind: ServiceAccount
-    name: coredns
+    name: maesh-coredns
     namespace: {{ .Release.Namespace }}
 {{- end }}
