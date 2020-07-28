@@ -4,7 +4,7 @@ kind: PodDisruptionBudget
 metadata:
   name: jaeger
   labels:
-    app: {{ .Release.Name | quote }}
+    app: jaeger
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}

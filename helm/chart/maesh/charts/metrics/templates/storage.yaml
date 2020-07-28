@@ -5,6 +5,8 @@ metadata:
   name: metrics-storage
   namespace: {{ .Release.Namespace }}
   labels:
+    app: maesh
+    component: grafana
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -25,6 +27,8 @@ metadata:
   name: prometheus-storage
   namespace: {{ .Release.Namespace }}
   labels:
+    app: maesh
+    component: prometheus
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}

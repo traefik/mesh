@@ -5,7 +5,8 @@ metadata:
   name: maesh-controller
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: controller
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -13,13 +14,13 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Release.Name | quote }}
+      app: maesh
       component: controller
       release: {{ .Release.Name | quote }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name | quote }}
+        app: maesh
         component: controller
         release: {{ .Release.Name | quote }}
       annotations:
