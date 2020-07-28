@@ -5,9 +5,9 @@ The static configuration is configured when the service mesh is installed and is
 
 ## Static configuration
 
-- The Maesh image version can be manually defined if needed.
+- The controller image version as well as the Traefik image version used by mesh proxies can be manually defined if needed.
 
-- Logging level and format for controller and proxies can be defined.
+- Logging level and format for the controller and proxies can be defined.
 
 - The default mesh mode can be configured. If this is not set, the default mode will be HTTP.
   This means that new mesh services that are not specified will default to operate in HTTP mode.
