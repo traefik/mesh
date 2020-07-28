@@ -5,8 +5,9 @@ metadata:
   name: jaeger-query
   namespace: {{ .Release.Namespace }}
   labels:
-    app: maesh
-    component: jaeger-query
+    app: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: query
 spec:
   ports:
     - name: query-http
@@ -14,8 +15,8 @@ spec:
       port: 16686
       targetPort: serve-frontend
   selector:
-    app: maesh
-    component: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: all-in-one
   type: ClusterIP
 
 ---
@@ -25,8 +26,9 @@ metadata:
   name: jaeger-collector
   namespace: {{ .Release.Namespace }}
   labels:
-    app: maesh
-    component: jaeger-collector
+    app: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: collector
 spec:
   ports:
     - name: jaeger-collector-tchannel
@@ -42,8 +44,8 @@ spec:
       protocol: TCP
       targetPort: collector-zip
   selector:
-    app: maesh
-    component: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: all-in-one
   type: ClusterIP
 
 ---
@@ -53,8 +55,9 @@ metadata:
   name: jaeger-agent
   namespace: {{ .Release.Namespace }}
   labels:
-    app: maesh
-    component: jaeger-agent
+    app: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: agent
 spec:
   ports:
     - name: agent-zipkin-thrift
@@ -75,8 +78,8 @@ spec:
       targetPort: serve-configs
   clusterIP: None
   selector:
-    app: maesh
-    component: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: all-in-one
 
 ---
 apiVersion: v1
@@ -85,8 +88,9 @@ metadata:
   name: zipkin
   namespace: {{ .Release.Namespace }}
   labels:
-    app: maesh
-    component: jaeger-zipkin
+    app: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: zipkin
 spec:
   ports:
     - name: jaeger-collector-zipkin
@@ -95,5 +99,5 @@ spec:
       targetPort: collector-zip
   clusterIP: None
   selector:
-    app: maesh
-    component: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: all-in-one

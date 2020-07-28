@@ -58,7 +58,7 @@ spec:
           imagePullPolicy: {{ .Values.tracing.jaeger.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "service"
-            - "-lapp=maesh,component=jaeger-agent"
+            - "-lapp.kubernetes.io/name=jaeger,app.kubernetes.io/component=agent"
           resources:
             requests:
               memory: "10Mi"
