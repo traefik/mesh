@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
