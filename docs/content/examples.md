@@ -235,7 +235,7 @@ IP: 127.0.0.1
 IP: 5.6.7.8
 RemoteAddr: 1.2.3.4:12345
 GET / HTTP/1.1
-Host: whoami.whoami.svc.cluster.local
+Host: whoami.whoami.maesh
 User-Agent: curl/7.64.0
 Accept: */*
 X-Forwarded-For: 3.4.5.6
