@@ -6,6 +6,8 @@ metadata:
   name: maesh-coredns
   namespace: {{ .Release.Namespace }}
   labels:
+    app: maesh
+    component: coredns
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}

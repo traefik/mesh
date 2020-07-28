@@ -112,7 +112,7 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 		k8s.IgnoreNamespaces(cfg.IgnoreNamespaces...),
 		k8s.IgnoreNamespaces(metav1.NamespaceSystem),
 		k8s.IgnoreService(metav1.NamespaceDefault, "kubernetes"),
-		k8s.IgnoreApps("maesh", "jaeger"),
+		k8s.IgnoreApps("maesh"),
 	)
 
 	// Create the work queue and the enqueue handler.

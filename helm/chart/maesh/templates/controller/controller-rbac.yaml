@@ -5,7 +5,8 @@ metadata:
   name: maesh-controller-role
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote}}
+    app: maesh
+    component: controller
     chart: {{ include "maesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -75,7 +76,8 @@ metadata:
   name: maesh-controller
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote}}
+    app: maesh
+    component: controller
     chart: {{ include "maesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}

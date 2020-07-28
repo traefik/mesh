@@ -5,7 +5,8 @@ metadata:
   name: maesh-mesh
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: maesh-mesh
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -16,13 +17,13 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: {{ .Release.Name | quote }}
+      app: maesh
       component: maesh-mesh
       release: {{ .Release.Name | quote }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name | quote }}
+        app: maesh
         component: maesh-mesh
         release: {{ .Release.Name | quote }}
       annotations:
@@ -57,7 +58,7 @@ spec:
           imagePullPolicy: {{ .Values.tracing.jaeger.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "service"
-            - "-lapp.kubernetes.io/name=jaeger,app.kubernetes.io/component=agent"
+            - "-lapp=maesh,component=jaeger-agent"
           resources:
             requests:
               memory: "10Mi"
