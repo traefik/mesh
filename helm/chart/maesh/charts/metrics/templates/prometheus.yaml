@@ -6,11 +6,11 @@ metadata:
   name: prometheus-rules
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: prometheus
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
-    component: prometheus
 data:
   general.yaml: |
     groups:
@@ -29,11 +29,11 @@ metadata:
   name: prometheus-core
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: prometheus
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
-    component: prometheus
 data:
   prometheus.yaml: |
     global:
@@ -71,23 +71,23 @@ metadata:
   name: prometheus-core
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: prometheus
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
-    component: prometheus
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: prometheus
-      component: core
+      app: maesh
+      component: prometheus
   template:
     metadata:
       name: prometheus-main
       labels:
-        app: prometheus
-        component: core
+        app: maesh
+        component: prometheus
     spec:
       serviceAccountName: prometheus-k8s
       automountServiceAccountToken: true
@@ -175,11 +175,11 @@ metadata:
   name: prometheus
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: prometheus
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
-    component: prometheus
   annotations:
     prometheus.io/scrape: 'true'
 spec:
@@ -193,5 +193,5 @@ spec:
       protocol: TCP
       name: webui
   selector:
-    app: prometheus
-    component: core
+    app: maesh
+    component: prometheus

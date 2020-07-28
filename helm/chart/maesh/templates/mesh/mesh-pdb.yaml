@@ -5,7 +5,8 @@ metadata:
   name: maesh-mesh
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: maesh-mesh
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -13,6 +14,6 @@ spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: {{ .Release.Name | quote }}
+      app: maesh
       component: maesh-mesh
       release: {{ .Release.Name | quote }}

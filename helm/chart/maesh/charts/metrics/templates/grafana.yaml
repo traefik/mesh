@@ -5,22 +5,22 @@ metadata:
   name: grafana-core
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: grafana
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
-    component: grafana
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: grafana
-      component: core
+      app: maesh
+      component: grafana
   template:
     metadata:
       labels:
-        app: grafana
-        component: core
+        app: maesh
+        component: grafana
     spec:
       serviceAccountName: grafana-k8s
       automountServiceAccountToken: false
@@ -100,11 +100,11 @@ metadata:
   name: grafana-config
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: grafana
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
-    component: grafana
 data:
   grafana.ini: |-
     instance_name = containous-grafana
@@ -155,11 +155,11 @@ metadata:
   name: grafana
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: grafana
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
-    component: grafana
 spec:
   type: {{ .Values.grafana.service.type }}
   ports:
@@ -169,8 +169,8 @@ spec:
       nodePort: {{ .Values.grafana.service.nodePort }}
       {{- end }}
   selector:
-    app: grafana
-    component: core
+    app: maesh
+    component: grafana
 
 ---
 {{- $files := .Files }}
@@ -183,6 +183,7 @@ metadata:
   name: grafana-dashboard-{{ $filename }}
   namespace: {{ $ns }}
   labels:
+    app: maesh
     component: grafana
 data:
   {{ base $path }}: '{{ $files.Get $path }}'
