@@ -6,9 +6,8 @@ metadata:
   name: coredns
   namespace: {{ .Release.Namespace }}
   labels:
-    k8s-app: coredns
-    kubernetes.io/name: "CoreDNS"
-    kubernetes.io/cluster-service: "true"
+    app: maesh
+    component: coredns
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
@@ -17,7 +16,8 @@ metadata:
     prometheus.io/scrape: "true"
 spec:
   selector:
-    k8s-app: coredns
+    app: maesh
+    component: coredns
   type: ClusterIP
   ports:
     - name: dns

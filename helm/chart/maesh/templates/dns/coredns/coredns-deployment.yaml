@@ -6,8 +6,8 @@ metadata:
   name: coredns
   namespace: {{ .Release.Namespace }}
   labels:
-    k8s-app: coredns
-    kubernetes.io/name: "CoreDNS"
+    app: maesh
+    component: coredns
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
@@ -19,11 +19,13 @@ spec:
       maxUnavailable: 1
   selector:
     matchLabels:
-      k8s-app: coredns
+      app: maesh
+      component: coredns
   template:
     metadata:
       labels:
-        k8s-app: coredns
+        app: maesh
+        component: coredns
     spec:
       serviceAccountName: maesh-coredns
       affinity:
@@ -33,10 +35,14 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchExpressions:
-                    - key: k8s-app
+                    - key: app
                       operator: In
                       values:
-                        - corednss
+                        - maesh
+                    - key: component
+                      operator: In
+                      values:
+                        - coredns
                 topologyKey: "kubernetes.io/hostname"
       tolerations:
         - key: "CriticalAddonsOnly"

@@ -4,6 +4,8 @@ kind: ClusterRoleBinding
 metadata:
   name: prometheus
   labels:
+    app: maesh
+    component: prometheus
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -22,6 +24,8 @@ kind: ClusterRole
 metadata:
   name: prometheus
   labels:
+    app: maesh
+    component: prometheus
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -51,6 +55,8 @@ metadata:
   name: prometheus-k8s
   namespace: {{ .Release.Namespace }}
   labels:
+    app: maesh
+    component: prometheus
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -62,6 +68,8 @@ metadata:
   name: grafana-k8s
   namespace: {{ .Release.Namespace }}
   labels:
+    app: maesh
+    component: grafana
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}

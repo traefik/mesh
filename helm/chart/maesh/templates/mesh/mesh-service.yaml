@@ -6,6 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
+    component: maesh-mesh
 spec:
   type: ClusterIP
   ports:
@@ -13,4 +14,5 @@ spec:
       name: mesh-api
       targetPort: api
   selector:
+    app: maesh
     component: maesh-mesh

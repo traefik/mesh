@@ -5,7 +5,8 @@ metadata:
   name: jaeger
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Release.Name | quote}}
+    app: maesh
+    component: jaeger
     chart: {{ include "maesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}

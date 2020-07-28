@@ -4,7 +4,8 @@ kind: PodDisruptionBudget
 metadata:
   name: jaeger
   labels:
-    app: {{ .Release.Name | quote }}
+    app: maesh
+    component: jaeger
     chart: {{ include "maesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
@@ -12,6 +13,5 @@ spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: jaeger
-      app.kubernetes.io/name: jaeger
-      app.kubernetes.io/component: all-in-one
+      app: maesh
+      component: jaeger
