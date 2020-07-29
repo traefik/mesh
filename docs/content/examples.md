@@ -49,9 +49,9 @@ spec:
     spec:
       serviceAccount: whoami-server
       containers:
-      - name: whoami
-        image: containous/whoami:v1.4.0
-        imagePullPolicy: IfNotPresent
+        - name: whoami
+          image: containous/whoami:v1.4.0
+          imagePullPolicy: IfNotPresent
 
 ---
 kind: Deployment
@@ -71,9 +71,9 @@ spec:
     spec:
       serviceAccount: whoami-server
       containers:
-      - name: whoami-tcp
-        image: containous/whoamitcp:latest
-        imagePullPolicy: IfNotPresent
+        - name: whoami-tcp
+          image: containous/whoamitcp:latest
+          imagePullPolicy: IfNotPresent
 
 ---
 apiVersion: v1
@@ -86,8 +86,8 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 80
-    name: whoami
+    - port: 80
+      name: whoami
   selector:
     app: whoami
 
@@ -119,8 +119,8 @@ spec:
     - name: whoami-client
       image: giantswarm/tiny-tools:3.9
       command:
-      - "sleep"
-      - "3600"
+        - "sleep"
+        - "3600"
 ```
 
 You should now see the following when running `kubectl get all -n whoami`:
@@ -183,6 +183,7 @@ Now, in order to configure Maesh for your `whoami` service, you just need to upd
 The HTTP service needs to have `maesh.containo.us/traffic-type: "http"` and the TCP service, `maesh.containo.us/traffic-type: "tcp"`.
 
 ```yaml
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -197,8 +198,8 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 80
-    name: whoami
+    - port: 80
+      name: whoami
   selector:
     app: whoami
 
@@ -220,7 +221,6 @@ spec:
       name: whoami-tcp
   selector:
     app: whoami-tcp
-
 ```
 
 You should now be able to access your HTTP and TCP services through the Maesh endpoint:
@@ -235,7 +235,7 @@ IP: 127.0.0.1
 IP: 5.6.7.8
 RemoteAddr: 1.2.3.4:12345
 GET / HTTP/1.1
-Host: whoami.whoami.svc.cluster.local
+Host: whoami.whoami.maesh
 User-Agent: curl/7.64.0
 Accept: */*
 X-Forwarded-For: 3.4.5.6
@@ -251,15 +251,17 @@ Each `TrafficTarget` defines that a set of source `ServiceAccount` is capable of
 explicitly allow it to hit the pods exposed by the `whoami` service. 
 
 ```yaml
+---
 apiVersion: specs.smi-spec.io/v1alpha1
 kind: HTTPRouteGroup
 metadata:
   name: http-everything
   namespace: whoami
 matches:
-- name: everything
-  pathRegex: ".*"
-  methods: ["*"]
+  - name: everything
+    pathRegex: ".*"
+    methods: ["*"]
+
 ---
 kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
@@ -272,20 +274,21 @@ destination:
   namespace: whoami
   port: "80"
 specs:
-- kind: HTTPRouteGroup
-  name: http-everything
-  matches:
-  - everything
+  - kind: HTTPRouteGroup
+    name: http-everything
+    matches:
+      - everything
 sources:
-- kind: ServiceAccount
-  name: whoami-client
-  namespace: whoami
+  - kind: ServiceAccount
+    name: whoami-client
+    namespace: whoami
 ```
 
 
 Incoming traffic on a TCP service can also be authorized using a `TrafficTarget` and a `TCPRoute`.
 
 ```yaml
+---
 kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha1
 metadata:
@@ -296,12 +299,13 @@ destination:
   name: api-service
   namespace: default
 specs:
-- kind: TCPRoute
-  name: my-tcp-route
+  - kind: TCPRoute
+    name: my-tcp-route
 sources:
-- kind: ServiceAccount
-  name: my-other-service
-  namespace: default
+  - kind: ServiceAccount
+    name: my-other-service
+    namespace: default
+
 ---
 apiVersion: specs.smi-spec.io/v1alpha1
 kind: TCPRoute
