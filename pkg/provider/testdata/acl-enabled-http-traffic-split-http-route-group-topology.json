@@ -1,0 +1,189 @@
+{
+  "services": {
+    "svc-a@my-ns": {
+      "name": "svc-a",
+      "namespace": "my-ns",
+      "selector": {},
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.14.1",
+      "pods": [],
+      "trafficSplits": ["split@my-ns"]
+    },
+    "svc-b@my-ns": {
+      "name": "svc-b",
+      "namespace": "my-ns",
+      "selector": {},
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 80
+        }
+      ],
+      "clusterIp": "10.10.15.1",
+      "pods": [
+        "pod-b@my-ns"
+      ],
+      "backendOf": ["split@my-ns"],
+      "trafficTargets": ["svc-b@my-ns:tt@my-ns"]
+    },
+    "svc-c@my-ns": {
+      "name": "svc-c",
+      "namespace": "my-ns",
+      "selector": {},
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 80
+        }
+      ],
+      "clusterIp": "10.10.16.1",
+      "pods": [
+        "pod-c@my-ns"
+      ],
+      "backendOf": ["split@my-ns"],
+      "trafficTargets": ["svc-c@my-ns:tt@my-ns"]
+    }
+  },
+  "pods": {
+    "pod-a@my-ns": {
+      "name": "pod-a",
+      "namespace": "my-ns",
+      "serviceAccount": "client",
+      "ip": "10.10.1.1",
+      "sourceOf": ["svc-b@my-ns:tt@my-ns", "svc-c@my-ns:tt@my-ns"]
+    },
+    "pod-b@my-ns": {
+      "name": "pod-b",
+      "namespace": "my-ns",
+      "serviceAccount": "server",
+      "ip": "10.10.2.1",
+      "destinationOf": ["svc-b@my-ns:tt@my-ns"]
+    },
+    "pod-c@my-ns": {
+      "name": "pod-c",
+      "namespace": "my-ns",
+      "serviceAccount": "server",
+      "ip": "10.10.3.1",
+      "destinationOf": ["svc-c@my-ns:tt@my-ns"]
+    }
+  },
+  "trafficSplits": {
+    "split@my-ns": {
+      "name": "split",
+      "namespace": "my-ns",
+      "service": "svc-a@my-ns",
+      "backends": [
+        {
+          "weight": 80,
+          "service": "svc-b@my-ns"
+        },
+        {
+          "weight": 20,
+          "service": "svc-c@my-ns"
+        }
+      ],
+      "specs": [
+        {
+          "httpRouteGroup": {
+            "kind": "HTTPRouteGroup",
+            "apiVersion": "specs.smi-spec.io/v1alpha3",
+            "metadata": {
+              "name": "app-route-group",
+              "namespace": "my-ns"
+            },
+            "spec": {
+              "matches": [
+                {
+                  "name": "app",
+                  "methods": ["*"],
+                  "pathRegex": "/app"
+                }
+              ]
+            }
+          },
+          "httpMatches": [
+            {
+              "name": "app",
+              "methods": ["*"],
+              "pathRegex": "/app"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "serviceTrafficTargets": {
+    "svc-b@my-ns:tt@my-ns": {
+      "service": "svc-b@my-ns",
+      "name": "tt",
+      "namespace": "my-ns",
+      "sources": [
+        {
+          "serviceAccount": "client",
+          "namespace": "my-ns",
+          "pods": [
+            "pod-a@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "server",
+        "namespace": "my-ns",
+        "ports": [
+          {
+            "name": "port-8080",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 80
+          }
+        ],
+        "pods": [
+          "pod-b@my-ns"
+        ]
+      }
+    },
+    "svc-c@my-ns:tt@my-ns": {
+      "service": "svc-c@my-ns",
+      "name": "tt",
+      "namespace": "my-ns",
+      "sources": [
+        {
+          "serviceAccount": "client",
+          "namespace": "my-ns",
+          "pods": [
+            "pod-a@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "server",
+        "namespace": "my-ns",
+        "ports": [
+          {
+            "name": "port-8080",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 80
+          }
+        ],
+        "pods": [
+          "pod-c@my-ns"
+        ]
+      }
+    }
+  }
+}
