@@ -8,11 +8,11 @@ import (
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
 )
 
-func buildTrafficTargetRule(tt *topology.ServiceTrafficTarget) string {
+func buildHTTPRuleFromTrafficSpecs(specs []topology.TrafficSpec) string {
 	var orRules []string
 
-	for _, rule := range tt.Rules {
-		for _, match := range rule.HTTPMatches {
+	for _, spec := range specs {
+		for _, match := range spec.HTTPMatches {
 			var matchParts []string
 
 			// Handle Path filtering.
@@ -94,18 +94,29 @@ func buildHTTPRuleFromService(svc *topology.Service) string {
 }
 
 func buildHTTPRuleFromTrafficTarget(tt *topology.ServiceTrafficTarget, ttSvc *topology.Service) string {
-	ttRule := buildTrafficTargetRule(tt)
-	httpRule := buildHTTPRuleFromService(ttSvc)
+	ttRule := buildHTTPRuleFromTrafficSpecs(tt.Rules)
+	svcRule := buildHTTPRuleFromService(ttSvc)
 
 	if ttRule != "" {
-		return fmt.Sprintf("(%s) && (%s)", httpRule, ttRule)
+		return fmt.Sprintf("(%s) && (%s)", svcRule, ttRule)
 	}
 
-	return httpRule
+	return svcRule
+}
+
+func buildHTTPRuleFromTrafficSplit(ts *topology.TrafficSplit, tsSvc *topology.Service) string {
+	tsRule := buildHTTPRuleFromTrafficSpecs(ts.Specs)
+	svcRule := buildHTTPRuleFromService(tsSvc)
+
+	if tsRule != "" {
+		return fmt.Sprintf("(%s) && (%s)", svcRule, tsRule)
+	}
+
+	return svcRule
 }
 
 func buildHTTPRuleFromTrafficTargetIndirect(tt *topology.ServiceTrafficTarget, ttSvc *topology.Service) string {
-	ttRule := buildTrafficTargetRule(tt)
+	ttRule := buildHTTPRuleFromTrafficSpecs(tt.Rules)
 	svcRule := buildHTTPRuleFromService(ttSvc)
 	indirectRule := "HeadersRegexp(`X-Forwarded-For`, `.+`)"
 
@@ -116,9 +127,14 @@ func buildHTTPRuleFromTrafficTargetIndirect(tt *topology.ServiceTrafficTarget, t
 	return fmt.Sprintf("(%s) && %s", svcRule, indirectRule)
 }
 
-func buildHTTPRuleFromTrafficSplitIndirect(tsSvc *topology.Service) string {
+func buildHTTPRuleFromTrafficSplitIndirect(ts *topology.TrafficSplit, tsSvc *topology.Service) string {
+	tsRule := buildHTTPRuleFromTrafficSpecs(ts.Specs)
 	svcRule := buildHTTPRuleFromService(tsSvc)
 	indirectRule := "HeadersRegexp(`X-Forwarded-For`, `.+`)"
+
+	if tsRule != "" {
+		return fmt.Sprintf("(%s) && (%s) && %s", svcRule, tsRule, indirectRule)
+	}
 
 	return fmt.Sprintf("(%s) && %s", svcRule, indirectRule)
 }
