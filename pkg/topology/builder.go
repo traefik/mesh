@@ -68,7 +68,7 @@ func (b *Builder) Build(resourceFilter *mk8s.ResourceFilter) (*Topology, error) 
 
 	// Populate services with traffic-split definitions.
 	for _, ts := range res.TrafficSplits {
-		b.evaluateTrafficSplit(topology, ts)
+		b.evaluateTrafficSplit(res, topology, ts)
 	}
 
 	// Populate services with traffic-target definitions.
@@ -220,7 +220,7 @@ func addSourceAndDestinationToPods(topology *Topology, sources []ServiceTrafficT
 
 // evaluateTrafficSplit evaluates the given traffic-split. If the traffic-split targets a known Service, a new TrafficSplit
 // will be added to it. The TrafficSplit will be added only if all its backends expose the ports required by the Service.
-func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.TrafficSplit) {
+func (b *Builder) evaluateTrafficSplit(res *resources, topology *Topology, trafficSplit *split.TrafficSplit) {
 	svcKey := Key{trafficSplit.Spec.Service, trafficSplit.Namespace}
 	ts := &TrafficSplit{
 		Name:      trafficSplit.Name,
@@ -229,6 +229,17 @@ func (b *Builder) evaluateTrafficSplit(topology *Topology, trafficSplit *split.T
 	}
 
 	tsKey := Key{trafficSplit.Name, trafficSplit.Namespace}
+
+	var err error
+
+	ts.Specs, err = b.buildTrafficSplitSpecs(res, trafficSplit)
+	if err != nil {
+		err = fmt.Errorf("unable to build spec: %v", err)
+		ts.AddError(err)
+		b.logger.Errorf("Error building topology for TrafficTarget %q: %v", tsKey, err)
+
+		return
+	}
 
 	svc, ok := topology.Services[svcKey]
 	// The current version of the spec does not support having more than one TrafficSplit attached to the same service.
@@ -470,15 +481,15 @@ func (b *Builder) buildTrafficTargetRules(res *resources, tt *access.TrafficTarg
 
 	for _, s := range tt.Spec.Rules {
 		switch s.Kind {
-		case "HTTPRouteGroup":
-			trafficSpec, err := b.buildHTTPRouteGroup(res.HTTPRouteGroups, tt.Namespace, s)
+		case mk8s.HTTPRouteGroupObjectKind:
+			trafficSpec, err := b.buildHTTPRouteGroup(res.HTTPRouteGroups, tt.Namespace, s.Name, s.Matches)
 			if err != nil {
 				return nil, err
 			}
 
 			trafficSpecs = append(trafficSpecs, trafficSpec)
-		case "TCPRoute":
-			trafficSpec, err := b.buildTCPRoute(res.TCPRoutes, tt.Namespace, s)
+		case mk8s.TCPRouteObjectKind:
+			trafficSpec, err := b.buildTCPRoute(res.TCPRoutes, tt.Namespace, s.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -492,8 +503,35 @@ func (b *Builder) buildTrafficTargetRules(res *resources, tt *access.TrafficTarg
 	return trafficSpecs, nil
 }
 
-func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*specs.HTTPRouteGroup, ns string, rule access.TrafficTargetRule) (TrafficSpec, error) {
-	key := Key{rule.Name, ns}
+func (b *Builder) buildTrafficSplitSpecs(res *resources, ts *split.TrafficSplit) ([]TrafficSpec, error) {
+	var trafficSpecs []TrafficSpec
+
+	for _, m := range ts.Spec.Matches {
+		switch m.Kind {
+		case mk8s.HTTPRouteGroupObjectKind:
+			trafficSpec, err := b.buildHTTPRouteGroup(res.HTTPRouteGroups, ts.Namespace, m.Name, nil)
+			if err != nil {
+				return nil, err
+			}
+
+			trafficSpecs = append(trafficSpecs, trafficSpec)
+		case mk8s.TCPRouteObjectKind:
+			trafficSpec, err := b.buildTCPRoute(res.TCPRoutes, ts.Namespace, m.Name)
+			if err != nil {
+				return nil, err
+			}
+
+			trafficSpecs = append(trafficSpecs, trafficSpec)
+		default:
+			return nil, fmt.Errorf("unknown spec type: %q", m.Kind)
+		}
+	}
+
+	return trafficSpecs, nil
+}
+
+func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*specs.HTTPRouteGroup, ns, name string, matches []string) (TrafficSpec, error) {
+	key := Key{name, ns}
 
 	httpRouteGroup, ok := httpRtGrps[key]
 	if !ok {
@@ -505,7 +543,7 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*specs.HTTPRouteGroup, 
 		err         error
 	)
 
-	if len(rule.Matches) == 0 {
+	if len(matches) == 0 {
 		httpMatches = make([]*specs.HTTPMatch, len(httpRouteGroup.Spec.Matches))
 
 		for i, match := range httpRouteGroup.Spec.Matches {
@@ -513,7 +551,7 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*specs.HTTPRouteGroup, 
 			httpMatches[i] = &m
 		}
 	} else {
-		httpMatches, err = buildHTTPRouteGroupMatches(rule.Matches, httpRouteGroup.Spec.Matches, httpMatches, key)
+		httpMatches, err = buildHTTPRouteGroupMatches(matches, httpRouteGroup.Spec.Matches, httpMatches, key)
 		if err != nil {
 			return TrafficSpec{}, err
 		}
@@ -546,8 +584,8 @@ func buildHTTPRouteGroupMatches(ttMatches []string, httpRouteGroupMatches []spec
 	return httpMatches, nil
 }
 
-func (b *Builder) buildTCPRoute(tcpRts map[Key]*specs.TCPRoute, ns string, rule access.TrafficTargetRule) (TrafficSpec, error) {
-	key := Key{rule.Name, ns}
+func (b *Builder) buildTCPRoute(tcpRts map[Key]*specs.TCPRoute, ns, name string) (TrafficSpec, error) {
+	key := Key{name, ns}
 
 	tcpRoute, ok := tcpRts[key]
 	if !ok {
