@@ -124,18 +124,9 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 			Service:       svcKey,
 			TrafficTarget: Key{tt.Name, tt.Namespace},
 		}
-
-		svc, ok := topology.Services[svcKey]
-		// Since in the current version of the spec, the traffic will always go to a TrafficSplit, we don't need to evaluate
-		// Pods if there is already a TrafficSplit on the Service.
-		if ok && len(svc.TrafficSplits) > 0 {
-			b.logger.Warnf("Service %q already has a TrafficSplit attached, TrafficTarget %q will not be evaluated on this service", svcKey, svcTTKey.TrafficTarget)
-
-			continue
-		}
-
 		topology.ServiceTrafficTargets[svcTTKey] = stt
 
+		svc, ok := topology.Services[svcKey]
 		if !ok {
 			err := fmt.Errorf("unable to find Service %q", svcKey)
 			stt.AddError(err)
@@ -229,6 +220,7 @@ func (b *Builder) evaluateTrafficSplit(res *resources, topology *Topology, traff
 	}
 
 	tsKey := Key{trafficSplit.Name, trafficSplit.Namespace}
+	topology.TrafficSplits[tsKey] = ts
 
 	var err error
 
@@ -242,15 +234,6 @@ func (b *Builder) evaluateTrafficSplit(res *resources, topology *Topology, traff
 	}
 
 	svc, ok := topology.Services[svcKey]
-	// The current version of the spec does not support having more than one TrafficSplit attached to the same service.
-	if ok && len(svc.TrafficSplits) > 0 {
-		b.logger.Warnf("Service %q already has a TrafficSplit attached, TrafficSplit %q will not be evaluated", svcKey, tsKey)
-
-		return
-	}
-
-	topology.TrafficSplits[tsKey] = ts
-
 	if !ok {
 		err := fmt.Errorf("unable to find root Service %q", svcKey)
 		ts.AddError(err)
