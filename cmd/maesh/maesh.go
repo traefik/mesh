@@ -12,7 +12,6 @@ import (
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/cmd/cleanup"
 	"github.com/containous/maesh/cmd/prepare"
-	"github.com/containous/maesh/cmd/proxy"
 	"github.com/containous/maesh/cmd/version"
 	"github.com/containous/maesh/pkg/api"
 	"github.com/containous/maesh/pkg/controller"
@@ -50,12 +49,6 @@ func main() {
 
 	cleanupConfig := cmd.NewCleanupConfiguration()
 	if err := cmdMaesh.AddCommand(cleanup.NewCmd(cleanupConfig, maeshLoaders)); err != nil {
-		stdlog.Println(err)
-		os.Exit(1)
-	}
-
-	traefikLoaders := []cli.ResourceLoader{&cli.FileLoader{}, &cli.FlagLoader{}, &cli.EnvLoader{}}
-	if err := cmdMaesh.AddCommand(proxy.NewCmd(traefikLoaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}

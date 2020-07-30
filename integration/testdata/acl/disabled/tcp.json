@@ -12,7 +12,7 @@
     "services": {
       "block-all-service": {
         "loadBalancer": {
-          "passHostHeader": null
+          "passHostHeader": false
         }
       },
       "readiness": {
@@ -57,6 +57,5 @@
         }
       }
     }
-  },
-  "udp": {}
+  }
 }
