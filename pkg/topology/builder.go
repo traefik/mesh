@@ -2,7 +2,6 @@ package topology
 
 import (
 	"fmt"
-	"strconv"
 
 	mk8s "github.com/containous/maesh/pkg/k8s"
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
@@ -560,28 +559,23 @@ func (b *Builder) buildTCPRoute(tcpRts map[Key]*spec.TCPRoute, ns string, s acce
 	}, nil
 }
 
-// getTrafficTargetDestinationPorts gets the ports mentioned in the TrafficTarget.Destination.Port.
-// If the port is "", all of the Service's ports are returned.
-// If the port is an integer, it is returned.
+// getTrafficTargetDestinationPorts gets the ports mentioned in the TrafficTarget.Destination.Port. If the destination
+// port is defined but not on the service itself an error will be returned. If the destination port is not defined, the
+// traffic allowed on all the service's ports.
 func (b *Builder) getTrafficTargetDestinationPorts(svc *Service, tt *access.TrafficTarget) ([]corev1.ServicePort, error) {
-	if tt.Destination.Port == "" {
+	if tt.Destination.Port == 0 {
 		return svc.Ports, nil
 	}
 
 	key := Key{tt.Name, tt.Namespace}
 
-	port, err := strconv.ParseInt(tt.Destination.Port, 10, 32)
-	if err != nil {
-		return nil, fmt.Errorf("destination port of TrafficTarget %q is not a valid port: %w", key, err)
-	}
-
 	for _, svcPort := range svc.Ports {
-		if svcPort.TargetPort.IntVal == int32(port) {
+		if svcPort.TargetPort.IntVal == int32(tt.Destination.Port) {
 			return []corev1.ServicePort{svcPort}, nil
 		}
 	}
 
-	return nil, fmt.Errorf("destination port %d of TrafficTarget %q is not exposed by the service", port, key)
+	return nil, fmt.Errorf("destination port %d of TrafficTarget %q is not exposed by the service", tt.Destination.Port, key)
 }
 
 func getOrCreatePod(topology *Topology, pod *corev1.Pod) Key {

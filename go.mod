@@ -5,19 +5,19 @@ go 1.14
 require (
 	github.com/abronan/valkeyrie v0.0.0-20200127174252-ef4277a138cd
 	github.com/cenkalti/backoff/v4 v4.0.2
-	github.com/containous/traefik/v2 v2.2.7
+	github.com/containous/traefik/v2 v2.3.0-rc3
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pmezard/go-difflib v1.0.0
-	github.com/servicemeshinterface/smi-sdk-go v0.3.0
+	github.com/servicemeshinterface/smi-sdk-go v0.4.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.5.1
 	github.com/vdemeester/shakers v0.1.0
-	k8s.io/api v0.17.4
-	k8s.io/apimachinery v0.17.4
-	k8s.io/client-go v0.17.4
+	k8s.io/api v0.18.6
+	k8s.io/apimachinery v0.18.6
+	k8s.io/client-go v0.18.6
 )
 
 replace (
