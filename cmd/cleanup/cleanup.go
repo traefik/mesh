@@ -24,7 +24,7 @@ func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
-	ctx := context.Background()
+	ctx := cmd.ContextWithSignal(context.Background())
 
 	logger, err := cmd.NewLogger(cConfig.LogFormat, cConfig.LogLevel, false)
 	if err != nil {
