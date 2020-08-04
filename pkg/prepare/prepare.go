@@ -120,34 +120,34 @@ func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{})
 }
 
 // CheckDNSProvider checks if the required informers can start and sync in a reasonable time.
-func (p *Prepare) CheckDNSProvider() (dns.Provider, error) {
-	return p.dnsClient.CheckDNSProvider()
+func (p *Prepare) CheckDNSProvider(ctx context.Context) (dns.Provider, error) {
+	return p.dnsClient.CheckDNSProvider(ctx)
 }
 
 // ConfigureCoreDNS patches the CoreDNS configuration for Maesh.
-func (p *Prepare) ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespace string) error {
-	return p.dnsClient.ConfigureCoreDNS(coreDNSNamespace, clusterDomain, maeshNamespace)
+func (p *Prepare) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, clusterDomain, maeshNamespace string) error {
+	return p.dnsClient.ConfigureCoreDNS(ctx, coreDNSNamespace, clusterDomain, maeshNamespace)
 }
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
-func (p *Prepare) ConfigureKubeDNS(clusterDomain, maeshNamespace string) error {
-	return p.dnsClient.ConfigureKubeDNS(clusterDomain, maeshNamespace)
+func (p *Prepare) ConfigureKubeDNS(ctx context.Context, clusterDomain, maeshNamespace string) error {
+	return p.dnsClient.ConfigureKubeDNS(ctx, clusterDomain, maeshNamespace)
 }
 
 // ConfigureDNS configures and patches the DNS system.
-func (p *Prepare) ConfigureDNS(clusterDomain, maeshNamespace string) error {
-	provider, err := p.CheckDNSProvider()
+func (p *Prepare) ConfigureDNS(ctx context.Context, clusterDomain, maeshNamespace string) error {
+	provider, err := p.CheckDNSProvider(ctx)
 	if err != nil {
 		return fmt.Errorf("error during cluster check: %v", err)
 	}
 
 	switch provider {
 	case dns.CoreDNS:
-		if err := p.ConfigureCoreDNS(metav1.NamespaceSystem, clusterDomain, maeshNamespace); err != nil {
+		if err := p.ConfigureCoreDNS(ctx, metav1.NamespaceSystem, clusterDomain, maeshNamespace); err != nil {
 			return fmt.Errorf("unable to configure CoreDNS: %v", err)
 		}
 	case dns.KubeDNS:
-		if err := p.ConfigureKubeDNS(clusterDomain, maeshNamespace); err != nil {
+		if err := p.ConfigureKubeDNS(ctx, clusterDomain, maeshNamespace); err != nil {
 			return fmt.Errorf("unable to configure KubeDNS: %v", err)
 		}
 	}
