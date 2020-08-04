@@ -59,7 +59,7 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
 	rtGrp := createHTTPRouteGroup("ignored-ns", "http-rt-grp-ignored", []spec.HTTPMatch{apiMatch, metricMatch})
 
-	tt := createTrafficTarget("ignored-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, []string{})
+	tt := createTrafficTarget("ignored-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, []string{})
 	ts := createTrafficSplit("ignored-ns", "ts", svcB, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, svcB, podB, svcC, svcD)
@@ -125,10 +125,10 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	ttb := createTrafficTarget("my-ns", "tt-b", saB, "8080", []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
-	ttd := createTrafficTarget("my-ns", "tt-d", saD, "8080", []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
-	ttc := createTrafficTarget("my-ns", "tt-c", saC, "8080", []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
-	tte := createTrafficTarget("my-ns", "tt-e", saE, "8080", []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
+	ttb := createTrafficTarget("my-ns", "tt-b", saB, 8080, []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
+	ttd := createTrafficTarget("my-ns", "tt-d", saD, 8080, []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
+	ttc := createTrafficTarget("my-ns", "tt-c", saC, 8080, []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
+	tte := createTrafficTarget("my-ns", "tt-e", saE, 8080, []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
 	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
 	tsErr := createTrafficSplit("my-ns", "tsErr", svcC, svcB, svcE)
 
@@ -189,9 +189,9 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	tt := createTrafficTarget("my-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
-	ttc := createTrafficTarget("my-ns", "tt-c", saC, "8080", []*corev1.ServiceAccount{saA, saA2}, rtGrp, ttMatch)
-	ttd := createTrafficTarget("my-ns", "tt-d", saD, "8080", []*corev1.ServiceAccount{saC}, rtGrp, ttMatch)
+	tt := createTrafficTarget("my-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
+	ttc := createTrafficTarget("my-ns", "tt-c", saC, 8080, []*corev1.ServiceAccount{saA, saA2}, rtGrp, ttMatch)
+	ttd := createTrafficTarget("my-ns", "tt-d", saD, 8080, []*corev1.ServiceAccount{saC}, rtGrp, ttMatch)
 	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, podA2, saB, svcB, podB, svcC, svcD, podC, podD, epB, epC, epD)
@@ -254,10 +254,10 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	ttb := createTrafficTarget("my-ns", "tt-b", saB, "8080", []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
-	ttd := createTrafficTarget("my-ns", "tt-d", saD, "8080", []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
-	ttc := createTrafficTarget("my-ns", "tt-c", saC, "8080", []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
-	tte := createTrafficTarget("my-ns", "tt-e", saE, "8080", []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
+	ttb := createTrafficTarget("my-ns", "tt-b", saB, 8080, []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
+	ttd := createTrafficTarget("my-ns", "tt-d", saD, 8080, []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
+	ttc := createTrafficTarget("my-ns", "tt-c", saC, 8080, []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
+	tte := createTrafficTarget("my-ns", "tt-e", saE, 8080, []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
 	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
 	ts2 := createTrafficSplit("my-ns", "ts2", svcB, svcC, svcE)
 
@@ -315,7 +315,7 @@ func TestTopologyBuilder_BuildWithTrafficTarget(t *testing.T) {
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	tt := createTrafficTarget("my-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
+	tt := createTrafficTarget("my-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
 
 	k8sClient := fake.NewSimpleClientset(saA, saB, podA, podB, svcB, epB)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
@@ -374,7 +374,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *t
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	tt := createTrafficTarget("my-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
+	tt := createTrafficTarget("my-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
 	ts := createTrafficSplit("my-ns", "ts", svcB1, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, saB, saC, saD,
@@ -417,7 +417,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
 
-	tt := createTrafficTarget("my-ns", "tt", saB, "8080", []*corev1.ServiceAccount{saA}, rtGrp, []string{})
+	tt := createTrafficTarget("my-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, []string{})
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, svcB, podB, epB)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
@@ -458,8 +458,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	podB := createPod("my-ns", "app-b", saB, svcB.Spec.Selector, "10.10.2.1")
 
 	epB := createEndpoints(svcB, createEndpointSubset(svcbPorts, podB))
-
-	tt := createTrafficTarget("my-ns", "tt", saB, "", []*corev1.ServiceAccount{saA}, nil, []string{})
+	// Set destination port to its zero value to simulate a port not being passed in the TrafficTarget.
+	tt := createTrafficTarget("my-ns", "tt", saB, 0, []*corev1.ServiceAccount{saA}, nil, []string{})
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, svcB, podB, epB)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
@@ -497,7 +497,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndMismatchServicePort(t *testing
 	svcB2 := createService("my-ns", "svc-b2", annotations, svcB2Ports, selectorAppB2, "10.10.1.17")
 	epB2 := createEndpoints(svcB2, createEndpointSubset(svcB2Ports, podB2))
 
-	tt := createTrafficTarget("my-ns", "tt", saB, "80", []*corev1.ServiceAccount{saA}, nil, []string{})
+	tt := createTrafficTarget("my-ns", "tt", saB, 80, []*corev1.ServiceAccount{saA}, nil, []string{})
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, podB1, svcB1, epB1, podB2, svcB2, epB2)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
@@ -536,7 +536,7 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 
 	epC := createEndpoints(svcC, createEndpointSubset(svccPorts, podC1, podC2))
 
-	tt := createTrafficTarget("my-ns", "tt", saC, "8080", []*corev1.ServiceAccount{saA, saB}, nil, []string{})
+	tt := createTrafficTarget("my-ns", "tt", saC, 8080, []*corev1.ServiceAccount{saA, saB}, nil, []string{})
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, podB, saC, svcC, podC1, podC2, epC)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
@@ -567,7 +567,7 @@ func TestTopologyBuilder_EmptyTrafficTargetDestinationNamespace(t *testing.T) {
 		Destination: access.IdentityBindingSubject{
 			Kind: "ServiceAccount",
 			Name: "test",
-			Port: "80",
+			Port: 80,
 		},
 	}
 
@@ -757,7 +757,7 @@ func createTrafficSplit(namespace, name string, svc *corev1.Service, backend1 *c
 	}
 }
 
-func createTrafficTarget(namespace, name string, destSa *corev1.ServiceAccount, destPort string, srcsSa []*corev1.ServiceAccount, rtGrp *spec.HTTPRouteGroup, rtGrpMatches []string) *access.TrafficTarget {
+func createTrafficTarget(namespace, name string, destSa *corev1.ServiceAccount, destPort int, srcsSa []*corev1.ServiceAccount, rtGrp *spec.HTTPRouteGroup, rtGrpMatches []string) *access.TrafficTarget {
 	sources := make([]access.IdentityBindingSubject, len(srcsSa))
 	for i, sa := range srcsSa {
 		sources[i] = access.IdentityBindingSubject{
