@@ -1,6 +1,7 @@
 package cleanup
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/containous/maesh/pkg/dns"
@@ -30,8 +31,8 @@ func NewCleanup(logger logrus.FieldLogger, kubeClient kubernetes.Interface, name
 }
 
 // CleanShadowServices deletes all shadow services from the cluster.
-func (c *Cleanup) CleanShadowServices() error {
-	serviceList, err := c.kubeClient.CoreV1().Services(c.namespace).List(metav1.ListOptions{
+func (c *Cleanup) CleanShadowServices(ctx context.Context) error {
+	serviceList, err := c.kubeClient.CoreV1().Services(c.namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "app=maesh,type=shadow",
 	})
 	if err != nil {
@@ -39,7 +40,7 @@ func (c *Cleanup) CleanShadowServices() error {
 	}
 
 	for _, s := range serviceList.Items {
-		if err := c.kubeClient.CoreV1().Services(s.Namespace).Delete(s.Name, &metav1.DeleteOptions{}); err != nil {
+		if err := c.kubeClient.CoreV1().Services(s.Namespace).Delete(ctx, s.Name, metav1.DeleteOptions{}); err != nil {
 			return err
 		}
 	}
@@ -48,8 +49,8 @@ func (c *Cleanup) CleanShadowServices() error {
 }
 
 // RestoreDNSConfig restores the configmap and restarts the DNS pods.
-func (c *Cleanup) RestoreDNSConfig() error {
-	provider, err := c.dnsClient.CheckDNSProvider()
+func (c *Cleanup) RestoreDNSConfig(ctx context.Context) error {
+	provider, err := c.dnsClient.CheckDNSProvider(ctx)
 	if err != nil {
 		return err
 	}
@@ -57,11 +58,11 @@ func (c *Cleanup) RestoreDNSConfig() error {
 	// Restore configmaps based on DNS provider.
 	switch provider {
 	case dns.CoreDNS:
-		if err := c.dnsClient.RestoreCoreDNS(); err != nil {
+		if err := c.dnsClient.RestoreCoreDNS(ctx); err != nil {
 			return fmt.Errorf("unable to restore CoreDNS: %w", err)
 		}
 	case dns.KubeDNS:
-		if err := c.dnsClient.RestoreKubeDNS(); err != nil {
+		if err := c.dnsClient.RestoreKubeDNS(ctx); err != nil {
 			return fmt.Errorf("unable to restore KubeDNS: %w", err)
 		}
 	}

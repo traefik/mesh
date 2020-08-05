@@ -226,6 +226,8 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
+			ctx := context.Background()
+
 			log := logrus.New()
 
 			log.SetOutput(os.Stdout)
@@ -267,7 +269,7 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 				client,
 			)
 
-			shadowSvc, err := shadowServiceManager.CreateOrUpdate(test.svc)
+			shadowSvc, err := shadowServiceManager.CreateOrUpdate(ctx, test.svc)
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedShadowSvc.Name, shadowSvc.Name)
@@ -368,6 +370,8 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
+			ctx := context.Background()
+
 			log := logrus.New()
 
 			log.SetOutput(os.Stdout)
@@ -408,7 +412,7 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 				client,
 			)
 
-			err := shadowServiceManager.Delete(test.namespace, test.name)
+			err := shadowServiceManager.Delete(ctx, test.namespace, test.name)
 			require.NoError(t, err)
 
 			if test.currentShadowSvc == nil {
