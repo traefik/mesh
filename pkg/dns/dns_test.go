@@ -59,7 +59,7 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			client := NewClient(log, k8sClient.KubernetesClient())
 
-			provider, err := client.CheckDNSProvider()
+			provider, err := client.CheckDNSProvider(ctx)
 			if test.expectedErr {
 				require.Error(t, err)
 				return
@@ -137,7 +137,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			client := NewClient(log, k8sClient.KubernetesClient())
 
-			err := client.ConfigureCoreDNS("kube-system", "titi", "toto")
+			err := client.ConfigureCoreDNS(ctx, "kube-system", "titi", "toto")
 			if test.expectedErr {
 				require.Error(t, err)
 				return
@@ -145,13 +145,13 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedCorefile, cfgMap.Data["Corefile"])
 
 			if len(test.expectedCustom) > 0 {
-				customCfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-custom", metav1.GetOptions{})
+				customCfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns-custom", metav1.GetOptions{})
 				require.NoError(t, err)
 
 				assert.Equal(t, test.expectedCustom, customCfgMap.Data["maesh.server"])
@@ -203,7 +203,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			client := NewClient(log, k8sClient.KubernetesClient())
 
-			err := client.ConfigureKubeDNS("cluster.local", "maesh")
+			err := client.ConfigureKubeDNS(ctx, "cluster.local", "maesh")
 			if test.expectedErr {
 				require.Error(t, err)
 				return
@@ -211,7 +211,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("kube-dns", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get(ctx, "kube-dns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedStubDomains, cfgMap.Data["stubDomains"])
@@ -264,16 +264,16 @@ func TestRestoreCoreDNS(t *testing.T) {
 
 			client := NewClient(log, k8sClient.KubernetesClient())
 
-			err := client.RestoreCoreDNS()
+			err := client.RestoreCoreDNS(ctx)
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedCorefile, cfgMap.Data["Corefile"])
 
 			if test.hasCustom {
-				customCfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("coredns-custom", metav1.GetOptions{})
+				customCfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns-custom", metav1.GetOptions{})
 				require.NoError(t, err)
 
 				_, exists := customCfgMap.Data["maesh.server"]
@@ -318,10 +318,10 @@ func TestRestoreKubeDNS(t *testing.T) {
 
 			client := NewClient(log, k8sClient.KubernetesClient())
 
-			err := client.RestoreKubeDNS()
+			err := client.RestoreKubeDNS(ctx)
 			require.NoError(t, err)
 
-			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get("kube-dns", metav1.GetOptions{})
+			cfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get(ctx, "kube-dns", metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedStubDomains, cfgMap.Data["stubDomains"])
