@@ -195,11 +195,11 @@ spec:
             {{- end }}
             {{- if .Values.metrics.prometheus.enabled }}
             - "--metrics.prometheus=true"
-              {{- if .Values.metrics.prometheus.addEntrypointsLabels }}
-            - "--metrics.prometheus.addEntryPointsLabels=true"
+              {{- if hasKey .Values.metrics.prometheus "addEntrypointsLabels" }}
+            - "--metrics.prometheus.addEntryPointsLabels={{ .Values.metrics.prometheus.addEntrypointsLabels }}"
               {{- end }}
-              {{- if .Values.metrics.prometheus.addServiceLabels }}
-            - "--metrics.prometheus.addServicesLabels=true"
+              {{- if hasKey .Values.metrics.prometheus "addServiceLabels" }}
+            - "--metrics.prometheus.addServicesLabels={{ .Values.metrics.prometheus.addServiceLabels }}"
               {{- end }}
               {{- if .Values.metrics.prometheus.buckets }}
             - "--metrics.prometheus.buckets={{ .Values.metrics.prometheus.buckets }}"
@@ -210,11 +210,11 @@ spec:
               {{- if .Values.metrics.datadog.address }}
             - "--metrics.datadog.address={{ .Values.metrics.datadog.address }}"
               {{- end }}
-              {{- if .Values.metrics.datadog.addEntrypointsLabels }}
-            - "--metrics.datadog.addEntryPointsLabels=true"
+              {{- if hasKey .Values.metrics.datadog "addEntrypointsLabels" }}
+            - "--metrics.datadog.addEntryPointsLabels={{ .Values.metrics.datadog.addEntrypointsLabels }}"
               {{- end }}
-              {{- if .Values.metrics.datadog.addServiceLabels }}
-            - "--metrics.datadog.addServicesLabels=true"
+              {{- if hasKey .Values.metrics.datadog "addServiceLabels" }}
+            - "--metrics.datadog.addServicesLabels={{ .Values.metrics.datadog.addServiceLabels }}"
               {{- end }}
               {{- if .Values.metrics.datadog.pushInterval }}
             - "--metrics.datadog.pushInterval={{ .Values.metrics.datadog.pushInterval }}"
@@ -240,11 +240,11 @@ spec:
               {{- if .Values.metrics.influxdb.password }}
             - "--metrics.influxdb.password={{ .Values.metrics.influxdb.password }}"
               {{- end }}
-              {{- if .Values.metrics.influxdb.addEntrypointsLabels }}
-            - "--metrics.influxdb.addEntryPointsLabels=true"
+              {{- if hasKey .Values.metrics.influxdb "addEntrypointsLabels" }}
+            - "--metrics.influxdb.addEntryPointsLabels={{ .Values.metrics.influxdb.addEntrypointsLabels }}"
               {{- end }}
-              {{- if .Values.metrics.influxdb.addServiceLabels }}
-            - "--metrics.influxdb.addServicesLabels=true"
+              {{- if .Values.metrics.influxdb "addServiceLabels" }}
+            - "--metrics.influxdb.addServicesLabels={{ .Values.metrics.influxdb.addServiceLabels }}"
               {{- end }}
               {{- if .Values.metrics.influxdb.pushInterval }}
             - "--metrics.influxdb.pushInterval={{ .Values.metrics.influxdb.pushInterval }}"
@@ -255,11 +255,11 @@ spec:
               {{- if .Values.metrics.statsd.address }}
             - "--metrics.statsd.address={{ .Values.metrics.statsd.address }}"
               {{- end }}
-              {{- if .Values.metrics.statsd.addEntrypointsLabels }}
-            - "--metrics.statsd.addEntryPointsLabels=true"
+              {{- if hasKey .Values.metrics.statsd "addEntrypointsLabels" }}
+            - "--metrics.statsd.addEntryPointsLabels={{ .Values.metrics.statsd.addEntrypointsLabels }}"
               {{- end }}
-              {{- if .Values.metrics.statsd.addServiceLabels }}
-            - "--metrics.statsd.addServicesLabels=true"
+              {{- if hasKey .Values.metrics.statsd "addServiceLabels" }}
+            - "--metrics.statsd.addServicesLabels={{ .Values.metrics.statsd.addServicesLabels }}"
               {{- end }}
               {{- if .Values.metrics.statsd.pushInterval }}
             - "--metrics.statsd.pushInterval={{ .Values.metrics.statsd.pushInterval }}"
