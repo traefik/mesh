@@ -54,8 +54,7 @@ spec:
       {{- if .Values.tracing.deploy }}
       initContainers:
         - name: wait-for-jaeger-init
-          image: {{ .Values.tracing.jaeger.image.name | quote }}
-          imagePullPolicy: {{ .Values.tracing.jaeger.image.pullPolicy | default "IfNotPresent" }}
+          image: groundnuty/k8s-wait-for:v1.3
           args:
             - "service"
             - "-lapp.kubernetes.io/name=jaeger,app.kubernetes.io/component=agent"
@@ -101,20 +100,20 @@ spec:
             - "--providers.http.pollTimeout={{ .Values.mesh.pollTimeout }}"
             {{- end }}
             {{- if .Values.tracing.jaeger.enabled }}
-              {{- if .Values.tracing.jaeger.localagenthostport }}
-            - "--tracing.jaeger.localagenthostport={{ .Values.tracing.jaeger.localagenthostport }}"
+              {{- if .Values.tracing.jaeger.localAgentHostPort }}
+            - "--tracing.jaeger.localAgentHostPort={{ .Values.tracing.jaeger.localAgentHostPort }}"
               {{- else }}
             - {{ printf "--tracing.jaeger.localagenthostport=jaeger-agent.%s.svc.%s:6831" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
               {{- end }}
               {{- if .Values.tracing.jaeger.localagenthostport }}
-            - "--tracing.jaeger.samplingserverurl={{ .Values.tracing.jaeger.samplingserverurl }}"
+            - "--tracing.jaeger.samplingServerURL={{ .Values.tracing.jaeger.samplingServerURL }}"
               {{- else }}
-            - {{ printf "--tracing.jaeger.samplingserverurl=http://jaeger-agent.%s.svc.%s:5778/sampling" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
+            - {{ printf "--tracing.jaeger.samplingServerURL=http://jaeger-agent.%s.svc.%s:5778/sampling" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
               {{- end }}
             {{- end }}
             {{- if .Values.tracing.datadog }}
               {{- if .Values.tracing.datadog.localagenthostport }}
-            - "--tracing.datadog.localagenthostport={{ .Values.tracing.datadog.localagenthostport }}"
+            - "--tracing.datadog.localAgentHostPort={{ .Values.tracing.datadog.localAgentHostPort }}"
               {{- end }}
               {{- if .Values.tracing.datadog.debug }}
             - "--tracing.datadog.debug=true"

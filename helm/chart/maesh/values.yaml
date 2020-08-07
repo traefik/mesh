@@ -106,13 +106,13 @@ mesh:
 tracing:
   deploy: true
   jaeger:
-    image:
-      name: groundnuty/k8s-wait-for:v1.3
     enabled: true
-    localagenthostport: ""
-    samplingserverurl: ""
+    # (Optional)
+    # localAgentHostPort: "127.0.0.1:6831"
+    # (Optional)
+    # samplingServerURL: "http://localhost:5778/sampling"
   # datadog:
-    # localagenthostport: "127.0.0.1:8126"
+    # localAgentHostPort: "127.0.0.1:8126"
     # (Optional)
     # debug: true
     # (Optional)
