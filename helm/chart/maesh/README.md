@@ -91,33 +91,35 @@ The following table lists the configurable parameters of the Maesh chart and the
 The following table lists the available parameters to configure the metrics integrations on the mesh proxies.
 As the mesh proxies are vanilla Traefik, check out the corresponding [documentation](https://docs.traefik.io/observability/metrics/overview/) for more details.
 
-| Key                                              | Description                                                                                                      | Default             |
-|--------------------------------------------------|------------------------------------------------------------------------------------------------------------------|---------------------|
-| metrics.datadog.addEntrypointsLabels             | Enable metrics on entry points.                                                                                  | `true`              |
-| metrics.datadog.addServiceLabels                 | Enable metrics on services.                                                                                      | `true`              |
-| metrics.datadog.address                          | Address of the `datadog-agent` to send metrics to.                                                               | `"127.0.0.1:8125"`  |
-| metrics.datadog.pushInterval                     | Interval used by the exporter to push metrics to the `datadog-agent`.                                            | `"10s"`             |
-| metrics.deploy                                   | Deploy the metric chart which contains [Grafana](https://grafana.com/) and [Prometheus](https://prometheus.io/). | `true`              |
-| metrics.influxdb.addEntrypointsLabels            | Enable metrics on entry points.                                                                                  | `true`              |
-| metrics.influxdb.addServiceLabels                | Enable metrics on services.                                                                                      | `true`              |
-| metrics.influxdb.address                         | Address of the `InfluxDB` to send metrics to.                                                                    | `"localhost:8089"`  |
-| metrics.influxdb.database                        | Database to use when the protocol is `HTTP`.                                                                     |                     |
-| metrics.influxdb.password                        | Password, only for the `HTTP` protocol.                                                                          |                     |
-| metrics.influxdb.protocol                        | Address protocol, `udp` or `http`.                                                                               | `"udp"`             |
-| metrics.influxdb.pushInterval                    | Interval used by the exporter to push metrics.                                                                   | `"10s"`             |
-| metrics.influxdb.retentionPolicy                 | Retention policy used when the protocol is `HTTP`.                                                               |                     |
-| metrics.influxdb.username                        | Username, only for the `HTTP` protocol.                                                                          |                     |
-| metrics.prometheus.enabled                       | Enable the `Prometheus` metrics.                                                                                 | `true`              |
-| metrics.prometheus.grafana.resources.limit.cpu   | Maximum amount of CPU units that the Grafana container can use.                                                  | `"500m"`            |
-| metrics.prometheus.grafana.resources.limit.mem   | Maximum amount of memory that the Grafana container can use.                                                     | `"500Mi"`           |
-| metrics.prometheus.grafana.resources.request.cpu | Amount of CPU units that the Grafana container requests.                                                         | `"200m"`            |
-| metrics.prometheus.grafana.resources.request.mem | Amount of memory that the Grafana container requests.                                                            | `"200Mi"`           |
-| metrics.prometheus.grafana.storageClassName      | Storage class. See the [K8S documentation](https://kubernetes.io/docs/concepts/storage/storage-classes/)         | `"metrics-storage"` |
-| metrics.statsd.addEntrypointsLabels              | Enable metrics on entry points.                                                                                  | `true`              |
-| metrics.statsd.addServiceLabels                  | Enable metrics on services.                                                                                      | `true`              |
-| metrics.statsd.address                           | Instructs the exporter to send metrics to `statsd` at this address.                                              | `"127.0.0.1:8125"`  |
-| metrics.statsd.prefix                            | Prefix to use for metrics collection.                                                                            | `"traefik"`         |
-| metrics.statsd.pushInterval                      | Interval used by the exporter to push the metrics to `statsd`.                                                   | `"10s"`             |
+| Key                                              | Description                                                                                                      | Default                                    |
+|--------------------------------------------------|------------------------------------------------------------------------------------------------------------------|--------------------------------------------|
+| metrics.datadog.addEntrypointsLabels             | Enable metrics on entry points.                                                                                  | `true`                                     |
+| metrics.datadog.addServiceLabels                 | Enable metrics on services.                                                                                      | `true`                                     |
+| metrics.datadog.address                          | Address of the `datadog-agent` to send metrics to.                                                               | `"127.0.0.1:8125"`                         |
+| metrics.datadog.pushInterval                     | Interval used by the exporter to push metrics to the `datadog-agent`.                                            | `"10s"`                                    |
+| metrics.deploy                                   | Deploy the metric chart which contains [Grafana](https://grafana.com/) and [Prometheus](https://prometheus.io/). | `true`                                     |
+| metrics.influxdb.addEntrypointsLabels            | Enable metrics on entry points.                                                                                  | `true`                                     |
+| metrics.influxdb.addServiceLabels                | Enable metrics on services.                                                                                      | `true`                                     |
+| metrics.influxdb.address                         | Address of the `InfluxDB` to send metrics to.                                                                    | `"localhost:8089"`                         |
+| metrics.influxdb.database                        | Database to use when the protocol is `HTTP`.                                                                     |                                            |
+| metrics.influxdb.password                        | Password, only for the `HTTP` protocol.                                                                          |                                            |
+| metrics.influxdb.protocol                        | Address protocol, `udp` or `http`.                                                                               | `"udp"`                                    |
+| metrics.influxdb.pushInterval                    | Interval used by the exporter to push metrics.                                                                   | `"10s"`                                    |
+| metrics.influxdb.retentionPolicy                 | Retention policy used when the protocol is `HTTP`.                                                               |                                            |
+| metrics.influxdb.username                        | Username, only for the `HTTP` protocol.                                                                          |                                            |
+| metrics.prometheus.addEntrypointsLabels          | Enable metrics on entry points.                                                                                  | `true`                                     |
+| metrics.prometheus.addServiceLabels              | Enable metrics on services.                                                                                      | `true`                                     |
+| metrics.prometheus.buckets                       | Buckets for latency metrics.                                                                                     | `"0.100000, 0.300000, 1.200000, 5.000000"` |
+| metrics.prometheus.grafana.resources.limit.cpu   | Maximum amount of CPU units that the Grafana container can use.                                                  | `"500m"`                                   |
+| metrics.prometheus.grafana.resources.limit.mem   | Maximum amount of memory that the Grafana container can use.                                                     | `"500Mi"`                                  |
+| metrics.prometheus.grafana.resources.request.cpu | Amount of CPU units that the Grafana container requests.                                                         | `"200m"`                                   |
+| metrics.prometheus.grafana.resources.request.mem | Amount of memory that the Grafana container requests.                                                            | `"200Mi"`                                  |
+| metrics.prometheus.grafana.storageClassName      | Storage class. See the [K8S documentation](https://kubernetes.io/docs/concepts/storage/storage-classes/)         | `"metrics-storage"`                        |
+| metrics.statsd.addEntrypointsLabels              | Enable metrics on entry points.                                                                                  | `true`                                     |
+| metrics.statsd.addServiceLabels                  | Enable metrics on services.                                                                                      | `true`                                     |
+| metrics.statsd.address                           | Instructs the exporter to send metrics to `statsd` at this address.                                              | `"127.0.0.1:8125"`                         |
+| metrics.statsd.prefix                            | Prefix to use for metrics collection.                                                                            | `"traefik"`                                |
+| metrics.statsd.pushInterval                      | Interval used by the exporter to push the metrics to `statsd`.                                                   | `"10s"`                                    |
 
 ### Tracing
 
