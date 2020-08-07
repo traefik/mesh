@@ -255,6 +255,9 @@ spec:
               {{- if .Values.metrics.statsd.pushInterval }}
             - "--metrics.statsd.pushInterval={{ .Values.metrics.statsd.pushInterval }}"
               {{- end }}
+              {{- if .Values.metrics.statsd.prefix }}
+            - "--metrics.statsd.prefix={{ .Values.metrics.statsd.prefix }}"
+              {{- end }}
             {{- end }}
             {{- with .Values.mesh.additionalArguments }}
             {{- range . }}

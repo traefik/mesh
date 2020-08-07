@@ -116,6 +116,7 @@ As the mesh proxies are vanilla Traefik, check out the corresponding [documentat
 | metrics.statsd.addEntrypointsLabels              | Enable metrics on entry points.                                                                                  | `true`              |
 | metrics.statsd.addServiceLabels                  | Enable metrics on services.                                                                                      | `true`              |
 | metrics.statsd.address                           | Instructs the exporter to send metrics to `statsd` at this address.                                              | `"127.0.0.1:8125"`  |
+| metrics.statsd.prefix                            | Prefix to use for metrics collection.                                                                            | `"traefik"`         |
 | metrics.statsd.pushInterval                      | Interval used by the exporter to push the metrics to `statsd`.                                                   | `"10s"`             |
 
 ### Tracing
