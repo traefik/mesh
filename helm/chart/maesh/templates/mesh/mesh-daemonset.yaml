@@ -194,7 +194,16 @@ spec:
             - "--log.format={{ or .Values.mesh.logFormat .Values.logFormat }}"
             {{- end }}
             {{- if .Values.metrics.prometheus.enabled }}
-            - "--metrics.prometheus"
+            - "--metrics.prometheus=true"
+              {{- if .Values.metrics.prometheus.addEntrypointsLabels }}
+            - "--metrics.prometheus.addEntryPointsLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.prometheus.addServiceLabels }}
+            - "--metrics.prometheus.addServicesLabels=true"
+              {{- end }}
+              {{- if .Values.metrics.prometheus.buckets }}
+            - "--metrics.prometheus.buckets={{ .Values.metrics.prometheus.buckets }}"
+              {{- end }}
             {{- end }}
             {{- if .Values.metrics.datadog }}
             - "--metrics.datadog=true"
