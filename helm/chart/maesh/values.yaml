@@ -198,3 +198,5 @@ metrics:
     # addServiceLabels: true
     # (Optional)
     # pushInterval: 10s
+    # (Optional)
+    # prefix: traefik
