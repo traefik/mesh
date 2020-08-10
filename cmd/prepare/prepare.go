@@ -32,7 +32,7 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debug("Starting maesh prepare...")
+	log.Debug("Starting prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 

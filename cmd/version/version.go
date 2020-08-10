@@ -21,7 +21,7 @@ platform    : %s/%s
 func NewCmd() *cli.Command {
 	return &cli.Command{
 		Name:          "version",
-		Description:   `Shows the current Maesh version.`,
+		Description:   `Shows the current Traefik Mesh version.`,
 		Configuration: nil,
 		Run: func(_ []string) error {
 			printVersion()

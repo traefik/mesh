@@ -27,37 +27,37 @@ const (
 )
 
 func main() {
-	maeshConfig := cmd.NewMaeshConfiguration()
-	maeshLoaders := []cli.ResourceLoader{&cmd.FileLoader{}, &cli.FlagLoader{}, &cmd.EnvLoader{}}
+	traefikMeshConfig := cmd.NewTraefikMeshConfiguration()
+	traefikMeshLoaders := []cli.ResourceLoader{&cmd.FileLoader{}, &cli.FlagLoader{}, &cmd.EnvLoader{}}
 
-	cmdMaesh := &cli.Command{
-		Name:          "maesh",
-		Description:   `maesh`,
-		Configuration: maeshConfig,
-		Resources:     maeshLoaders,
+	cmdTraefikMesh := &cli.Command{
+		Name:          "traefik-mesh",
+		Description:   `traefik-mesh`,
+		Configuration: traefikMeshConfig,
+		Resources:     traefikMeshLoaders,
 		Run: func(_ []string) error {
-			return maeshCommand(maeshConfig)
+			return traefikMeshCommand(traefikMeshConfig)
 		},
 	}
 
 	prepareConfig := cmd.NewPrepareConfiguration()
-	if err := cmdMaesh.AddCommand(prepare.NewCmd(prepareConfig, maeshLoaders)); err != nil {
+	if err := cmdTraefikMesh.AddCommand(prepare.NewCmd(prepareConfig, traefikMeshLoaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
 	cleanupConfig := cmd.NewCleanupConfiguration()
-	if err := cmdMaesh.AddCommand(cleanup.NewCmd(cleanupConfig, maeshLoaders)); err != nil {
+	if err := cmdTraefikMesh.AddCommand(cleanup.NewCmd(cleanupConfig, traefikMeshLoaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	if err := cmdMaesh.AddCommand(version.NewCmd()); err != nil {
+	if err := cmdTraefikMesh.AddCommand(version.NewCmd()); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	if err := cli.Execute(cmdMaesh); err != nil {
+	if err := cli.Execute(cmdTraefikMesh); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
@@ -65,7 +65,7 @@ func main() {
 	os.Exit(0)
 }
 
-func maeshCommand(config *cmd.MaeshConfiguration) error {
+func traefikMeshCommand(config *cmd.TraefikMeshConfiguration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
 	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel, config.Debug)
@@ -73,7 +73,7 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debug("Starting maesh controller...")
+	log.Debug("Starting controller...")
 	log.Debugf("Using masterURL: %q", config.MasterURL)
 	log.Debugf("Using kubeconfig: %q", config.KubeConfig)
 
