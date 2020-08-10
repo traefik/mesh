@@ -1,11 +1,11 @@
-site_name: Maesh
-site_description: Maesh Documentation
-site_author: containo.us
-site_url: https://docs.mae.sh
+site_name: Traefik Mesh
+site_description: Traefik Mesh Documentation
+site_author: traefik.io
+site_url: https://doc.traefik.io/mesh
 dev_addr: 0.0.0.0:8000
 
 repo_name: 'GitHub'
-repo_url: 'https://github.com/containous/maesh'
+repo_url: 'https://github.com/traefik/mesh'
 
 docs_dir: 'content'
 edit_uri: 'edit/master/docs/content/'
@@ -16,8 +16,8 @@ theme:
   custom_dir: 'theme'
   language: en
   include_sidebar: true
-  favicon: assets/img/maesh-logo.svg
-  logo: assets/img/maesh-logo.svg
+  favicon: assets/img/traefik-mesh-logo.svg
+  logo: assets/img/traefik-mesh-logo.svg
   feature:
     tabs: false
   palette:
@@ -27,7 +27,7 @@ theme:
     prev: 'Previous'
     next: 'Next'
 
-copyright: "Copyright &copy; 2016-2020 Containous"
+copyright: "Copyright 2020 Traefik labs"
 
 extra_css:
   - assets/styles/root.css
