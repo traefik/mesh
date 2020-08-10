@@ -1,16 +1,16 @@
 apiVersion: v2
-name: maesh
+name: traefik-mesh
 version: 2.1.2
 appVersion: v1.3.2
-description: Maesh - Simpler Service Mesh
+description: Traefik Mesh - Simpler Service Mesh
 type: application
 keywords:
   - traefik
   - mesh
   - smi
-home: https://mae.sh/
+home: https://doc.traefik.io/mesh
 sources:
-  - https://github.com/containous/maesh/
+  - https://github.com/traefik/mesh/
 maintainers:
   - name: emilevauge
     email: emile@vauge.com
@@ -24,7 +24,7 @@ maintainers:
     email: harold@containo.us
   - name: kevinpollet
     email: kevin@containo.us
-icon: https://raw.githubusercontent.com/containous/maesh/v1.2/docs/content/assets/img/maesh.png
+icon: https://raw.githubusercontent.com/traefik/mesh/master/docs/content/assets/img/traefik-mesh.png
 dependencies:
   - name: tracing
     version: 0.0.3

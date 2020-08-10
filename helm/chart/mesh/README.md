@@ -1,9 +1,9 @@
-# Maesh
+# Traefik Mesh
 
-Maesh is a simple, yet full-featured service mesh. It is container-native and fits as your de-facto service mesh in your Kubernetes cluster. 
+Traefik Mesh is a simple, yet full-featured service mesh. It is container-native and fits as your de-facto service mesh in your Kubernetes cluster.
 It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io/) that facilitates integration with pre-existing solution.
 
-Moreover, Maesh is opt-in by default, which means that your existing services are unaffected until you decide to add them to the mesh.
+Moreover, Traefik Mesh is opt-in by default, which means that your existing services are unaffected until you decide to add them to the mesh.
 
 ## Prerequisites
 
@@ -13,29 +13,28 @@ Moreover, Maesh is opt-in by default, which means that your existing services ar
 
 ## Installing the Chart
 
-To install the chart with the release name `maesh`:
+To install the chart with the release name `traefik-mesh`:
 
 ```bash
-$ helm repo add maesh https://containous.github.io/maesh/charts
+$ helm repo add traefik-mesh https://traefik.github.io/mesh/charts
 $ helm repo update
-$ helm install maesh maesh/maesh
+$ helm install traefik-mesh traefik-mesh/traefik-mesh
 ```
 
-You can use the `--namespace my-namespace` flag to deploy Maesh in a custom namespace and the `--set "key1=val1,key2=val2,..."`
-flag to configure it. Where `key1=val1`, `key2=val2`, `...` are chart values that you can find at 
-https://github.com/containous/maesh/blob/master/helm/chart/maesh/values.yaml.
+You can use the `--namespace my-namespace` flag to deploy Traefik Mesh in a custom namespace and the `--set "key1=val1,key2=val2,..."` flag to configure it.
+Where `key1=val1`, `key2=val2`, `...` are chart values that you can find at https://github.com/traefik/mesh/blob/master/helm/chart/mesh/values.yaml.
 
 ## Uninstalling the Chart
 
-To uninstall the chart with the release name `maesh`:
+To uninstall the chart with the release name `traefik-mesh`:
 
 ```bash
-$ helm uninstall maesh
+$ helm uninstall traefik-mesh
 ```
 
 ## Configuration
 
-The following table lists the configurable parameters of the Maesh chart and their default values.
+The following table lists the configurable parameters of the Traefik Mesh chart and their default values.
 
 | Key                                              | Description                                                                                                                                                                                                                                                                     | Default                                |
 |--------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|
@@ -43,7 +42,7 @@ The following table lists the configurable parameters of the Maesh chart and the
 | clusterDomain                                    | Custom cluster domain.                                                                                                                                                                                                                                                          | `"cluster.local"`                      |
 | controller.affinity                              | Node/Pod affinities for the controller.                                                                                                                                                                                                                                         | `{}`                                   |
 | controller.ignoreNamespaces                      | Namespace to ignore for the controller.                                                                                                                                                                                                                                         | `[]`                                   |
-| controller.image.name                            | Docker image for the controller.                                                                                                                                                                                                                                                | `"containous/maesh"`                   |
+| controller.image.name                            | Docker image for the controller.                                                                                                                                                                                                                                                | `"traefik/mesh"`                       |
 | controller.image.pullPolicy                      | Pull policy for the controller Docker image.                                                                                                                                                                                                                                    | `"IfNotPresent"`                       |
 | controller.image.pullSecret                      | Name of the Secret resource containing the private registry credentials for the controller image.                                                                                                                                                                               |                                        |
 | controller.image.tag                             | Tag for the controller container Docker image.                                                                                                                                                                                                                                  | `{{ .Chart.AppVersion }}`              |

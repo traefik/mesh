@@ -1,4 +1,4 @@
-# Default values for Maesh.
+# Default values for Traefik Mesh.
 
 # acl: true
 
@@ -18,7 +18,7 @@ limits:
 
 controller:
   image:
-    name: containous/maesh
+    name: traefik/mesh
     # (Optional)
     # pullPolicy: IfNotPresent
     # (Optional)

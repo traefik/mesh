@@ -1,10 +1,10 @@
-# Maesh Helm Chart Guidelines
+# Traefik Mesh Helm Chart Guidelines
 
-This document outlines the guidelines for developing, managing and extending the Maesh Helm Chart.
+This document outlines the guidelines for developing, managing and extending the Traefik Mesh Helm Chart.
 
 ## Optionality
 
-All non-critical features (features not mandatory to start Maesh) in the Helm Chart must be optional.
+All non-critical features (features not mandatory to start Traefik Mesh) in the Helm Chart must be optional.
 All non-critical features should be disabled (commented out) in the `values.yaml` file.
 All optional non-critical features should be disabled (commented out) in the `values.yaml` file, and have a comment `# (Optional)` in the line above.
 This allows minimal configuration, and ease of extension.
@@ -13,7 +13,7 @@ This allows minimal configuration, and ease of extension.
 
 ```yaml
 image:
-  name: containous/maesh
+  name: traefik/mesh
 ```
 
 This feature is critical, and therefore is defined clearly in the `values.yaml` file.
@@ -64,7 +64,7 @@ These should just be added as an uncommented non-critical feature:
 
 ```yaml
 image:
-  name: containous/maesh
+  name: traefik/mesh
   # (Optional)
   # pullPolicy: IfNotPresent
 ```
