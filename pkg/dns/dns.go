@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/containous/maesh/pkg/safe"
 	"github.com/google/uuid"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/pkg/safe"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"

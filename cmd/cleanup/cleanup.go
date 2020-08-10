@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containous/maesh/cmd"
-	"github.com/containous/maesh/pkg/cleanup"
-	"github.com/containous/maesh/pkg/k8s"
+	"github.com/traefik/mesh/cmd"
+	"github.com/traefik/mesh/pkg/cleanup"
+	"github.com/traefik/mesh/pkg/k8s"
 	"github.com/traefik/paerser/cli"
 )
 

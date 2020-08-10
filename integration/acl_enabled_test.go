@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/containous/maesh/integration/k3d"
-	"github.com/containous/maesh/integration/tool"
-	"github.com/containous/maesh/integration/try"
 	"github.com/go-check/check"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/integration/k3d"
+	"github.com/traefik/mesh/integration/tool"
+	"github.com/traefik/mesh/integration/try"
 	checker "github.com/vdemeester/shakers"
 )
 
@@ -24,7 +24,7 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
-		{Name: "containous/maesh:latest", Local: true},
+		{Name: "traefik/mesh:latest", Local: true},
 		{Name: "traefik:v2.3"},
 		{Name: "containous/whoami:v1.0.1"},
 		{Name: "giantswarm/tiny-tools:3.9"},

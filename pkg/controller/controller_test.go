@@ -4,11 +4,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/containous/maesh/pkg/k8s"
-	"github.com/containous/maesh/pkg/topology"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/traefik/mesh/pkg/k8s"
+	"github.com/traefik/mesh/pkg/topology"
 )
 
 const (

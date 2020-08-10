@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/containous/maesh/pkg/topology"
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
+	"github.com/traefik/mesh/pkg/topology"
 )
 
 func buildHTTPRuleFromTrafficSpecs(specs []topology.TrafficSpec) string {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containous/maesh/cmd"
-	"github.com/containous/maesh/pkg/dns"
-	"github.com/containous/maesh/pkg/k8s"
+	"github.com/traefik/mesh/cmd"
+	"github.com/traefik/mesh/pkg/dns"
+	"github.com/traefik/mesh/pkg/k8s"
 	"github.com/traefik/paerser/cli"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

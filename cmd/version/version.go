@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/containous/maesh/pkg/version"
+	"github.com/traefik/mesh/pkg/version"
 	"github.com/traefik/paerser/cli"
 )
 

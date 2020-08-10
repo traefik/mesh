@@ -9,14 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containous/maesh/cmd"
-	"github.com/containous/maesh/cmd/cleanup"
-	"github.com/containous/maesh/cmd/prepare"
-	"github.com/containous/maesh/cmd/version"
-	"github.com/containous/maesh/pkg/api"
-	"github.com/containous/maesh/pkg/controller"
-	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/cmd"
+	"github.com/traefik/mesh/cmd/cleanup"
+	"github.com/traefik/mesh/cmd/prepare"
+	"github.com/traefik/mesh/cmd/version"
+	"github.com/traefik/mesh/pkg/api"
+	"github.com/traefik/mesh/pkg/controller"
+	"github.com/traefik/mesh/pkg/k8s"
 	"github.com/traefik/paerser/cli"
 )
 

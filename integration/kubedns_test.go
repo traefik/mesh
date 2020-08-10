@@ -3,11 +3,11 @@ package integration
 import (
 	"time"
 
-	"github.com/containous/maesh/integration/k3d"
-	"github.com/containous/maesh/integration/tool"
-	"github.com/containous/maesh/integration/try"
 	"github.com/go-check/check"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/integration/k3d"
+	"github.com/traefik/mesh/integration/tool"
+	"github.com/traefik/mesh/integration/try"
 	checker "github.com/vdemeester/shakers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

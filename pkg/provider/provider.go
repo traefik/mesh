@@ -6,10 +6,10 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/containous/maesh/pkg/annotations"
-	"github.com/containous/maesh/pkg/topology"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/pkg/annotations"
+	"github.com/traefik/mesh/pkg/topology"
 	corev1 "k8s.io/api/core/v1"
 )
 

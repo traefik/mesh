@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containous/maesh/integration/k3d"
 	"github.com/go-check/check"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/integration/k3d"
 	checker "github.com/vdemeester/shakers"
 )
 
@@ -22,7 +22,7 @@ func (s *HelmSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
-		{Name: "containous/maesh:latest", Local: true},
+		{Name: "traefik/mesh:latest", Local: true},
 		{Name: "traefik:v2.3"},
 	}
 
