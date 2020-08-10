@@ -1,23 +1,22 @@
 <p align="center">
-<img width="400" src="docs/content/assets/img/maesh.png" alt="Maesh" title="Maesh" />
+<img width="400" src="docs/content/assets/img/traefik-mesh.png" alt="Traefik Mesh" title="Traefik Mesh" />
 </p>
 
 
-[![Travis CI Build Status](https://travis-ci.com/containous/maesh.svg?branch=master)](https://travis-ci.com/containous/maesh)
-[![Semaphore CI Build Status](https://containous.semaphoreci.com/badges/maesh/branches/master.svg?style=shields)](https://containous.semaphoreci.com/projects/maesh)
-[![Docs](https://img.shields.io/badge/docs-current-brightgreen.svg)](https://docs.mae.sh)
-[![Go Report Card](https://goreportcard.com/badge/github.com/containous/maesh)](https://goreportcard.com/report/github.com/containous/maesh)
-[![Release](https://img.shields.io/github/tag-date/containous/maesh.svg)](https://github.com/containous/maesh/releases)
-[![GitHub](https://img.shields.io/github/license/containous/maesh)](https://github.com/containous/maesh/blob/master/LICENSE)
+[![Travis CI Build Status](https://travis-ci.com/traefik/mesh.svg?branch=master)](https://travis-ci.com/traefik/mesh)
+[![Semaphore CI Build Status](https://traefik.semaphoreci.com/badges/mesh/branches/master.svg?style=shields)](https://traefik.semaphoreci.com/projects/mesh)
+[![Docs](https://img.shields.io/badge/docs-current-brightgreen.svg)](https://doc.traefik.io/mesh)
+[![Go Report Card](https://goreportcard.com/badge/github.com/traefik/mesh)](https://goreportcard.com/report/github.com/traefik/mesh)
+[![Release](https://img.shields.io/github/tag-date/traefik/mesh.svg)](https://github.com/traefik/mesh/releases)
+[![GitHub](https://img.shields.io/github/license/traefik/mesh)](https://github.com/traefik/mesh/blob/master/LICENSE)
 [![Discourse status](https://img.shields.io/discourse/https/community.containo.us/status?label=Community&style=social)](https://community.containo.us/c/maesh)
 
-## Maesh: Simpler Service Mesh
+## Traefik Mesh: Simpler Service Mesh
 
-Maesh is a simple, yet full-featured service mesh. 
+Traefik Mesh is a simple, yet full-featured service mesh. 
 It is container-native and fits as your de-facto service mesh in your Kubernetes cluster. 
 It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io) that facilitates integration with pre-existing solution. 
-Moreover, Maesh is opt-in by default, 
-which means that your existing services are unaffected until you decide to add them to the mesh.
+Moreover, Traefik Mesh is opt-in by default, which means that your existing services are unaffected until you decide to add them to the mesh.
 
 <p align="center">
 <a href="https://smi-spec.io" target="_blank"><img width="150" src="docs/content/assets/img/smi.png" alt="SMI" title="SMI" /></a>
@@ -26,15 +25,15 @@ which means that your existing services are unaffected until you decide to add t
 
 ## Non-Invasive Service Mesh
 
-Maesh does not use any sidecar container but handles routing through proxy endpoints running on each node. 
+Traefik Mesh does not use any sidecar container but handles routing through proxy endpoints running on each node. 
 The mesh controller runs in a dedicated pod and handles all the configuration parsing and deployment to the proxy nodes. 
-Maesh supports multiple configuration options: annotations on user service objects, and SMI objects. 
-Not using sidecars means that Maesh does not modify your Kubernetes objects, and does not modify your traffic without your knowledge. 
-Using the Maesh endpoints is all that is required.
+Traefik Mesh supports multiple configuration options: annotations on user service objects, and SMI objects. 
+Not using sidecars means that Traefik Mesh does not modify your Kubernetes objects, and does not modify your traffic without your knowledge. 
+Using the Traefik Mesh endpoints is all that is required.
 
 <p align="center">
-<img width="400" src="docs/content/assets/img/before-maesh-graphic.png" alt="Maesh" title="Maesh" />
-<img width="400" src="docs/content/assets/img/after-maesh-graphic.png" alt="Maesh" title="Maesh" />
+<img width="400" src="docs/content/assets/img/before-traefik-mesh-graphic.png" alt="Traefik Mesh" title="Traefik Mesh" />
+<img width="400" src="docs/content/assets/img/after-traefik-mesh-graphic.png" alt="Traefik Mesh" title="Traefik Mesh" />
 </p>
 
 ## Prerequisites
@@ -48,12 +47,12 @@ To run this app, you require the following:
 ## Install (Helm v3 only)
 
 ```shell
-helm repo add maesh https://containous.github.io/maesh/charts
+helm repo add traefik-mesh https://traefik.github.io/mesh/charts
 helm repo update
-helm install maesh maesh/maesh
+helm install traefik-mesh traefik-mesh/traefik-mesh
 ```
 
-You can find the complete documentation at https://docs.mae.sh.
+You can find the complete documentation at https://doc.traefik.io/mesh.
 
 
 ## Contributing
