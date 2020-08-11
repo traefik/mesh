@@ -54,8 +54,7 @@ spec:
       {{- if .Values.tracing.deploy }}
       initContainers:
         - name: wait-for-jaeger-init
-          image: {{ .Values.tracing.jaeger.image.name | quote }}
-          imagePullPolicy: {{ .Values.tracing.jaeger.image.pullPolicy | default "IfNotPresent" }}
+          image: groundnuty/k8s-wait-for:v1.3
           args:
             - "service"
             - "-lapp.kubernetes.io/name=jaeger,app.kubernetes.io/component=agent"
@@ -101,20 +100,20 @@ spec:
             - "--providers.http.pollTimeout={{ .Values.mesh.pollTimeout }}"
             {{- end }}
             {{- if .Values.tracing.jaeger.enabled }}
-              {{- if .Values.tracing.jaeger.localagenthostport }}
-            - "--tracing.jaeger.localagenthostport={{ .Values.tracing.jaeger.localagenthostport }}"
+              {{- if .Values.tracing.jaeger.localAgentHostPort }}
+            - "--tracing.jaeger.localAgentHostPort={{ .Values.tracing.jaeger.localAgentHostPort }}"
               {{- else }}
             - {{ printf "--tracing.jaeger.localagenthostport=jaeger-agent.%s.svc.%s:6831" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
               {{- end }}
               {{- if .Values.tracing.jaeger.localagenthostport }}
-            - "--tracing.jaeger.samplingserverurl={{ .Values.tracing.jaeger.samplingserverurl }}"
+            - "--tracing.jaeger.samplingServerURL={{ .Values.tracing.jaeger.samplingServerURL }}"
               {{- else }}
-            - {{ printf "--tracing.jaeger.samplingserverurl=http://jaeger-agent.%s.svc.%s:5778/sampling" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
+            - {{ printf "--tracing.jaeger.samplingServerURL=http://jaeger-agent.%s.svc.%s:5778/sampling" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
               {{- end }}
             {{- end }}
             {{- if .Values.tracing.datadog }}
               {{- if .Values.tracing.datadog.localagenthostport }}
-            - "--tracing.datadog.localagenthostport={{ .Values.tracing.datadog.localagenthostport }}"
+            - "--tracing.datadog.localAgentHostPort={{ .Values.tracing.datadog.localAgentHostPort }}"
               {{- end }}
               {{- if .Values.tracing.datadog.debug }}
             - "--tracing.datadog.debug=true"
@@ -195,18 +194,27 @@ spec:
             - "--log.format={{ or .Values.mesh.logFormat .Values.logFormat }}"
             {{- end }}
             {{- if .Values.metrics.prometheus.enabled }}
-            - "--metrics.prometheus"
+            - "--metrics.prometheus=true"
+              {{- if hasKey .Values.metrics.prometheus "addEntrypointsLabels" }}
+            - "--metrics.prometheus.addEntryPointsLabels={{ .Values.metrics.prometheus.addEntrypointsLabels }}"
+              {{- end }}
+              {{- if hasKey .Values.metrics.prometheus "addServiceLabels" }}
+            - "--metrics.prometheus.addServicesLabels={{ .Values.metrics.prometheus.addServiceLabels }}"
+              {{- end }}
+              {{- if .Values.metrics.prometheus.buckets }}
+            - "--metrics.prometheus.buckets={{ .Values.metrics.prometheus.buckets }}"
+              {{- end }}
             {{- end }}
             {{- if .Values.metrics.datadog }}
             - "--metrics.datadog=true"
               {{- if .Values.metrics.datadog.address }}
             - "--metrics.datadog.address={{ .Values.metrics.datadog.address }}"
               {{- end }}
-              {{- if .Values.metrics.datadog.addEntrypointsLabels }}
-            - "--metrics.datadog.addEntryPointsLabels=true"
+              {{- if hasKey .Values.metrics.datadog "addEntrypointsLabels" }}
+            - "--metrics.datadog.addEntryPointsLabels={{ .Values.metrics.datadog.addEntrypointsLabels }}"
               {{- end }}
-              {{- if .Values.metrics.datadog.addServiceLabels }}
-            - "--metrics.datadog.addServicesLabels=true"
+              {{- if hasKey .Values.metrics.datadog "addServiceLabels" }}
+            - "--metrics.datadog.addServicesLabels={{ .Values.metrics.datadog.addServiceLabels }}"
               {{- end }}
               {{- if .Values.metrics.datadog.pushInterval }}
             - "--metrics.datadog.pushInterval={{ .Values.metrics.datadog.pushInterval }}"
@@ -232,11 +240,11 @@ spec:
               {{- if .Values.metrics.influxdb.password }}
             - "--metrics.influxdb.password={{ .Values.metrics.influxdb.password }}"
               {{- end }}
-              {{- if .Values.metrics.influxdb.addEntrypointsLabels }}
-            - "--metrics.influxdb.addEntryPointsLabels=true"
+              {{- if hasKey .Values.metrics.influxdb "addEntrypointsLabels" }}
+            - "--metrics.influxdb.addEntryPointsLabels={{ .Values.metrics.influxdb.addEntrypointsLabels }}"
               {{- end }}
-              {{- if .Values.metrics.influxdb.addServiceLabels }}
-            - "--metrics.influxdb.addServicesLabels=true"
+              {{- if .Values.metrics.influxdb "addServiceLabels" }}
+            - "--metrics.influxdb.addServicesLabels={{ .Values.metrics.influxdb.addServiceLabels }}"
               {{- end }}
               {{- if .Values.metrics.influxdb.pushInterval }}
             - "--metrics.influxdb.pushInterval={{ .Values.metrics.influxdb.pushInterval }}"
@@ -247,14 +255,17 @@ spec:
               {{- if .Values.metrics.statsd.address }}
             - "--metrics.statsd.address={{ .Values.metrics.statsd.address }}"
               {{- end }}
-              {{- if .Values.metrics.statsd.addEntrypointsLabels }}
-            - "--metrics.statsd.addEntryPointsLabels=true"
+              {{- if hasKey .Values.metrics.statsd "addEntrypointsLabels" }}
+            - "--metrics.statsd.addEntryPointsLabels={{ .Values.metrics.statsd.addEntrypointsLabels }}"
               {{- end }}
-              {{- if .Values.metrics.statsd.addServiceLabels }}
-            - "--metrics.statsd.addServicesLabels=true"
+              {{- if hasKey .Values.metrics.statsd "addServiceLabels" }}
+            - "--metrics.statsd.addServicesLabels={{ .Values.metrics.statsd.addServicesLabels }}"
               {{- end }}
               {{- if .Values.metrics.statsd.pushInterval }}
             - "--metrics.statsd.pushInterval={{ .Values.metrics.statsd.pushInterval }}"
+              {{- end }}
+              {{- if .Values.metrics.statsd.prefix }}
+            - "--metrics.statsd.prefix={{ .Values.metrics.statsd.prefix }}"
               {{- end }}
             {{- end }}
             {{- with .Values.mesh.additionalArguments }}
