@@ -106,13 +106,13 @@ mesh:
 tracing:
   deploy: true
   jaeger:
-    image:
-      name: groundnuty/k8s-wait-for:v1.3
     enabled: true
-    localagenthostport: ""
-    samplingserverurl: ""
+    # (Optional)
+    # localAgentHostPort: "127.0.0.1:6831"
+    # (Optional)
+    # samplingServerURL: "http://localhost:5778/sampling"
   # datadog:
-    # localagenthostport: "127.0.0.1:8126"
+    # localAgentHostPort: "127.0.0.1:8126"
     # (Optional)
     # debug: true
     # (Optional)
@@ -153,6 +153,12 @@ metrics:
   prometheus:
     # whether to expose Prometheus metrics
     enabled: true
+    # (Optional)
+    # addEntrypointsLabels: true
+    # (Optional)
+    # addServiceLabels: true
+    # (Optional)
+    # buckets: 0.100000, 0.300000, 1.200000, 5.000000
   ## you can override values of the metrics subchart here.
   ## check charts/metrics/values.yaml for the defaults.
   ## example:
@@ -198,3 +204,5 @@ metrics:
     # addServiceLabels: true
     # (Optional)
     # pushInterval: 10s
+    # (Optional)
+    # prefix: traefik
