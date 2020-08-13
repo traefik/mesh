@@ -3,12 +3,12 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: maesh-coredns
+  name: traefik-mesh-coredns
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: coredns
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
 {{- end}}

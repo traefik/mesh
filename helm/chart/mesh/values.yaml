@@ -48,7 +48,7 @@ controller:
   tolerations: []
   affinity: {}
 
-mesh:
+proxy:
   image:
     name: traefik
     # (Optional)

@@ -8,7 +8,7 @@ metadata:
   labels:
     app: maesh
     component: coredns
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
 spec:
@@ -29,7 +29,7 @@ spec:
         component: coredns
         release: {{ .Release.Name | quote }}
     spec:
-      serviceAccountName: maesh-coredns
+      serviceAccountName: traefik-mesh-coredns
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

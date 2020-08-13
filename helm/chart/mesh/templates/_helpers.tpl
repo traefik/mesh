@@ -3,28 +3,28 @@
 {{/*
 Define the Chart version Label.
 */}}
-{{- define "maesh.chartLabel" -}}
+{{- define "traefikMesh.chartLabel" -}}
     {{- printf "%s-%s" .Chart.Name .Chart.Version -}}
 {{- end -}}
 
 {{/*
-Define the templated image with tag.
+Define the templated controller image with tag.
 */}}
-{{- define "maesh.controllerImage" -}}
+{{- define "traefikMesh.controllerImage" -}}
     {{- printf "%s:%s" .Values.controller.image.name ( .Values.controller.image.tag | default .Chart.AppVersion ) -}}
 {{- end -}}
 
 {{/*
-Define the templated mesh image with tag.
+Define the templated proxy image with tag.
 */}}
-{{- define "maesh.meshImage" -}}
-    {{- printf "%s:%s" .Values.mesh.image.name ( .Values.mesh.image.tag | default "v2.3" ) -}}
+{{- define "traefikMesh.proxyImage" -}}
+    {{- printf "%s:%s" .Values.proxy.image.name ( .Values.proxy.image.tag | default "v2.3" ) -}}
 {{- end -}}
 
 {{/*
-Define the watchNamespaces List.
+Define the controller watchNamespaces List.
 */}}
-{{- define "maesh.controllerWatchNamespaces" -}}
+{{- define "traefikMesh.controllerWatchNamespaces" -}}
     --watchNamespaces=
     {{- range $idx, $ns := .Values.controller.watchNamespaces }}
         {{- if $idx }},{{ end }}
@@ -33,9 +33,9 @@ Define the watchNamespaces List.
 {{- end -}}
 
 {{/*
-Define the ignoreNamespaces List.
+Define the controller ignoreNamespaces List.
 */}}
-{{- define "maesh.controllerIgnoreNamespaces" -}}
+{{- define "traefikMesh.controllerIgnoreNamespaces" -}}
     --ignoreNamespaces=
     {{- range $idx, $ns := .Values.controller.ignoreNamespaces }}
         {{- if $idx }},{{ end }}

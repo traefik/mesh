@@ -6,10 +6,10 @@ metadata:
   labels:
     app: maesh
     component: coredns
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
-  name: maesh-coredns-role
+  name: traefik-mesh-coredns-role
   namespace: {{ .Release.Namespace }}
 rules:
   - apiGroups:
@@ -33,12 +33,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: maesh-coredns
+  name: traefik-mesh-coredns
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: coredns
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
   annotations:
@@ -46,9 +46,9 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: maesh-coredns-role
+  name: traefik-mesh-coredns-role
 subjects:
   - kind: ServiceAccount
-    name: maesh-coredns
+    name: traefik-mesh-coredns
     namespace: {{ .Release.Namespace }}
 {{- end }}

@@ -2,12 +2,12 @@
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: maesh-controller
+  name: traefik-mesh-controller
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: controller
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:

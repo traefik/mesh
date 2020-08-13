@@ -5,7 +5,7 @@ metadata:
   name: jaeger
   labels:
     app: jaeger
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:

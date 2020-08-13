@@ -2,15 +2,15 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: maesh-mesh
+  name: traefik-mesh-proxy
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: maesh-mesh
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
-  {{- with .Values.mesh.annotations }}
+  {{- with .Values.proxy.annotations }}
   annotations:
 {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -29,36 +29,36 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
-        {{- with .Values.mesh.podAnnotations }}
+        {{- with .Values.proxy.podAnnotations }}
 {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: maesh-mesh
+      serviceAccountName: traefik-mesh-proxy
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
       terminationGracePeriodSeconds: 30
-      {{- if .Values.mesh.image.pullSecret }}
+      {{- if .Values.proxy.image.pullSecret }}
       imagePullSecrets:
-        - name: {{ .Values.mesh.image.pullSecret }}
+        - name: {{ .Values.proxy.image.pullSecret }}
       {{- end }}
-      {{- with .Values.mesh.nodeSelector }}
+      {{- with .Values.proxy.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}
       {{- end }}
-      {{- with .Values.mesh.tolerations }}
+      {{- with .Values.proxy.tolerations }}
       tolerations:
 {{ toYaml . | indent 8 }}
       {{- end }}
       containers:
-        - name: maesh-mesh
-          image: {{ include "maesh.meshImage" . | quote }}
-          imagePullPolicy: {{ .Values.mesh.image.pullPolicy | default "IfNotPresent" }}
-          {{- with .Values.mesh.env }}
+        - name: traefik-mesh-proxy
+          image: {{ include "traefikMesh.proxyImage" . | quote }}
+          imagePullPolicy: {{ .Values.proxy.image.pullPolicy | default "IfNotPresent" }}
+          {{- with .Values.proxy.env }}
           env:
 {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.mesh.envFrom }}
+          {{- with .Values.proxy.envFrom }}
           envFrom:
 {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -76,12 +76,12 @@ spec:
             {{- range $i, $port := untilStep 15000 ((add (.Values.limits.udp|int) 15000)|int) 1 }}
             - {{ printf "\"--entryPoints.udp-%d.address=:%d/udp\"" $port $port }}
             {{- end }}
-            - {{ printf "--providers.http.endpoint=http://maesh-controller.%s.svc.%s:9000/api/configuration/current" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
-            {{- if .Values.mesh.pollInterval }}
-            - "--providers.http.pollInterval={{ .Values.mesh.pollInterval }}"
+            - {{ printf "--providers.http.endpoint=http://traefik-mesh-controller.%s.svc.%s:9000/api/configuration/current" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
+            {{- if .Values.proxy.pollInterval }}
+            - "--providers.http.pollInterval={{ .Values.proxy.pollInterval }}"
             {{- end }}
-            {{- if .Values.mesh.pollTimeout }}
-            - "--providers.http.pollTimeout={{ .Values.mesh.pollTimeout }}"
+            {{- if .Values.proxy.pollTimeout }}
+            - "--providers.http.pollTimeout={{ .Values.proxy.pollTimeout }}"
             {{- end }}
             {{- if .Values.tracing.jaeger.enabled }}
               {{- if .Values.tracing.jaeger.localAgentHostPort }}
@@ -161,22 +161,22 @@ spec:
             - "--api.dashboard=false"
             - "--api.insecure"
             - "--ping"
-            {{- if .Values.mesh.forwardingTimeouts }}
-              {{- if .Values.mesh.forwardingTimeouts.dialTimeout }}
-            - "--serversTransport.forwardingTimeouts.dialTimeout={{ .Values.mesh.forwardingTimeouts.dialTimeout }}"
+            {{- if .Values.proxy.forwardingTimeouts }}
+              {{- if .Values.proxy.forwardingTimeouts.dialTimeout }}
+            - "--serversTransport.forwardingTimeouts.dialTimeout={{ .Values.proxy.forwardingTimeouts.dialTimeout }}"
               {{- end }}
-              {{- if .Values.mesh.forwardingTimeouts.responseHeaderTimeout }}
-            - "--serversTransport.forwardingTimeouts.responseHeaderTimeout={{ .Values.mesh.forwardingTimeouts.responseHeaderTimeout }}"
+              {{- if .Values.proxy.forwardingTimeouts.responseHeaderTimeout }}
+            - "--serversTransport.forwardingTimeouts.responseHeaderTimeout={{ .Values.proxy.forwardingTimeouts.responseHeaderTimeout }}"
               {{- end }}
-              {{- if .Values.mesh.forwardingTimeouts.idleConnTimeout }}
-            - "--serversTransport.forwardingTimeouts.idleConnTimeout={{ .Values.mesh.forwardingTimeouts.idleConnTimeout }}"
+              {{- if .Values.proxy.forwardingTimeouts.idleConnTimeout }}
+            - "--serversTransport.forwardingTimeouts.idleConnTimeout={{ .Values.proxy.forwardingTimeouts.idleConnTimeout }}"
               {{- end }}
             {{- end }}
-            {{- if or .Values.mesh.logLevel .Values.logLevel }}
-            - "--log.level={{ or .Values.mesh.logLevel .Values.logLevel }}"
+            {{- if or .Values.proxy.logLevel .Values.logLevel }}
+            - "--log.level={{ or .Values.proxy.logLevel .Values.logLevel }}"
             {{- end }}
-            {{- if or .Values.mesh.logFormat .Values.logFormat }}
-            - "--log.format={{ or .Values.mesh.logFormat .Values.logFormat }}"
+            {{- if or .Values.proxy.logFormat .Values.logFormat }}
+            - "--log.format={{ or .Values.proxy.logFormat .Values.logFormat }}"
             {{- end }}
             {{- if .Values.metrics.prometheus.enabled }}
             - "--metrics.prometheus=true"
@@ -253,7 +253,7 @@ spec:
             - "--metrics.statsd.prefix={{ .Values.metrics.statsd.prefix }}"
               {{- end }}
             {{- end }}
-            {{- with .Values.mesh.additionalArguments }}
+            {{- with .Values.proxy.additionalArguments }}
             {{- range . }}
             - {{ . | quote }}
             {{- end }}
@@ -278,8 +278,8 @@ spec:
             periodSeconds: 1
           resources:
             requests:
-              memory: {{ .Values.mesh.resources.request.mem }}
-              cpu: {{ .Values.mesh.resources.request.cpu }}
+              memory: {{ .Values.proxy.resources.request.mem }}
+              cpu: {{ .Values.proxy.resources.request.cpu }}
             limits:
-              memory: {{ .Values.mesh.resources.limit.mem }}
-              cpu: {{ .Values.mesh.resources.limit.cpu }}
+              memory: {{ .Values.proxy.resources.limit.mem }}
+              cpu: {{ .Values.proxy.resources.limit.cpu }}

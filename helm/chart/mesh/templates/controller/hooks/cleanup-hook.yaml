@@ -2,12 +2,12 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: maesh-cleanup
+  name: traefik-mesh-cleanup
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: cleanup
-    chart: {{ include "maesh.chartLabel" . | quote}}
+    chart: {{ include "traefikMesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
   annotations:
@@ -19,12 +19,12 @@ metadata:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: maesh-cleanup-role
+  name: traefik-mesh-cleanup-role
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: cleanup
-    chart: {{ include "maesh.chartLabel" . | quote}}
+    chart: {{ include "traefikMesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
   annotations:
@@ -60,12 +60,12 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: maesh-cleanup
+  name: traefik-mesh-cleanup
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: cleanup
-    chart: {{ include "maesh.chartLabel" . | quote}}
+    chart: {{ include "traefikMesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
   annotations:
@@ -75,22 +75,22 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: maesh-cleanup-role
+  name: traefik-mesh-cleanup-role
 subjects:
   - kind: ServiceAccount
-    name: maesh-cleanup
+    name: traefik-mesh-cleanup
     namespace: {{ .Release.Namespace }}
 
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: maesh-cleanup
+  name: traefik-mesh-cleanup
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: cleanup
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote}}
     heritage: {{ .Release.Service | quote}}
   annotations:
@@ -107,15 +107,15 @@ spec:
         component: cleanup
         release: {{ .Release.Name | quote}}
     spec:
-      serviceAccountName: maesh-cleanup
+      serviceAccountName: traefik-mesh-cleanup
       restartPolicy: Never
       {{- if .Values.controller.image.pullSecret }}
       imagePullSecrets:
         - name: {{ .Values.controller.image.pullSecret }}
       {{- end }}
       containers:
-        - name: maesh-cleanup
-          image: {{ include "maesh.controllerImage" . | quote }}
+        - name: traefik-mesh-cleanup
+          image: {{ include "traefikMesh.controllerImage" . | quote }}
           imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent" }}
           args:
             - "cleanup"

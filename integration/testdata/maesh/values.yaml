@@ -1,5 +1,5 @@
 #
-# Maesh configuration.
+# Traefik Mesh configuration.
 #
 controller:
   image:
@@ -7,7 +7,7 @@ controller:
     pullPolicy: IfNotPresent
     tag: latest
 
-mesh:
+proxy:
   image:
     name: traefik
     pullPolicy: IfNotPresent

@@ -2,12 +2,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: maesh-controller
+  name: traefik-mesh-controller
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: controller
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:
@@ -27,7 +27,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "4646"
     spec:
-      serviceAccountName: maesh-controller
+      serviceAccountName: traefik-mesh-controller
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
@@ -48,8 +48,8 @@ spec:
 {{ toYaml . | indent 8 }}
       {{- end }}
       containers:
-        - name: maesh-controller
-          image: {{ include "maesh.controllerImage" . | quote }}
+        - name: traefik-mesh-controller
+          image: {{ include "traefikMesh.controllerImage" . | quote }}
           imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent" }}
           args:
             {{- if or .Values.controller.logLevel .Values.logLevel }}
@@ -66,10 +66,10 @@ spec:
             {{- end }}
             - "--namespace={{ .Release.Namespace }}"
             {{- if .Values.controller.watchNamespaces }}
-            - {{ include "maesh.controllerWatchNamespaces" . | quote }}
+            - {{ include "traefikMesh.controllerWatchNamespaces" . | quote }}
             {{- end }}
             {{- if .Values.controller.ignoreNamespaces }}
-            - {{ include "maesh.controllerIgnoreNamespaces" . | quote }}
+            - {{ include "traefikMesh.controllerIgnoreNamespaces" . | quote }}
             {{- end }}
             {{- if .Values.limits.http }}
             - "--limitHTTPPort={{ .Values.limits.http }}"
@@ -97,8 +97,8 @@ spec:
             initialDelaySeconds: 3
             periodSeconds: 1
       initContainers:
-        - name: maesh-prepare
-          image: {{ include "maesh.controllerImage" . | quote }}
+        - name: traefik-mesh-prepare
+          image: {{ include "traefikMesh.controllerImage" . | quote }}
           imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent"}}
           args:
             - "prepare"

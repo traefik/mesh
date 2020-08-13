@@ -2,12 +2,12 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: maesh-mesh
+  name: traefik-mesh-proxy
   namespace: {{ .Release.Namespace }}
   labels:
     app: maesh
     component: maesh-mesh
-    chart: {{ include "maesh.chartLabel" . | quote}}
+    chart: {{ include "traefikMesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 automountServiceAccountToken: false

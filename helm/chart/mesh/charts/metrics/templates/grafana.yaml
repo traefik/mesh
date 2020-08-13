@@ -7,7 +7,7 @@ metadata:
   labels:
     app: maesh
     component: grafana
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:
@@ -102,7 +102,7 @@ metadata:
   labels:
     app: maesh
     component: grafana
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 data:
@@ -146,7 +146,7 @@ data:
       editable: true
       options:
         path: /var/lib/grafana/dashboards
-        homeDashboardId: maesh
+        homeDashboardId: traefik-mesh
 
 ---
 apiVersion: v1
@@ -157,7 +157,7 @@ metadata:
   labels:
     app: maesh
     component: grafana
-    chart: {{ include "maesh.chartLabel" . | quote }}
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
 spec:
