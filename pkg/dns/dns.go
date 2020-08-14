@@ -72,7 +72,7 @@ func (c *Client) CheckDNSProvider(ctx context.Context) (Provider, error) {
 		return KubeDNS, nil
 	}
 
-	return UnknownDNS, errors.New("no supported DNS service available for installing maesh")
+	return UnknownDNS, errors.New("no supported DNS service available for installing traefik mesh")
 }
 
 func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
@@ -127,8 +127,8 @@ func (c *Client) kubeDNSMatch(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// ConfigureCoreDNS patches the CoreDNS configuration for Maesh.
-func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, clusterDomain, maeshNamespace string) error {
+// ConfigureCoreDNS patches the CoreDNS configuration for Traefik Mesh.
+func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, clusterDomain, traefikMeshNamespace string) error {
 	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "coredns", coreDNSNamespace)
 
 	coreDNSDeployment, err := c.kubeClient.AppsV1().Deployments(coreDNSNamespace).Get(ctx, "coredns", metav1.GetOptions{})
@@ -136,7 +136,7 @@ func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, cluster
 		return err
 	}
 
-	patchedConfigMap, changed, err := c.patchCoreDNSConfig(ctx, coreDNSDeployment, clusterDomain, maeshNamespace)
+	patchedConfigMap, changed, err := c.patchCoreDNSConfig(ctx, coreDNSDeployment, clusterDomain, traefikMeshNamespace)
 	if err != nil {
 		return fmt.Errorf("unable to patch coredns config: %w", err)
 	}
@@ -160,7 +160,7 @@ func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, cluster
 	return nil
 }
 
-func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment, clusterDomain, maeshNamespace string) (*corev1.ConfigMap, bool, error) {
+func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment, clusterDomain, traefikMeshNamespace string) (*corev1.ConfigMap, bool, error) {
 	coreDNSVersion, err := c.getCoreDNSVersion(deployment)
 	if err != nil {
 		return nil, false, err
@@ -177,9 +177,10 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 			maeshBlockTrailer,
 			maeshDomain,
 			clusterDomain,
-			maeshNamespace,
+			traefikMeshNamespace,
 			coreDNSVersion,
 		)
+
 		customConfigMap.Data["maesh.server"] = corefile
 
 		return customConfigMap, changed, nil
@@ -196,7 +197,7 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		maeshBlockTrailer,
 		maeshDomain,
 		clusterDomain,
-		maeshNamespace,
+		traefikMeshNamespace,
 		coreDNSVersion,
 	)
 
@@ -219,7 +220,7 @@ func (c *Client) getCoreDNSVersion(deployment *appsv1.Deployment) (*goversion.Ve
 	return nil, fmt.Errorf("unable to get CoreDNS container in deployment %q in namespace %q", deployment.Name, deployment.Namespace)
 }
 
-// ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
+// ConfigureKubeDNS patches the KubeDNS configuration for Traefik Mesh.
 func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, maeshNamespace string) error {
 	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "kube-dns", maeshNamespace)
 

@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	meshNamespace string = "maesh"
-	minHTTPPort          = int32(5000)
-	maxHTTPPort          = int32(5005)
-	minTCPPort           = int32(10000)
-	maxTCPPort           = int32(10005)
-	minUDPPort           = int32(15000)
-	maxUDPPort           = int32(15005)
+	traefikMeshNamespace string = "traefik-mesh"
+	minHTTPPort                 = int32(5000)
+	maxHTTPPort                 = int32(5005)
+	minTCPPort                  = int32(10000)
+	maxTCPPort                  = int32(10005)
+	minUDPPort                  = int32(15000)
+	maxUDPPort                  = int32(15005)
 )
 
 type storeMock struct{}
@@ -39,7 +39,7 @@ func TestController_NewMeshController(t *testing.T) {
 	controller := NewMeshController(clientMock, Config{
 		ACLEnabled:       false,
 		DefaultMode:      "http",
-		Namespace:        meshNamespace,
+		Namespace:        traefikMeshNamespace,
 		IgnoreNamespaces: []string{},
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,
@@ -64,7 +64,7 @@ func TestController_NewMeshControllerWithSMI(t *testing.T) {
 	controller := NewMeshController(clientMock, Config{
 		ACLEnabled:       true,
 		DefaultMode:      "http",
-		Namespace:        meshNamespace,
+		Namespace:        traefikMeshNamespace,
 		IgnoreNamespaces: []string{},
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,

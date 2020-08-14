@@ -533,7 +533,7 @@ func (p *Provider) buildServicesForTrafficSplitBackends(t *topology.Topology, cf
 
 		if len(backendSvc.TrafficSplits) > 0 {
 			tsKey := topology.Key{Name: ts.Name, Namespace: ts.Namespace}
-			p.logger.Warnf("Nested TrafficSplits detected in TrafficSplit %q: Maesh doesn't support nested TrafficSplits", tsKey)
+			p.logger.Warnf("Nested TrafficSplits detected in TrafficSplit %q: Traefik Mesh doesn't support nested TrafficSplits", tsKey)
 		}
 
 		backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)

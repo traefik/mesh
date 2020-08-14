@@ -30,7 +30,7 @@ func TestCleanup_CleanShadowServices(t *testing.T) {
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(logrus.DebugLevel)
 
-	cleanup := NewCleanup(logger, clientMock.KubernetesClient(), "maesh")
+	cleanup := NewCleanup(logger, clientMock.KubernetesClient(), "traefik-mesh")
 	require.NotNil(t, cleanup)
 
 	err := cleanup.CleanShadowServices(context.Background())

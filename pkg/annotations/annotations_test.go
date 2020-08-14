@@ -310,7 +310,7 @@ func Test_getAnnotation(t *testing.T) {
 			exists: true,
 		},
 		{
-			desc: "should return the maesh annotation value",
+			desc: "should return the deprecated maesh annotation value",
 			annotations: map[string]string{
 				"maesh.containo.us/foo": "bar",
 			},
