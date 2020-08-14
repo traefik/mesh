@@ -21,7 +21,6 @@ const (
 )
 
 // EnvLoader loads a configuration from all the environment variables.
-
 type EnvLoader struct{}
 
 // Load loads the command's configuration from the environment variables prefixed with "TRAEFIK_MESH_" or "MAESH_".

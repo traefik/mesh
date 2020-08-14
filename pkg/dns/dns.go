@@ -29,9 +29,14 @@ const (
 	CoreDNS
 	KubeDNS
 
+	// Maesh config is deprecated and will be removed in the next major release.
+	maeshDomain       = "maesh"
 	maeshBlockHeader  = "#### Begin Maesh Block"
 	maeshBlockTrailer = "#### End Maesh Block"
-	maeshDomain       = "maesh"
+
+	traefikMeshDomain       = "traefik.mesh"
+	traefikMeshBlockHeader  = "#### Begin Traefik Mesh Block"
+	traefikMeshBlockTrailer = "#### End Traefik Mesh Block"
 )
 
 var versionCoreDNS17 = goversion.Must(goversion.NewVersion("1.7"))
@@ -171,7 +176,8 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 	// For AKS the CoreDNS config have to be added to the coredns-custom ConfigMap.
 	// See https://docs.microsoft.com/en-us/azure/aks/coredns-custom
 	if err == nil {
-		corefile, changed := addStubDomain(
+		// deprecated, will be removed in the next major release.
+		corefile, mChanged := addStubDomain(
 			customConfigMap.Data["maesh.server"],
 			maeshBlockHeader,
 			maeshBlockTrailer,
@@ -180,10 +186,20 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 			traefikMeshNamespace,
 			coreDNSVersion,
 		)
-
 		customConfigMap.Data["maesh.server"] = corefile
 
-		return customConfigMap, changed, nil
+		corefile, tChanged := addStubDomain(
+			customConfigMap.Data["traefik.mesh.server"],
+			traefikMeshBlockHeader,
+			traefikMeshBlockTrailer,
+			traefikMeshDomain,
+			clusterDomain,
+			traefikMeshNamespace,
+			coreDNSVersion,
+		)
+		customConfigMap.Data["traefik.mesh.server"] = corefile
+
+		return customConfigMap, mChanged || tChanged, nil
 	}
 
 	coreDNSConfigMap, err := c.getConfigMap(ctx, deployment, "coredns")
@@ -191,7 +207,7 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		return nil, false, err
 	}
 
-	corefile, changed := addStubDomain(
+	corefile, mChanged := addStubDomain(
 		coreDNSConfigMap.Data["Corefile"],
 		maeshBlockHeader,
 		maeshBlockTrailer,
@@ -201,9 +217,19 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		coreDNSVersion,
 	)
 
+	corefile, tChanged := addStubDomain(
+		corefile,
+		traefikMeshBlockHeader,
+		traefikMeshBlockTrailer,
+		traefikMeshDomain,
+		clusterDomain,
+		traefikMeshNamespace,
+		coreDNSVersion,
+	)
+
 	coreDNSConfigMap.Data["Corefile"] = corefile
 
-	return coreDNSConfigMap, changed, nil
+	return coreDNSConfigMap, mChanged || tChanged, nil
 }
 
 func (c *Client) getCoreDNSVersion(deployment *appsv1.Deployment) (*goversion.Version, error) {
@@ -221,8 +247,8 @@ func (c *Client) getCoreDNSVersion(deployment *appsv1.Deployment) (*goversion.Ve
 }
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Traefik Mesh.
-func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, maeshNamespace string) error {
-	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "kube-dns", maeshNamespace)
+func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, traefikMeshNamespace string) error {
+	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "kube-dns", traefikMeshNamespace)
 
 	kubeDNSDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "kube-dns", metav1.GetOptions{})
 	if err != nil {
@@ -231,16 +257,16 @@ func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, maeshNames
 
 	var coreDNSServiceIP string
 
-	c.logger.Debugf("Getting ClusterIP for Service %q in namespace %q", "coredns", maeshNamespace)
+	c.logger.Debugf("Getting ClusterIP for Service %q in namespace %q", "coredns", traefikMeshNamespace)
 
 	operation := func() error {
-		svc, svcErr := c.kubeClient.CoreV1().Services(maeshNamespace).Get(ctx, "coredns", metav1.GetOptions{})
+		svc, svcErr := c.kubeClient.CoreV1().Services(traefikMeshNamespace).Get(ctx, "coredns", metav1.GetOptions{})
 		if svcErr != nil {
-			return fmt.Errorf("unable to get CoreDNS service in namespace %q: %w", maeshNamespace, err)
+			return fmt.Errorf("unable to get CoreDNS service in namespace %q: %w", traefikMeshNamespace, err)
 		}
 
 		if svc.Spec.ClusterIP == "" {
-			return fmt.Errorf("coredns service in namespace %q has no ClusterIP", maeshNamespace)
+			return fmt.Errorf("coredns service in namespace %q has no ClusterIP", traefikMeshNamespace)
 		}
 
 		coreDNSServiceIP = svc.Spec.ClusterIP
@@ -252,13 +278,13 @@ func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, maeshNames
 		return err
 	}
 
-	c.logger.Debugf("ClusterIP for Service %q in namespace %q is %q", "coredns", maeshNamespace, coreDNSServiceIP)
+	c.logger.Debugf("ClusterIP for Service %q in namespace %q is %q", "coredns", traefikMeshNamespace, coreDNSServiceIP)
 
 	if err := c.patchKubeDNSConfig(ctx, kubeDNSDeployment, coreDNSServiceIP); err != nil {
 		return err
 	}
 
-	if err := c.ConfigureCoreDNS(ctx, maeshNamespace, clusterDomain, maeshNamespace); err != nil {
+	if err := c.ConfigureCoreDNS(ctx, traefikMeshNamespace, clusterDomain, traefikMeshNamespace); err != nil {
 		return err
 	}
 
@@ -283,7 +309,10 @@ func (c *Client) patchKubeDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		}
 	}
 
+	// Add our stubDomains.
+	// maesh stubDomain is deprecated and will be removed in the next major release.
 	stubDomains["maesh"] = []string{coreDNSServiceIP}
+	stubDomains["traefik.mesh"] = []string{coreDNSServiceIP}
 
 	configMapData, err := json.Marshal(stubDomains)
 	if err != nil {
@@ -308,7 +337,7 @@ func (c *Client) restartPods(ctx context.Context, deployment *appsv1.Deployment)
 		annotations = make(map[string]string)
 	}
 
-	annotations["maesh-hash"] = uuid.New().String()
+	annotations["traefik-mesh-hash"] = uuid.New().String()
 	deployment.Spec.Template.Annotations = annotations
 
 	_, err := c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
@@ -346,6 +375,7 @@ func (c *Client) unpatchCoreDNSConfig(ctx context.Context, deployment *appsv1.De
 	// See https://docs.microsoft.com/en-us/azure/aks/coredns-custom
 	if err == nil {
 		delete(coreDNSConfigMap.Data, "maesh.server")
+		delete(coreDNSConfigMap.Data, "traefik.mesh.server")
 
 		return coreDNSConfigMap, nil
 	}
@@ -355,11 +385,19 @@ func (c *Client) unpatchCoreDNSConfig(ctx context.Context, deployment *appsv1.De
 		return nil, err
 	}
 
-	coreDNSConfigMap.Data["Corefile"] = removeStubDomain(
+	corefile := removeStubDomain(
 		coreDNSConfigMap.Data["Corefile"],
 		maeshBlockHeader,
 		maeshBlockTrailer,
 	)
+
+	corefile = removeStubDomain(
+		corefile,
+		traefikMeshBlockHeader,
+		traefikMeshBlockTrailer,
+	)
+
+	coreDNSConfigMap.Data["Corefile"] = corefile
 
 	return coreDNSConfigMap, nil
 }
@@ -388,8 +426,10 @@ func (c *Client) RestoreKubeDNS(ctx context.Context) error {
 		return fmt.Errorf("unable to unmarshal stubdomains: %w", err)
 	}
 
-	// Delete our stubDomain.
+	// Delete our stubDomains.
+	// maesh stubDomain is deprecated and will be removed in the next major release.
 	delete(stubDomains, "maesh")
+	delete(stubDomains, "traefik.mesh")
 
 	configMapData, err := json.Marshal(stubDomains)
 	if err != nil {
@@ -514,6 +554,7 @@ func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, tra
     loadbalance
 }
 %[5]s`
+
 	upstream := ""
 
 	if coreDNSVersion.LessThan(versionCoreDNS17) {

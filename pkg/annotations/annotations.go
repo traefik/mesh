@@ -30,6 +30,8 @@ const (
 	annotationRateLimitAverage         = "ratelimit-average"
 	annotationRateLimitBurst           = "ratelimit-burst"
 )
+
+// ErrNotFound indicates that the annotation hasn't been found.
 var ErrNotFound = errors.New("annotation not found")
 
 // GetTrafficType returns the value of the traffic-type annotation.

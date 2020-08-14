@@ -9,7 +9,7 @@
           "block-all-middleware"
         ],
         "service": "block-all-service",
-        "rule": "Host(`svc-b.my-ns.maesh`) || Host(`10.10.14.1`)",
+        "rule": "Host(`svc-b.my-ns.traefik.mesh`) || Host(`svc-b.my-ns.maesh`) || Host(`10.10.14.1`)",
         "priority": 1
       },
       "my-ns-svc-b-tt-8080-traffic-target-direct": {
@@ -20,8 +20,8 @@
           "my-ns-svc-b-tt-whitelist-traffic-target-direct"
         ],
         "service": "my-ns-svc-b-tt-8080-traffic-target",
-        "rule": "(Host(`svc-b.my-ns.maesh`) || Host(`10.10.14.1`)) && (PathPrefix(`/{path:app}`) || (PathPrefix(`/{path:api/notifications}`) && Method(`GET`)) || HeadersRegexp(`User-Agent`, `Mozilla/.*`))",
-        "priority": 2005
+        "rule": "(Host(`svc-b.my-ns.traefik.mesh`) || Host(`svc-b.my-ns.maesh`) || Host(`10.10.14.1`)) && (PathPrefix(`/{path:app}`) || (PathPrefix(`/{path:api/notifications}`) && Method(`GET`)) || HeadersRegexp(`User-Agent`, `Mozilla/.*`))",
+        "priority": 2006
       },
       "readiness": {
         "entryPoints": [

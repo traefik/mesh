@@ -854,7 +854,7 @@ func buildUDPServiceFromTrafficSplit(backendSvc []dynamic.UDPWRRService) *dynami
 
 func buildHTTPSplitTrafficBackendService(backend topology.TrafficSplitBackend, scheme string, port int32) *dynamic.Service {
 	server := dynamic.Server{
-		URL: fmt.Sprintf("%s://%s.%s.maesh:%d", scheme, backend.Service.Name, backend.Service.Namespace, port),
+		URL: fmt.Sprintf("%s://%s.%s.traefik.mesh:%d", scheme, backend.Service.Name, backend.Service.Namespace, port),
 	}
 
 	return &dynamic.Service{
@@ -867,7 +867,7 @@ func buildHTTPSplitTrafficBackendService(backend topology.TrafficSplitBackend, s
 
 func buildTCPSplitTrafficBackendService(backend topology.TrafficSplitBackend, port int32) *dynamic.TCPService {
 	server := dynamic.TCPServer{
-		Address: fmt.Sprintf("%s.%s.maesh:%d", backend.Service.Name, backend.Service.Namespace, port),
+		Address: fmt.Sprintf("%s.%s.traefik.mesh:%d", backend.Service.Name, backend.Service.Namespace, port),
 	}
 
 	return &dynamic.TCPService{
@@ -879,7 +879,7 @@ func buildTCPSplitTrafficBackendService(backend topology.TrafficSplitBackend, po
 
 func buildUDPSplitTrafficBackendService(backend topology.TrafficSplitBackend, port int32) *dynamic.UDPService {
 	server := dynamic.UDPServer{
-		Address: fmt.Sprintf("%s.%s.maesh:%d", backend.Service.Name, backend.Service.Namespace, port),
+		Address: fmt.Sprintf("%s.%s.traefik.mesh:%d", backend.Service.Name, backend.Service.Namespace, port),
 	}
 
 	return &dynamic.UDPService{
