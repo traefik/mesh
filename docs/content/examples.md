@@ -244,7 +244,7 @@ X-Forwarded-For: 3.4.5.6
 ## ACL Example
 
 The [ACL mode](install.md#access-control-list) can be enabled when installing Maesh. Once activated, all traffic is forbidden unless explicitly authorized
-using the SMI [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha1/traffic-access.md#traffictarget) resource. This example will present the configuration required to allow the client
+using the SMI [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md#traffictarget) resource. This example will present the configuration required to allow the client
 pod to send traffic to the HTTP and TCP services defined in the previous example.
 
 Each `TrafficTarget` defines that a set of source `ServiceAccount` is capable of sending traffic to a destination `ServiceAccount`. To authorize the `whoami-client` pod to send traffic to `whoami.whoami.maesh`, we need to
@@ -252,36 +252,38 @@ explicitly allow it to hit the pods exposed by the `whoami` service.
 
 ```yaml
 ---
-apiVersion: specs.smi-spec.io/v1alpha1
+apiVersion: specs.smi-spec.io/v1alpha3
 kind: HTTPRouteGroup
 metadata:
   name: http-everything
   namespace: whoami
-matches:
-  - name: everything
-    pathRegex: ".*"
-    methods: ["*"]
+spec:
+  matches:
+    - name: everything
+      pathRegex: ".*"
+      methods: ["*"]
 
 ---
 kind: TrafficTarget
-apiVersion: access.smi-spec.io/v1alpha1
+apiVersion: access.smi-spec.io/v1alpha2
 metadata:
   name: whatever
   namespace: whoami
-destination:
-  kind: ServiceAccount
-  name: whoami-server
-  namespace: whoami
-  port: "80"
-specs:
-  - kind: HTTPRouteGroup
-    name: http-everything
-    matches:
-      - everything
-sources:
-  - kind: ServiceAccount
-    name: whoami-client
+spec:
+  destination:
+    kind: ServiceAccount
+    name: whoami-server
     namespace: whoami
+    port: "80"
+  rules:
+    - kind: HTTPRouteGroup
+      name: http-everything
+      matches:
+        - everything
+  sources:
+    - kind: ServiceAccount
+      name: whoami-client
+      namespace: whoami
 ```
 
 
@@ -290,25 +292,27 @@ Incoming traffic on a TCP service can also be authorized using a `TrafficTarget`
 ```yaml
 ---
 kind: TrafficTarget
-apiVersion: access.smi-spec.io/v1alpha1
+apiVersion: access.smi-spec.io/v1alpha2
 metadata:
   name: api-service-target
   namespace: default
-destination:
-  kind: ServiceAccount
-  name: api-service
-  namespace: default
-specs:
-  - kind: TCPRoute
-    name: my-tcp-route
-sources:
-  - kind: ServiceAccount
-    name: my-other-service
+spec:
+  destination:
+    kind: ServiceAccount
+    name: api-service
     namespace: default
+  rules:
+    - kind: TCPRoute
+      name: my-tcp-route
+  sources:
+    - kind: ServiceAccount
+      name: my-other-service
+      namespace: default
 
 ---
-apiVersion: specs.smi-spec.io/v1alpha1
+apiVersion: specs.smi-spec.io/v1alpha3
 kind: TCPRoute
 metadata:
   name: my-tcp-route
+spec: {}
 ```

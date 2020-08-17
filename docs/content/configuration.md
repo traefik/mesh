@@ -16,8 +16,8 @@ The static configuration is configured when the service mesh is installed and is
 
 - Access-Control List (ACL) mode can be enabled.
   This configures Maesh to run in ACL mode, where all traffic is forbidden unless explicitly allowed via an SMI 
-  [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha1/traffic-access.md#traffictarget). Please see 
-  the [SMI Specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha1/traffic-access.md) for more information.
+  [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md#traffictarget). Please see 
+  the [SMI Specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md) for more information.
 
 ## Dynamic configuration
 
@@ -50,7 +50,7 @@ If this annotation is not present, the mesh service will operate in the default 
 
 !!! Info
     For now, the `udp` traffic type does not work when ACL mode is enabled. In ACL mode, all traffic is forbidden unless it
-    is explicitly allowed with a [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha1/traffic-access.md#traffictarget) and
+    is explicitly allowed with a [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md#traffictarget) and
     unfortunately the SMI specification does not yet define a [Traffic Spec](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-specs/traffic-specs-WD.md) for `UDP`.
     
 #### Scheme
@@ -114,18 +114,19 @@ The first step is to describe what the traffic of our server application looks l
 
 ```yaml
 ---
-apiVersion: specs.smi-spec.io/v1alpha1
+apiVersion: specs.smi-spec.io/v1alpha3
 kind: HTTPRouteGroup
 metadata:
   name: server-routes
   namespace: server
-matches:
-  - name: api
-    pathRegex: /api
-    methods: ["*"]
-  - name: metrics
-    pathRegex: /metrics
-    methods: ["GET"]
+spec:
+  matches:
+    - name: api
+      pathRegex: /api
+      methods: ["*"]
+    - name: metrics
+      pathRegex: /metrics
+      methods: ["GET"]
 ```
 
 In this example, we define a set of HTTP routes for our `server` application.
@@ -135,7 +136,7 @@ More precisely, the `server` app is composed by two routes:
 - The `api` route under the `/api` path, accepting all methods.
 - The `metrics` routes under the `/metrics` path, accepting only `GET` requests.
 
-Other types of route groups and detailed information are available [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-specs/v1alpha2/traffic-specs.md).
+Other types of route groups and detailed information are available [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-specs/v1alpha3/traffic-specs.md).
 
 By default, all traffic is denied so we need to grant access to clients to our application. This is done by defining a `TrafficTarget`.
 
@@ -146,38 +147,39 @@ By default, all traffic is denied so we need to grant access to clients to our a
 
 ```yaml
 ---
-apiVersion: access.smi-spec.io/v1alpha1
+apiVersion: access.smi-spec.io/v1alpha2
 kind: TrafficTarget
 metadata:
   name: client-server-target
   namespace: server
-destination:
-  kind: ServiceAccount
-  name: server
-  namespace: server
-specs:
-  - kind: HTTPRouteGroup
-    name: server-routes
-    matches:
-      - api
-sources:
-  - kind: ServiceAccount
-    name: client
-    namespace: client
+spec:
+  destination:
+    kind: ServiceAccount
+    name: server
+    namespace: server
+  rules:
+    - kind: HTTPRouteGroup
+      name: server-routes
+      matches:
+        - api
+  sources:
+    - kind: ServiceAccount
+      name: client
+      namespace: client
 ```
 
 In this example, we grant access to all pods running with the service account `client` under the namespace `client` to the HTTP route `api` specified by on the group `server-routes` on all pods running with the service account `server` under the namespace `server`.
 
 Any client running with the service account `client` under the `client` namespace accessing `server.server.maesh/api` is allowed to access the `/api` resource. Others will receive 404 answers from the Maesh node.
 
-More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha1/traffic-access.md).
+More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md).
 
 #### Traffic Splitting
 
 SMI defines the `TrafficSplit` resource which allows to direct subsets of the traffic to different services.
 
 ```yaml
-apiVersion: split.smi-spec.io/v1alpha2
+apiVersion: split.smi-spec.io/v1alpha3
 kind: TrafficSplit
 metadata:
   name: server-split
@@ -185,16 +187,16 @@ metadata:
 spec:
   service: server
   backends:
-  - service: server-v1
-    weight: 80
-  - service: server-v2
-    weight: 20
+    - service: server-v1
+      weight: 80
+    - service: server-v2
+      weight: 20
 ```
 
 In this example, we define a traffic split for our server service between two versions of our server, v1 and v2.
 `server.server.maesh` directs 80% of the traffic to the server-v1 pods, and 20% of the traffic to the server-v2 pods.
 
-More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-split/v1alpha2/traffic-split.md).
+More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-split/v1alpha3/traffic-split.md).
 
 #### Traffic Metrics
 
