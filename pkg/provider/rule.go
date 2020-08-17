@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/containous/maesh/pkg/topology"
-	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
+	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
 )
 
 func buildTrafficTargetRule(tt *topology.ServiceTrafficTarget) string {

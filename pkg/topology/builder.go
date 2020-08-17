@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	mk8s "github.com/containous/maesh/pkg/k8s"
-	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
-	spec "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
-	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
-	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
-	speclister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
-	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
+	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha2"
+	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
+	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha3"
+	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha2"
+	speclister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha3"
+	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha3"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -108,7 +108,7 @@ func (b *Builder) evaluateService(res *resources, topology *Topology, svc *corev
 // When a ServiceTrafficTarget gets added to a Service, each source and destination pod will be added to the topology
 // and linked to it.
 func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *access.TrafficTarget) {
-	destSaKey := Key{tt.Destination.Name, tt.Destination.Namespace}
+	destSaKey := Key{tt.Spec.Destination.Name, tt.Spec.Destination.Namespace}
 
 	sources := b.buildTrafficTargetSources(res, topology, tt)
 
@@ -172,8 +172,8 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 func (b *Builder) buildTrafficTargetDestination(topology *Topology, tt *access.TrafficTarget, pods []*corev1.Pod, svc *Service) (ServiceTrafficTargetDestination, error) {
 	dest := ServiceTrafficTargetDestination{
-		ServiceAccount: tt.Destination.Name,
-		Namespace:      tt.Destination.Namespace,
+		ServiceAccount: tt.Spec.Destination.Name,
+		Namespace:      tt.Spec.Destination.Namespace,
 	}
 
 	// Find out which are the destination pods.
@@ -438,9 +438,9 @@ func unionPod(pods1, pods2 []Key) []Key {
 // buildTrafficTargetSources retrieves the Pod IPs for each Pod mentioned in a source of the given TrafficTarget.
 // If a Pod IP is not yet available, the pod will be skipped.
 func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *access.TrafficTarget) []ServiceTrafficTargetSource {
-	sources := make([]ServiceTrafficTargetSource, len(tt.Sources))
+	sources := make([]ServiceTrafficTargetSource, len(tt.Spec.Sources))
 
-	for i, source := range tt.Sources {
+	for i, source := range tt.Spec.Sources {
 		srcSaKey := Key{source.Name, source.Namespace}
 
 		pods := res.PodsByServiceAccounts[srcSaKey]
@@ -468,7 +468,7 @@ func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *acc
 func (b *Builder) buildTrafficTargetSpecs(res *resources, tt *access.TrafficTarget) ([]TrafficSpec, error) {
 	var trafficSpecs []TrafficSpec
 
-	for _, s := range tt.Specs {
+	for _, s := range tt.Spec.Rules {
 		switch s.Kind {
 		case "HTTPRouteGroup":
 			trafficSpec, err := b.buildHTTPRouteGroup(res.HTTPRouteGroups, tt.Namespace, s)
@@ -492,8 +492,8 @@ func (b *Builder) buildTrafficTargetSpecs(res *resources, tt *access.TrafficTarg
 	return trafficSpecs, nil
 }
 
-func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, ns string, s access.TrafficTargetSpec) (TrafficSpec, error) {
-	key := Key{s.Name, ns}
+func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*specs.HTTPRouteGroup, ns string, rule access.TrafficTargetRule) (TrafficSpec, error) {
+	key := Key{rule.Name, ns}
 
 	httpRouteGroup, ok := httpRtGrps[key]
 	if !ok {
@@ -501,19 +501,19 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 	}
 
 	var (
-		httpMatches []*spec.HTTPMatch
+		httpMatches []*specs.HTTPMatch
 		err         error
 	)
 
-	if len(s.Matches) == 0 {
-		httpMatches = make([]*spec.HTTPMatch, len(httpRouteGroup.Matches))
+	if len(rule.Matches) == 0 {
+		httpMatches = make([]*specs.HTTPMatch, len(httpRouteGroup.Spec.Matches))
 
-		for i, match := range httpRouteGroup.Matches {
+		for i, match := range httpRouteGroup.Spec.Matches {
 			m := match
 			httpMatches[i] = &m
 		}
 	} else {
-		httpMatches, err = buildHTTPRouteGroupMatches(s.Matches, httpRouteGroup.Matches, httpMatches, key)
+		httpMatches, err = buildHTTPRouteGroupMatches(rule.Matches, httpRouteGroup.Spec.Matches, httpMatches, key)
 		if err != nil {
 			return TrafficSpec{}, err
 		}
@@ -525,7 +525,7 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*spec.HTTPRouteGroup, n
 	}, nil
 }
 
-func buildHTTPRouteGroupMatches(ttMatches []string, httpRouteGroupMatches []spec.HTTPMatch, httpMatches []*spec.HTTPMatch, key Key) ([]*spec.HTTPMatch, error) {
+func buildHTTPRouteGroupMatches(ttMatches []string, httpRouteGroupMatches []specs.HTTPMatch, httpMatches []*specs.HTTPMatch, key Key) ([]*specs.HTTPMatch, error) {
 	for _, name := range ttMatches {
 		var found bool
 
@@ -546,8 +546,8 @@ func buildHTTPRouteGroupMatches(ttMatches []string, httpRouteGroupMatches []spec
 	return httpMatches, nil
 }
 
-func (b *Builder) buildTCPRoute(tcpRts map[Key]*spec.TCPRoute, ns string, s access.TrafficTargetSpec) (TrafficSpec, error) {
-	key := Key{s.Name, ns}
+func (b *Builder) buildTCPRoute(tcpRts map[Key]*specs.TCPRoute, ns string, rule access.TrafficTargetRule) (TrafficSpec, error) {
+	key := Key{rule.Name, ns}
 
 	tcpRoute, ok := tcpRts[key]
 	if !ok {
@@ -563,19 +563,21 @@ func (b *Builder) buildTCPRoute(tcpRts map[Key]*spec.TCPRoute, ns string, s acce
 // port is defined but not on the service itself an error will be returned. If the destination port is not defined, the
 // traffic allowed on all the service's ports.
 func (b *Builder) getTrafficTargetDestinationPorts(svc *Service, tt *access.TrafficTarget) ([]corev1.ServicePort, error) {
-	if tt.Destination.Port == 0 {
+	port := tt.Spec.Destination.Port
+
+	if port == nil {
 		return svc.Ports, nil
 	}
 
 	key := Key{tt.Name, tt.Namespace}
 
 	for _, svcPort := range svc.Ports {
-		if svcPort.TargetPort.IntVal == int32(tt.Destination.Port) {
+		if svcPort.TargetPort.IntVal == int32(*port) {
 			return []corev1.ServicePort{svcPort}, nil
 		}
 	}
 
-	return nil, fmt.Errorf("destination port %d of TrafficTarget %q is not exposed by the service", tt.Destination.Port, key)
+	return nil, fmt.Errorf("destination port %d of TrafficTarget %q is not exposed by the service", *port, key)
 }
 
 func getOrCreatePod(topology *Topology, pod *corev1.Pod) Key {
@@ -606,8 +608,8 @@ func (b *Builder) loadResources(resourceFilter *mk8s.ResourceFilter) (*resources
 		Services:              make(map[Key]*corev1.Service),
 		TrafficTargets:        make(map[Key]*access.TrafficTarget),
 		TrafficSplits:         make(map[Key]*split.TrafficSplit),
-		HTTPRouteGroups:       make(map[Key]*spec.HTTPRouteGroup),
-		TCPRoutes:             make(map[Key]*spec.TCPRoute),
+		HTTPRouteGroups:       make(map[Key]*specs.HTTPRouteGroup),
+		TCPRoutes:             make(map[Key]*specs.TCPRoute),
 		PodsBySvc:             make(map[Key][]*corev1.Pod),
 		PodsByServiceAccounts: make(map[Key][]*corev1.Pod),
 		PodsBySvcBySa:         make(map[Key]map[Key][]*corev1.Pod),
@@ -633,7 +635,7 @@ func (b *Builder) loadResources(resourceFilter *mk8s.ResourceFilter) (*resources
 		return nil, fmt.Errorf("unable to list TrafficSplits: %w", err)
 	}
 
-	var httpRtGrps []*spec.HTTPRouteGroup
+	var httpRtGrps []*specs.HTTPRouteGroup
 	if b.httpRouteGroupLister != nil {
 		httpRtGrps, err = b.httpRouteGroupLister.List(labels.Everything())
 		if err != nil {
@@ -641,7 +643,7 @@ func (b *Builder) loadResources(resourceFilter *mk8s.ResourceFilter) (*resources
 		}
 	}
 
-	var tcpRts []*spec.TCPRoute
+	var tcpRts []*specs.TCPRoute
 	if b.tcpRoutesLister != nil {
 		tcpRts, err = b.tcpRoutesLister.List(labels.Everything())
 		if err != nil {
@@ -684,8 +686,8 @@ type resources struct {
 	Services        map[Key]*corev1.Service
 	TrafficTargets  map[Key]*access.TrafficTarget
 	TrafficSplits   map[Key]*split.TrafficSplit
-	HTTPRouteGroups map[Key]*spec.HTTPRouteGroup
-	TCPRoutes       map[Key]*spec.TCPRoute
+	HTTPRouteGroups map[Key]*specs.HTTPRouteGroup
+	TCPRoutes       map[Key]*specs.TCPRoute
 
 	// Pods indexes.
 	PodsBySvc             map[Key][]*corev1.Pod
@@ -765,7 +767,7 @@ func (r *resources) indexPodByService(ep *corev1.Endpoints, address corev1.Endpo
 	indexedServicePods[keyPod] = struct{}{}
 }
 
-func (r *resources) indexSMIResources(resourceFilter *mk8s.ResourceFilter, tts []*access.TrafficTarget, tss []*split.TrafficSplit, tcpRts []*spec.TCPRoute, httpRtGrps []*spec.HTTPRouteGroup) {
+func (r *resources) indexSMIResources(resourceFilter *mk8s.ResourceFilter, tts []*access.TrafficTarget, tss []*split.TrafficSplit, tcpRts []*specs.TCPRoute, httpRtGrps []*specs.HTTPRouteGroup) {
 	for _, httpRouteGroup := range httpRtGrps {
 		if resourceFilter.IsIgnored(httpRouteGroup) {
 			continue
@@ -789,9 +791,9 @@ func (r *resources) indexSMIResources(resourceFilter *mk8s.ResourceFilter, tts [
 			continue
 		}
 
-		// If the destination namepace is empty or blank, set it to the trafficTarget namespace.
-		if trafficTarget.Destination.Namespace == "" {
-			trafficTarget.Destination.Namespace = trafficTarget.Namespace
+		// If the destination namespace is empty or blank, set it to the trafficTarget namespace.
+		if trafficTarget.Spec.Destination.Namespace == "" {
+			trafficTarget.Spec.Destination.Namespace = trafficTarget.Namespace
 		}
 
 		key := Key{trafficTarget.Name, trafficTarget.Namespace}

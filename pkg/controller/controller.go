@@ -12,11 +12,11 @@ import (
 	"github.com/containous/maesh/pkg/topology"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
-	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
+	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha2"
 	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
-	specslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
+	specslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha3"
 	splitinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
-	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
+	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha3"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -129,25 +129,25 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 	c.podLister = c.kubernetesFactory.Core().V1().Pods().Lister()
 	c.endpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
 	c.serviceLister = c.kubernetesFactory.Core().V1().Services().Lister()
-	c.trafficSplitLister = c.splitFactory.Split().V1alpha2().TrafficSplits().Lister()
+	c.trafficSplitLister = c.splitFactory.Split().V1alpha3().TrafficSplits().Lister()
 
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(handler)
-	c.splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(handler)
+	c.splitFactory.Split().V1alpha3().TrafficSplits().Informer().AddEventHandler(handler)
 
 	// Create SharedInformers, listers and register the event handler for ACL related resources.
 	if c.cfg.ACLEnabled {
 		c.accessFactory = accessinformer.NewSharedInformerFactoryWithOptions(c.clients.AccessClient(), k8s.ResyncPeriod)
 		c.specsFactory = specsinformer.NewSharedInformerFactoryWithOptions(c.clients.SpecsClient(), k8s.ResyncPeriod)
 
-		c.trafficTargetLister = c.accessFactory.Access().V1alpha1().TrafficTargets().Lister()
-		c.httpRouteGroupLister = c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
-		c.tcpRouteLister = c.specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
+		c.trafficTargetLister = c.accessFactory.Access().V1alpha2().TrafficTargets().Lister()
+		c.httpRouteGroupLister = c.specsFactory.Specs().V1alpha3().HTTPRouteGroups().Lister()
+		c.tcpRouteLister = c.specsFactory.Specs().V1alpha3().TCPRoutes().Lister()
 
-		c.accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(handler)
+		c.accessFactory.Access().V1alpha2().TrafficTargets().Informer().AddEventHandler(handler)
 		c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(handler)
-		c.specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(handler)
-		c.specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(handler)
+		c.specsFactory.Specs().V1alpha3().HTTPRouteGroups().Informer().AddEventHandler(handler)
+		c.specsFactory.Specs().V1alpha3().TCPRoutes().Informer().AddEventHandler(handler)
 	}
 
 	c.tcpStateTable = NewPortMapping(c.cfg.Namespace, c.serviceLister, logger, c.cfg.MinTCPPort, c.cfg.MaxTCPPort)
