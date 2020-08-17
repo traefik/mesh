@@ -77,29 +77,31 @@
         {
           "httpRouteGroup": {
             "kind": "HTTPRouteGroup",
-            "apiVersion": "specs.smi-spec.io/v1alpha1",
+            "apiVersion": "specs.smi-spec.io/v1alpha3",
             "metadata": {
               "name": "http-rt-grp",
               "namespace": "my-ns",
               "creationTimestamp": null
             },
-            "matches": [
-              {
-                "name": "api",
-                "methods": [
-                  "GET",
-                  "POST"
-                ],
-                "pathRegex": "/api"
-              },
-              {
-                "name": "metric",
-                "methods": [
-                  "GET"
-                ],
-                "pathRegex": "/metric"
-              }
-            ]
+            "spec": {
+              "matches": [
+                {
+                  "name": "api",
+                  "methods": [
+                    "GET",
+                    "POST"
+                  ],
+                  "pathRegex": "/api"
+                },
+                {
+                  "name": "metric",
+                  "methods": [
+                    "GET"
+                  ],
+                  "pathRegex": "/metric"
+                }
+              ]
+            }
           },
           "httpMatches": [
             {
