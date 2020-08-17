@@ -1,5 +1,5 @@
 #######
-# This Makefile contains all targets related to the documentation
+# This Makefile contains all targets related to the documentation.
 #######
 
 DOCS_VERIFY_SKIP ?= false

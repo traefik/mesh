@@ -76,7 +76,7 @@ nav:
   - 'Examples': 'examples.md'
   - 'API': 'api.md'
   - 'Migration':
-      - 'Maesh v1': 'migration/maesh-v1.md'
+      - 'Traefik Mesh v1': 'migration/traefik-mesh-v1.md'
       - 'Helm Chart': 'migration/helm-chart.md'
   - 'Contributing':
       - 'Thank You!': 'contributing/thank-you.md'

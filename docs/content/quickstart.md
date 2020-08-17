@@ -1,6 +1,6 @@
 # Quickstart
 
-Maesh can be installed in your cluster without affecting any running services.
+Traefik Mesh can be installed in your cluster without affecting any running services.
 It can safely be installed using the [Helm Chart](https://helm.sh/docs/intro/using_helm/#helm-install-installing-a-package).
 
 ## Prerequisites
@@ -11,15 +11,12 @@ It can safely be installed using the [Helm Chart](https://helm.sh/docs/intro/usi
 
 ### RBAC
 
-Depending on the tool you used to deploy your cluster you might need
-to tweak RBAC permissions.
+Depending on the tool you used to deploy your cluster you might need to tweak RBAC permissions.
 
 #### `kubeadm`
 
-If you used `kubeadm` to deploy your cluster, a fast way to allow the
-helm installation to perform all steps it needs is to edit the
-`cluster-admin` `ClusterRoleBinding`, adding the following to the
-`subjects` section:
+If you used `kubeadm` to deploy your cluster, a fast way to allow the helm installation to perform all steps it needs is to edit the
+`cluster-admin` `ClusterRoleBinding`, adding the following to the `subjects` section:
 
 ```yaml
 - kind: ServiceAccount
@@ -27,31 +24,31 @@ helm installation to perform all steps it needs is to edit the
   namespace: kube-system
 ```
 
-## Installing Maesh
+## Installing Traefik Mesh
 
 ```bash tab="Command"
-helm repo add maesh https://containous.github.io/maesh/charts
+helm repo add traefik-mesh https://traefik.github.io/mesh/charts
 helm repo update
-helm install maesh maesh/maesh
+helm install traefik-mesh traefik-mesh/traefik-mesh
 ```
 
 ```bash tab="Expected output"
 [...]
 
 NOTES:
-Thank you for installing maesh.
+Thank you for installing traefik-mesh.
 
-Your release is named maesh.
+Your release is named traefik-mesh.
 
 To learn more about the release, try:
 
-  $ helm status maesh
-  $ helm get maesh
+  $ helm status traefik-mesh
+  $ helm get traefik-mesh
 ```
 
-## Using Maesh
+## Using Traefik Mesh
 
-As an example, let's deploy a server application and a client application under the `maesh-test` namespace.
+As an example, let's deploy a server application and a client application under the `test` namespace.
 
 ```yaml tab="server.yaml"
 ---
@@ -59,7 +56,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: server
-  namespace: maesh-test
+  namespace: test
   labels:
     app: server
 spec:
@@ -74,7 +71,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: containous/whoami:v1.4.0
+          image: containous/whoami:v1.5.0
           ports:
             - containerPort: 80
 ---
@@ -82,7 +79,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: server
-  namespace: maesh-test
+  namespace: test
 spec:
   selector:
     app: server
@@ -99,7 +96,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: client
-  namespace: maesh-test
+  namespace: test
   labels:
     app: client
 spec:
@@ -124,7 +121,7 @@ spec:
 Create the namespace then deploy those two applications:
 
 ```bash
-kubectl create namespace maesh-test
+kubectl create namespace test
 kubectl apply -f server.yaml
 kubectl apply -f client.yaml
 ```
@@ -132,7 +129,7 @@ kubectl apply -f client.yaml
 You should now see the following output:
 
 ```bash tab="Command"
-kubectl get all -n maesh-test
+kubectl get all -n test
 ```
 
 ```text tab="Expected output"
@@ -156,13 +153,13 @@ replicaset.apps/server-7c8fd58db5   2         2         2         77s
 Take note of the client app pod name (here it's `client-7446fdf848-x96fq`) and open a new terminal session inside this pod using `kubectl exec`.
 
 ```bash
-kubectl -n maesh-test exec -ti client-7446fdf848-x96fq ash
+kubectl -n test exec -ti client-7446fdf848-x96fq ash
 ```
 
 From inside the client container, make sure your server is reachable using the Kubernetes DNS service discovery.
 
 ```bash tab="Command"
-curl server.maesh-test.svc.cluster.local
+curl server.test.svc.cluster.local
 ```
 
 ```test tab="Expected Output"
@@ -173,17 +170,17 @@ IP: 10.42.2.10
 IP: fe80::a4ec:77ff:fe37:1cdd
 RemoteAddr: 10.42.2.9:46078
 GET / HTTP/1.1
-Host: server.maesh-test.svc.cluster.local
+Host: server.test.svc.cluster.local
 User-Agent: curl/7.64.0
 Accept: */*
 ```
 
 You can note that all this server application is doing is to respond with the content of the request it receives.
 
-Now replace the `svc.cluster.local` suffix by `maesh`, and tada: you are now using Maesh to reach your server!
+Now replace the `svc.cluster.local` suffix by `traefik.mesh`, and tada: you are now using Traefik Mesh to reach your server!
 
 ```bash tab="Command"
-curl server.maesh-test.maesh
+curl server.test.traefik.mesh
 ```
 
 ```test tab="Expected Output"
@@ -194,21 +191,21 @@ IP: 10.42.1.7
 IP: fe80::601d:7cff:fe26:c8c6
 RemoteAddr: 10.42.1.5:59478
 GET / HTTP/1.1
-Host: server.maesh-test.maesh
+Host: server.test.traefik.mesh
 User-Agent: curl/7.64.0
 Accept: */*
 Accept-Encoding: gzip
 Uber-Trace-Id: 3f9e7129a059f70:7e889a1ebcb147ac:3f9e7129a059f70:1
 X-Forwarded-For: 10.42.2.9
-X-Forwarded-Host: server.maesh-test.maesh
+X-Forwarded-Host: server.test.traefik.mesh
 X-Forwarded-Port: 80
 X-Forwarded-Proto: http
-X-Forwarded-Server: maesh-mesh-w95q2
+X-Forwarded-Server: traefik-mesh-proxy-w95q2
 X-Real-Ip: 10.42.2.9
 ```
 
-Note the presence of `X-Forwarded` headers as well as other instrumentation headers like `Uber-Trace-Id`, indicating than your request has been processed and instrumented by Maesh.
+Note the presence of `X-Forwarded` headers as well as other instrumentation headers like `Uber-Trace-Id`, indicating than your request has been processed and instrumented by Traefik Mesh.
 
 ## What's next
 
-See the [examples page](examples.md) to see a more advanced example, or dive into the [configuration](configuration.md) to discover all Maesh capabilities.
+See the [examples page](examples.md) to see a more advanced example, or dive into the [configuration](configuration.md) to discover all Traefik Mesh capabilities.
