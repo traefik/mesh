@@ -70,7 +70,7 @@ func (p *Prepare) startBaseInformers(ctx context.Context, stopCh <-chan struct{}
 	}
 
 	splitFactory := splitinformer.NewSharedInformerFactoryWithOptions(p.client.SplitClient(), k8s.ResyncPeriod)
-	splitFactory.Split().V1alpha2().TrafficSplits().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	splitFactory.Split().V1alpha3().TrafficSplits().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	splitFactory.Start(stopCh)
 
 	for t, ok := range splitFactory.WaitForCacheSync(ctx.Done()) {
@@ -85,7 +85,7 @@ func (p *Prepare) startBaseInformers(ctx context.Context, stopCh <-chan struct{}
 func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{}) error {
 	// Create new SharedInformerFactories, and register the event handler to informers.
 	accessFactory := accessinformer.NewSharedInformerFactoryWithOptions(p.client.AccessClient(), k8s.ResyncPeriod)
-	accessFactory.Access().V1alpha1().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	accessFactory.Access().V1alpha2().TrafficTargets().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	accessFactory.Start(stopCh)
 
 	for t, ok := range accessFactory.WaitForCacheSync(ctx.Done()) {
@@ -95,8 +95,8 @@ func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{})
 	}
 
 	specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(p.client.SpecsClient(), k8s.ResyncPeriod)
-	specsFactory.Specs().V1alpha1().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-	specsFactory.Specs().V1alpha1().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	specsFactory.Specs().V1alpha3().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	specsFactory.Specs().V1alpha3().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	specsFactory.Start(stopCh)
 
 	for t, ok := range specsFactory.WaitForCacheSync(ctx.Done()) {

@@ -9,14 +9,14 @@ import (
 	"time"
 
 	mk8s "github.com/containous/maesh/pkg/k8s"
-	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
-	spec "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
-	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
+	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha2"
+	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
+	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha3"
 	accessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
 	accessfake "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
 	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	specsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
-	specfake "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned/fake"
+	specsfake "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned/fake"
 	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
 	splitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	splitfake "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned/fake"
@@ -57,15 +57,15 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
-	rtGrp := createHTTPRouteGroup("ignored-ns", "http-rt-grp-ignored", []spec.HTTPMatch{apiMatch, metricMatch})
+	rtGrp := createHTTPRouteGroup("ignored-ns", "http-rt-grp-ignored", []specs.HTTPMatch{apiMatch, metricMatch})
 
-	tt := createTrafficTarget("ignored-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, []string{})
+	tt := createTrafficTarget("ignored-ns", "tt", saB, intPtr(8080), []*corev1.ServiceAccount{saA}, rtGrp, []string{})
 	ts := createTrafficSplit("ignored-ns", "ts", svcB, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, svcB, podB, svcC, svcD)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
 	smiSplitClient := splitfake.NewSimpleClientset(ts)
-	smiSpecClient := specfake.NewSimpleClientset(rtGrp)
+	smiSpecClient := specsfake.NewSimpleClientset(rtGrp)
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -122,13 +122,13 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
-	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
+	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	ttb := createTrafficTarget("my-ns", "tt-b", saB, 8080, []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
-	ttd := createTrafficTarget("my-ns", "tt-d", saD, 8080, []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
-	ttc := createTrafficTarget("my-ns", "tt-c", saC, 8080, []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
-	tte := createTrafficTarget("my-ns", "tt-e", saE, 8080, []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
+	ttb := createTrafficTarget("my-ns", "tt-b", saB, intPtr(8080), []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
+	ttd := createTrafficTarget("my-ns", "tt-d", saD, intPtr(8080), []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
+	ttc := createTrafficTarget("my-ns", "tt-c", saC, intPtr(8080), []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
+	tte := createTrafficTarget("my-ns", "tt-e", saE, intPtr(8080), []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
 	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
 	tsErr := createTrafficSplit("my-ns", "tsErr", svcC, svcB, svcE)
 
@@ -138,7 +138,7 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 		epB, epC, epD, epE)
 	smiAccessClient := accessfake.NewSimpleClientset(ttb, ttc, ttd, tte)
 	smiSplitClient := splitfake.NewSimpleClientset(ts, tsErr)
-	smiSpecClient := specfake.NewSimpleClientset(rtGrp)
+	smiSpecClient := specsfake.NewSimpleClientset(rtGrp)
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -186,18 +186,18 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
-	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
+	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	tt := createTrafficTarget("my-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
-	ttc := createTrafficTarget("my-ns", "tt-c", saC, 8080, []*corev1.ServiceAccount{saA, saA2}, rtGrp, ttMatch)
-	ttd := createTrafficTarget("my-ns", "tt-d", saD, 8080, []*corev1.ServiceAccount{saC}, rtGrp, ttMatch)
+	tt := createTrafficTarget("my-ns", "tt", saB, intPtr(8080), []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
+	ttc := createTrafficTarget("my-ns", "tt-c", saC, intPtr(8080), []*corev1.ServiceAccount{saA, saA2}, rtGrp, ttMatch)
+	ttd := createTrafficTarget("my-ns", "tt-d", saD, intPtr(8080), []*corev1.ServiceAccount{saC}, rtGrp, ttMatch)
 	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, podA2, saB, svcB, podB, svcC, svcD, podC, podD, epB, epC, epD)
 	smiAccessClient := accessfake.NewSimpleClientset(tt, ttc, ttd)
 	smiSplitClient := splitfake.NewSimpleClientset(ts)
-	smiSpecClient := specfake.NewSimpleClientset(rtGrp)
+	smiSpecClient := specsfake.NewSimpleClientset(rtGrp)
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -251,13 +251,13 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
-	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
+	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	ttb := createTrafficTarget("my-ns", "tt-b", saB, 8080, []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
-	ttd := createTrafficTarget("my-ns", "tt-d", saD, 8080, []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
-	ttc := createTrafficTarget("my-ns", "tt-c", saC, 8080, []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
-	tte := createTrafficTarget("my-ns", "tt-e", saE, 8080, []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
+	ttb := createTrafficTarget("my-ns", "tt-b", saB, intPtr(8080), []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
+	ttd := createTrafficTarget("my-ns", "tt-d", saD, intPtr(8080), []*corev1.ServiceAccount{saA1}, rtGrp, ttMatch)
+	ttc := createTrafficTarget("my-ns", "tt-c", saC, intPtr(8080), []*corev1.ServiceAccount{saA1, saA2}, rtGrp, ttMatch)
+	tte := createTrafficTarget("my-ns", "tt-e", saE, intPtr(8080), []*corev1.ServiceAccount{saA2}, rtGrp, ttMatch)
 	ts := createTrafficSplit("my-ns", "ts", svcB, svcC, svcD)
 	ts2 := createTrafficSplit("my-ns", "ts2", svcB, svcC, svcE)
 
@@ -267,7 +267,7 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 		epB, epC, epD, epE)
 	smiAccessClient := accessfake.NewSimpleClientset(ttb, ttc, ttd, tte)
 	smiSplitClient := splitfake.NewSimpleClientset(ts, ts2)
-	smiSpecClient := specfake.NewSimpleClientset(rtGrp)
+	smiSpecClient := specsfake.NewSimpleClientset(rtGrp)
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -312,15 +312,15 @@ func TestTopologyBuilder_BuildWithTrafficTarget(t *testing.T) {
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
-	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
+	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	tt := createTrafficTarget("my-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
+	tt := createTrafficTarget("my-ns", "tt", saB, intPtr(8080), []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
 
 	k8sClient := fake.NewSimpleClientset(saA, saB, podA, podB, svcB, epB)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
 	smiSplitClient := splitfake.NewSimpleClientset()
-	smiSpecClient := specfake.NewSimpleClientset(rtGrp)
+	smiSpecClient := specsfake.NewSimpleClientset(rtGrp)
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -371,10 +371,10 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *t
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
-	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
+	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
-	tt := createTrafficTarget("my-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
+	tt := createTrafficTarget("my-ns", "tt", saB, intPtr(8080), []*corev1.ServiceAccount{saA}, rtGrp, ttMatch)
 	ts := createTrafficSplit("my-ns", "ts", svcB1, svcC, svcD)
 
 	k8sClient := fake.NewSimpleClientset(saA, saB, saC, saD,
@@ -383,7 +383,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *t
 		epB1, epB2, epC, epD)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
 	smiSplitClient := splitfake.NewSimpleClientset(ts)
-	smiSpecClient := specfake.NewSimpleClientset(rtGrp)
+	smiSpecClient := specsfake.NewSimpleClientset(rtGrp)
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -397,7 +397,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *t
 
 // TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch makes sure that when TrafficTarget.Spec.Matches is empty,
 // the output list contains all the matches defined in the HTTPRouteGroup (as defined by the
-// spec https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md#traffictarget-v1alpha1)
+// spec https://github.com/servicemeshinterface/smi-spec/tree/master/apis/traffic-access/v1alpha2)
 func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 	selectorAppA := map[string]string{"app": "app-a"}
 	selectorAppB := map[string]string{"app": "app-b"}
@@ -415,14 +415,14 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 
 	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
 	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
-	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []spec.HTTPMatch{apiMatch, metricMatch})
+	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
-	tt := createTrafficTarget("my-ns", "tt", saB, 8080, []*corev1.ServiceAccount{saA}, rtGrp, []string{})
+	tt := createTrafficTarget("my-ns", "tt", saB, intPtr(8080), []*corev1.ServiceAccount{saA}, rtGrp, []string{})
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, svcB, podB, epB)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
 	smiSplitClient := splitfake.NewSimpleClientset()
-	smiSpecClient := specfake.NewSimpleClientset(rtGrp)
+	smiSpecClient := specsfake.NewSimpleClientset(rtGrp)
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -436,7 +436,7 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 
 // TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort makes sure that when a TrafficTarget.Destination.Port
 // is empty, the output contains all the ports defined by the destination service (as defined by the
-// spec https://github.com/servicemeshinterface/smi-spec/blob/master/traffic-access-control.md#traffictarget-v1alpha1)
+// spec https://github.com/servicemeshinterface/smi-spec/tree/master/apis/traffic-access/v1alpha2)
 func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T) {
 	selectorAppA := map[string]string{"app": "app-a"}
 	selectorAppB := map[string]string{"app": "app-b"}
@@ -458,13 +458,12 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	podB := createPod("my-ns", "app-b", saB, svcB.Spec.Selector, "10.10.2.1")
 
 	epB := createEndpoints(svcB, createEndpointSubset(svcbPorts, podB))
-	// Set destination port to its zero value to simulate a port not being passed in the TrafficTarget.
-	tt := createTrafficTarget("my-ns", "tt", saB, 0, []*corev1.ServiceAccount{saA}, nil, []string{})
+	tt := createTrafficTarget("my-ns", "tt", saB, nil, []*corev1.ServiceAccount{saA}, nil, []string{})
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, svcB, podB, epB)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
 	smiSplitClient := splitfake.NewSimpleClientset()
-	smiSpecClient := specfake.NewSimpleClientset()
+	smiSpecClient := specsfake.NewSimpleClientset()
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -497,12 +496,12 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndMismatchServicePort(t *testing
 	svcB2 := createService("my-ns", "svc-b2", annotations, svcB2Ports, selectorAppB2, "10.10.1.17")
 	epB2 := createEndpoints(svcB2, createEndpointSubset(svcB2Ports, podB2))
 
-	tt := createTrafficTarget("my-ns", "tt", saB, 80, []*corev1.ServiceAccount{saA}, nil, []string{})
+	tt := createTrafficTarget("my-ns", "tt", saB, intPtr(80), []*corev1.ServiceAccount{saA}, nil, []string{})
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, podB1, svcB1, epB1, podB2, svcB2, epB2)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
 	smiSplitClient := splitfake.NewSimpleClientset()
-	smiSpecClient := specfake.NewSimpleClientset()
+	smiSpecClient := specsfake.NewSimpleClientset()
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -536,12 +535,12 @@ func TestTopologyBuilder_BuildTrafficTargetMultipleSourcesAndDestinations(t *tes
 
 	epC := createEndpoints(svcC, createEndpointSubset(svccPorts, podC1, podC2))
 
-	tt := createTrafficTarget("my-ns", "tt", saC, 8080, []*corev1.ServiceAccount{saA, saB}, nil, []string{})
+	tt := createTrafficTarget("my-ns", "tt", saC, intPtr(8080), []*corev1.ServiceAccount{saA, saB}, nil, []string{})
 
 	k8sClient := fake.NewSimpleClientset(saA, podA, saB, podB, saC, svcC, podC1, podC2, epC)
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
 	smiSplitClient := splitfake.NewSimpleClientset()
-	smiSpecClient := specfake.NewSimpleClientset()
+	smiSpecClient := specsfake.NewSimpleClientset()
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -558,23 +557,25 @@ func TestTopologyBuilder_EmptyTrafficTargetDestinationNamespace(t *testing.T) {
 	tt := &access.TrafficTarget{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TrafficTarget",
-			APIVersion: "access.smi-spec.io/v1alpha1",
+			APIVersion: "access.smi-spec.io/v1alpha2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "test",
 		},
-		Destination: access.IdentityBindingSubject{
-			Kind: "ServiceAccount",
-			Name: "test",
-			Port: 80,
+		Spec: access.TrafficTargetSpec{
+			Destination: access.IdentityBindingSubject{
+				Kind: "ServiceAccount",
+				Name: "test",
+				Port: intPtr(80),
+			},
 		},
 	}
 
 	k8sClient := fake.NewSimpleClientset()
 	smiAccessClient := accessfake.NewSimpleClientset(tt)
 	smiSplitClient := splitfake.NewSimpleClientset()
-	smiSpecClient := specfake.NewSimpleClientset()
+	smiSpecClient := specsfake.NewSimpleClientset()
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -585,7 +586,7 @@ func TestTopologyBuilder_EmptyTrafficTargetDestinationNamespace(t *testing.T) {
 
 	actual, exists := res.TrafficTargets[Key{Name: "test", Namespace: namespace}]
 	assert.Equal(t, true, exists)
-	assert.Equal(t, namespace, actual.Destination.Namespace)
+	assert.Equal(t, namespace, actual.Spec.Destination.Namespace)
 }
 
 func TestTopologyBuilder_BuildServiceWithPodPortMixture(t *testing.T) {
@@ -637,7 +638,7 @@ func TestTopologyBuilder_BuildServiceWithPodPortMixture(t *testing.T) {
 	k8sClient := fake.NewSimpleClientset(endpoints, svc, podV1, podV2)
 	smiAccessClient := accessfake.NewSimpleClientset()
 	smiSplitClient := splitfake.NewSimpleClientset()
-	smiSpecClient := specfake.NewSimpleClientset()
+	smiSpecClient := specsfake.NewSimpleClientset()
 
 	builder, err := createBuilder(k8sClient, smiAccessClient, smiSpecClient, smiSplitClient)
 	require.NoError(t, err)
@@ -666,10 +667,10 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 	splitFactory := splitinformer.NewSharedInformerFactoryWithOptions(smiSplitClient, mk8s.ResyncPeriod)
 	specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(smiSpecClient, mk8s.ResyncPeriod)
 
-	trafficTargetLister := accessFactory.Access().V1alpha1().TrafficTargets().Lister()
-	trafficSplitLister := splitFactory.Split().V1alpha2().TrafficSplits().Lister()
-	httpRouteGroupLister := specsFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
-	tcpRouteLister := specsFactory.Specs().V1alpha1().TCPRoutes().Lister()
+	trafficTargetLister := accessFactory.Access().V1alpha2().TrafficTargets().Lister()
+	trafficSplitLister := splitFactory.Split().V1alpha3().TrafficSplits().Lister()
+	httpRouteGroupLister := specsFactory.Specs().V1alpha3().HTTPRouteGroups().Lister()
+	tcpRouteLister := specsFactory.Specs().V1alpha3().TCPRoutes().Lister()
 
 	k8sFactory.Start(ctx.Done())
 	accessFactory.Start(ctx.Done())
@@ -735,7 +736,7 @@ func createTrafficSplit(namespace, name string, svc *corev1.Service, backend1 *c
 	return &split.TrafficSplit{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TrafficSplit",
-			APIVersion: "split.smi-spec.io/v1alpha2",
+			APIVersion: "split.smi-spec.io/v1alpha3",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -757,7 +758,7 @@ func createTrafficSplit(namespace, name string, svc *corev1.Service, backend1 *c
 	}
 }
 
-func createTrafficTarget(namespace, name string, destSa *corev1.ServiceAccount, destPort int, srcsSa []*corev1.ServiceAccount, rtGrp *spec.HTTPRouteGroup, rtGrpMatches []string) *access.TrafficTarget {
+func createTrafficTarget(namespace, name string, destSa *corev1.ServiceAccount, destPort *int, srcsSa []*corev1.ServiceAccount, rtGrp *specs.HTTPRouteGroup, rtGrpMatches []string) *access.TrafficTarget {
 	sources := make([]access.IdentityBindingSubject, len(srcsSa))
 	for i, sa := range srcsSa {
 		sources[i] = access.IdentityBindingSubject{
@@ -767,10 +768,10 @@ func createTrafficTarget(namespace, name string, destSa *corev1.ServiceAccount, 
 		}
 	}
 
-	var specs []access.TrafficTargetSpec
+	var rules []access.TrafficTargetRule
 
 	if rtGrp != nil {
-		specs = append(specs, access.TrafficTargetSpec{
+		rules = append(rules, access.TrafficTargetRule{
 			Kind:    "HTTPRouteGroup",
 			Name:    rtGrp.Name,
 			Matches: rtGrpMatches,
@@ -780,39 +781,43 @@ func createTrafficTarget(namespace, name string, destSa *corev1.ServiceAccount, 
 	return &access.TrafficTarget{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TrafficTarget",
-			APIVersion: "access.smi-spec.io/v1alpha1",
+			APIVersion: "access.smi-spec.io/v1alpha2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
 		},
-		Destination: access.IdentityBindingSubject{
-			Kind:      "ServiceAccount",
-			Name:      destSa.Name,
-			Namespace: destSa.Namespace,
-			Port:      destPort,
+		Spec: access.TrafficTargetSpec{
+			Destination: access.IdentityBindingSubject{
+				Kind:      "ServiceAccount",
+				Name:      destSa.Name,
+				Namespace: destSa.Namespace,
+				Port:      destPort,
+			},
+			Sources: sources,
+			Rules:   rules,
 		},
-		Sources: sources,
-		Specs:   specs,
 	}
 }
 
-func createHTTPRouteGroup(namespace, name string, matches []spec.HTTPMatch) *spec.HTTPRouteGroup {
-	return &spec.HTTPRouteGroup{
+func createHTTPRouteGroup(namespace, name string, matches []specs.HTTPMatch) *specs.HTTPRouteGroup {
+	return &specs.HTTPRouteGroup{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "HTTPRouteGroup",
-			APIVersion: "specs.smi-spec.io/v1alpha1",
+			APIVersion: "specs.smi-spec.io/v1alpha3",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
 		},
-		Matches: matches,
+		Spec: specs.HTTPRouteGroupSpec{
+			Matches: matches,
+		},
 	}
 }
 
-func createHTTPMatch(name string, methods []string, pathPrefix string) spec.HTTPMatch {
-	return spec.HTTPMatch{
+func createHTTPMatch(name string, methods []string, pathPrefix string) specs.HTTPMatch {
+	return specs.HTTPMatch{
 		Name:      name,
 		Methods:   methods,
 		PathRegex: pathPrefix,
@@ -932,4 +937,8 @@ func assertTopology(t *testing.T, filename string, got *Topology) {
 	require.NoError(t, err)
 
 	assert.Equal(t, string(wantMarshaled), string(gotMarshaled))
+}
+
+func intPtr(value int) *int {
+	return &value
 }

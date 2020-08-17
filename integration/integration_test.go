@@ -28,8 +28,8 @@ import (
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/go-check/check"
 	"github.com/pmezard/go-difflib/difflib"
-	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
-	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
+	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha2"
+	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha3"
 	checker "github.com/vdemeester/shakers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -563,14 +563,14 @@ func (s *BaseSuite) getService(c *check.C, name string) *corev1.Service {
 }
 
 func (s *BaseSuite) getTrafficTarget(c *check.C, name string) *access.TrafficTarget {
-	tt, err := s.client.AccessClient().AccessV1alpha1().TrafficTargets(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	tt, err := s.client.AccessClient().AccessV1alpha2().TrafficTargets(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return tt
 }
 
 func (s *BaseSuite) getTrafficSplit(c *check.C, name string) *split.TrafficSplit {
-	ts, err := s.client.SplitClient().SplitV1alpha2().TrafficSplits(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
+	ts, err := s.client.SplitClient().SplitV1alpha3().TrafficSplits(testNamespace).Get(context.Background(), name, metav1.GetOptions{})
 	c.Assert(err, checker.IsNil)
 
 	return ts

@@ -9,21 +9,21 @@ import (
 	"testing"
 
 	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
-	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha1"
-	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha1"
-	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha2"
+	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha2"
+	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
+	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha3"
 	accessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
 	fakeaccessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
 	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
-	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha1"
+	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha2"
 	specsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
 	fakespecsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned/fake"
 	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
-	specslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha1"
+	specslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha3"
 	splitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	fakesplitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned/fake"
 	splitinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
-	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha2"
+	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	kubeclient "k8s.io/client-go/kubernetes"
@@ -103,7 +103,7 @@ func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, acl
 	serviceInformer := c.informerFactory.Core().V1().Services().Informer()
 	endpointsInformer := c.informerFactory.Core().V1().Endpoints().Informer()
 	namespaceInformer := c.informerFactory.Core().V1().Namespaces().Informer()
-	trafficSplitInformer := c.splitInformerFactory.Split().V1alpha2().TrafficSplits().Informer()
+	trafficSplitInformer := c.splitInformerFactory.Split().V1alpha3().TrafficSplits().Informer()
 
 	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
 	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
@@ -115,7 +115,7 @@ func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, acl
 	c.ServiceLister = c.informerFactory.Core().V1().Services().Lister()
 	c.EndpointsLister = c.informerFactory.Core().V1().Endpoints().Lister()
 	c.NamespaceLister = c.informerFactory.Core().V1().Namespaces().Lister()
-	c.TrafficSplitLister = c.splitInformerFactory.Split().V1alpha2().TrafficSplits().Lister()
+	c.TrafficSplitLister = c.splitInformerFactory.Split().V1alpha3().TrafficSplits().Lister()
 
 	// Start the informers.
 	c.startInformers(stopCh)
@@ -127,17 +127,17 @@ func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, acl
 		c.accessInformerFactory = accessinformer.NewSharedInformerFactory(c.accessClient, 0)
 		c.specsInformerFactory = specsinformer.NewSharedInformerFactory(c.specsClient, 0)
 
-		trafficTargetInformer := c.accessInformerFactory.Access().V1alpha1().TrafficTargets().Informer()
-		httpRouteGroupInformer := c.specsInformerFactory.Specs().V1alpha1().HTTPRouteGroups().Informer()
-		tcpRouteInformer := c.specsInformerFactory.Specs().V1alpha1().TCPRoutes().Informer()
+		trafficTargetInformer := c.accessInformerFactory.Access().V1alpha2().TrafficTargets().Informer()
+		httpRouteGroupInformer := c.specsInformerFactory.Specs().V1alpha3().HTTPRouteGroups().Informer()
+		tcpRouteInformer := c.specsInformerFactory.Specs().V1alpha3().TCPRoutes().Informer()
 
 		trafficTargetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
 		httpRouteGroupInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
 		tcpRouteInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
 
-		c.TrafficTargetLister = c.accessInformerFactory.Access().V1alpha1().TrafficTargets().Lister()
-		c.HTTPRouteGroupLister = c.specsInformerFactory.Specs().V1alpha1().HTTPRouteGroups().Lister()
-		c.TCPRouteLister = c.specsInformerFactory.Specs().V1alpha1().TCPRoutes().Lister()
+		c.TrafficTargetLister = c.accessInformerFactory.Access().V1alpha2().TrafficTargets().Lister()
+		c.HTTPRouteGroupLister = c.specsInformerFactory.Specs().V1alpha3().HTTPRouteGroups().Lister()
+		c.TCPRouteLister = c.specsInformerFactory.Specs().V1alpha3().TCPRoutes().Lister()
 
 		// Start the informers.
 		c.startACLInformers(stopCh)
