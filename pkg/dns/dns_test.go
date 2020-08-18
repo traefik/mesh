@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -174,7 +175,9 @@ func TestConfigureCoreDNS(t *testing.T) {
 			assert.Equal(t, test.expectedCorefile, cfgMap.Data["Corefile"])
 
 			if len(test.expectedCustom) > 0 {
-				customCfgMap, err := k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns-custom", metav1.GetOptions{})
+				var customCfgMap *corev1.ConfigMap
+
+				customCfgMap, err = k8sClient.KubernetesClient().CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns-custom", metav1.GetOptions{})
 				require.NoError(t, err)
 
 				assert.Equal(t, test.expectedCustom, customCfgMap.Data["maesh.server"])
