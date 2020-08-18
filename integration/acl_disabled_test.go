@@ -10,13 +10,14 @@ import (
 type ACLDisabledSuite struct{ BaseSuite }
 
 func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
-	requiredImages := []string{
-		"containous/maesh:latest",
-		"containous/whoami:v1.0.1",
-		"containous/whoamitcp:v0.0.2",
-		"containous/whoamiudp:v0.0.1",
-		"coredns/coredns:1.6.3",
+	requiredImages := []image{
+		{name: "containous/maesh:latest", local: true},
+		{name: "containous/whoami:v1.0.1"},
+		{name: "containous/whoamitcp:v0.0.2"},
+		{name: "containous/whoamiudp:v0.0.1"},
+		{name: "coredns/coredns:1.6.3"},
 	}
+
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
 	s.createResources(c, "testdata/smi/crds/")
