@@ -6,6 +6,9 @@ metadata:
 spec:
   template:
     spec:
+      containers:
+        - name: coredns
+          image: coredns:1.7.0
       volumes:
         - configMap:
             name: "other-cfgmap"
@@ -26,24 +29,23 @@ metadata:
 data:
   Corefile: |
     .:53 {
-            errors
-            health {
-                lameduck 5s
-            }
-            ready
-            kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {
-                pods insecure
-                fallthrough in-addr.arpa ip6.arpa
-                ttl 30
-            }
-            prometheus :9153
-            forward . /etc/resolv.conf
-            cache 30
-            loop
-            reload
-            loadbalance
+        errors
+        health {
+            lameduck 5s
         }
-
+        ready
+        kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+        prometheus :9153
+        forward . /etc/resolv.conf
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
     #### Begin Maesh Block
     maesh:53 {
         errors
@@ -54,7 +56,7 @@ data:
         kubernetes titi in-addr.arpa ip6.arpa {
             pods insecure
             upstream
-        	fallthrough in-addr.arpa ip6.arpa
+            fallthrough in-addr.arpa ip6.arpa
         }
         forward . /etc/resolv.conf
         cache 30
@@ -63,4 +65,3 @@ data:
         loadbalance
     }
     #### End Maesh Block
-    # This is test data that must be present
