@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/containous/traefik/v2/pkg/cli"
-	"github.com/containous/traefik/v2/pkg/config/env"
-	"github.com/containous/traefik/v2/pkg/config/file"
-	"github.com/containous/traefik/v2/pkg/config/flag"
-	"github.com/containous/traefik/v2/pkg/config/parser"
-	"github.com/containous/traefik/v2/pkg/log"
+	"github.com/sirupsen/logrus"
+	"github.com/traefik/paerser/cli"
+	"github.com/traefik/paerser/env"
+	"github.com/traefik/paerser/file"
+	"github.com/traefik/paerser/flag"
+	"github.com/traefik/paerser/parser"
 )
 
 const maeshPrefix = "MAESH_"
@@ -21,17 +21,19 @@ type EnvLoader struct{}
 
 // Load loads the command's configuration from the environment variables.
 func (e *EnvLoader) Load(_ []string, cmd *cli.Command) (bool, error) {
+	logger := logrus.StandardLogger()
+
 	vars := env.FindPrefixedEnvVars(os.Environ(), maeshPrefix, cmd.Configuration)
 	if len(vars) == 0 {
 		return false, nil
 	}
 
 	if err := env.Decode(vars, maeshPrefix, cmd.Configuration); err != nil {
-		log.WithoutContext().Debug("environment variables", strings.Join(vars, ", "))
+		logger.Debug("environment variables", strings.Join(vars, ", "))
 		return false, fmt.Errorf("failed to decode configuration from environment variables: %w ", err)
 	}
 
-	log.WithoutContext().Println("Configuration loaded from environment variables.")
+	logger.Println("Configuration loaded from environment variables.")
 
 	return true, nil
 }
@@ -41,6 +43,8 @@ type FileLoader struct{}
 
 // Load loads the command's configuration from a file either specified with the --configFile flag, or from default locations.
 func (f *FileLoader) Load(args []string, cmd *cli.Command) (bool, error) {
+	logger := logrus.StandardLogger()
+
 	ref, err := flag.Parse(args, cmd.Configuration)
 	if err != nil {
 		_ = cmd.PrintHelp(os.Stdout)
@@ -58,7 +62,6 @@ func (f *FileLoader) Load(args []string, cmd *cli.Command) (bool, error) {
 		return false, nil
 	}
 
-	logger := log.WithoutContext()
 	logger.Printf("Configuration loaded from file: %s", configFile)
 
 	content, _ := ioutil.ReadFile(configFile)

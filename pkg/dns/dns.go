@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/containous/traefik/v2/pkg/safe"
+	"github.com/containous/maesh/pkg/safe"
 	"github.com/google/uuid"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"

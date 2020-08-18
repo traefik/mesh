@@ -2,9 +2,6 @@ package cmd
 
 import (
 	"os"
-	"time"
-
-	"github.com/containous/traefik/v2/pkg/config/static"
 )
 
 // MaeshConfiguration wraps the static configuration and extra parameters.
@@ -73,14 +70,6 @@ func NewPrepareConfiguration() *PrepareConfiguration {
 		ClusterDomain: "cluster.local",
 		SMI:           false,
 	}
-}
-
-// ProxyConfiguration wraps the static configuration and extra parameters for proxy nodes.
-type ProxyConfiguration struct {
-	static.Configuration `export:"true"`
-	Endpoint             string        `description:"Load configuration from this endpoint." json:"endpoint" toml:"endpoint" yaml:"endpoint" export:"true"`
-	PollInterval         time.Duration `description:"Polling interval for endpoint." json:"pollInterval,omitempty" toml:"pollInterval,omitempty" yaml:"pollInterval,omitempty"`
-	PollTimeout          time.Duration `description:"Polling timeout for endpoint." json:"pollTimeout,omitempty" toml:"pollTimeout,omitempty" yaml:"pollTimeout,omitempty"`
 }
 
 // CleanupConfiguration holds the configuration for the cleanup command.
