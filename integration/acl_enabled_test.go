@@ -11,11 +11,11 @@ type ACLEnabledSuite struct{ BaseSuite }
 
 func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	requiredImages := []image{
-		{repository: "containous/maesh", tag: "latest", local: true},
-		{repository: "containous/whoami", tag: "v1.0.1"},
-		{repository: "containous/whoamitcp", tag: "v0.0.2"},
-		{repository: "coredns/coredns", tag: "1.6.3"},
-		{repository: "giantswarm/tiny-tools", tag: "3.9"},
+		{name: "containous/maesh:latest", local: true},
+		{name: "containous/whoami:v1.0.1"},
+		{name: "containous/whoamitcp:v0.0.2"},
+		{name: "coredns/coredns:1.6.3"},
+		{name: "giantswarm/tiny-tools:3.9"},
 	}
 
 	s.startk3s(c, requiredImages)

@@ -17,13 +17,13 @@ type CoreDNSSuite struct{ BaseSuite }
 
 func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	requiredImages := []image{
-		{repository: "containous/whoami", tag: "v1.0.1"},
-		{repository: "coredns/coredns", tag: "1.3.1"},
-		{repository: "coredns/coredns", tag: "1.4.0"},
-		{repository: "coredns/coredns", tag: "1.5.2"},
-		{repository: "coredns/coredns", tag: "1.6.3"},
-		{repository: "coredns/coredns", tag: "1.7.0"},
-		{repository: "giantswarm/tiny-tools", tag: "3.9"},
+		{name: "containous/whoami:v1.0.1"},
+		{name: "coredns/coredns:1.3.1"},
+		{name: "coredns/coredns:1.4.0"},
+		{name: "coredns/coredns:1.5.2"},
+		{name: "coredns/coredns:1.6.3"},
+		{name: "coredns/coredns:1.7.0"},
+		{name: "giantswarm/tiny-tools:3.9"},
 	}
 
 	s.startk3s(c, requiredImages)

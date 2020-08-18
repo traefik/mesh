@@ -509,6 +509,7 @@ func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, tra
 
 	return config + stubDomain
 }
+
 func removeStubDomain(config, blockHeader, blockTrailer string) string {
 	if !strings.Contains(config, blockHeader) {
 		return config

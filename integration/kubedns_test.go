@@ -12,11 +12,11 @@ type KubeDNSSuite struct{ BaseSuite }
 
 func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	requiredImages := []image{
-		{repository: "containous/whoami", tag: "v1.0.1"},
-		{repository: "coredns/coredns", tag: "1.6.3"},
-		{repository: "gcr.io/google_containers/k8s-dns-kube-dns-amd64", tag: "1.14.7"},
-		{repository: "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64", tag: "1.14.7"},
-		{repository: "gcr.io/google_containers/k8s-dns-sidecar-amd64", tag: "1.14.7"},
+		{name: "containous/whoami:v1.0.1"},
+		{name: "coredns/coredns:1.6.3"},
+		{name: "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7"},
+		{name: "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"},
+		{name: "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7"},
 	}
 
 	s.startk3s(c, requiredImages)

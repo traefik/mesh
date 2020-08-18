@@ -64,9 +64,8 @@ func Test(t *testing.T) {
 }
 
 type image struct {
-	repository string
-	tag        string
-	local      bool
+	name  string
+	local bool
 }
 
 type BaseSuite struct {
@@ -185,11 +184,9 @@ func (s *BaseSuite) createK8sClient(c *check.C) {
 
 func loadK3sImages(c *check.C, images []image) error {
 	for _, image := range images {
-		name := fmt.Sprintf("%s:%s", image.repository, image.tag)
+		c.Log("Importing image: " + image.name)
 
-		c.Log("Importing image: " + name)
-
-		err := loadK3sImage(k3dClusterName, name, 1*time.Minute)
+		err := loadK3sImage(k3dClusterName, image.name, 1*time.Minute)
 		if err != nil {
 			return err
 		}
@@ -225,15 +222,14 @@ func pullDockerImages(images []image) error {
 			continue
 		}
 
-		name := fmt.Sprintf("%s:%s", image.repository, image.tag)
-		cmd := exec.Command("docker", "pull", name)
+		cmd := exec.Command("docker", "pull", image.name)
 		cmd.Env = os.Environ()
 
 		output, err := cmd.CombinedOutput()
 		fmt.Println(string(output))
 
 		if err != nil {
-			fmt.Printf("unable to pull docker image %q: %v", name, err)
+			fmt.Printf("unable to pull docker image %q: %v", image.name, err)
 
 			return err
 		}

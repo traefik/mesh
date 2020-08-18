@@ -10,9 +10,9 @@ type HelmSuite struct{ BaseSuite }
 
 func (s *HelmSuite) SetUpSuite(c *check.C) {
 	requiredImages := []image{
-		{repository: "containous/maesh", tag: "latest", local: true},
-		{repository: "coredns/coredns", tag: "1.6.3"},
-		{repository: "traefik", tag: "v2.3"},
+		{name: "containous/maesh:latest", local: true},
+		{name: "coredns/coredns:1.6.3"},
+		{name: "traefik:v2.3"},
 	}
 
 	s.startk3s(c, requiredImages)
