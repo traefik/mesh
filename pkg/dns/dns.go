@@ -29,8 +29,9 @@ const (
 	CoreDNS
 	KubeDNS
 
-	coreFileHeader  = "#### Begin Maesh Block"
-	coreFileTrailer = "#### End Maesh Block"
+	maeshBlockHeader  = "#### Begin Maesh Block"
+	maeshBlockTrailer = "#### End Maesh Block"
+	maeshDomain       = "maesh"
 )
 
 var versionCoreDNS17 = goversion.Must(goversion.NewVersion("1.7"))
@@ -162,10 +163,13 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 	// For AKS the CoreDNS config have to be added to the coredns-custom ConfigMap.
 	// See https://docs.microsoft.com/en-us/azure/aks/coredns-custom
 	if err == nil {
-		customConfigMap.Data["maesh.server"] = c.addMaeshStubDomain(
+		customConfigMap.Data["maesh.server"] = addStubDomain(
+			"",
+			maeshBlockHeader,
+			maeshBlockTrailer,
+			maeshDomain,
 			clusterDomain,
 			maeshNamespace,
-			"",
 			coreDNSVersion,
 		)
 
@@ -177,59 +181,17 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		return nil, err
 	}
 
-	coreDNSConfigMap.Data["Corefile"] = c.addMaeshStubDomain(
+	coreDNSConfigMap.Data["Corefile"] = addStubDomain(
+		coreDNSConfigMap.Data["Corefile"],
+		maeshBlockHeader,
+		maeshBlockTrailer,
+		maeshDomain,
 		clusterDomain,
 		maeshNamespace,
-		coreDNSConfigMap.Data["Corefile"],
 		coreDNSVersion,
 	)
 
 	return coreDNSConfigMap, nil
-}
-
-func (c *Client) addMaeshStubDomain(clusterDomain, maeshNamespace, coreDNSConfig string, coreDNSVersion *goversion.Version) string {
-	// config already contains the maesh block.
-	if strings.Contains(coreDNSConfig, coreFileHeader) {
-		return coreDNSConfig
-	}
-
-	stubDomainFormat := `
-%[4]s
-maesh:53 {
-    errors
-    rewrite continue {
-        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh %[3]s-{1}-6d61657368-{2}.%[3]s.svc.%[1]s
-        answer name %[3]s-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.%[3]s\.svc\.%[2]s {1}.{2}.maesh
-    }
-    kubernetes %[1]s in-addr.arpa ip6.arpa {
-        pods insecure
-        %[6]s
-        fallthrough in-addr.arpa ip6.arpa
-    }
-    forward . /etc/resolv.conf
-    cache 30
-    loop
-    reload
-    loadbalance
-}
-%[5]s
-`
-	upstream := ""
-
-	if coreDNSVersion.LessThan(versionCoreDNS17) {
-		upstream = "upstream"
-	}
-
-	stubDomain := fmt.Sprintf(stubDomainFormat,
-		clusterDomain,
-		strings.Replace(clusterDomain, ".", "\\.", -1),
-		maeshNamespace,
-		coreFileHeader,
-		coreFileTrailer,
-		upstream,
-	)
-
-	return coreDNSConfig + stubDomain
 }
 
 func (c *Client) getCoreDNSVersion(deployment *appsv1.Deployment) (*goversion.Version, error) {
@@ -366,35 +328,26 @@ func (c *Client) RestoreCoreDNS(ctx context.Context) error {
 }
 
 func (c *Client) unpatchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
-	customConfigMap, err := c.getConfigMap(ctx, deployment, "coredns-custom")
+	coreDNSConfigMap, err := c.getConfigMap(ctx, deployment, "coredns-custom")
 
 	// For AKS the CoreDNS config have to be removed from the coredns-custom ConfigMap.
 	// See https://docs.microsoft.com/en-us/azure/aks/coredns-custom
 	if err == nil {
-		delete(customConfigMap.Data, "maesh.server")
-		return customConfigMap, nil
+		delete(coreDNSConfigMap.Data, "maesh.server")
+
+		return coreDNSConfigMap, nil
 	}
 
-	coreDNSConfigMap, err := c.getConfigMap(ctx, deployment, "coredns")
+	coreDNSConfigMap, err = c.getConfigMap(ctx, deployment, "coredns")
 	if err != nil {
 		return nil, err
 	}
 
-	data := coreDNSConfigMap.Data["Corefile"]
-
-	// Split the data on the header, and save the pre-header data.
-	splitData := strings.SplitN(data, coreFileHeader+"\n", 2)
-	preData := splitData[0]
-
-	// Split the data on the trailer, and save the post-header data.
-	postData := ""
-	splitData = strings.SplitN(data, coreFileTrailer+"\n", 2)
-
-	if len(splitData) > 1 {
-		postData = splitData[1]
-	}
-
-	coreDNSConfigMap.Data["Corefile"] = preData + postData
+	coreDNSConfigMap.Data["Corefile"] = removeStubDomain(
+		coreDNSConfigMap.Data["Corefile"],
+		maeshBlockHeader,
+		maeshBlockTrailer,
+	)
 
 	return coreDNSConfigMap, nil
 }
@@ -510,4 +463,67 @@ func getConfigMapVolumeSource(deployment *appsv1.Deployment, name string) (*core
 	}
 
 	return nil, fmt.Errorf("configmap %q cannot be found", name)
+}
+
+func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, traefikMeshNamespace string, coreDNSVersion *goversion.Version) string {
+	if strings.Contains(config, blockHeader) {
+		config = removeStubDomain(config, blockHeader, blockTrailer)
+	}
+
+	stubDomainFormat := `
+%[4]s
+%[7]s:53 {
+    errors
+    rewrite continue {
+        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.%[7]s %[3]s-{1}-6d61657368-{2}.%[3]s.svc.%[1]s
+        answer name %[3]s-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.%[3]s\.svc\.%[2]s {1}.{2}.%[7]s
+    }
+    kubernetes %[1]s in-addr.arpa ip6.arpa {
+        pods insecure
+        %[6]s
+        fallthrough in-addr.arpa ip6.arpa
+    }
+    forward . /etc/resolv.conf
+    cache 30
+    loop
+    reload
+    loadbalance
+}
+%[5]s
+`
+	upstream := ""
+
+	if coreDNSVersion.LessThan(versionCoreDNS17) {
+		upstream = "upstream"
+	}
+
+	stubDomain := fmt.Sprintf(stubDomainFormat,
+		clusterDomain,
+		strings.Replace(clusterDomain, ".", "\\.", -1),
+		traefikMeshNamespace,
+		blockHeader,
+		blockTrailer,
+		upstream,
+		domain,
+	)
+
+	return config + stubDomain
+}
+func removeStubDomain(config, blockHeader, blockTrailer string) string {
+	if !strings.Contains(config, blockHeader) {
+		return config
+	}
+	// Split the data on the header, and save the pre-header data.
+	splitData := strings.SplitN(config, "\n"+blockHeader+"\n", 2)
+	preData := splitData[0]
+
+	// Split the data on the trailer, and save the post-header data.
+	postData := ""
+
+	splitData = strings.SplitN(config, "\n"+blockTrailer+"\n", 2)
+	if len(splitData) > 1 {
+		postData = splitData[1]
+	}
+
+	return preData + postData
 }
