@@ -11,14 +11,14 @@ import (
 type KubeDNSSuite struct{ BaseSuite }
 
 func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
-	requiredImages := []string{
-		"containous/maesh:latest",
-		"containous/whoami:v1.0.1",
-		"coredns/coredns:1.6.3",
-		"gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7",
-		"gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7",
-		"gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7",
+	requiredImages := []image{
+		{repository: "containous/whoami", tag: "v1.0.1"},
+		{repository: "coredns/coredns", tag: "1.6.3"},
+		{repository: "gcr.io/google_containers/k8s-dns-kube-dns-amd64", tag: "1.14.7"},
+		{repository: "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64", tag: "1.14.7"},
+		{repository: "gcr.io/google_containers/k8s-dns-sidecar-amd64", tag: "1.14.7"},
 	}
+
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForKubeDNS(c)
 
@@ -30,7 +30,7 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	s.createResources(c, "testdata/smi/crds/")
 }
 
-func (s *KubeDNSSuite) TearDownSuite(c *check.C) {
+func (s *KubeDNSSuite) TearDownSuite(_ *check.C) {
 	s.stopK3s()
 }
 

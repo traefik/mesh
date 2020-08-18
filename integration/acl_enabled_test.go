@@ -10,13 +10,14 @@ import (
 type ACLEnabledSuite struct{ BaseSuite }
 
 func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
-	requiredImages := []string{
-		"containous/maesh:latest",
-		"containous/whoami:v1.0.1",
-		"containous/whoamitcp:v0.0.2",
-		"coredns/coredns:1.6.3",
-		"giantswarm/tiny-tools:3.9",
+	requiredImages := []image{
+		{repository: "containous/maesh", tag: "latest", local: true},
+		{repository: "containous/whoami", tag: "v1.0.1"},
+		{repository: "containous/whoamitcp", tag: "v0.0.2"},
+		{repository: "coredns/coredns", tag: "1.6.3"},
+		{repository: "giantswarm/tiny-tools", tag: "3.9"},
 	}
+
 	s.startk3s(c, requiredImages)
 	s.startAndWaitForCoreDNS(c)
 	s.createResources(c, "testdata/smi/crds/")
