@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha2"
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
 	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha3"
@@ -49,11 +48,6 @@ func init() {
 	}
 
 	err = split.AddToScheme(scheme.Scheme)
-	if err != nil {
-		panic(err)
-	}
-
-	err = v1alpha1.AddToScheme(scheme.Scheme)
 	if err != nil {
 		panic(err)
 	}

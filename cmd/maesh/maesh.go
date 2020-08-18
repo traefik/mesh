@@ -17,8 +17,8 @@ import (
 	"github.com/containous/maesh/pkg/controller"
 	"github.com/containous/maesh/pkg/k8s"
 	preparepkg "github.com/containous/maesh/pkg/prepare"
-	"github.com/containous/traefik/v2/pkg/cli"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/paerser/cli"
 )
 
 const (

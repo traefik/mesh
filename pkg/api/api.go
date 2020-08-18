@@ -10,9 +10,9 @@ import (
 
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/provider"
+	"github.com/containous/maesh/pkg/safe"
 	"github.com/containous/maesh/pkg/topology"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
