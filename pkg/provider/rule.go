@@ -21,6 +21,9 @@ func buildTrafficTargetRule(tt *topology.ServiceTrafficTarget) string {
 			// Handle Method filtering.
 			matchParts = appendMethodFilter(matchParts, match)
 
+			// Handle Header filtering.
+			matchParts = appendHeaderFilter(matchParts, match)
+
 			// Conditions within a HTTPMatch must all be fulfilled to be considered valid.
 			if len(matchParts) > 0 {
 				matchCond := strings.Join(matchParts, " && ")
@@ -67,6 +70,20 @@ func appendMethodFilter(matchParts []string, match *specs.HTTPMatch) []string {
 	if !matchAll {
 		methods := strings.Join(match.Methods, "`,`")
 		return append(matchParts, fmt.Sprintf("Method(`%s`)", methods))
+	}
+
+	return matchParts
+}
+
+func appendHeaderFilter(matchParts []string, match *specs.HTTPMatch) []string {
+	var rules []string
+
+	for name, value := range match.Headers {
+		rules = append(rules, fmt.Sprintf("HeadersRegexp(`%s`, `%s`)", name, value))
+	}
+
+	if len(rules) > 0 {
+		matchParts = append(matchParts, strings.Join(rules, " && "))
 	}
 
 	return matchParts

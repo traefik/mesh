@@ -55,8 +55,8 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 	svcC := createService("ignored-ns", "svc-c", annotations, svccPorts, selectorAppA, "10.10.1.17")
 	svcD := createService("ignored-ns", "svc-d", annotations, svcdPorts, selectorAppA, "10.10.1.18")
 
-	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
-	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
+	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api", nil)
+	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric", nil)
 	rtGrp := createHTTPRouteGroup("ignored-ns", "http-rt-grp-ignored", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	tt := createTrafficTarget("ignored-ns", "tt", saB, intPtr(8080), []*corev1.ServiceAccount{saA}, rtGrp, []string{})
@@ -120,8 +120,8 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 	epD := createEndpoints(svcD, createEndpointSubset(svcPorts, podD))
 	epE := createEndpoints(svcE, createEndpointSubset(svcPorts, podE))
 
-	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
-	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
+	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api", nil)
+	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric", nil)
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
@@ -184,8 +184,8 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	epC := createEndpoints(svcC, createEndpointSubset(svcPorts, podC))
 	epD := createEndpoints(svcD, createEndpointSubset(svcPorts, podD))
 
-	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
-	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
+	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api", nil)
+	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric", nil)
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
@@ -249,8 +249,8 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	epD := createEndpoints(svcD, createEndpointSubset(svcPorts, podD))
 	epE := createEndpoints(svcE, createEndpointSubset(svcPorts, podE))
 
-	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
-	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
+	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api", nil)
+	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric", nil)
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
@@ -310,8 +310,10 @@ func TestTopologyBuilder_BuildWithTrafficTarget(t *testing.T) {
 
 	epB := createEndpoints(svcB, createEndpointSubset(svcPorts, podB))
 
-	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
-	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
+	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric", nil)
+	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api", map[string]string{
+		"User-Agent": "curl/.*",
+	})
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
@@ -369,8 +371,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetAndTrafficSplitOnSameService(t *t
 	epC := createEndpoints(svcC, createEndpointSubset(svcPorts, podC))
 	epD := createEndpoints(svcD, createEndpointSubset(svcPorts, podD))
 
-	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
-	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
+	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api", nil)
+	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric", nil)
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	ttMatch := []string{apiMatch.Name}
@@ -413,8 +415,8 @@ func TestTopologyBuilder_BuildWithTrafficTargetSpecEmptyMatch(t *testing.T) {
 
 	epB := createEndpoints(svcB, createEndpointSubset(svcbPorts, podB))
 
-	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api")
-	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric")
+	apiMatch := createHTTPMatch("api", []string{"GET", "POST"}, "/api", nil)
+	metricMatch := createHTTPMatch("metric", []string{"GET"}, "/metric", nil)
 	rtGrp := createHTTPRouteGroup("my-ns", "http-rt-grp", []specs.HTTPMatch{apiMatch, metricMatch})
 
 	tt := createTrafficTarget("my-ns", "tt", saB, intPtr(8080), []*corev1.ServiceAccount{saA}, rtGrp, []string{})
@@ -816,11 +818,12 @@ func createHTTPRouteGroup(namespace, name string, matches []specs.HTTPMatch) *sp
 	}
 }
 
-func createHTTPMatch(name string, methods []string, pathPrefix string) specs.HTTPMatch {
+func createHTTPMatch(name string, methods []string, pathPrefix string, headers map[string]string) specs.HTTPMatch {
 	return specs.HTTPMatch{
 		Name:      name,
 		Methods:   methods,
 		PathRegex: pathPrefix,
+		Headers:   headers,
 	}
 }
 
