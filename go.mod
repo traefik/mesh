@@ -13,7 +13,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/servicemeshinterface/smi-sdk-go v0.4.1
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
+	github.com/traefik/paerser v0.1.0
 	github.com/vdemeester/shakers v0.1.0
 	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6

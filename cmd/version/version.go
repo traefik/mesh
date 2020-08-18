@@ -5,7 +5,7 @@ import (
 	"runtime"
 
 	"github.com/containous/maesh/pkg/version"
-	"github.com/containous/traefik/v2/pkg/cli"
+	"github.com/traefik/paerser/cli"
 )
 
 const versionFormat = `

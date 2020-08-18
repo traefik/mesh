@@ -7,7 +7,7 @@ import (
 	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/prepare"
-	"github.com/containous/traefik/v2/pkg/cli"
+	"github.com/traefik/paerser/cli"
 )
 
 // NewCmd builds a new Prepare command.

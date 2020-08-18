@@ -13,8 +13,10 @@ func OperationWithRecover(operation backoff.Operation) backoff.Operation {
 	return func() (err error) {
 		defer func() {
 			if res := recover(); res != nil {
-				logrus.Errorf("Error in Go routine: %s", err)
-				logrus.Errorf("Stack: %s", debug.Stack())
+				logger := logrus.StandardLogger()
+
+				logger.Errorf("Error in Go routine: %s", res)
+				logger.Errorf("Stack: %s", debug.Stack())
 
 				err = fmt.Errorf("panic in operation: %w", err)
 			}
