@@ -65,7 +65,6 @@ func Test(t *testing.T) {
 	images = append(images, image{"containous/whoami:v1.0.1", true})
 	images = append(images, image{"containous/whoamitcp:v0.0.2", true})
 	images = append(images, image{"containous/whoamiudp:v0.0.1", true})
-	images = append(images, image{"coredns/coredns:1.2.6", true})
 	images = append(images, image{"coredns/coredns:1.3.1", true})
 	images = append(images, image{"coredns/coredns:1.4.0", true})
 	images = append(images, image{"coredns/coredns:1.5.2", true})
@@ -299,10 +298,10 @@ func (s *BaseSuite) waitForPods(c *check.C, pods []string) {
 
 func (s *BaseSuite) startAndWaitForCoreDNS(c *check.C) {
 	s.createResources(c, "testdata/coredns/coredns.yaml")
-	s.WaitForCoreDNS(c)
+	s.waitForCoreDNS(c)
 }
 
-func (s *BaseSuite) WaitForCoreDNS(c *check.C) {
+func (s *BaseSuite) waitForCoreDNS(c *check.C) {
 	c.Assert(s.try.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 }
 
@@ -367,29 +366,6 @@ func (s *BaseSuite) uninstallHelmMaesh(c *check.C) {
 	argSlice := []string{"uninstall", "powpow", "--namespace", maeshNamespace}
 	err := s.try.WaitCommandExecute("helm", argSlice, "uninstalled", 10*time.Second)
 	c.Assert(err, checker.IsNil)
-}
-
-func (s *BaseSuite) setCoreDNSVersion(c *check.C, version string) {
-	ctx := context.Background()
-	ebo := backoff.NewExponentialBackOff()
-	ebo.MaxElapsedTime = 60 * time.Second
-
-	err := backoff.Retry(safe.OperationWithRecover(func() error {
-		// Get current coreDNS deployment.
-		deployment, err := s.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
-		c.Assert(err, checker.IsNil)
-
-		newDeployment := deployment.DeepCopy()
-		c.Assert(len(newDeployment.Spec.Template.Spec.Containers), checker.Equals, 1)
-
-		newDeployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("coredns/coredns:%s", version)
-
-		return s.try.WaitUpdateDeployment(newDeployment, 10*time.Second)
-	}), ebo)
-
-	c.Assert(err, checker.IsNil)
-
-	s.WaitForCoreDNS(c)
 }
 
 func (s *BaseSuite) installTinyToolsMaesh(c *check.C) {
@@ -536,7 +512,9 @@ func (s *BaseSuite) digHost(c *check.C, source, namespace, destination string) {
 		if err != nil {
 			return err
 		}
-		c.Log(fmt.Sprintf("Dig %s: %s", destination, strings.TrimSpace(output)))
+
+		c.Logf("Dig %s: %s", destination, strings.TrimSpace(output))
+
 		IP = net.ParseIP(strings.TrimSpace(output))
 		if IP == nil {
 			return fmt.Errorf("could not parse an IP from dig")

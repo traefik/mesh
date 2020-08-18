@@ -1,10 +1,15 @@
 package integration
 
 import (
-	"os"
+	"context"
+	"fmt"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
+	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // CoreDNSSuite.
@@ -13,7 +18,6 @@ type CoreDNSSuite struct{ BaseSuite }
 func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	requiredImages := []string{
 		"containous/whoami:v1.0.1",
-		"coredns/coredns:1.2.6",
 		"coredns/coredns:1.3.1",
 		"coredns/coredns:1.4.0",
 		"coredns/coredns:1.5.2",
@@ -28,126 +32,75 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	s.createResources(c, "testdata/smi/crds/")
 }
 
-func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
+func (s *CoreDNSSuite) TearDownSuite(_ *check.C) {
 	s.stopK3s()
 }
 
-func (s *CoreDNSSuite) TestCoreDNSVersionSafe(c *check.C) {
-	testCases := []struct {
-		desc          string
-		version       string
-		expectedError bool
-	}{
-		{
-			desc:          "CoreDNS 1.2.6",
-			version:       "1.2.6",
-			expectedError: true,
-		},
-		{
-			desc:          "CoreDNS 1.3.1",
-			version:       "1.3.1",
-			expectedError: false,
-		},
-		{
-			desc:          "CoreDNS 1.4.0",
-			version:       "1.4.0",
-			expectedError: false,
-		},
+// TestCoreDNSLegacy tests specific version of CoreDNS which did not support the `ready` plugin. It checks that
+// the prepare command successfully patches the Corefile or custom Corefile and that we can dig it.
+func (s *CoreDNSSuite) TestCoreDNSLegacy(c *check.C) {
+	versions := []string{"1.3.1", "1.4.0"}
+
+	s.createResources(c, "testdata/coredns/coredns-legacy.yaml")
+	s.waitForCoreDNS(c)
+
+	for _, version := range versions {
+		s.testCoreDNSVersion(c, version)
 	}
 
-	for _, test := range testCases {
-		s.createResources(c, "testdata/coredns/corednssafe.yaml")
-		s.WaitForCoreDNS(c)
-
-		c.Logf("Testing compatibility with %s", test.desc)
-		s.setCoreDNSVersion(c, test.version)
-
-		cmd := s.maeshPrepareWithArgs()
-		cmd.Env = os.Environ()
-		output, err := cmd.CombinedOutput()
-
-		c.Log(string(output))
-
-		if test.expectedError {
-			c.Assert(err, checker.NotNil)
-		} else {
-			c.Assert(err, checker.IsNil)
-		}
-
-		s.deleteResources(c, "testdata/coredns/corednssafe.yaml")
-	}
+	s.deleteResources(c, "testdata/coredns/coredns-legacy.yaml")
 }
 
-func (s *CoreDNSSuite) TestCoreDNSVersion(c *check.C) {
-	testCases := []struct {
-		desc    string
-		version string
-	}{
-		{
-			desc:    "CoreDNS 1.5.2",
-			version: "1.5.2",
-		},
-		{
-			desc:    "CoreDNS 1.6.3",
-			version: "1.6.3",
-		},
-		{
-			desc:    "CoreDNS 1.7.0",
-			version: "1.7.0",
-		},
+func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
+	versions := []string{"1.5.2", "1.6.3", "1.7.0"}
+
+	s.createResources(c, "testdata/coredns/coredns.yaml")
+	s.waitForCoreDNS(c)
+
+	for _, version := range versions {
+		s.testCoreDNSVersion(c, version)
 	}
 
-	for _, test := range testCases {
-		s.createResources(c, "testdata/coredns/coredns.yaml")
-		s.WaitForCoreDNS(c)
-
-		c.Logf("Testing compatibility with %s", test.desc)
-		s.setCoreDNSVersion(c, test.version)
-
-		cmd := s.maeshPrepareWithArgs()
-		cmd.Env = os.Environ()
-		output, err := cmd.CombinedOutput()
-
-		c.Log(string(output))
-		c.Assert(err, checker.IsNil)
-
-		s.deleteResources(c, "testdata/coredns/coredns.yaml")
-	}
+	s.deleteResources(c, "testdata/coredns/coredns.yaml")
 }
 
-func (s *CoreDNSSuite) TestCoreDNSDig(c *check.C) {
-	testCases := []struct {
-		desc    string
-		version string
-	}{
-		{
-			desc:    "CoreDNS 1.6.3",
-			version: "1.6.3",
-		},
-		{
-			desc:    "CoreDNS 1.7.0",
-			version: "1.7.0",
-		},
-	}
+func (s *CoreDNSSuite) testCoreDNSVersion(c *check.C, version string) {
+	c.Logf("Testing dig with CoreDNS %s", version)
 
-	for _, test := range testCases {
-		s.createResources(c, "testdata/coredns/coredns.yaml")
-		s.WaitForCoreDNS(c)
+	s.setCoreDNSVersion(c, version)
 
-		c.Logf("Testing dig with %s", test.desc)
-		s.setCoreDNSVersion(c, test.version)
+	cmd := s.startMaeshBinaryCmd(c, false, false)
 
-		cmd := s.startMaeshBinaryCmd(c, false, false)
+	err := cmd.Start()
+	c.Assert(err, checker.IsNil)
 
-		err := cmd.Start()
+	defer s.stopMaeshBinary(c, cmd.Process)
+
+	pod := s.getToolsPodMaesh(c)
+	c.Assert(pod, checker.NotNil)
+
+	s.digHost(c, pod.Name, pod.Namespace, "whoami.whoami.maesh")
+}
+
+func (s *CoreDNSSuite) setCoreDNSVersion(c *check.C, version string) {
+	ctx := context.Background()
+	ebo := backoff.NewExponentialBackOff()
+	ebo.MaxElapsedTime = 60 * time.Second
+
+	err := backoff.Retry(safe.OperationWithRecover(func() error {
+		// Get current coreDNS deployment.
+		deployment, err := s.client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
 		c.Assert(err, checker.IsNil)
 
-		pod := s.getToolsPodMaesh(c)
-		c.Assert(pod, checker.NotNil)
+		newDeployment := deployment.DeepCopy()
+		c.Assert(len(newDeployment.Spec.Template.Spec.Containers), checker.Equals, 1)
 
-		s.digHost(c, pod.Name, pod.Namespace, "whoami.whoami.maesh")
-		s.stopMaeshBinary(c, cmd.Process)
+		newDeployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("coredns/coredns:%s", version)
 
-		s.deleteResources(c, "testdata/coredns/coredns.yaml")
-	}
+		return s.try.WaitUpdateDeployment(newDeployment, 10*time.Second)
+	}), ebo)
+
+	c.Assert(err, checker.IsNil)
+
+	s.waitForCoreDNS(c)
 }
