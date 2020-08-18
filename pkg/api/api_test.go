@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/containous/maesh/pkg/k8s"
-	"github.com/containous/traefik/v2/pkg/testhelpers"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -72,7 +71,12 @@ func TestGetReadiness(t *testing.T) {
 			api.readiness.Set(test.readiness)
 
 			res := httptest.NewRecorder()
-			req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/readiness", nil)
+
+			req, err := http.NewRequest(http.MethodGet, "/api/status/readiness", nil)
+			if err != nil {
+				require.NoError(t, err)
+				return
+			}
 
 			api.getReadiness(res, req)
 
@@ -94,7 +98,12 @@ func TestGetCurrentConfiguration(t *testing.T) {
 	api.configuration.Set("foo")
 
 	res := httptest.NewRecorder()
-	req := testhelpers.MustNewRequest(http.MethodGet, "/api/configuration/current", nil)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/configuration/current", nil)
+	if err != nil {
+		require.NoError(t, err)
+		return
+	}
 
 	api.getCurrentConfiguration(res, req)
 
@@ -147,7 +156,12 @@ func TestGetMeshNodes(t *testing.T) {
 			require.NoError(t, err)
 
 			res := httptest.NewRecorder()
-			req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/nodes", nil)
+
+			req, err := http.NewRequest(http.MethodGet, "/api/status/nodes", nil)
+			if err != nil {
+				require.NoError(t, err)
+				return
+			}
 
 			api.getMeshNodes(res, req)
 
@@ -198,9 +212,14 @@ func TestGetMeshNodeConfiguration(t *testing.T) {
 			require.NoError(t, err)
 
 			res := httptest.NewRecorder()
-			req := testhelpers.MustNewRequest(http.MethodGet, "/api/status/node/mesh-pod-1/configuration", nil)
 
-			//fake gorilla/mux vars
+			req, err := http.NewRequest(http.MethodGet, "/api/status/node/mesh-pod-1/configuration", nil)
+			if err != nil {
+				require.NoError(t, err)
+				return
+			}
+
+			// fake gorilla/mux vars
 			vars := map[string]string{
 				"node": "mesh-pod-1",
 			}

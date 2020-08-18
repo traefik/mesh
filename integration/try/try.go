@@ -14,7 +14,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/containous/maesh/pkg/k8s"
-	"github.com/containous/traefik/v2/pkg/safe"
+	"github.com/containous/maesh/pkg/safe"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
@@ -33,7 +33,7 @@ type timedAction func(timeout time.Duration, operation DoCondition) error
 // Try holds try configuration.
 type Try struct {
 	client k8s.Client
-	log    logrus.FieldLogger
+	logger logrus.FieldLogger
 }
 
 // NewTry creates a new try.
@@ -43,7 +43,7 @@ func NewTry(client k8s.Client) *Try {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	return &Try{client: client, log: log}
+	return &Try{client: client, logger: log}
 }
 
 // WaitReadyDeployment wait until the deployment is ready.
@@ -152,7 +152,7 @@ func (t *Try) WaitPodIPAssigned(name string, namespace string, timeout time.Dura
 			return fmt.Errorf("unable get the pod %q in namespace %q: %v", name, namespace, err)
 		}
 
-		// If the pod IP is not empty, log and return.
+		// If the pod IP is not empty, logger and return.
 		if pod.Status.PodIP != "" {
 			// IP is assigned
 			fmt.Printf("Pod %q has IP: %s\n", name, pod.Status.PodIP)
@@ -187,7 +187,7 @@ func (t *Try) WaitCommandExecute(command string, argSlice []string, expected str
 			return fmt.Errorf("output %s does not contain %s", string(output), expected)
 		}
 
-		t.log.Debug(string(output))
+		t.logger.Debug(string(output))
 
 		return nil
 	}), ebo); err != nil {
