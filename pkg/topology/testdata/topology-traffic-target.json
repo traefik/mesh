@@ -91,7 +91,12 @@
                     "GET",
                     "POST"
                   ],
-                  "pathRegex": "/api"
+                  "pathRegex": "/api",
+                  "headers": [
+                    {
+                      "User-Agent": "curl/.*"
+                    }
+                  ]
                 },
                 {
                   "name": "metric",
@@ -110,7 +115,12 @@
                 "GET",
                 "POST"
               ],
-              "pathRegex": "/api"
+              "pathRegex": "/api",
+              "headers": [
+                {
+                  "User-Agent": "curl/.*"
+                }
+              ]
             }
           ]
         }
