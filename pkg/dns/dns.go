@@ -136,9 +136,13 @@ func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, cluster
 
 	c.logger.Debug("Patching CoreDNS ConfigMap")
 
-	patchedConfigMap, err := c.patchCoreDNSConfig(ctx, coreDNSDeployment, clusterDomain, maeshNamespace)
+	patchedConfigMap, changed, err := c.patchCoreDNSConfig(ctx, coreDNSDeployment, clusterDomain, maeshNamespace)
 	if err != nil {
 		return fmt.Errorf("unable to patch coredns config: %w", err)
+	}
+
+	if !changed {
+		return nil
 	}
 
 	if _, err = c.kubeClient.CoreV1().ConfigMaps(patchedConfigMap.Namespace).Update(ctx, patchedConfigMap, metav1.UpdateOptions{}); err != nil {
@@ -152,10 +156,10 @@ func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, cluster
 	return nil
 }
 
-func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment, clusterDomain, maeshNamespace string) (*corev1.ConfigMap, error) {
+func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment, clusterDomain, maeshNamespace string) (*corev1.ConfigMap, bool, error) {
 	coreDNSVersion, err := c.getCoreDNSVersion(deployment)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	customConfigMap, err := c.getConfigMap(ctx, deployment, "coredns-custom")
@@ -163,8 +167,8 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 	// For AKS the CoreDNS config have to be added to the coredns-custom ConfigMap.
 	// See https://docs.microsoft.com/en-us/azure/aks/coredns-custom
 	if err == nil {
-		customConfigMap.Data["maesh.server"] = addStubDomain(
-			"",
+		corefile, changed := addStubDomain(
+			customConfigMap.Data["maesh.server"],
 			maeshBlockHeader,
 			maeshBlockTrailer,
 			maeshDomain,
@@ -173,15 +177,17 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 			coreDNSVersion,
 		)
 
-		return customConfigMap, nil
+		customConfigMap.Data["maesh.server"] = corefile
+
+		return customConfigMap, changed, nil
 	}
 
 	coreDNSConfigMap, err := c.getConfigMap(ctx, deployment, "coredns")
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	coreDNSConfigMap.Data["Corefile"] = addStubDomain(
+	corefile, changed := addStubDomain(
 		coreDNSConfigMap.Data["Corefile"],
 		maeshBlockHeader,
 		maeshBlockTrailer,
@@ -191,7 +197,9 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		coreDNSVersion,
 	)
 
-	return coreDNSConfigMap, nil
+	coreDNSConfigMap.Data["Corefile"] = corefile
+
+	return coreDNSConfigMap, changed, nil
 }
 
 func (c *Client) getCoreDNSVersion(deployment *appsv1.Deployment) (*goversion.Version, error) {
@@ -465,13 +473,25 @@ func getConfigMapVolumeSource(deployment *appsv1.Deployment, name string) (*core
 	return nil, fmt.Errorf("configmap %q cannot be found", name)
 }
 
-func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, traefikMeshNamespace string, coreDNSVersion *goversion.Version) string {
-	if strings.Contains(config, blockHeader) {
+func getStubDomain(config, blockHeader, blockTrailer string) string {
+	start := strings.Index(config, blockHeader)
+	end := strings.Index(config, blockTrailer)
+
+	if start == -1 || end == -1 {
+		return ""
+	}
+
+	return config[start : end+len(blockTrailer)]
+}
+
+func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, traefikMeshNamespace string, coreDNSVersion *goversion.Version) (string, bool) {
+	existingStubDomain := getStubDomain(config, blockHeader, blockTrailer)
+
+	if existingStubDomain != "" {
 		config = removeStubDomain(config, blockHeader, blockTrailer)
 	}
 
-	stubDomainFormat := `
-%[4]s
+	stubDomainFormat := `%[4]s
 %[7]s:53 {
     errors
     rewrite continue {
@@ -489,8 +509,7 @@ func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, tra
     reload
     loadbalance
 }
-%[5]s
-`
+%[5]s`
 	upstream := ""
 
 	if coreDNSVersion.LessThan(versionCoreDNS17) {
@@ -507,7 +526,7 @@ func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, tra
 		domain,
 	)
 
-	return config + stubDomain
+	return config + "\n" + stubDomain + "\n", existingStubDomain != stubDomain
 }
 
 func removeStubDomain(config, blockHeader, blockTrailer string) string {
@@ -515,13 +534,13 @@ func removeStubDomain(config, blockHeader, blockTrailer string) string {
 		return config
 	}
 	// Split the data on the header, and save the pre-header data.
-	splitData := strings.SplitN(config, "\n"+blockHeader+"\n", 2)
+	splitData := strings.SplitN(config, blockHeader+"\n", 2)
 	preData := splitData[0]
 
 	// Split the data on the trailer, and save the post-header data.
 	postData := ""
 
-	splitData = strings.SplitN(config, "\n"+blockTrailer+"\n", 2)
+	splitData = strings.SplitN(config, blockTrailer+"\n", 2)
 	if len(splitData) > 1 {
 		postData = splitData[1]
 	}
