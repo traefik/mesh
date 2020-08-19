@@ -76,7 +76,7 @@ func appendMethodFilter(matchParts []string, match *specs.HTTPMatch) []string {
 }
 
 func appendHeaderFilter(matchParts []string, match *specs.HTTPMatch) []string {
-	var rules []string
+	rules := make([]string, 0, len(match.Headers))
 
 	for name, value := range match.Headers {
 		rules = append(rules, fmt.Sprintf("HeadersRegexp(`%s`, `%s`)", name, value))
