@@ -109,6 +109,13 @@ func TestProvider_BuildConfig(t *testing.T) {
 			wantConfig: "testdata/acl-enabled-tcp-basic-config.json",
 		},
 		{
+			desc:               "ACL enabled: HTTP service with http-route-group",
+			acl:                true,
+			defaultTrafficType: "http",
+			topology:           "testdata/acl-enabled-http-route-group-topology.json",
+			wantConfig:         "testdata/acl-enabled-http-route-group-config.json",
+		},
+		{
 			desc:               "ACL enabled: HTTP service with traffic-split",
 			acl:                true,
 			defaultTrafficType: "http",
