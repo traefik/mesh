@@ -7,7 +7,7 @@ be sure to follow the guidelines below.
 
 !!! Important "Getting Help"
     The issue tracker is not a general support forum, but a place to report bugs and asks for new features.
-    For end-user related support questions, use the [Traefik Mesh community forum](https://community.containo.us/c/maesh/15).
+    For end-user related support questions, use the [Traefik Mesh community forum](https://community.traefik.io/c/traefik-mesh).
 
 ## Issue Title
 

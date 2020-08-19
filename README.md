@@ -9,7 +9,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/traefik/mesh)](https://goreportcard.com/report/github.com/traefik/mesh)
 [![Release](https://img.shields.io/github/tag-date/traefik/mesh.svg)](https://github.com/traefik/mesh/releases)
 [![GitHub](https://img.shields.io/github/license/traefik/mesh)](https://github.com/traefik/mesh/blob/master/LICENSE)
-[![Discourse status](https://img.shields.io/discourse/https/community.containo.us/status?label=Community&style=social)](https://community.containo.us/c/maesh)
+[![Discourse status](https://img.shields.io/discourse/https/community.traefik.io/status?label=Community&style=social)](https://community.traefik.io/c/traefik-mesh)
 
 ## Traefik Mesh: Simpler Service Mesh
 
