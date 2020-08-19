@@ -176,7 +176,7 @@
           "app-b2@my-ns"
         ]
       },
-      "specs": [
+      "rules": [
         {
           "httpRouteGroup": {
             "kind": "HTTPRouteGroup",

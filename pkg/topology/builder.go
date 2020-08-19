@@ -146,7 +146,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 		var err error
 
-		stt.Specs, err = b.buildTrafficTargetSpecs(res, tt)
+		stt.Rules, err = b.buildTrafficTargetRules(res, tt)
 		if err != nil {
 			err = fmt.Errorf("unable to build spec: %v", err)
 			stt.AddError(err)
@@ -465,7 +465,7 @@ func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *acc
 	return sources
 }
 
-func (b *Builder) buildTrafficTargetSpecs(res *resources, tt *access.TrafficTarget) ([]TrafficSpec, error) {
+func (b *Builder) buildTrafficTargetRules(res *resources, tt *access.TrafficTarget) ([]TrafficSpec, error) {
 	var trafficSpecs []TrafficSpec
 
 	for _, s := range tt.Spec.Rules {
