@@ -54,7 +54,7 @@
       "service": "svc-b@my-ns",
       "name": "tt",
       "namespace": "my-ns",
-      "specs": [
+      "rules": [
         {
           "tcpRoute": {
             "kind": "TCPRoute",
