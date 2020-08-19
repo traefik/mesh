@@ -146,7 +146,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 		var err error
 
-		stt.Specs, err = b.buildTrafficTargetSpecs(res, tt)
+		stt.Rules, err = b.buildTrafficTargetRules(res, tt)
 		if err != nil {
 			err = fmt.Errorf("unable to build spec: %v", err)
 			stt.AddError(err)
@@ -465,39 +465,39 @@ func (b *Builder) buildTrafficTargetSources(res *resources, t *Topology, tt *acc
 	return sources
 }
 
-func (b *Builder) buildTrafficTargetSpecs(res *resources, tt *access.TrafficTarget) ([]TrafficSpec, error) {
-	var trafficSpecs []TrafficSpec
+func (b *Builder) buildTrafficTargetRules(res *resources, tt *access.TrafficTarget) ([]TrafficRule, error) {
+	var rules []TrafficRule
 
 	for _, s := range tt.Spec.Rules {
 		switch s.Kind {
 		case "HTTPRouteGroup":
-			trafficSpec, err := b.buildHTTPRouteGroup(res.HTTPRouteGroups, tt.Namespace, s)
+			rule, err := b.buildHTTPRouteGroup(res.HTTPRouteGroups, tt.Namespace, s)
 			if err != nil {
 				return nil, err
 			}
 
-			trafficSpecs = append(trafficSpecs, trafficSpec)
+			rules = append(rules, rule)
 		case "TCPRoute":
-			trafficSpec, err := b.buildTCPRoute(res.TCPRoutes, tt.Namespace, s)
+			rule, err := b.buildTCPRoute(res.TCPRoutes, tt.Namespace, s)
 			if err != nil {
 				return nil, err
 			}
 
-			trafficSpecs = append(trafficSpecs, trafficSpec)
+			rules = append(rules, rule)
 		default:
-			return nil, fmt.Errorf("unknown spec type: %q", s.Kind)
+			return nil, fmt.Errorf("unknown rule type: %q", s.Kind)
 		}
 	}
 
-	return trafficSpecs, nil
+	return rules, nil
 }
 
-func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*specs.HTTPRouteGroup, ns string, rule access.TrafficTargetRule) (TrafficSpec, error) {
+func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*specs.HTTPRouteGroup, ns string, rule access.TrafficTargetRule) (TrafficRule, error) {
 	key := Key{rule.Name, ns}
 
 	httpRouteGroup, ok := httpRtGrps[key]
 	if !ok {
-		return TrafficSpec{}, fmt.Errorf("unable to find HTTPRouteGroup %q", key)
+		return TrafficRule{}, fmt.Errorf("unable to find HTTPRouteGroup %q", key)
 	}
 
 	var (
@@ -515,11 +515,11 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*specs.HTTPRouteGroup, 
 	} else {
 		httpMatches, err = buildHTTPRouteGroupMatches(rule.Matches, httpRouteGroup.Spec.Matches, httpMatches, key)
 		if err != nil {
-			return TrafficSpec{}, err
+			return TrafficRule{}, err
 		}
 	}
 
-	return TrafficSpec{
+	return TrafficRule{
 		HTTPRouteGroup: httpRouteGroup,
 		HTTPMatches:    httpMatches,
 	}, nil
@@ -546,15 +546,15 @@ func buildHTTPRouteGroupMatches(ttMatches []string, httpRouteGroupMatches []spec
 	return httpMatches, nil
 }
 
-func (b *Builder) buildTCPRoute(tcpRts map[Key]*specs.TCPRoute, ns string, rule access.TrafficTargetRule) (TrafficSpec, error) {
+func (b *Builder) buildTCPRoute(tcpRts map[Key]*specs.TCPRoute, ns string, rule access.TrafficTargetRule) (TrafficRule, error) {
 	key := Key{rule.Name, ns}
 
 	tcpRoute, ok := tcpRts[key]
 	if !ok {
-		return TrafficSpec{}, fmt.Errorf("unable to find TCPRoute %q", key)
+		return TrafficRule{}, fmt.Errorf("unable to find TCPRoute %q", key)
 	}
 
-	return TrafficSpec{
+	return TrafficRule{
 		TCPRoute: tcpRoute,
 	}, nil
 }

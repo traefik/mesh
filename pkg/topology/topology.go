@@ -164,7 +164,7 @@ type ServiceTrafficTarget struct {
 
 	Sources     []ServiceTrafficTargetSource    `json:"sources,omitempty"`
 	Destination ServiceTrafficTargetDestination `json:"destination"`
-	Specs       []TrafficSpec                   `json:"specs,omitempty"`
+	Rules       []TrafficRule                   `json:"rules,omitempty"`
 
 	Errors []string `json:"errors"`
 }
@@ -193,8 +193,8 @@ type ServiceTrafficTargetDestination struct {
 	Pods           []Key                `json:"pods,omitempty"`
 }
 
-// TrafficSpec represents a Spec which can be used for restricting access to a route in a TrafficTarget.
-type TrafficSpec struct {
+// TrafficRule represents a rule which can be used for restricting access to a route in a TrafficTarget.
+type TrafficRule struct {
 	HTTPRouteGroup *specs.HTTPRouteGroup `json:"httpRouteGroup,omitempty"`
 	TCPRoute       *specs.TCPRoute       `json:"tcpRoute,omitempty"`
 

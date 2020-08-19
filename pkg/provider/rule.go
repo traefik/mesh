@@ -11,8 +11,8 @@ import (
 func buildTrafficTargetRule(tt *topology.ServiceTrafficTarget) string {
 	var orRules []string
 
-	for _, spec := range tt.Specs {
-		for _, match := range spec.HTTPMatches {
+	for _, rule := range tt.Rules {
+		for _, match := range rule.HTTPMatches {
 			var matchParts []string
 
 			// Handle Path filtering.
