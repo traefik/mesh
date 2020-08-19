@@ -5,10 +5,19 @@ Helm Chart
 
 ## v2.1 to v3.0
 
+### Traefik Mesh renaming
+
+All existing resources have been renamed and prefixed by `traefik-mesh`. 
+For example, the `maesh-controller`resource has been renamed to `traefik-mesh-controller`.
+
+### Mesh Property Name
+
+Inside the Traefik Mesh helm chart, the `mesh` property has been renamed to `proxy`.
+
 ### Image version
 
-Since version `v1.4`, Traefik Mesh uses plain [Traefik](https://github.com/traefik/traefik/) Docker image for mesh proxies.
-Therefore, to change the image version used for the controller, or the mesh proxies you should use the `controller.image` and `proxy.image` options.
+Since version `v1.4`, Traefik Mesh uses plain [Traefik](https://github.com/traefik/traefik/) Docker image for proxies.
+Therefore, to change the image version used for the controller, or the proxies you should use the `controller.image` and `proxy.image` options.
 
 ### Default Mode
 
