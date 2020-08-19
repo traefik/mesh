@@ -353,7 +353,7 @@ func (p *Provider) buildHTTPServicesAndRoutersForTrafficTarget(t *topology.Topol
 }
 
 func (p *Provider) buildTCPServicesAndRoutersForTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, cfg *dynamic.Configuration, ttSvc *topology.Service, ttKey topology.ServiceTrafficTargetKey) {
-	if !hasTrafficTargetSpecTCPRoute(tt) {
+	if !hasTrafficTargetRuleTCPRoute(tt) {
 		return
 	}
 
@@ -914,9 +914,9 @@ func buildUDPRouter(entrypoint string, svcKey string) *dynamic.UDPRouter {
 	}
 }
 
-func hasTrafficTargetSpecTCPRoute(tt *topology.ServiceTrafficTarget) bool {
-	for _, spec := range tt.Specs {
-		if spec.TCPRoute != nil {
+func hasTrafficTargetRuleTCPRoute(tt *topology.ServiceTrafficTarget) bool {
+	for _, rule := range tt.Rules {
+		if rule.TCPRoute != nil {
 			return true
 		}
 	}
