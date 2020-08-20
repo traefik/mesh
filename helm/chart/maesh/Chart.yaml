@@ -1,9 +1,9 @@
----
 apiVersion: v2
 name: maesh
 version: 2.1.2
 appVersion: v1.3.2
 description: Maesh - Simpler Service Mesh
+type: application
 keywords:
   - traefik
   - mesh
@@ -24,7 +24,6 @@ maintainers:
     email: harold@containo.us
   - name: kevinpollet
     email: kevin@containo.us
-engine: gotpl
 icon: https://raw.githubusercontent.com/containous/maesh/v1.2/docs/content/assets/img/maesh.png
 dependencies:
   - name: tracing

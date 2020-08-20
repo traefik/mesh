@@ -51,21 +51,6 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
       {{- end }}
-      {{- if .Values.tracing.deploy }}
-      initContainers:
-        - name: wait-for-jaeger-init
-          image: groundnuty/k8s-wait-for:v1.3
-          args:
-            - "service"
-            - "-lapp.kubernetes.io/name=jaeger,app.kubernetes.io/component=agent"
-          resources:
-            requests:
-              memory: "10Mi"
-              cpu: "50m"
-            limits:
-              memory: "20Mi"
-              cpu: "100m"
-      {{- end }}
       containers:
         - name: maesh-mesh
           image: {{ include "maesh.meshImage" . | quote }}
@@ -110,6 +95,7 @@ spec:
               {{- else }}
             - {{ printf "--tracing.jaeger.samplingServerURL=http://jaeger-agent.%s.svc.%s:5778/sampling" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
               {{- end }}
+            - "--tracing.jaeger.disableAttemptReconnecting=false"
             {{- end }}
             {{- if .Values.tracing.datadog }}
               {{- if .Values.tracing.datadog.localagenthostport }}
