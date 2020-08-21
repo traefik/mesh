@@ -213,7 +213,7 @@ type TrafficSplit struct {
 
 	Service  Key                   `json:"service"`
 	Backends []TrafficSplitBackend `json:"backends,omitempty"`
-	Specs    []TrafficSpec         `json:"specs,omitempty"`
+	Rules    []TrafficSpec         `json:"rules,omitempty"`
 
 	// List of Pods that are explicitly allowed to pass through the TrafficSplit.
 	Incoming []Key `json:"incoming,omitempty"`

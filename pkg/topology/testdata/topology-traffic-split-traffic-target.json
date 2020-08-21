@@ -199,7 +199,7 @@
           "app-b@my-ns"
         ]
       },
-      "specs": [
+      "rules": [
         {
           "httpRouteGroup": {
             "kind": "HTTPRouteGroup",
@@ -278,7 +278,7 @@
           "app-c@my-ns"
         ]
       },
-      "specs": [
+      "rules": [
         {
           "httpRouteGroup": {
             "kind": "HTTPRouteGroup",
@@ -350,7 +350,7 @@
           "app-d@my-ns"
         ]
       },
-      "specs": [
+      "rules": [
         {
           "httpRouteGroup": {
             "kind": "HTTPRouteGroup",

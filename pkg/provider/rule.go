@@ -105,7 +105,7 @@ func buildHTTPRuleFromTrafficTarget(tt *topology.ServiceTrafficTarget, ttSvc *to
 }
 
 func buildHTTPRuleFromTrafficSplit(ts *topology.TrafficSplit, tsSvc *topology.Service) string {
-	tsRule := buildHTTPRuleFromTrafficSpecs(ts.Specs)
+	tsRule := buildHTTPRuleFromTrafficSpecs(ts.Rules)
 	svcRule := buildHTTPRuleFromService(tsSvc)
 
 	if tsRule != "" {
@@ -128,7 +128,7 @@ func buildHTTPRuleFromTrafficTargetIndirect(tt *topology.ServiceTrafficTarget, t
 }
 
 func buildHTTPRuleFromTrafficSplitIndirect(ts *topology.TrafficSplit, tsSvc *topology.Service) string {
-	tsRule := buildHTTPRuleFromTrafficSpecs(ts.Specs)
+	tsRule := buildHTTPRuleFromTrafficSpecs(ts.Rules)
 	svcRule := buildHTTPRuleFromService(tsSvc)
 	indirectRule := "HeadersRegexp(`X-Forwarded-For`, `.+`)"
 

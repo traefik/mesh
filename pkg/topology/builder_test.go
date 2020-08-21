@@ -284,12 +284,6 @@ func TestTopologyBuilder_EvaluatesIncomingTrafficSplit(t *testing.T) {
 	assert.Len(t, tsKeys, 2)
 	assert.Len(t, got.TrafficSplits, 2)
 
-	// Sort TrafficSplit keys as order may differ between different run.
-	//
-	//sort.Slice(got.Services[], func(i, j int) bool {
-	//	return strings.Compare(tsKeys[i].Name, tsKeys[j].Name) < 0
-	//})
-
 	assertTopology(t, "testdata/topology-traffic-split-traffic-target.json", got)
 }
 
