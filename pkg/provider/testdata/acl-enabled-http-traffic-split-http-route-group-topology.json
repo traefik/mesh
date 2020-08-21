@@ -96,7 +96,7 @@
           "service": "svc-c@my-ns"
         }
       ],
-      "specs": [
+      "rules": [
         {
           "httpRouteGroup": {
             "kind": "HTTPRouteGroup",

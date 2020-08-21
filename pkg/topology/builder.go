@@ -224,7 +224,7 @@ func (b *Builder) evaluateTrafficSplit(res *resources, topology *Topology, traff
 
 	var err error
 
-	ts.Specs, err = b.buildTrafficSplitSpecs(res, trafficSplit)
+	ts.Rules, err = b.buildTrafficSplitSpecs(res, trafficSplit)
 	if err != nil {
 		err = fmt.Errorf("unable to build spec: %v", err)
 		ts.AddError(err)
