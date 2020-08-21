@@ -125,29 +125,29 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 	// Create SharedInformers, listers and register the event handler to informers that are not ACL related.
 	c.kubernetesFactory = informers.NewSharedInformerFactoryWithOptions(c.clients.KubernetesClient(), k8s.ResyncPeriod)
 	c.splitFactory = splitinformer.NewSharedInformerFactoryWithOptions(c.clients.SplitClient(), k8s.ResyncPeriod)
+	c.specsFactory = specsinformer.NewSharedInformerFactoryWithOptions(c.clients.SpecsClient(), k8s.ResyncPeriod)
 
 	c.podLister = c.kubernetesFactory.Core().V1().Pods().Lister()
 	c.endpointsLister = c.kubernetesFactory.Core().V1().Endpoints().Lister()
 	c.serviceLister = c.kubernetesFactory.Core().V1().Services().Lister()
 	c.trafficSplitLister = c.splitFactory.Split().V1alpha3().TrafficSplits().Lister()
+	c.httpRouteGroupLister = c.specsFactory.Specs().V1alpha3().HTTPRouteGroups().Lister()
+	c.tcpRouteLister = c.specsFactory.Specs().V1alpha3().TCPRoutes().Lister()
 
 	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(handler)
 	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(handler)
 	c.splitFactory.Split().V1alpha3().TrafficSplits().Informer().AddEventHandler(handler)
+	c.specsFactory.Specs().V1alpha3().HTTPRouteGroups().Informer().AddEventHandler(handler)
+	c.specsFactory.Specs().V1alpha3().TCPRoutes().Informer().AddEventHandler(handler)
 
 	// Create SharedInformers, listers and register the event handler for ACL related resources.
 	if c.cfg.ACLEnabled {
 		c.accessFactory = accessinformer.NewSharedInformerFactoryWithOptions(c.clients.AccessClient(), k8s.ResyncPeriod)
-		c.specsFactory = specsinformer.NewSharedInformerFactoryWithOptions(c.clients.SpecsClient(), k8s.ResyncPeriod)
 
 		c.trafficTargetLister = c.accessFactory.Access().V1alpha2().TrafficTargets().Lister()
-		c.httpRouteGroupLister = c.specsFactory.Specs().V1alpha3().HTTPRouteGroups().Lister()
-		c.tcpRouteLister = c.specsFactory.Specs().V1alpha3().TCPRoutes().Lister()
 
 		c.accessFactory.Access().V1alpha2().TrafficTargets().Informer().AddEventHandler(handler)
 		c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(handler)
-		c.specsFactory.Specs().V1alpha3().HTTPRouteGroups().Informer().AddEventHandler(handler)
-		c.specsFactory.Specs().V1alpha3().TCPRoutes().Informer().AddEventHandler(handler)
 	}
 
 	c.tcpStateTable = NewPortMapping(c.cfg.Namespace, c.serviceLister, logger, c.cfg.MinTCPPort, c.cfg.MaxTCPPort)
@@ -285,6 +285,14 @@ func (c *Controller) startBaseInformers(ctx context.Context) error {
 		}
 	}
 
+	c.specsFactory.Start(c.stopCh)
+
+	for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
+		}
+	}
+
 	return nil
 }
 
@@ -292,14 +300,6 @@ func (c *Controller) startACLInformers(ctx context.Context) error {
 	c.accessFactory.Start(c.stopCh)
 
 	for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
-		if !ok {
-			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
-		}
-	}
-
-	c.specsFactory.Start(c.stopCh)
-
-	for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}

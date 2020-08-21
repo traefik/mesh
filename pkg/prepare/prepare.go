@@ -79,6 +79,17 @@ func (p *Prepare) startBaseInformers(ctx context.Context, stopCh <-chan struct{}
 		}
 	}
 
+	specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(p.client.SpecsClient(), k8s.ResyncPeriod)
+	specsFactory.Specs().V1alpha3().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	specsFactory.Specs().V1alpha3().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
+	specsFactory.Start(stopCh)
+
+	for t, ok := range specsFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
+		}
+	}
+
 	return nil
 }
 
@@ -89,17 +100,6 @@ func (p *Prepare) startACLInformers(ctx context.Context, stopCh <-chan struct{})
 	accessFactory.Start(stopCh)
 
 	for t, ok := range accessFactory.WaitForCacheSync(ctx.Done()) {
-		if !ok {
-			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
-		}
-	}
-
-	specsFactory := specsinformer.NewSharedInformerFactoryWithOptions(p.client.SpecsClient(), k8s.ResyncPeriod)
-	specsFactory.Specs().V1alpha3().HTTPRouteGroups().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-	specsFactory.Specs().V1alpha3().TCPRoutes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-	specsFactory.Start(stopCh)
-
-	for t, ok := range specsFactory.WaitForCacheSync(ctx.Done()) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t.String())
 		}
