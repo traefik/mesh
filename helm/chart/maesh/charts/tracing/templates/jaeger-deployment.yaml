@@ -47,11 +47,13 @@ spec:
         runAsNonRoot: true
         runAsUser: 999
       containers:
-        - env:
-          - name: COLLECTOR_ZIPKIN_HTTP_PORT
-            value: "9411"
+        - name: jaeger
           image: {{ .Values.image.jaeger | quote }}
-          name: jaeger
+          env:
+            - name: JAEGER_DISABLED
+              value: "true"
+            - name: COLLECTOR_ZIPKIN_HTTP_PORT
+              value: "9411"
           ports:
             - containerPort: 5775
               protocol: UDP

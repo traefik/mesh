@@ -1,2 +1,2 @@
 image:
-  jaeger: jaegertracing/all-in-one:1.13
+  jaeger: jaegertracing/all-in-one:1.18
