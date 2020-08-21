@@ -122,6 +122,13 @@ func TestProvider_BuildConfig(t *testing.T) {
 			topology:           "testdata/acl-enabled-http-traffic-split-topology.json",
 			wantConfig:         "testdata/acl-enabled-http-traffic-split-config.json",
 		},
+		{
+			desc:               "ACL enabled: HTTP service with traffic-split and http-route-group",
+			acl:                true,
+			defaultTrafficType: "http",
+			topology:           "testdata/acl-enabled-http-traffic-split-http-route-group-topology.json",
+			wantConfig:         "testdata/acl-enabled-http-traffic-split-http-route-group-config.json",
+		},
 	}
 
 	for _, test := range tests {
