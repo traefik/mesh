@@ -269,25 +269,27 @@ func (c *Controller) startInformers(syncTimeout time.Duration) error {
 }
 
 func (c *Controller) startBaseInformers(ctx context.Context) error {
-	c.kubernetesFactory.Start(c.stopCh)
+	stopCh := raceFirstClosed(c.stopCh, ctx.Done())
 
-	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
+	c.kubernetesFactory.Start(stopCh)
+
+	for t, ok := range c.kubernetesFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
-	c.splitFactory.Start(c.stopCh)
+	c.splitFactory.Start(stopCh)
 
-	for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.splitFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
-	c.specsFactory.Start(c.stopCh)
+	c.specsFactory.Start(stopCh)
 
-	for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.specsFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
@@ -297,9 +299,11 @@ func (c *Controller) startBaseInformers(ctx context.Context) error {
 }
 
 func (c *Controller) startACLInformers(ctx context.Context) error {
-	c.accessFactory.Start(c.stopCh)
+	stopCh := raceFirstClosed(c.stopCh, ctx.Done())
 
-	for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
+	c.accessFactory.Start(stopCh)
+
+	for t, ok := range c.accessFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
@@ -402,4 +406,26 @@ func (c *Controller) handleErr(key interface{}, err error) {
 
 	c.logger.Errorf("Unable to complete work %q: %v", key, err)
 	c.workQueue.Forget(key)
+}
+
+// raceFirstClosed creates a channel which will be closed when the first of the given channel
+// will be closed.
+func raceFirstClosed(cs ...<-chan struct{}) <-chan struct{} {
+	out := make(chan struct{})
+
+	for _, c := range cs {
+		go func(c <-chan struct{}) {
+			for {
+				select {
+				case <-out:
+					return
+				case <-c:
+					close(out)
+					return
+				}
+			}
+		}(c)
+	}
+
+	return out
 }
