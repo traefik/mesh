@@ -1,29 +1,34 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: server
+  name: server-v1
   namespace: test
   labels:
-    app: server
+    app: server-v1
 spec:
   containers:
-    - name: server
+    - name: server-v1
       image: containous/whoami:v1.0.1
-      imagePullPolicy: Always
+      imagePullPolicy: IfNotPresent
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 80
+        periodSeconds: 1
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: server
+  name: server-v1
   namespace: test
   labels:
-    app: server
+    app: server-v1
 spec:
   type: ClusterIP
   ports:
     - port: 8080
-      name: server
+      name: server-v1
       targetPort: 80
   selector:
-    app: server
+    app: server-v1
