@@ -405,7 +405,7 @@ func (p *Provider) buildServiceAndRoutersForTrafficSplit(t *topology.Topology, c
 }
 
 func (p *Provider) buildHTTPServiceAndRoutersForTrafficSplit(t *topology.Topology, cfg *dynamic.Configuration, tsKey topology.Key, scheme string, ts *topology.TrafficSplit, tsSvc *topology.Service, middlewares []string) {
-	rule := buildHTTPRuleFromService(tsSvc)
+	rule := buildHTTPRuleFromTrafficSplit(ts, tsSvc)
 
 	rtrMiddlewares := middlewares
 
@@ -449,7 +449,7 @@ func (p *Provider) buildHTTPServiceAndRoutersForTrafficSplit(t *topology.Topolog
 			whitelistIndirectKey := getWhitelistMiddlewareKeyFromTrafficSplitIndirect(ts)
 			cfg.HTTP.Middlewares[whitelistIndirectKey] = whitelistIndirect
 
-			rule = buildHTTPRuleFromTrafficSplitIndirect(tsSvc)
+			rule = buildHTTPRuleFromTrafficSplitIndirect(ts, tsSvc)
 			rtrMiddlewaresindirect := addToSliceCopy(middlewares, whitelistIndirectKey)
 
 			indirectRtrKey := getRouterKeyFromTrafficSplitIndirect(ts, svcPort.Port)
