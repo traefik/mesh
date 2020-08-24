@@ -1,0 +1,236 @@
+{
+  "services": {
+    "svc-b@my-ns": {
+      "name": "svc-b",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-b"
+      },
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.16",
+      "pods": [
+        "app-b@my-ns"
+      ],
+      "trafficSplits": [
+        "ts@my-ns"
+      ],
+      "errors": null
+    },
+    "svc-c@my-ns": {
+      "name": "svc-c",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-c"
+      },
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.17",
+      "pods": [
+        "app-c@my-ns"
+      ],
+      "trafficTargets": [
+        "svc-c@my-ns:tt-c@my-ns"
+      ],
+      "backendOf": [
+        "ts@my-ns"
+      ],
+      "errors": null
+    },
+    "svc-d@my-ns": {
+      "name": "svc-d",
+      "namespace": "my-ns",
+      "selector": {
+        "app": "app-d"
+      },
+      "annotations": {},
+      "ports": [
+        {
+          "name": "port-8080",
+          "protocol": "TCP",
+          "port": 8080,
+          "targetPort": 8080
+        }
+      ],
+      "clusterIp": "10.10.1.18",
+      "pods": [
+        "app-d@my-ns"
+      ],
+      "trafficTargets": [
+        "svc-d@my-ns:tt-d@my-ns"
+      ],
+      "backendOf": [
+        "ts@my-ns"
+      ],
+      "errors": null
+    }
+  },
+  "pods": {
+    "app-a@my-ns": {
+      "name": "app-a",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-a",
+      "ip": "10.10.1.1",
+      "sourceOf": [
+        "svc-c@my-ns:tt-c@my-ns",
+        "svc-d@my-ns:tt-d@my-ns"
+      ]
+    },
+    "app-b@my-ns": {
+      "name": "app-b",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-b",
+      "ip": "10.10.2.1"
+    },
+    "app-c@my-ns": {
+      "name": "app-c",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-c",
+      "ip": "10.10.2.2",
+      "destinationOf": [
+        "svc-c@my-ns:tt-c@my-ns"
+      ]
+    },
+    "app-d@my-ns": {
+      "name": "app-d",
+      "namespace": "my-ns",
+      "serviceAccount": "service-account-d",
+      "ip": "10.10.2.3",
+      "destinationOf": [
+        "svc-d@my-ns:tt-d@my-ns"
+      ]
+    }
+  },
+  "serviceTrafficTargets": {
+    "svc-c@my-ns:tt-c@my-ns": {
+      "service": "svc-c@my-ns",
+      "name": "tt-c",
+      "namespace": "my-ns",
+      "sources": [
+        {
+          "serviceAccount": "service-account-a",
+          "namespace": "my-ns",
+          "pods": [
+            "app-a@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "service-account-c",
+        "namespace": "my-ns",
+        "ports": [
+          {
+            "name": "port-8080",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "pods": [
+          "app-c@my-ns"
+        ]
+      },
+      "errors": null
+    },
+    "svc-d@my-ns:tt-d@my-ns": {
+      "service": "svc-d@my-ns",
+      "name": "tt-d",
+      "namespace": "my-ns",
+      "sources": [
+        {
+          "serviceAccount": "service-account-a",
+          "namespace": "my-ns",
+          "pods": [
+            "app-a@my-ns"
+          ]
+        }
+      ],
+      "destination": {
+        "serviceAccount": "service-account-d",
+        "namespace": "my-ns",
+        "ports": [
+          {
+            "name": "port-8080",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "pods": [
+          "app-d@my-ns"
+        ]
+      },
+      "errors": null
+    }
+  },
+  "trafficSplits": {
+    "ts@my-ns": {
+      "name": "ts",
+      "namespace": "my-ns",
+      "service": "svc-b@my-ns",
+      "backends": [
+        {
+          "weight": 80,
+          "service": "svc-c@my-ns"
+        },
+        {
+          "weight": 20,
+          "service": "svc-d@my-ns"
+        }
+      ],
+      "rules": [
+        {
+          "httpRouteGroup": {
+            "kind": "HTTPRouteGroup",
+            "apiVersion": "specs.smi-spec.io/v1alpha3",
+            "metadata": {
+              "name": "http-rt-grp",
+              "namespace": "my-ns",
+              "creationTimestamp": null
+            },
+            "spec": {
+              "matches": [
+                {
+                  "name": "api",
+                  "methods": [
+                    "GET",
+                    "POST"
+                  ],
+                  "pathRegex": "/api"
+                }
+              ]
+            }
+          },
+          "httpMatches": [
+            {
+              "name": "api",
+              "methods": [
+                "GET",
+                "POST"
+              ],
+              "pathRegex": "/api"
+            }
+          ]
+        }
+      ],
+      "incoming": [
+        "app-a@my-ns"
+      ],
+      "errors": null
+    }
+  }
+}

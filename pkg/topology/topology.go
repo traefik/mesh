@@ -193,15 +193,6 @@ type ServiceTrafficTargetDestination struct {
 	Pods           []Key                `json:"pods,omitempty"`
 }
 
-// TrafficSpec represents a spec which can be used for restricting access to a route in a TrafficTarget.
-type TrafficSpec struct {
-	HTTPRouteGroup *specs.HTTPRouteGroup `json:"httpRouteGroup,omitempty"`
-	TCPRoute       *specs.TCPRoute       `json:"tcpRoute,omitempty"`
-
-	// HTTPMatches is the list of HTTPMatch selected from the HTTPRouteGroup.
-	HTTPMatches []*specs.HTTPMatch `json:"httpMatches,omitempty"`
-}
-
 // Pod is a node of the graph representing a kubernetes pod.
 type Pod struct {
 	Name            string                 `json:"name"`
@@ -222,11 +213,21 @@ type TrafficSplit struct {
 
 	Service  Key                   `json:"service"`
 	Backends []TrafficSplitBackend `json:"backends,omitempty"`
+	Rules    []TrafficSpec         `json:"rules,omitempty"`
 
 	// List of Pods that are explicitly allowed to pass through the TrafficSplit.
 	Incoming []Key `json:"incoming,omitempty"`
 
 	Errors []string `json:"errors"`
+}
+
+// TrafficSpec represents a Spec which can be used for restricting access to a route in a TrafficTarget or a TrafficSplit.
+type TrafficSpec struct {
+	HTTPRouteGroup *specs.HTTPRouteGroup `json:"httpRouteGroup,omitempty"`
+	TCPRoute       *specs.TCPRoute       `json:"tcpRoute,omitempty"`
+
+	// HTTPMatches is the list of HTTPMatch selected from the HTTPRouteGroup.
+	HTTPMatches []*specs.HTTPMatch `json:"httpMatches,omitempty"`
 }
 
 // AddError adds the given error to this TrafficSplit.
