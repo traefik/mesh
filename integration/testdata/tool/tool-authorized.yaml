@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tool-authorized
+  namespace: test
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tool-authorized
+  namespace: test
+spec:
+  serviceAccountName: tool-authorized
+  containers:
+    - name: tool-authorized
+      image: giantswarm/tiny-tools:3.9
+      command:
+        - "sleep"
+        - "36000"
