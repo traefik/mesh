@@ -193,15 +193,11 @@ func (c *Cluster) WaitReadyDeployment(name, namespace string, timeout time.Durat
 
 			return fmt.Errorf("unable get deployment %q in namespace %q: %v", name, namespace, err)
 		}
-		if d.Status.Replicas == 0 {
-			return fmt.Errorf("deployment %q has no replicas", name)
-		}
 
-		if d.Status.UnavailableReplicas > 0 {
-			return fmt.Errorf("deployment %q has unavailable replicas", name)
-		}
-
-		if d.Status.ReadyReplicas == d.Status.Replicas && d.Status.ReadyReplicas == d.Status.AvailableReplicas {
+		if d.Status.UpdatedReplicas == *(d.Spec.Replicas) &&
+			d.Status.Replicas == *(d.Spec.Replicas) &&
+			d.Status.AvailableReplicas == *(d.Spec.Replicas) &&
+			d.Status.ObservedGeneration >= d.Generation {
 			return nil
 		}
 
