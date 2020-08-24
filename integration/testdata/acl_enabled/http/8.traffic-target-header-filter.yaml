@@ -1,31 +1,29 @@
 apiVersion: specs.smi-spec.io/v1alpha3
 kind: HTTPRouteGroup
 metadata:
-  name: http-route-group-api
+  name: http-route-group-header
   namespace: test
 spec:
   matches:
-    - name: api
-      pathRegex: /api
-      methods: ["GET"]
+    - name: header
+      headers:
+        - Authorized: "t|True"
 
 ---
 apiVersion: access.smi-spec.io/v1alpha2
 kind: TrafficTarget
 metadata:
-  name: traffic-target
+  name: traffic-target-header-filter
   namespace: test
 spec:
   destination:
     kind: ServiceAccount
-    name: server
+    name: server-header
     namespace: test
   rules:
     - kind: HTTPRouteGroup
-      name: http-route-group-api
-      matches:
-        - api
+      name: http-route-group-header
   sources:
     - kind: ServiceAccount
-      name: client-a
+      name: tool-authorized
       namespace: test
