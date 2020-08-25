@@ -249,18 +249,17 @@ func (c *Controller) Shutdown() {
 
 // startInformers starts the controller informers.
 func (c *Controller) startInformers(syncTimeout time.Duration) error {
-	// Start the informers with a timeout.
-	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	ctx, cancel := context.WithTimeout(contextWithStopChan(context.Background(), c.stopCh), syncTimeout)
 	defer cancel()
 
 	c.logger.Debug("Starting Informers")
 
-	if err := c.startBaseInformers(ctxWithTimeout); err != nil {
+	if err := c.startBaseInformers(ctx.Done()); err != nil {
 		return err
 	}
 
 	if c.cfg.ACLEnabled {
-		if err := c.startACLInformers(ctxWithTimeout); err != nil {
+		if err := c.startACLInformers(ctx.Done()); err != nil {
 			return err
 		}
 	}
@@ -268,26 +267,26 @@ func (c *Controller) startInformers(syncTimeout time.Duration) error {
 	return nil
 }
 
-func (c *Controller) startBaseInformers(ctx context.Context) error {
-	c.kubernetesFactory.Start(c.stopCh)
+func (c *Controller) startBaseInformers(stopCh <-chan struct{}) error {
+	c.kubernetesFactory.Start(stopCh)
 
-	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.kubernetesFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
-	c.splitFactory.Start(c.stopCh)
+	c.splitFactory.Start(stopCh)
 
-	for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.splitFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
-	c.specsFactory.Start(c.stopCh)
+	c.specsFactory.Start(stopCh)
 
-	for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.specsFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
@@ -296,10 +295,10 @@ func (c *Controller) startBaseInformers(ctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) startACLInformers(ctx context.Context) error {
-	c.accessFactory.Start(c.stopCh)
+func (c *Controller) startACLInformers(stopCh <-chan struct{}) error {
+	c.accessFactory.Start(stopCh)
 
-	for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.accessFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
@@ -402,4 +401,19 @@ func (c *Controller) handleErr(key interface{}, err error) {
 
 	c.logger.Errorf("Unable to complete work %q: %v", key, err)
 	c.workQueue.Forget(key)
+}
+
+func contextWithStopChan(ctx context.Context, stopCh <-chan struct{}) context.Context {
+	ctx, cancel := context.WithCancel(ctx)
+
+	go func() {
+		defer cancel()
+
+		select {
+		case <-ctx.Done():
+		case <-stopCh:
+		}
+	}()
+
+	return ctx
 }
