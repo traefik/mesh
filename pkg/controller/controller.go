@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/pkg/annotations"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/provider"
@@ -249,18 +250,17 @@ func (c *Controller) Shutdown() {
 
 // startInformers starts the controller informers.
 func (c *Controller) startInformers(syncTimeout time.Duration) error {
-	// Start the informers with a timeout.
-	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	ctx, cancel := context.WithTimeout(cmd.ContextWithStopChan(context.Background(), c.stopCh), syncTimeout)
 	defer cancel()
 
 	c.logger.Debug("Starting Informers")
 
-	if err := c.startBaseInformers(ctxWithTimeout); err != nil {
+	if err := c.startBaseInformers(ctx.Done()); err != nil {
 		return err
 	}
 
 	if c.cfg.ACLEnabled {
-		if err := c.startACLInformers(ctxWithTimeout); err != nil {
+		if err := c.startACLInformers(ctx.Done()); err != nil {
 			return err
 		}
 	}
@@ -268,26 +268,26 @@ func (c *Controller) startInformers(syncTimeout time.Duration) error {
 	return nil
 }
 
-func (c *Controller) startBaseInformers(ctx context.Context) error {
-	c.kubernetesFactory.Start(c.stopCh)
+func (c *Controller) startBaseInformers(stopCh <-chan struct{}) error {
+	c.kubernetesFactory.Start(stopCh)
 
-	for t, ok := range c.kubernetesFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.kubernetesFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
-	c.splitFactory.Start(c.stopCh)
+	c.splitFactory.Start(stopCh)
 
-	for t, ok := range c.splitFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.splitFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
 	}
 
-	c.specsFactory.Start(c.stopCh)
+	c.specsFactory.Start(stopCh)
 
-	for t, ok := range c.specsFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.specsFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}
@@ -296,10 +296,10 @@ func (c *Controller) startBaseInformers(ctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) startACLInformers(ctx context.Context) error {
-	c.accessFactory.Start(c.stopCh)
+func (c *Controller) startACLInformers(stopCh <-chan struct{}) error {
+	c.accessFactory.Start(stopCh)
 
-	for t, ok := range c.accessFactory.WaitForCacheSync(ctx.Done()) {
+	for t, ok := range c.accessFactory.WaitForCacheSync(stopCh) {
 		if !ok {
 			return fmt.Errorf("timed out waiting for controller caches to sync: %s", t)
 		}

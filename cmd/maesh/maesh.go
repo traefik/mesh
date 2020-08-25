@@ -118,8 +118,8 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 
 	var wg sync.WaitGroup
 
-	apiErrCh := make(chan error)
-	ctrlErrCh := make(chan error)
+	apiErrCh := make(chan error, 1)
+	ctrlErrCh := make(chan error, 1)
 
 	// Start the API server.
 	wg.Add(1)

@@ -7,6 +7,23 @@ import (
 	"syscall"
 )
 
+// ContextWithStopChan creates a context canceled when the given stopCh receives a message
+// or get closed.
+func ContextWithStopChan(ctx context.Context, stopCh <-chan struct{}) context.Context {
+	ctx, cancel := context.WithCancel(ctx)
+
+	go func() {
+		defer cancel()
+
+		select {
+		case <-ctx.Done():
+		case <-stopCh:
+		}
+	}()
+
+	return ctx
+}
+
 // ContextWithSignal creates a context canceled when SIGINT or SIGTERM are notified.
 func ContextWithSignal(ctx context.Context) context.Context {
 	newCtx, cancel := context.WithCancel(ctx)
