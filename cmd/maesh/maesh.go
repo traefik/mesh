@@ -16,7 +16,6 @@ import (
 	"github.com/containous/maesh/pkg/api"
 	"github.com/containous/maesh/pkg/controller"
 	"github.com/containous/maesh/pkg/k8s"
-	preparepkg "github.com/containous/maesh/pkg/prepare"
 	"github.com/sirupsen/logrus"
 	"github.com/traefik/paerser/cli"
 )
@@ -74,20 +73,13 @@ func maeshCommand(config *cmd.MaeshConfiguration) error {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debug("Starting maesh prepare...")
+	log.Debug("Starting maesh controller...")
 	log.Debugf("Using masterURL: %q", config.MasterURL)
 	log.Debugf("Using kubeconfig: %q", config.KubeConfig)
 
 	clients, err := k8s.NewClient(log, config.MasterURL, config.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %w", err)
-	}
-
-	prep := preparepkg.NewPrepare(log, clients)
-
-	_, err = prep.CheckDNSProvider(ctx)
-	if err != nil {
-		return fmt.Errorf("no valid DNS provider found: %w", err)
 	}
 
 	if config.SMI {

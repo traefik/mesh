@@ -150,3 +150,18 @@ func buildSmiSplitClient(log logrus.FieldLogger, config *rest.Config) (*splitcli
 
 	return client, nil
 }
+
+// NewKubernetesClient creates a new Kubernetes client.
+func NewKubernetesClient(log logrus.FieldLogger, masterURL, kubeConfig string) (*kubernetes.Clientset, error) {
+	config, err := buildConfig(log, masterURL, kubeConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := buildKubernetesClient(log, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
