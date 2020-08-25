@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/containous/maesh/cmd"
 	"github.com/containous/maesh/pkg/annotations"
 	"github.com/containous/maesh/pkg/k8s"
 	"github.com/containous/maesh/pkg/provider"
@@ -249,7 +250,7 @@ func (c *Controller) Shutdown() {
 
 // startInformers starts the controller informers.
 func (c *Controller) startInformers(syncTimeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(contextWithStopChan(context.Background(), c.stopCh), syncTimeout)
+	ctx, cancel := context.WithTimeout(cmd.ContextWithStopChan(context.Background(), c.stopCh), syncTimeout)
 	defer cancel()
 
 	c.logger.Debug("Starting Informers")
@@ -401,19 +402,4 @@ func (c *Controller) handleErr(key interface{}, err error) {
 
 	c.logger.Errorf("Unable to complete work %q: %v", key, err)
 	c.workQueue.Forget(key)
-}
-
-func contextWithStopChan(ctx context.Context, stopCh <-chan struct{}) context.Context {
-	ctx, cancel := context.WithCancel(ctx)
-
-	go func() {
-		defer cancel()
-
-		select {
-		case <-ctx.Done():
-		case <-stopCh:
-		}
-	}()
-
-	return ctx
 }
