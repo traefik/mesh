@@ -269,7 +269,7 @@ func (c *Controller) startInformers(syncTimeout time.Duration) error {
 }
 
 func (c *Controller) startBaseInformers(stopCh <-chan struct{}) error {
-	c.kubernetesFactory.Start(stopCh)
+	c.kubernetesFactory.Start(c.stopCh)
 
 	for t, ok := range c.kubernetesFactory.WaitForCacheSync(stopCh) {
 		if !ok {
@@ -277,7 +277,7 @@ func (c *Controller) startBaseInformers(stopCh <-chan struct{}) error {
 		}
 	}
 
-	c.splitFactory.Start(stopCh)
+	c.splitFactory.Start(c.stopCh)
 
 	for t, ok := range c.splitFactory.WaitForCacheSync(stopCh) {
 		if !ok {
@@ -285,7 +285,7 @@ func (c *Controller) startBaseInformers(stopCh <-chan struct{}) error {
 		}
 	}
 
-	c.specsFactory.Start(stopCh)
+	c.specsFactory.Start(c.stopCh)
 
 	for t, ok := range c.specsFactory.WaitForCacheSync(stopCh) {
 		if !ok {
@@ -297,7 +297,7 @@ func (c *Controller) startBaseInformers(stopCh <-chan struct{}) error {
 }
 
 func (c *Controller) startACLInformers(stopCh <-chan struct{}) error {
-	c.accessFactory.Start(stopCh)
+	c.accessFactory.Start(c.stopCh)
 
 	for t, ok := range c.accessFactory.WaitForCacheSync(stopCh) {
 		if !ok {
