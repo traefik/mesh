@@ -55,7 +55,9 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 }
 
 func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
-	c.Assert(s.cluster.Stop(s.logger), checker.IsNil)
+	if s.cluster != nil {
+		c.Assert(s.cluster.Stop(s.logger), checker.IsNil)
+	}
 }
 
 // TestCoreDNSLegacy tests specific version of CoreDNS which did not support the `ready` plugin. It checks that
