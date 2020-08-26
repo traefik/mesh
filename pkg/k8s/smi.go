@@ -31,18 +31,17 @@ func CheckSMIVersion(client kubernetes.Interface, aclEnabled bool) error {
 	var errs []string
 
 	for _, requiredGroup := range requiredGroups {
-		var found bool
-
 		var version string
 
 		for _, group := range serverGroups.Groups {
 			if requiredGroup.Group == group.Name {
-				found = true
 				version = group.PreferredVersion.Version
+
+				break
 			}
 		}
 
-		if !found {
+		if version == "" {
 			errs = append(errs, fmt.Sprintf("unable to find group %q version %q", requiredGroup.Group, requiredGroup.Version))
 		} else if version != requiredGroup.Version {
 			errs = append(errs, fmt.Sprintf("unable to find group %q version %q, got %q", requiredGroup.Group, requiredGroup.Version, version))
