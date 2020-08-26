@@ -68,7 +68,7 @@ func (s *CoreDNSSuite) TestCoreDNSLegacy(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/coredns/coredns-legacy.yaml"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/coredns/coredns-legacy.yaml")
 
-	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 2*time.Minute), checker.IsNil)
 
 	for _, version := range versions {
 		s.testCoreDNSVersion(c, version)
@@ -83,7 +83,7 @@ func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/coredns/coredns.yaml"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/coredns/coredns.yaml")
 
-	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 2*time.Minute), checker.IsNil)
 
 	for _, version := range versions {
 		s.testCoreDNSVersion(c, version)
