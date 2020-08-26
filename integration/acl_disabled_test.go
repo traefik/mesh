@@ -64,7 +64,7 @@ func (s *ACLDisabledSuite) TestHTTPService(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/http"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/http")
 
-	s.assertHTTPServiceReachable(c, "server-http.test.maesh:8080", "server-http", 10*time.Second)
+	s.assertHTTPServiceReachable(c, "server-http.test.maesh:8080", "server-http", 60*time.Second)
 }
 
 // TestTCPService deploys a TCP service "server" with one Pod called "server" and asserts this service is
@@ -73,7 +73,7 @@ func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/tcp"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/tcp")
 
-	s.assertTCPServiceReachable(c, "server-tcp.test.maesh", 8080, "server-tcp", 10*time.Second)
+	s.assertTCPServiceReachable(c, "server-tcp.test.maesh", 8080, "server-tcp", 60*time.Second)
 }
 
 // TestUDPService deploys a UDP service "server" with one Pod called "server" and asserts this service is
@@ -82,7 +82,7 @@ func (s *ACLDisabledSuite) TestUDPervice(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/udp"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/udp")
 
-	s.assertUDPServiceReachable(c, "server-udp.test.maesh", 8080, "server-udp", 10*time.Second)
+	s.assertUDPServiceReachable(c, "server-udp.test.maesh", 8080, "server-udp", 60*time.Second)
 }
 
 // TestSplitTraffic deploys an HTTP service "server" and a TrafficSplit attached to it configured to distribute equally
@@ -92,8 +92,8 @@ func (s *ACLDisabledSuite) TestSplitTraffic(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/traffic-split"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/traffic-split")
 
-	s.assertHTTPServiceReachable(c, "server-split.test.maesh:8080", "server-v1", 15*time.Second)
-	s.assertHTTPServiceReachable(c, "server-split.test.maesh:8080", "server-v2", 5*time.Second)
+	s.assertHTTPServiceReachable(c, "server-split.test.maesh:8080", "server-v1", 60*time.Second)
+	s.assertHTTPServiceReachable(c, "server-split.test.maesh:8080", "server-v2", 30*time.Second)
 }
 
 func (s *ACLDisabledSuite) assertHTTPServiceReachable(c *check.C, url, expectedHostname string, timeout time.Duration) {
