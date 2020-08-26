@@ -341,8 +341,9 @@ func (c *Controller) processNextWorkItem() bool {
 	}
 
 	defer c.workQueue.Done(key)
-
+	fmt.Println(key)
 	if key != configRefreshKey {
+		fmt.Println("Sync shadow services", key)
 		if err := c.syncShadowService(key.(string)); err != nil {
 			c.handleErr(key, fmt.Errorf("unable to sync shadow service: %w", err))
 			return true
