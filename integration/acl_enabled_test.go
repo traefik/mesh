@@ -1,111 +1,97 @@
 package integration
 
 import (
+	"net/http"
+	"time"
+
+	"github.com/containous/maesh/integration/k3d"
+	"github.com/containous/maesh/integration/tool"
+	"github.com/containous/maesh/integration/try"
 	"github.com/go-check/check"
+	"github.com/sirupsen/logrus"
 	checker "github.com/vdemeester/shakers"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // ACLEnabledSuite.
-type ACLEnabledSuite struct{ BaseSuite }
+type ACLEnabledSuite struct {
+	logger         logrus.FieldLogger
+	cluster        *k3d.Cluster
+	toolAuthorized *tool.Tool
+	toolForbidden  *tool.Tool
+}
 
 func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
-	requiredImages := []string{
-		"containous/maesh:latest",
-		"containous/whoami:v1.0.1",
-		"containous/whoamitcp:v0.0.2",
-		"coredns/coredns:1.6.3",
-		"giantswarm/tiny-tools:3.9",
+	var err error
+
+	requiredImages := []k3d.DockerImage{
+		{Name: "containous/maesh:latest", Local: true},
+		{Name: "traefik:v2.3"},
+		{Name: "coredns/coredns:1.6.3"},
+		{Name: "containous/whoami:v1.0.1"},
+		{Name: "giantswarm/tiny-tools:3.9"},
 	}
-	s.startk3s(c, requiredImages)
-	s.startAndWaitForCoreDNS(c)
-	s.createResources(c, "testdata/smi/crds/")
+
+	s.logger = logrus.New()
+	s.cluster, err = k3d.NewCluster(s.logger, masterURL, k3dClusterName,
+		k3d.WithoutTraefik(),
+		k3d.WithImages(requiredImages...),
+	)
+	c.Assert(err, checker.IsNil)
+
+	c.Assert(s.cluster.CreateNamespace(s.logger, maeshNamespace), checker.IsNil)
+	c.Assert(s.cluster.CreateNamespace(s.logger, testNamespace), checker.IsNil)
+
+	c.Assert(s.cluster.Apply(s.logger, smiCRDs), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/tool/tool-authorized.yaml"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/tool/tool-forbidden.yaml"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/maesh/controller-acl-enabled.yaml"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/maesh/proxy.yaml"), checker.IsNil)
+
+	c.Assert(s.cluster.WaitReadyPod("tool-authorized", testNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyPod("tool-forbidden", testNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 30*time.Second), checker.IsNil)
+
+	s.toolAuthorized = tool.New(s.logger, "tool-authorized", testNamespace)
+	s.toolForbidden = tool.New(s.logger, "tool-forbidden", testNamespace)
 }
 
 func (s *ACLEnabledSuite) TearDownSuite(c *check.C) {
-	s.stopK3s()
+	c.Assert(s.cluster.Stop(s.logger), checker.IsNil)
 }
 
-func (s *ACLEnabledSuite) TestTrafficTargetWithACL(c *check.C) {
-	s.testTrafficTarget(false, true, c)
+func (s *ACLEnabledSuite) TestHTTPServiceWithTrafficTarget(c *check.C) {
+	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_enabled/http"), checker.IsNil)
+	defer s.cluster.Delete(s.logger, "testdata/acl_enabled/http")
+
+	s.logger.Infof("Asserting TrafficTarget with no HTTPRouteGroup are enforced")
+	s.assertHTTPServiceStatus(c, s.toolAuthorized, "server-http.test.maesh:8080", nil, http.StatusOK)
+	s.assertHTTPServiceStatus(c, s.toolForbidden, "server-http.test.maesh:8080", nil, http.StatusForbidden)
+
+	s.logger.Infof("Asserting HTTPRouteGroup path filtering is enforced")
+	s.assertHTTPServiceStatus(c, s.toolAuthorized, "server-http-api.test.maesh:8080/api", nil, http.StatusOK)
+	s.assertHTTPServiceStatus(c, s.toolAuthorized, "server-http-api.test.maesh:8080", nil, http.StatusForbidden)
+
+	s.logger.Infof("Asserting HTTPRouteGroup header filtering is enforced")
+	s.assertHTTPServiceStatus(c, s.toolAuthorized, "server-http-header.test.maesh:8080", map[string]string{"Authorized": "true"}, http.StatusOK)
+	s.assertHTTPServiceStatus(c, s.toolAuthorized, "server-http-header.test.maesh:8080", map[string]string{"Authorized": "false"}, http.StatusForbidden)
 }
 
-// For the sake of BC, we need be check if the SMI option is handle correctly.
-func (s *ACLEnabledSuite) TestTrafficTargetWithSMI(c *check.C) {
-	s.testTrafficTarget(true, false, c)
+func (s *ACLEnabledSuite) TestHTTPServiceWithTrafficSplit(c *check.C) {
+	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_enabled/traffic-split"), checker.IsNil)
+	defer s.cluster.Delete(s.logger, "testdata/acl_enabled/traffic-split")
+
+	s.logger.Info("Asserting TrafficTarget is enforced")
+	s.assertHTTPServiceStatus(c, s.toolAuthorized, "server-http-split.test.maesh:8080", nil, http.StatusOK)
+	s.assertHTTPServiceStatus(c, s.toolForbidden, "server-http-split.test.maesh:8080", nil, http.StatusForbidden)
 }
 
-func (s *ACLEnabledSuite) testTrafficTarget(smi, acl bool, c *check.C) {
-	s.createResources(c, "testdata/acl/enabled/traffic-target")
-	defer s.deleteResources(c, "testdata/acl/enabled/traffic-target")
-	defer s.deleteShadowServices(c)
+func (s *ACLEnabledSuite) assertHTTPServiceStatus(c *check.C, t *tool.Tool, url string, headers map[string]string, expectedStatus int) {
+	s.logger.Infof("Asserting status is %q on %q with headers: %v", http.StatusText(expectedStatus), url, headers)
 
-	s.waitForPods(c, []string{"client-a", "client-b", "server"})
-
-	cmd := s.startMaeshBinaryCmd(c, smi, acl)
-	err := cmd.Start()
+	err := try.Retry(func() error {
+		return t.Curl(url, headers, try.StatusCodeIs(expectedStatus))
+	}, 60*time.Second)
 
 	c.Assert(err, checker.IsNil)
-	defer s.stopMaeshBinary(c, cmd.Process)
-
-	config := s.testConfigurationWithReturn(c, "testdata/acl/enabled/traffic-target.json")
-
-	svc := s.getService(c, "server")
-	tt := s.getTrafficTarget(c, "traffic-target")
-	serverPod := s.getPod(c, "server")
-	clientAPod := s.getPod(c, "client-a")
-
-	s.checkBlockAllMiddleware(c, config)
-	s.checkHTTPReadinessService(c, config)
-	s.checkTrafficTargetLoadBalancer(c, config, tt, svc, []*corev1.Pod{serverPod})
-	s.checkTrafficTargetWhitelistDirect(c, config, tt, svc, []*corev1.Pod{clientAPod})
-}
-
-func (s *ACLEnabledSuite) TestTrafficSplitACLEnable(c *check.C) {
-	s.testTrafficSplit(false, true, c)
-}
-
-// For the sake of BC, we need be check if the SMI option is handle correctly.
-func (s *ACLEnabledSuite) TestTrafficSplitSMIEnable(c *check.C) {
-	s.testTrafficSplit(true, false, c)
-}
-
-func (s *ACLEnabledSuite) testTrafficSplit(smi, acl bool, c *check.C) {
-	s.createResources(c, "testdata/acl/enabled/traffic-split")
-	defer s.deleteResources(c, "testdata/acl/enabled/traffic-split")
-	defer s.deleteShadowServices(c)
-
-	s.waitForPods(c, []string{"client-a", "client-b", "server-v1", "server-v2"})
-
-	cmd := s.startMaeshBinaryCmd(c, smi, acl)
-	err := cmd.Start()
-
-	c.Assert(err, checker.IsNil)
-	defer s.stopMaeshBinary(c, cmd.Process)
-
-	config := s.testConfigurationWithReturn(c, "testdata/acl/enabled/traffic-split.json")
-
-	s.checkBlockAllMiddleware(c, config)
-	s.checkHTTPReadinessService(c, config)
-
-	tt := s.getTrafficTarget(c, "traffic-target")
-	ts := s.getTrafficSplit(c, "traffic-split")
-	clientAPod := s.getPod(c, "client-a")
-	serverSvc := s.getService(c, "server")
-
-	s.checkTrafficSplitWhitelistDirect(c, config, ts, serverSvc, []*corev1.Pod{clientAPod})
-
-	serverV1Svc := s.getService(c, "server-v1")
-	serverV1Pod := s.getPod(c, "server-v1")
-
-	s.checkTrafficTargetLoadBalancer(c, config, tt, serverV1Svc, []*corev1.Pod{serverV1Pod})
-	s.checkTrafficTargetWhitelistDirect(c, config, tt, serverV1Svc, []*corev1.Pod{clientAPod})
-	s.checkTrafficTargetWhitelistIndirect(c, config, tt, serverV1Svc, []*corev1.Pod{clientAPod})
-
-	serverV2Svc := s.getService(c, "server-v2")
-	serverV2Pod := s.getPod(c, "server-v2")
-
-	s.checkTrafficTargetLoadBalancer(c, config, tt, serverV2Svc, []*corev1.Pod{serverV2Pod})
-	s.checkTrafficTargetWhitelistDirect(c, config, tt, serverV2Svc, []*corev1.Pod{clientAPod})
-	s.checkTrafficTargetWhitelistIndirect(c, config, tt, serverV2Svc, []*corev1.Pod{clientAPod})
 }
