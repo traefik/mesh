@@ -65,11 +65,11 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 	switch dnsProvider {
 	case dns.CoreDNS:
 		if err := dnsClient.ConfigureCoreDNS(ctx, metav1.NamespaceSystem, pConfig.ClusterDomain, pConfig.Namespace); err != nil {
-			return fmt.Errorf("unable to configure CoreDNS: %v", err)
+			return fmt.Errorf("unable to configure CoreDNS: %w", err)
 		}
 	case dns.KubeDNS:
 		if err := dnsClient.ConfigureKubeDNS(ctx, pConfig.ClusterDomain, pConfig.Namespace); err != nil {
-			return fmt.Errorf("unable to configure KubeDNS: %v", err)
+			return fmt.Errorf("unable to configure KubeDNS: %w", err)
 		}
 	}
 

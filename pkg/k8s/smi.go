@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// CheckSMIVersion checks if the SMI CRDs versions installed matches what Maesh supports.
+// CheckSMIVersion checks if the SMI CRDs versions installed match the supported versions.
 func CheckSMIVersion(client kubernetes.Interface, aclEnabled bool) error {
 	serverGroups, err := client.Discovery().ServerGroups()
 	if err != nil {
