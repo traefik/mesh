@@ -298,6 +298,7 @@ func createCluster(logger logrus.FieldLogger, clusterName string, cmdOpts []stri
 		"--api-port", "8443",
 		"--agents", "1",
 		"--image", fmt.Sprintf("%s:%s", k3sImage, k3sVersion),
+		"--wait",
 		"--timeout", "30s",
 	}
 
