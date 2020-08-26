@@ -54,7 +54,9 @@ func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 }
 
 func (s *ACLDisabledSuite) TearDownSuite(c *check.C) {
-	c.Assert(s.cluster.Stop(s.logger), checker.IsNil)
+	if s.cluster != nil {
+		c.Assert(s.cluster.Stop(s.logger), checker.IsNil)
+	}
 }
 
 // TestHTTPService deploys an HTTP service "server" with one Pod called "server" and asserts this service is
@@ -69,7 +71,6 @@ func (s *ACLDisabledSuite) TestHTTPService(c *check.C) {
 // TestTCPService deploys a TCP service "server" with one Pod called "server" and asserts this service is
 // reachable and that a connection has been established with this Pod.
 func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
-	time.Sleep(100000 * time.Second)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/tcp"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/tcp")
 

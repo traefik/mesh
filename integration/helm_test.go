@@ -37,7 +37,9 @@ func (s *HelmSuite) SetUpSuite(c *check.C) {
 }
 
 func (s *HelmSuite) TearDownSuite(c *check.C) {
-	c.Assert(s.cluster.Stop(s.logger), checker.IsNil)
+	if s.cluster != nil {
+		c.Assert(s.cluster.Stop(s.logger), checker.IsNil)
+	}
 }
 
 func (s *HelmSuite) TestACLDisabled(c *check.C) {
