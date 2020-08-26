@@ -91,7 +91,7 @@ func (s *ACLEnabledSuite) assertHTTPServiceStatus(c *check.C, t *tool.Tool, url 
 
 	err := try.Retry(func() error {
 		return t.Curl(url, headers, try.StatusCodeIs(expectedStatus))
-	}, 20*time.Second)
+	}, 60*time.Second)
 
 	c.Assert(err, checker.IsNil)
 }
