@@ -36,12 +36,12 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 
-	k8sClient, err := k8s.NewKubernetesClient(log, pConfig.MasterURL, pConfig.KubeConfig)
+	client, err := k8s.NewClient(log, pConfig.MasterURL, pConfig.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("unable to create kubernetes client: %w", err)
 	}
 
-	dnsClient := dns.NewClient(log, k8sClient)
+	dnsClient := dns.NewClient(log, client.KubernetesClient())
 
 	if pConfig.SMI {
 		log.Warnf("SMI mode is deprecated, please consider using --acl instead")
@@ -51,7 +51,7 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 
 	log.Debugf("ACL mode enabled: %t", aclEnabled)
 
-	if err = k8s.CheckSMIVersion(k8sClient, aclEnabled); err != nil {
+	if err = k8s.CheckSMIVersion(client.KubernetesClient(), aclEnabled); err != nil {
 		return fmt.Errorf("unsupported SMI version: %w", err)
 	}
 
