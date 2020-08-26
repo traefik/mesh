@@ -104,6 +104,10 @@ func NewCluster(logger logrus.FieldLogger, masterURL string, name string, opts .
 		return nil, fmt.Errorf("unable to create kubernetes client: %w", err)
 	}
 
+	if err = waitClusterReady(client); err != nil {
+		return nil, err
+	}
+
 	return &Cluster{
 		logger:     logger,
 		workingDir: workingDir,
@@ -298,6 +302,7 @@ func createCluster(logger logrus.FieldLogger, clusterName string, cmdOpts []stri
 		"--api-port", "8443",
 		"--agents", "1",
 		"--image", fmt.Sprintf("%s:%s", k3sImage, k3sVersion),
+		"--wait",
 		"--timeout", "30s",
 	}
 
@@ -397,4 +402,17 @@ func createK8sClient(logger logrus.FieldLogger, clusterName, masterURL string) (
 	}
 
 	return client, nil
+}
+
+func waitClusterReady(client k8s.Client) error {
+	err := try.Retry(func() error {
+		_, err := client.KubernetesClient().Discovery().ServerVersion()
+		return err
+	}, 60*time.Second)
+
+	if err != nil {
+		return fmt.Errorf("timed out waiting for the cluster to be ready: %w", err)
+	}
+
+	return nil
 }
