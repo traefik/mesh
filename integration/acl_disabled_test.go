@@ -25,7 +25,6 @@ func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 	requiredImages := []k3d.DockerImage{
 		{Name: "containous/maesh:latest", Local: true},
 		{Name: "traefik:v2.3"},
-		{Name: "coredns/coredns:1.6.3"},
 		{Name: "containous/whoami:v1.0.1"},
 		{Name: "containous/whoamitcp:v0.0.2"},
 		{Name: "containous/whoamiudp:v0.0.1"},
@@ -47,9 +46,9 @@ func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/maesh/controller-acl-disabled.yaml"), checker.IsNil)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/maesh/proxy.yaml"), checker.IsNil)
 
-	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 30*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 60*time.Second), checker.IsNil)
 
 	s.tool = tool.New(s.logger, "tool", testNamespace)
 }
@@ -70,6 +69,7 @@ func (s *ACLDisabledSuite) TestHTTPService(c *check.C) {
 // TestTCPService deploys a TCP service "server" with one Pod called "server" and asserts this service is
 // reachable and that a connection has been established with this Pod.
 func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
+	time.Sleep(100000 * time.Second)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/tcp"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/tcp")
 

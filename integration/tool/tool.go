@@ -62,7 +62,7 @@ func (t *Tool) Curl(url string, headers map[string]string, conditions ...try.Res
 	output, err := t.exec(append(args, url))
 	if err != nil {
 		t.logger.WithError(err).Debug("Curl command has failed")
-		return nil
+		return err
 	}
 
 	reader := bufio.NewReader(bytes.NewReader(output))

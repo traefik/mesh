@@ -49,7 +49,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/tool/tool.yaml"), checker.IsNil)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/coredns/whoami-shadow-service.yaml"), checker.IsNil)
 
-	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 60*time.Second), checker.IsNil)
 
 	s.tool = tool.New(s.logger, "tool", testNamespace)
 }

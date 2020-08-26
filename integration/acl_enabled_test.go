@@ -26,7 +26,6 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	requiredImages := []k3d.DockerImage{
 		{Name: "containous/maesh:latest", Local: true},
 		{Name: "traefik:v2.3"},
-		{Name: "coredns/coredns:1.6.3"},
 		{Name: "containous/whoami:v1.0.1"},
 		{Name: "giantswarm/tiny-tools:3.9"},
 	}
@@ -47,10 +46,10 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/maesh/controller-acl-enabled.yaml"), checker.IsNil)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/maesh/proxy.yaml"), checker.IsNil)
 
-	c.Assert(s.cluster.WaitReadyPod("tool-authorized", testNamespace, 30*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyPod("tool-forbidden", testNamespace, 30*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyPod("tool-authorized", testNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyPod("tool-forbidden", testNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 60*time.Second), checker.IsNil)
 
 	s.toolAuthorized = tool.New(s.logger, "tool-authorized", testNamespace)
 	s.toolForbidden = tool.New(s.logger, "tool-forbidden", testNamespace)

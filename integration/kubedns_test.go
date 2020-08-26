@@ -47,7 +47,7 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/kubedns/"), checker.IsNil)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/coredns/whoami-shadow-service.yaml"), checker.IsNil)
 
-	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 60*time.Second), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("coredns", maeshNamespace, 60*time.Second), checker.IsNil)
 
@@ -68,6 +68,6 @@ func (s *KubeDNSSuite) TestKubeDNSDig(c *check.C) {
 
 	err := try.Retry(func() error {
 		return s.tool.Dig("whoami.whoami.maesh")
-	}, 30*time.Second)
+	}, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }

@@ -20,7 +20,7 @@ import (
 
 var (
 	k3sImage   = "rancher/k3s"
-	k3sVersion = "v0.10.1"
+	k3sVersion = "v1.18.6-k3s1"
 )
 
 // DockerImage holds the configuration of a Docker image.
@@ -41,14 +41,14 @@ type ClusterOptionFunc func(opts *ClusterOptions)
 // WithoutTraefik tells k3d to not start a k3s cluster with Traefik already installed in.
 func WithoutTraefik() func(opts *ClusterOptions) {
 	return func(opts *ClusterOptions) {
-		opts.Cmd = append(opts.Cmd, "--server-arg", "--no-deploy=traefik")
+		opts.Cmd = append(opts.Cmd, "--k3s-server-arg", "--no-deploy=traefik")
 	}
 }
 
 // WithoutCoreDNS tells k3d to not start a k3s cluster with CoreDNS already installed in.
 func WithoutCoreDNS() func(opts *ClusterOptions) {
 	return func(opts *ClusterOptions) {
-		opts.Cmd = append(opts.Cmd, "--server-arg", "--no-deploy=coredns")
+		opts.Cmd = append(opts.Cmd, "--k3s-server-arg", "--no-deploy=coredns")
 	}
 }
 
@@ -70,7 +70,11 @@ type Cluster struct {
 
 // NewCluster creates a new k3s cluster using the given configuration.
 func NewCluster(logger logrus.FieldLogger, masterURL string, name string, opts ...ClusterOptionFunc) (*Cluster, error) {
-	clusterOpts := ClusterOptions{}
+	clusterOpts := ClusterOptions{
+		Images: []DockerImage{
+			{Name: "rancher/coredns-coredns:1.6.3"},
+		},
+	}
 
 	for _, opt := range opts {
 		opt(&clusterOpts)
@@ -110,7 +114,7 @@ func NewCluster(logger logrus.FieldLogger, masterURL string, name string, opts .
 
 // Stop stops the cluster.
 func (c *Cluster) Stop(logger logrus.FieldLogger) error {
-	cmd := exec.Command("k3d", "delete", "--name", c.Name)
+	cmd := exec.Command("k3d", "cluster", "delete", c.Name)
 	cmd.Env = os.Environ()
 
 	logger.Infof("Stopping k3s cluster %q...", c.Name)
@@ -289,11 +293,12 @@ func createCluster(logger logrus.FieldLogger, clusterName string, cmdOpts []stri
 	logger.Infof("Creating k3d cluster %s...", clusterName)
 
 	opts := []string{
-		"create", "--name", clusterName,
+		"cluster", "create", clusterName,
+		"--no-lb",
 		"--api-port", "8443",
-		"--workers", "1",
+		"--agents", "1",
 		"--image", fmt.Sprintf("%s:%s", k3sImage, k3sVersion),
-		"--wait", "30",
+		"--timeout", "30s",
 	}
 
 	cmd := exec.Command("k3d", append(opts, cmdOpts...)...)
@@ -331,7 +336,7 @@ func pullDockerImages(logger logrus.FieldLogger, images []DockerImage) error {
 
 func importDockerImages(logger logrus.FieldLogger, clusterName string, images []DockerImage) error {
 	args := []string{
-		"import-images", "--name", clusterName,
+		"image", "import", "--cluster", clusterName,
 	}
 
 	for _, image := range images {
@@ -353,7 +358,7 @@ func importDockerImages(logger logrus.FieldLogger, clusterName string, images []
 }
 
 func createK8sClient(logger logrus.FieldLogger, clusterName, masterURL string) (k8s.Client, error) {
-	cmd := exec.Command("k3d", "get-kubeconfig", "--name", clusterName)
+	cmd := exec.Command("k3d", "kubeconfig", "write", clusterName)
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()

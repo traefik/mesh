@@ -23,7 +23,6 @@ func (s *HelmSuite) SetUpSuite(c *check.C) {
 
 	requiredImages := []k3d.DockerImage{
 		{Name: "containous/maesh:latest", Local: true},
-		{Name: "coredns/coredns:1.6.3"},
 		{Name: "traefik:v2.3"},
 	}
 
@@ -45,24 +44,24 @@ func (s *HelmSuite) TestACLDisabled(c *check.C) {
 	s.installHelmMaesh(c, false, false)
 	defer s.uninstallHelmMaesh(c)
 
-	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 60*time.Second), checker.IsNil)
 }
 
 func (s *HelmSuite) TestACLEnabled(c *check.C) {
 	s.installHelmMaesh(c, true, false)
 	defer s.uninstallHelmMaesh(c)
 
-	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 60*time.Second), checker.IsNil)
 }
 
 func (s *HelmSuite) TestKubeDNSEnabled(c *check.C) {
 	s.installHelmMaesh(c, false, true)
 	defer s.uninstallHelmMaesh(c)
 
-	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 30*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 30*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 60*time.Second), checker.IsNil)
 }
 
 func (s *HelmSuite) installHelmMaesh(c *check.C, acl bool, kubeDNS bool) {
