@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-http-split
+  namespace: test
+  labels:
+    app: server-http-split
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: server-http-split
+  selector:
+    app: server-http-split
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: server-http-split-v1
+  namespace: test
+  labels:
+    app: server-http-split-v1
+spec:
+  serviceAccountName: server-split
+  containers:
+    - name: server-http-split-v1
+      image: containous/whoami:v1.0.1
+      imagePullPolicy: IfNotPresent
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 80
+        periodSeconds: 1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-http-split-v1
+  namespace: test
+  labels:
+    app: server-http-split-v1
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: server-http-split-v1
+      targetPort: 80
+  selector:
+    app: server-http-split-v1
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: server-http-split-v2
+  namespace: test
+  labels:
+    app: server-http-split-v2
+spec:
+  serviceAccountName: server-split
+  containers:
+    - name: server-http-split-v2
+      image: containous/whoami:v1.0.1
+      imagePullPolicy: IfNotPresent
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 80
+        periodSeconds: 1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-http-split-v2
+  namespace: test
+  labels:
+    app: server-http-split-v2
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: server-http-split-v2
+      targetPort: 80
+  selector:
+    app: server-http-split-v2
+
+---
+apiVersion: split.smi-spec.io/v1alpha3
+kind: TrafficSplit
+metadata:
+  name: server-http-split
+  namespace: test
+spec:
+  service: server-http-split
+  backends:
+    - service: server-http-split-v1
+      weight: 50
+    - service: server-http-split-v2
+      weight: 50
+
+---
+apiVersion: access.smi-spec.io/v1alpha2
+kind: TrafficTarget
+metadata:
+  name: tool-authorized-to-server-http-split
+  namespace: test
+spec:
+  destination:
+    kind: ServiceAccount
+    name: server-split
+    namespace: test
+  sources:
+    - kind: ServiceAccount
+      name: tool-authorized
+      namespace: test
