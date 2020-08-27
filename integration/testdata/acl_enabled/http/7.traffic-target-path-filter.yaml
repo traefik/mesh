@@ -1,0 +1,29 @@
+apiVersion: specs.smi-spec.io/v1alpha3
+kind: HTTPRouteGroup
+metadata:
+  name: http-route-group-api
+  namespace: test
+spec:
+  matches:
+    - name: api
+      pathRegex: /api
+      methods: ["GET"]
+
+---
+apiVersion: access.smi-spec.io/v1alpha2
+kind: TrafficTarget
+metadata:
+  name: traffic-target-path-filter
+  namespace: test
+spec:
+  destination:
+    kind: ServiceAccount
+    name: server-api
+    namespace: test
+  rules:
+    - kind: HTTPRouteGroup
+      name: http-route-group-api
+  sources:
+    - kind: ServiceAccount
+      name: tool-authorized
+      namespace: test
