@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -33,6 +34,7 @@ spec:
     - name: dns-tcp
       port: 53
       protocol: TCP
+
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -42,6 +44,7 @@ metadata:
   labels:
     kubernetes.io/cluster-service: "true"
     addonmanager.kubernetes.io/mode: Reconcile
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -50,6 +53,7 @@ metadata:
   namespace: kube-system
   labels:
     addonmanager.kubernetes.io/mode: EnsureExists
+
 ---
 apiVersion: apps/v1
 kind: Deployment
