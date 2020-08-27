@@ -13,10 +13,7 @@ import (
 )
 
 func TestCleanup_New(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", false)
+	clientMock := k8s.NewClientMock(t, "mock.yaml")
 	logger := logrus.New()
 
 	logger.SetOutput(os.Stdout)
@@ -27,10 +24,7 @@ func TestCleanup_New(t *testing.T) {
 }
 
 func TestCleanup_CleanShadowServices(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", false)
+	clientMock := k8s.NewClientMock(t, "mock.yaml")
 	logger := logrus.New()
 
 	logger.SetOutput(os.Stdout)
@@ -39,16 +33,16 @@ func TestCleanup_CleanShadowServices(t *testing.T) {
 	cleanup := NewCleanup(logger, clientMock.KubernetesClient(), "maesh")
 	require.NotNil(t, cleanup)
 
-	err := cleanup.CleanShadowServices(ctx)
+	err := cleanup.CleanShadowServices(context.Background())
 	require.NoError(t, err)
 
-	serviceList, err := clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
+	serviceList, err := clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{
 		LabelSelector: "app=maesh,type=shadow",
 	})
 	require.NoError(t, err)
 	assert.Len(t, serviceList.Items, 0)
 
-	serviceList, err = clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	serviceList, err = clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
 	require.NoError(t, err)
 	assert.Len(t, serviceList.Items, 2)
 }

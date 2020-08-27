@@ -22,20 +22,11 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - namespaces
-    verbs:
-      - get
-      - create
-  - apiGroups:
-      - ""
-    resources:
       - configmaps
     verbs:
       - get
       - create
       - update
-      - list
-      - watch
   - apiGroups:
       - ""
     resources:
@@ -54,7 +45,6 @@ rules:
     verbs:
       - get
       - update
-      - create
   - apiGroups:
       - access.smi-spec.io
       - specs.smi-spec.io
