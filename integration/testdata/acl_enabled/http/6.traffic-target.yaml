@@ -1,3 +1,4 @@
+---
 apiVersion: access.smi-spec.io/v1alpha2
 kind: TrafficTarget
 metadata:

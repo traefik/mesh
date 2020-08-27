@@ -64,7 +64,7 @@ func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
 	versions := []string{"1.5.2", "1.6.3", "1.7.0"}
 
 	for _, version := range versions {
-		c.Assert(s.resetCoreDNSCoreFile(true), checker.IsNil)
+		c.Assert(s.resetCoreDNSCorefile(true), checker.IsNil)
 
 		s.testCoreDNSVersion(c, version)
 	}
@@ -75,7 +75,7 @@ func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
 	versions = []string{"1.3.1", "1.4.0"}
 
 	for _, version := range versions {
-		c.Assert(s.resetCoreDNSCoreFile(false), checker.IsNil)
+		c.Assert(s.resetCoreDNSCorefile(false), checker.IsNil)
 
 		s.testCoreDNSVersion(c, version)
 	}
@@ -133,7 +133,7 @@ func (s *CoreDNSSuite) removeCoreDNSReadinessProbe() error {
 	})
 }
 
-func (s *CoreDNSSuite) resetCoreDNSCoreFile(ready bool) error {
+func (s *CoreDNSSuite) resetCoreDNSCorefile(ready bool) error {
 	ctx := context.Background()
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
