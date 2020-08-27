@@ -60,32 +60,23 @@ func (s *CoreDNSSuite) TearDownSuite(c *check.C) {
 	}
 }
 
-// TestCoreDNSLegacy tests specific version of CoreDNS which did not support the `ready` plugin. It checks that
-// the prepare command successfully patches the Corefile or custom Corefile and that we can dig it.
-func (s *CoreDNSSuite) TestCoreDNSLegacy(c *check.C) {
-	versions := []string{"1.3.1", "1.4.0"}
-
-	c.Assert(s.cluster.Apply(s.logger, "testdata/coredns/coredns-legacy.yaml"), checker.IsNil)
-	defer s.cluster.Delete(s.logger, "testdata/coredns/coredns-legacy.yaml")
-
-	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 2*time.Minute), checker.IsNil)
-
-	for _, version := range versions {
-		s.testCoreDNSVersion(c, version)
-	}
-}
-
-// TestCoreDNS tests CoreDNS version after 1.4.0 and make sure once patched ".maesh" urls can be resolved
-// successfully.
 func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
 	versions := []string{"1.5.2", "1.6.3", "1.7.0"}
 
-	c.Assert(s.cluster.Apply(s.logger, "testdata/coredns/coredns.yaml"), checker.IsNil)
-	defer s.cluster.Delete(s.logger, "testdata/coredns/coredns.yaml")
+	for _, version := range versions {
+		c.Assert(s.resetCoreDNSCoreFile(true), checker.IsNil)
 
-	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 2*time.Minute), checker.IsNil)
+		s.testCoreDNSVersion(c, version)
+	}
+
+	// Test specific versions of CoreDNS which did not support the `ready` plugin.
+	c.Assert(s.removeCoreDNSReadinessProbe(), checker.IsNil)
+
+	versions = []string{"1.3.1", "1.4.0"}
 
 	for _, version := range versions {
+		c.Assert(s.resetCoreDNSCoreFile(false), checker.IsNil)
+
 		s.testCoreDNSVersion(c, version)
 	}
 }
@@ -93,17 +84,13 @@ func (s *CoreDNSSuite) TestCoreDNS(c *check.C) {
 func (s *CoreDNSSuite) testCoreDNSVersion(c *check.C, version string) {
 	s.logger.Infof("Asserting CoreDNS %s has been patched successfully and can be dug", version)
 
-	err := try.Retry(func() error {
-		return s.setCoreDNSVersion(version)
-	}, 60*time.Second)
-	c.Assert(err, checker.IsNil)
-
-	c.Assert(maeshPrepare(), checker.IsNil)
-
-	// Wait for coreDNS, as the pods will be restarted.
+	c.Assert(s.setCoreDNSVersion(version), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
-	err = try.Retry(func() error {
+	c.Assert(maeshPrepare(), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
+
+	err := try.Retry(func() error {
 		return s.tool.Dig("whoami.whoami.maesh")
 	}, 30*time.Second)
 	c.Assert(err, checker.IsNil)
@@ -112,27 +99,77 @@ func (s *CoreDNSSuite) testCoreDNSVersion(c *check.C, version string) {
 func (s *CoreDNSSuite) setCoreDNSVersion(version string) error {
 	ctx := context.Background()
 
-	// Get current coreDNS deployment.
-	deployment, err := s.cluster.Client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
-	if err != nil {
+	s.logger.Debugf("Updating CoreDNS version to %q...", version)
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Get current coreDNS deployment.
+		deployment, err := s.cluster.Client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		deployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("coredns/coredns:%s", version)
+
+		_, err = s.cluster.Client.KubernetesClient().AppsV1().Deployments(deployment.Namespace).Update(context.Background(), deployment, metav1.UpdateOptions{})
 		return err
-	}
-
-	newDeployment := deployment.DeepCopy()
-
-	if len(newDeployment.Spec.Template.Spec.Containers) != 1 {
-		return fmt.Errorf("expected 1 containers, got %d", len(newDeployment.Spec.Template.Spec.Containers))
-	}
-
-	newDeployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("coredns/coredns:%s", version)
-
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_, updateErr := s.cluster.Client.KubernetesClient().AppsV1().Deployments(newDeployment.Namespace).Update(context.Background(), newDeployment, metav1.UpdateOptions{})
-		return updateErr
 	})
-	if err != nil {
-		return fmt.Errorf("unable to update coredns deployment: %w", err)
-	}
+}
 
-	return nil
+func (s *CoreDNSSuite) removeCoreDNSReadinessProbe() error {
+	ctx := context.Background()
+
+	s.logger.Debug("Removing CoreDNS readiness probe...")
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		deployment, err := s.cluster.Client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
+
+		_, err = s.cluster.Client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Update(ctx, deployment, metav1.UpdateOptions{})
+		return err
+	})
+}
+
+func (s *CoreDNSSuite) resetCoreDNSCoreFile(ready bool) error {
+	ctx := context.Background()
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		configmap, err := s.cluster.Client.KubernetesClient().CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		var readyPlugin string
+
+		if ready {
+			readyPlugin = "ready"
+		}
+
+		configmap.Data["Corefile"] = fmt.Sprintf(`.:53 {
+	errors
+	health
+	%s
+	kubernetes cluster.local in-addr.arpa ip6.arpa {
+		pods insecure
+		fallthrough in-addr.arpa ip6.arpa
+	}
+	hosts /etc/coredns/NodeHosts {
+		reload 1s
+		fallthrough
+	}
+	prometheus :9153
+	forward . /etc/resolv.conf
+	cache 30
+	loop
+	reload
+	loadbalance
+}
+`, readyPlugin)
+
+		_, err = s.cluster.Client.KubernetesClient().CoreV1().ConfigMaps(metav1.NamespaceSystem).Update(ctx, configmap, metav1.UpdateOptions{})
+		return err
+	})
 }
