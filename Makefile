@@ -108,7 +108,7 @@ helm-lint: helm
 	helm lint helm/chart/maesh
 
 k3d:
-	@command -v k3d >/dev/null 2>&1 || curl -s https://raw.githubusercontent.com/rancher/k3d/v1.5.1/install.sh | TAG=v1.5.1 bash
+	@command -v k3d >/dev/null 2>&1 || curl -s https://raw.githubusercontent.com/rancher/k3d/v3.0.1/install.sh | TAG=v3.0.1 bash
 
 pages:
 	mkdir -p $(CURDIR)/pages
