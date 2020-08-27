@@ -10,3 +10,4 @@ metadata:
     chart: {{ include "maesh.chartLabel" . | quote}}
     release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service | quote }}
+automountServiceAccountToken: false

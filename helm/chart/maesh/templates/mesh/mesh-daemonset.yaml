@@ -34,7 +34,6 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: maesh-mesh
-      automountServiceAccountToken: true
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
