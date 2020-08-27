@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: server-http
+  namespace: test
+  labels:
+    app: server-http
+spec:
+  serviceAccountName: server
+  containers:
+    - name: server-http
+      image: containous/whoami:v1.0.1
+      imagePullPolicy: IfNotPresent
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 80
+        periodSeconds: 1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-http
+  namespace: test
+  labels:
+    app: server-http
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: server-http
+      targetPort: 80
+  selector:
+    app: server-http

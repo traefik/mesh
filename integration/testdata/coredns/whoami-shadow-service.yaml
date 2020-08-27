@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maesh-whoami-6d61657368-whoami
+  namespace: maesh
+  labels:
+    app: maesh
+    type: shadow
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: whoami
+      targetPort: 80
+  selector:
+    app: maesh-mesh

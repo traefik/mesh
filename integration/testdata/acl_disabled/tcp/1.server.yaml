@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: server-tcp
+  namespace: test
+  labels:
+    app: server-tcp
+spec:
+  containers:
+  - name: server-tcp
+    image: containous/whoamitcp:v0.0.2
+    imagePullPolicy: IfNotPresent
+    readinessProbe:
+      tcpSocket:
+        port: 8080
+      periodSeconds: 1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-tcp
+  namespace: test
+  labels:
+    app: server-tcp
+    plop: cool
+  annotations:
+    maesh.containo.us/traffic-type: tcp
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: server-tcp
+  selector:
+    app: server-tcp

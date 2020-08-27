@@ -1,0 +1,15 @@
+---
+apiVersion: access.smi-spec.io/v1alpha2
+kind: TrafficTarget
+metadata:
+  name: tool-authorized-to-server-http
+  namespace: test
+spec:
+  destination:
+    kind: ServiceAccount
+    name: server
+    namespace: test
+  sources:
+    - kind: ServiceAccount
+      name: tool-authorized
+      namespace: test

@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tool
+  namespace: test
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tool
+  namespace: test
+spec:
+  serviceAccountName: tool
+  containers:
+    - name: tool
+      image: giantswarm/tiny-tools:3.9
+      command:
+        - "sleep"
+        - "36000"
