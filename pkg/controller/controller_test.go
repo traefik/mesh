@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -29,11 +28,8 @@ func (a *storeMock) SetTopology(topo *topology.Topology)  {}
 func (a *storeMock) SetReadiness(isReady bool)            {}
 
 func TestController_NewMeshController(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	store := &storeMock{}
-	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", false)
+	clientMock := k8s.NewClientMock(t, "mock.yaml")
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
@@ -57,11 +53,8 @@ func TestController_NewMeshController(t *testing.T) {
 }
 
 func TestController_NewMeshControllerWithSMI(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	store := &storeMock{}
-	clientMock := k8s.NewClientMock(t, ctx.Done(), "mock.yaml", true)
+	clientMock := k8s.NewClientMock(t, "mock.yaml")
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
