@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -147,10 +146,7 @@ func TestGetMeshNodes(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			clientMock := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
+			clientMock := k8s.NewClientMock(t, test.mockFile)
 			api, err := NewAPI(log, 9000, localhost, clientMock.KubernetesClient(), "foo")
 
 			require.NoError(t, err)
@@ -203,10 +199,7 @@ func TestGetMeshNodeConfiguration(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			clientMock := k8s.NewClientMock(t, ctx.Done(), test.mockFile, false)
+			clientMock := k8s.NewClientMock(t, test.mockFile)
 			api, err := NewAPI(log, 9000, localhost, clientMock.KubernetesClient(), "foo")
 
 			require.NoError(t, err)

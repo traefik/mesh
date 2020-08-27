@@ -13,23 +13,14 @@ import (
 	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha3"
 	accessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned"
 	fakeaccessclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/clientset/versioned/fake"
-	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
-	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha2"
 	specsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned"
 	fakespecsclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/clientset/versioned/fake"
-	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
-	specslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha3"
 	splitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned"
 	fakesplitclient "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/clientset/versioned/fake"
-	splitinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/informers/externalversions"
-	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha3"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/informers"
 	kubeclient "k8s.io/client-go/kubernetes"
 	fakekubeclient "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
-	listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/cache"
 )
 
 // Ensure the client mock fits the Client interface.
@@ -61,24 +52,10 @@ type ClientMock struct {
 	accessClient *fakeaccessclient.Clientset
 	specsClient  *fakespecsclient.Clientset
 	splitClient  *fakesplitclient.Clientset
-
-	informerFactory       informers.SharedInformerFactory
-	accessInformerFactory accessinformer.SharedInformerFactory
-	specsInformerFactory  specsinformer.SharedInformerFactory
-	splitInformerFactory  splitinformer.SharedInformerFactory
-
-	PodLister            listers.PodLister
-	ServiceLister        listers.ServiceLister
-	EndpointsLister      listers.EndpointsLister
-	NamespaceLister      listers.NamespaceLister
-	TrafficTargetLister  accesslister.TrafficTargetLister
-	HTTPRouteGroupLister specslister.HTTPRouteGroupLister
-	TCPRouteLister       specslister.TCPRouteLister
-	TrafficSplitLister   splitlister.TrafficSplitLister
 }
 
 // NewClientMock create a new client mock.
-func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, acl bool) *ClientMock {
+func NewClientMock(testingT *testing.T, path string) *ClientMock {
 	yamlContent, err := ioutil.ReadFile(filepath.FromSlash("./testdata/" + path))
 	if err != nil {
 		panic(err)
@@ -89,92 +66,9 @@ func NewClientMock(testingT *testing.T, stopCh <-chan struct{}, path string, acl
 
 	c.kubeClient = fakekubeclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, CoreObjectKinds)...)
 	c.splitClient = fakesplitclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SplitObjectKinds)...)
-
-	c.informerFactory = informers.NewSharedInformerFactory(c.kubeClient, 0)
-	c.splitInformerFactory = splitinformer.NewSharedInformerFactory(c.splitClient, 0)
-
-	podInformer := c.informerFactory.Core().V1().Pods().Informer()
-	serviceInformer := c.informerFactory.Core().V1().Services().Informer()
-	endpointsInformer := c.informerFactory.Core().V1().Endpoints().Informer()
-	namespaceInformer := c.informerFactory.Core().V1().Namespaces().Informer()
-	trafficSplitInformer := c.splitInformerFactory.Split().V1alpha3().TrafficSplits().Informer()
-
-	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
-	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
-	endpointsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
-	namespaceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
-	trafficSplitInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
-
-	c.PodLister = c.informerFactory.Core().V1().Pods().Lister()
-	c.ServiceLister = c.informerFactory.Core().V1().Services().Lister()
-	c.EndpointsLister = c.informerFactory.Core().V1().Endpoints().Lister()
-	c.NamespaceLister = c.informerFactory.Core().V1().Namespaces().Lister()
-	c.TrafficSplitLister = c.splitInformerFactory.Split().V1alpha3().TrafficSplits().Lister()
-
-	// Start the informers.
-	c.startInformers(stopCh)
-
-	if acl {
-		c.accessClient = fakeaccessclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, AccessObjectKinds)...)
-		c.specsClient = fakespecsclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SpecsObjectKinds)...)
-
-		c.accessInformerFactory = accessinformer.NewSharedInformerFactory(c.accessClient, 0)
-		c.specsInformerFactory = specsinformer.NewSharedInformerFactory(c.specsClient, 0)
-
-		trafficTargetInformer := c.accessInformerFactory.Access().V1alpha2().TrafficTargets().Informer()
-		httpRouteGroupInformer := c.specsInformerFactory.Specs().V1alpha3().HTTPRouteGroups().Informer()
-		tcpRouteInformer := c.specsInformerFactory.Specs().V1alpha3().TCPRoutes().Informer()
-
-		trafficTargetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
-		httpRouteGroupInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
-		tcpRouteInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{})
-
-		c.TrafficTargetLister = c.accessInformerFactory.Access().V1alpha2().TrafficTargets().Lister()
-		c.HTTPRouteGroupLister = c.specsInformerFactory.Specs().V1alpha3().HTTPRouteGroups().Lister()
-		c.TCPRouteLister = c.specsInformerFactory.Specs().V1alpha3().TCPRoutes().Lister()
-
-		// Start the informers.
-		c.startACLInformers(stopCh)
-	}
+	c.specsClient = fakespecsclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SpecsObjectKinds)...)
 
 	return c
-}
-
-// startInformers waits for the kubernetes core informers to start and sync.
-func (c *ClientMock) startInformers(stopCh <-chan struct{}) {
-	c.informerFactory.Start(stopCh)
-
-	for t, ok := range c.informerFactory.WaitForCacheSync(stopCh) {
-		if !ok {
-			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
-		}
-	}
-
-	c.splitInformerFactory.Start(stopCh)
-
-	for t, ok := range c.splitInformerFactory.WaitForCacheSync(stopCh) {
-		if !ok {
-			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
-		}
-	}
-}
-
-// startACLInformers waits for the ACL informers to start and sync.
-func (c *ClientMock) startACLInformers(stopCh <-chan struct{}) {
-	c.accessInformerFactory.Start(stopCh)
-	c.specsInformerFactory.Start(stopCh)
-
-	for t, ok := range c.accessInformerFactory.WaitForCacheSync(stopCh) {
-		if !ok {
-			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
-		}
-	}
-
-	for t, ok := range c.specsInformerFactory.WaitForCacheSync(stopCh) {
-		if !ok {
-			c.testingT.Logf("timed out waiting for controller caches to sync: %s", t)
-		}
-	}
 }
 
 // KubernetesClient is used to get the kubernetes clientset.
