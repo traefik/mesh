@@ -52,7 +52,7 @@ func NewClient(logger logrus.FieldLogger, kubeClient kubernetes.Interface) *Clie
 
 // CheckDNSProvider checks that the DNS provider deployed in the cluster is supported and returns it.
 func (c *Client) CheckDNSProvider(ctx context.Context) (Provider, error) {
-	c.logger.Info("Checking DNS provider")
+	c.logger.Debug("Detecting DNS provider...")
 
 	match, err := c.coreDNSMatch(ctx)
 	if err != nil {
@@ -76,11 +76,11 @@ func (c *Client) CheckDNSProvider(ctx context.Context) (Provider, error) {
 }
 
 func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
-	c.logger.Info("Checking CoreDNS")
+	c.logger.Debugf("Checking if CoreDNS is installed in namespace %q...", metav1.NamespaceSystem)
 
 	deployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
-		c.logger.Debugf("CoreDNS deployment does not exist in namespace %q", metav1.NamespaceSystem)
+		c.logger.Debug("CoreDNS deployment not found")
 		return false, nil
 	}
 
@@ -99,20 +99,22 @@ func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 	}
 
 	if !versionConstraint.Check(version) {
+		c.logger.Debugf("CoreDNS version is not supported, must satisfy %q, got %q", versionConstraint, version)
+
 		return false, fmt.Errorf("unsupported CoreDNS version %q", version)
 	}
 
-	c.logger.Info("CoreDNS match")
+	c.logger.Debugf("CoreDNS %q has been detected", version)
 
 	return true, nil
 }
 
 func (c *Client) kubeDNSMatch(ctx context.Context) (bool, error) {
-	c.logger.Info("Checking KubeDNS")
+	c.logger.Debugf("Checking if KubeDNS is installed in namespace %q...", metav1.NamespaceSystem)
 
 	_, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "kube-dns", metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
-		c.logger.Debugf("KubeDNS deployment does not exist in namespace %q", metav1.NamespaceSystem)
+		c.logger.Debug("KubeDNS deployment not found")
 		return false, nil
 	}
 
@@ -120,21 +122,19 @@ func (c *Client) kubeDNSMatch(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("unable to get KubeDNS deployment in namespace %q: %w", metav1.NamespaceSystem, err)
 	}
 
-	c.logger.Info("KubeDNS match")
+	c.logger.Debug("KubeDNS has been detected")
 
 	return true, nil
 }
 
 // ConfigureCoreDNS patches the CoreDNS configuration for Maesh.
 func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, clusterDomain, maeshNamespace string) error {
-	c.logger.Debug("Patching CoreDNS")
+	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "coredns", coreDNSNamespace)
 
 	coreDNSDeployment, err := c.kubeClient.AppsV1().Deployments(coreDNSNamespace).Get(ctx, "coredns", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-
-	c.logger.Debug("Patching CoreDNS ConfigMap")
 
 	patchedConfigMap, changed, err := c.patchCoreDNSConfig(ctx, coreDNSDeployment, clusterDomain, maeshNamespace)
 	if err != nil {
@@ -142,12 +142,16 @@ func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, cluster
 	}
 
 	if !changed {
+		c.logger.Infof("CoreDNS ConfigMap %q in namespace %q has already been patched", patchedConfigMap.Name, patchedConfigMap.Namespace)
+
 		return nil
 	}
 
 	if _, err = c.kubeClient.CoreV1().ConfigMaps(patchedConfigMap.Namespace).Update(ctx, patchedConfigMap, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
+
+	c.logger.Infof("CoreDNS ConfigMap %q in namespace %q has successfully been patched", patchedConfigMap.Name, patchedConfigMap.Namespace)
 
 	if err := c.restartPods(ctx, coreDNSDeployment); err != nil {
 		return err
@@ -212,30 +216,30 @@ func (c *Client) getCoreDNSVersion(deployment *appsv1.Deployment) (*goversion.Ve
 		return goversion.NewVersion(parts[len(parts)-1])
 	}
 
-	return nil, fmt.Errorf("unable to get CoreDNS container in deployment %q/%q", deployment.Namespace, deployment.Name)
+	return nil, fmt.Errorf("unable to get CoreDNS container in deployment %q in namespace %q", deployment.Namespace, deployment.Name)
 }
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
 func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, maeshNamespace string) error {
-	c.logger.Debug("Patching KubeDNS")
+	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "kube-dns", maeshNamespace)
 
 	kubeDNSDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "kube-dns", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
-	c.logger.Debug("Getting CoreDNS service IP")
-
 	var coreDNSServiceIP string
+
+	c.logger.Debugf("Getting ClusterIP for Service %q in namespace %q", "coredns", maeshNamespace)
 
 	operation := func() error {
 		svc, svcErr := c.kubeClient.CoreV1().Services(maeshNamespace).Get(ctx, "coredns", metav1.GetOptions{})
 		if svcErr != nil {
-			return fmt.Errorf("unable to get coredns service in namespace %q: %w", maeshNamespace, err)
+			return fmt.Errorf("unable to get CoreDNS service in namespace %q: %w", maeshNamespace, err)
 		}
 
 		if svc.Spec.ClusterIP == "" {
-			return fmt.Errorf("coredns service in namespace %q has no clusterip", maeshNamespace)
+			return fmt.Errorf("CoreDNS service in namespace %q has no ClusterIP", maeshNamespace)
 		}
 
 		coreDNSServiceIP = svc.Spec.ClusterIP
@@ -243,11 +247,11 @@ func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, maeshNames
 		return nil
 	}
 
+	c.logger.Debugf("ClusterIP for Service %q in namespace %q is %q", "coredns", maeshNamespace, coreDNSServiceIP)
+
 	if err = backoff.Retry(safe.OperationWithRecover(operation), backoff.WithMaxRetries(backoff.NewConstantBackOff(10*time.Second), 12)); err != nil {
 		return err
 	}
-
-	c.logger.Debugf("Patching KubeDNS ConfigMap with CoreDNS service IP %q", coreDNSServiceIP)
 
 	if err := c.patchKubeDNSConfig(ctx, kubeDNSDeployment, coreDNSServiceIP); err != nil {
 		return err
