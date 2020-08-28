@@ -216,7 +216,7 @@ func (c *Client) getCoreDNSVersion(deployment *appsv1.Deployment) (*goversion.Ve
 		return goversion.NewVersion(parts[len(parts)-1])
 	}
 
-	return nil, fmt.Errorf("unable to get CoreDNS container in deployment %q in namespace %q", deployment.Namespace, deployment.Name)
+	return nil, fmt.Errorf("unable to get CoreDNS container in deployment %q in namespace %q", deployment.Name, deployment.Namespace)
 }
 
 // ConfigureKubeDNS patches the KubeDNS configuration for Maesh.
