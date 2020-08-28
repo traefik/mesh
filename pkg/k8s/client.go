@@ -71,12 +71,12 @@ func NewClient(log logrus.FieldLogger, masterURL, kubeConfig string) (Client, er
 func buildConfig(log logrus.FieldLogger, masterURL, kubeConfig string) (*rest.Config, error) {
 	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("KUBERNETES_SERVICE_PORT") != "" {
 		// If these env vars are set, we can build an in-cluster config.
-		log.Infoln("Creating in-cluster client")
+		log.Debug("Creating in-cluster client")
 		return rest.InClusterConfig()
 	}
 
 	if masterURL != "" || kubeConfig != "" {
-		log.Infoln("Creating cluster-external client from provided masterURL or kubeconfig")
+		log.Debug("Creating cluster-external client from provided masterURL or kubeconfig")
 		return clientcmd.BuildConfigFromFlags(masterURL, kubeConfig)
 	}
 
