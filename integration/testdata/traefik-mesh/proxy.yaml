@@ -2,18 +2,19 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: maesh-mesh
-  namespace: maesh
+  name: traefik-mesh-proxy
+  namespace: traefik-mesh
   labels:
     app: maesh
     component: maesh-mesh
+automountServiceAccountToken: false
 
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: maesh-mesh-role
-  namespace: maesh
+  name: traefik-mesh-proxy-role
+  namespace: traefik-mesh
   labels:
     app: maesh
     component: maesh-mesh
@@ -29,26 +30,26 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: maesh-mesh
-  namespace: maesh
+  name: traefik-mesh-proxy
+  namespace: traefik-mesh
   labels:
     app: maesh
     component: maesh-mesh
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: maesh-mesh-role
+  name: traefik-mesh-proxy-role
 subjects:
   - kind: ServiceAccount
-    name: maesh-mesh
-    namespace: maesh
+    name: traefik-mesh-proxy
+    namespace: traefik-mesh
 
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: maesh-mesh
-  namespace: maesh
+  name: traefik-mesh-proxy
+  namespace: traefik-mesh
   labels:
     app: maesh
     component: maesh-mesh
@@ -63,11 +64,10 @@ spec:
         app: maesh
         component: maesh-mesh
     spec:
-      serviceAccountName: maesh-mesh
-      automountServiceAccountToken: true
+      serviceAccountName: traefik-mesh-proxy
       terminationGracePeriodSeconds: 30
       containers:
-        - name: maesh-mesh
+        - name: traefik-mesh-proxy
           image: "traefik:v2.3"
           imagePullPolicy: IfNotPresent
           args:
@@ -98,7 +98,7 @@ spec:
             - "--entryPoints.udp-15002.address=:15002/udp"
             - "--entryPoints.udp-15003.address=:15003/udp"
             - "--entryPoints.udp-15004.address=:15004/udp"
-            - "--providers.http.endpoint=http://maesh-controller.maesh.svc.cluster.local:9000/api/configuration/current"
+            - "--providers.http.endpoint=http://traefik-mesh-controller.traefik-mesh.svc.cluster.local:9000/api/configuration/current"
             - "--providers.http.pollInterval=100ms"
             - "--providers.http.pollTimeout=100ms"
             - "--api.dashboard=false"

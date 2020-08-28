@@ -42,7 +42,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	)
 	c.Assert(err, checker.IsNil)
 
-	c.Assert(s.cluster.CreateNamespace(s.logger, maeshNamespace), checker.IsNil)
+	c.Assert(s.cluster.CreateNamespace(s.logger, traefikMeshNamespace), checker.IsNil)
 	c.Assert(s.cluster.CreateNamespace(s.logger, testNamespace), checker.IsNil)
 
 	c.Assert(s.cluster.Apply(s.logger, smiCRDs), checker.IsNil)
@@ -87,11 +87,16 @@ func (s *CoreDNSSuite) testCoreDNSVersion(c *check.C, version string) {
 	c.Assert(s.setCoreDNSVersion(version), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
-	c.Assert(maeshPrepare(), checker.IsNil)
+	c.Assert(traefikMeshPrepare(), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
 	err := try.Retry(func() error {
 		return s.tool.Dig("whoami.whoami.maesh")
+	}, 30*time.Second)
+	c.Assert(err, checker.IsNil)
+
+	err = try.Retry(func() error {
+		return s.tool.Dig("whoami.whoami.traefik.mesh")
 	}, 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }

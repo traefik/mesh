@@ -3,13 +3,11 @@
 #
 controller:
   image:
-    name: containous/maesh
     pullPolicy: IfNotPresent
     tag: latest
 
 proxy:
   image:
-    name: traefik
     pullPolicy: IfNotPresent
     tag: v2.3
 
