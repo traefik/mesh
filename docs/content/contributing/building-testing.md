@@ -37,7 +37,7 @@ maesh
 
 Requirements:
 
-- `Go` v1.15+
+- `Go` v1.14+
 - Environment variable `GO111MODULE=on`
 
 One your Go environment is set up, you can build Maesh from the sources by using the `go build` command. The Go compiler 
