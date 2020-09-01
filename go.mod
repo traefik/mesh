@@ -1,10 +1,10 @@
 module github.com/containous/maesh
 
-go 1.14
+go 1.15
 
 require (
 	github.com/cenkalti/backoff/v4 v4.0.2
-	github.com/containous/traefik/v2 v2.3.0-rc3
+	github.com/containous/traefik/v2 v2.3.0-rc4
 	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
