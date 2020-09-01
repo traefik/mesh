@@ -21,7 +21,8 @@ blocks:
     task:
       prologue:
         commands:
-          - sem-version go 1.14
+          - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
+          - sudo semgo go1.15
           - checkout
       jobs:
         - name: Cache Go dependencies
@@ -42,7 +43,8 @@ blocks:
     task:
       prologue:
         commands:
-          - sem-version go 1.14
+          - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
+          - sudo semgo go1.15
           - checkout
           - cache restore
       jobs:
@@ -56,7 +58,8 @@ blocks:
     task:
       prologue:
         commands:
-          - sem-version go 1.14
+          - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
+          - sudo semgo go1.15
           - checkout
           - cache restore
           - cache restore maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID

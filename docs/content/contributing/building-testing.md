@@ -18,10 +18,10 @@ $ make
 Successfully tagged containous/maesh:latest
 docker run --name=build -t "containous/maesh:latest" version
 version:
- version     : 04789a3
- commit      : 04789a3
- build date  : 2020-04-09_10:24:49AM
- go version  : go1.14.1
+ version     : b417901
+ commit      : b417901
+ build date  : 2020-09-01_09:27:55AM
+ go version  : go1.15
  go compiler : gc
  platform    : linux/amd64
 #[...]
@@ -37,7 +37,7 @@ maesh
 
 Requirements:
 
-- `Go` v1.14+
+- `Go` v1.15+
 - Environment variable `GO111MODULE=on`
 
 One your Go environment is set up, you can build Maesh from the sources by using the `go build` command. The Go compiler 
@@ -50,9 +50,9 @@ version:
  version     : dev
  commit      : I don't remember exactly
  build date  : I don't remember exactly
- go version  : go1.14.1
+ go version  : go1.15
  go compiler : gc
- platform    : darwin/amd64
+ platform    : linux/amd64
 ```
 
 ## Testing
