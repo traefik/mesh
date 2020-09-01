@@ -1,7 +1,7 @@
 language: go
 
 go:
-  - 1.14
+  - 1.15.x
 
 os: linux
 
@@ -22,7 +22,7 @@ cache:
 jobs:
   fast_finish: true
   include:
-    - go: 1.14
+    - go: 1.15.x
       env: STABLE=true
 
 env:
