@@ -954,6 +954,7 @@ func buildKeySorter(keys []Key) func(i, j int) bool {
 		return strings.Compare(keys[i].String(), keys[j].String()) < 0
 	}
 }
+
 func buildServiceTrafficTargetKeySorter(keys []ServiceTrafficTargetKey) func(i, j int) bool {
 	return func(i, j int) bool {
 		return strings.Compare(keys[i].String(), keys[j].String()) < 0

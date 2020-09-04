@@ -104,8 +104,8 @@ func MustParseYaml(content []byte) []runtime.Object {
 		}
 
 		decode := scheme.Codecs.UniversalDeserializer().Decode
-		obj, groupVersionKind, err := decode([]byte(file), nil, nil)
 
+		obj, groupVersionKind, err := decode([]byte(file), nil, nil)
 		if err != nil {
 			panic(fmt.Sprintf("Error while decoding YAML object. Err was: %s", err))
 		}

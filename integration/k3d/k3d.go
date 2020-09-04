@@ -211,7 +211,6 @@ func (c *Cluster) WaitReadyDeployment(name, namespace string, timeout time.Durat
 
 		return errors.New("deployment not ready")
 	}, timeout)
-
 	if err != nil {
 		return fmt.Errorf("deployment %q in namespace %q is not ready: %w", name, namespace, err)
 	}
@@ -239,7 +238,6 @@ func (c *Cluster) WaitReadyDaemonSet(name, namespace string, timeout time.Durati
 
 		return errors.New("daemonset not ready")
 	}, timeout)
-
 	if err != nil {
 		return fmt.Errorf("daemonset %q in namespace %q is not ready: %w", name, namespace, err)
 	}
@@ -268,7 +266,6 @@ func (c *Cluster) WaitReadyPod(name, namespace string, timeout time.Duration) er
 
 		return nil
 	}, timeout)
-
 	if err != nil {
 		return fmt.Errorf("pod %q in namespace %q is not ready: %w", name, namespace, err)
 	}
@@ -277,16 +274,13 @@ func (c *Cluster) WaitReadyPod(name, namespace string, timeout time.Duration) er
 }
 
 func isPodReady(pod *corev1.Pod) bool {
-	var readyCondition *corev1.PodCondition
-
 	for _, condition := range pod.Status.Conditions {
 		if condition.Type == corev1.PodReady {
-			readyCondition = &condition
-			break
+			return condition.Status == corev1.ConditionTrue
 		}
 	}
 
-	return readyCondition != nil && readyCondition.Status == corev1.ConditionTrue
+	return false
 }
 
 func createCluster(logger logrus.FieldLogger, clusterName string, cmdOpts []string) error {
@@ -405,7 +399,6 @@ func waitClusterReady(client k8s.Client) error {
 		_, _, err := client.KubernetesClient().Discovery().ServerGroupsAndResources()
 		return err
 	}, 60*time.Second)
-
 	if err != nil {
 		return fmt.Errorf("timed out waiting for the cluster to be ready: %w", err)
 	}

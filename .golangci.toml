@@ -43,6 +43,10 @@
     "goconst", # Too many false positives
     "testpackage", # Does not allow testing private funcs
     "goerr113", # Forces wrapping all errors
+    "noctx", # Too strict
+    "exhaustive", # Too strict
+    "nlreturn", # Too strict
+    "exportloopref", # Too strict
   ]
 
 [issues]
