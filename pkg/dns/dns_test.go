@@ -261,7 +261,8 @@ func TestRestoreCoreDNS(t *testing.T) {
 		{
 			desc:             "CoreDNS config patched",
 			mockFile:         "restorecoredns_patched.yaml",
-			expectedCorefile: ".:53 {\n        errors\n        health {\n            lameduck 5s\n        }\n        ready\n        kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n            pods insecure\n            fallthrough in-addr.arpa ip6.arpa\n            ttl 30\n        }\n        prometheus :9153\n        forward . /etc/resolv.conf\n        cache 30\n        loop\n        reload\n        loadbalance\n    }\n\n# This is test data that must be present\n"},
+			expectedCorefile: ".:53 {\n        errors\n        health {\n            lameduck 5s\n        }\n        ready\n        kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n            pods insecure\n            fallthrough in-addr.arpa ip6.arpa\n            ttl 30\n        }\n        prometheus :9153\n        forward . /etc/resolv.conf\n        cache 30\n        loop\n        reload\n        loadbalance\n    }\n\n# This is test data that must be present\n",
+		},
 		{
 			desc:             "CoreDNS config not patched",
 			mockFile:         "restorecoredns_not_patched.yaml",
