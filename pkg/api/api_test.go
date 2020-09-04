@@ -15,9 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-var (
-	localhost = "127.0.0.1"
-)
+var localhost = "127.0.0.1"
 
 func TestEnableReadiness(t *testing.T) {
 	log := logrus.New()
@@ -234,8 +232,8 @@ func startTestAPIServer(port string, statusCode int, bodyData []byte) (ts *httpt
 
 		_, _ = w.Write(bodyData)
 	})
-	listener, err := net.Listen("tcp", "127.0.0.1:"+port)
 
+	listener, err := net.Listen("tcp", "127.0.0.1:"+port)
 	if err != nil {
 		panic(err)
 	}
