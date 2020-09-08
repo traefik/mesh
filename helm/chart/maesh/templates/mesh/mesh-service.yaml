@@ -16,3 +16,4 @@ spec:
   selector:
     app: maesh
     component: maesh-mesh
+    release: {{ .Release.Name | quote }}

@@ -14,4 +14,6 @@ spec:
       name: mesh-controller-api
       targetPort: api
   selector:
+    app: maesh
     component: controller
+    release: {{ .Release.Name | quote }}

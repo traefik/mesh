@@ -18,6 +18,7 @@ spec:
   selector:
     app: maesh
     component: coredns
+    release: {{ .Release.Name | quote }}
   type: ClusterIP
   ports:
     - name: dns
