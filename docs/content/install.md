@@ -103,9 +103,6 @@ pod/maesh-controller-676fb86b89-pj8ph   1/1     Running   0          11s
 pod/maesh-mesh-w62z5                    1/1     Running   0          11s
 pod/maesh-mesh-zjlpf                    1/1     Running   0          11s
 
-NAME                     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
-service/maesh-mesh-api   ClusterIP   100.69.177.254   <none>        8080/TCP   29s
-
 NAME                        DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
 daemonset.apps/maesh-mesh   2         2         0       2            0           <none>          29s
 

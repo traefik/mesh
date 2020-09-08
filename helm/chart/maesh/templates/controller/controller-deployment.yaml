@@ -28,22 +28,9 @@ spec:
         prometheus.io/port: "4646"
     spec:
       serviceAccountName: maesh-controller
-      automountServiceAccountToken: true
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: component
-                      operator: In
-                      values:
-                        - controller
-                topologyKey: "kubernetes.io/hostname"
       {{- if .Values.controller.image.pullSecret }}
       imagePullSecrets:
         - name: {{ .Values.controller.image.pullSecret }}
