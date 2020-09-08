@@ -21,11 +21,13 @@ spec:
     matchLabels:
       app: maesh
       component: coredns
+      release: {{ .Release.Name | quote }}
   template:
     metadata:
       labels:
         app: maesh
         component: coredns
+        release: {{ .Release.Name | quote }}
     spec:
       serviceAccountName: maesh-coredns
       affinity:
