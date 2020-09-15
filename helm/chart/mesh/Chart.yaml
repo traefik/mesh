@@ -8,7 +8,7 @@ keywords:
   - traefik
   - mesh
   - smi
-home: https://doc.traefik.io/mesh
+home: https://mae.sh/
 sources:
   - https://github.com/traefik/mesh/
 maintainers:
@@ -17,13 +17,13 @@ maintainers:
   - name: dtomcej
     email: daniel.tomcej@gmail.com
   - name: mmatur
-    email: michael@traefik.io
+    email: michael@containo.us
   - name: santode
-    email: manuel@traefik.io
+    email: manuel@containo.us
   - name: jspdown
-    email: harold@traefik.io
+    email: harold@containo.us
   - name: kevinpollet
-    email: kevin@traefik.io
+    email: kevin@containo.us
 icon: https://raw.githubusercontent.com/traefik/mesh/master/docs/content/assets/img/traefik-mesh.png
 dependencies:
   - name: tracing

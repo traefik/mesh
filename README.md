@@ -5,11 +5,11 @@
 
 [![Travis CI Build Status](https://travis-ci.com/traefik/mesh.svg?branch=master)](https://travis-ci.com/traefik/mesh)
 [![Semaphore CI Build Status](https://traefik.semaphoreci.com/badges/mesh/branches/master.svg?style=shields)](https://traefik.semaphoreci.com/projects/mesh)
-[![Docs](https://img.shields.io/badge/docs-current-brightgreen.svg)](https://doc.traefik.io/mesh)
+[![Docs](https://img.shields.io/badge/docs-current-brightgreen.svg)](https://docs.mae.sh)
 [![Go Report Card](https://goreportcard.com/badge/github.com/traefik/mesh)](https://goreportcard.com/report/github.com/traefik/mesh)
 [![Release](https://img.shields.io/github/tag-date/traefik/mesh.svg)](https://github.com/traefik/mesh/releases)
 [![GitHub](https://img.shields.io/github/license/traefik/mesh)](https://github.com/traefik/mesh/blob/master/LICENSE)
-[![Discourse status](https://img.shields.io/discourse/https/community.traefik.io/status?label=Community&style=social)](https://community.traefik.io/c/traefik-mesh)
+[![Discourse status](https://img.shields.io/discourse/https/community.containo.us/status?label=Community&style=social)](https://community.containo.us/c/maesh)
 
 ## Traefik Mesh: Simpler Service Mesh
 
@@ -52,7 +52,7 @@ helm repo update
 helm install traefik-mesh traefik-mesh/traefik-mesh
 ```
 
-You can find the complete documentation at https://doc.traefik.io/mesh.
+You can find the complete documentation at https://docs.mae.sh.
 
 
 ## Contributing
