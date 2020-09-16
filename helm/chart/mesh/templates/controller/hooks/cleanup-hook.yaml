@@ -1,0 +1,134 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik-mesh-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: cleanup
+    chart: {{ include "traefikMesh.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  annotations:
+    "helm.sh/hook": "post-delete"
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: traefik-mesh-cleanup-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: cleanup
+    chart: {{ include "traefikMesh.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  annotations:
+    "helm.sh/hook": "post-delete"
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - update
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: traefik-mesh-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: cleanup
+    chart: {{ include "traefikMesh.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  annotations:
+    "helm.sh/hook": "post-delete"
+    "helm.sh/hook-weight": "15"
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: traefik-mesh-cleanup-role
+subjects:
+  - kind: ServiceAccount
+    name: traefik-mesh-cleanup
+    namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: traefik-mesh-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: cleanup
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote}}
+    heritage: {{ .Release.Service | quote}}
+  annotations:
+    "helm.sh/hook": "post-delete"
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 30
+  template:
+    metadata:
+      labels:
+        app: maesh
+        component: cleanup
+        release: {{ .Release.Name | quote}}
+    spec:
+      serviceAccountName: traefik-mesh-cleanup
+      restartPolicy: Never
+      {{- if .Values.controller.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.controller.image.pullSecret }}
+      {{- end }}
+      containers:
+        - name: traefik-mesh-cleanup
+          image: {{ include "traefikMesh.controllerImage" . | quote }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent" }}
+          args:
+            - "cleanup"
+            {{- if or .Values.controller.logLevel .Values.logLevel }}
+            - "--logLevel={{ or .Values.controller.logLevel .Values.logLevel }}"
+            {{- end }}
+            {{- if or .Values.controller.logFormat .Values.logFormat }}
+            - "--logFormat={{ or .Values.controller.logFormat .Values.logFormat }}"
+            {{- end }}
+            - "--namespace={{ .Release.Namespace }}"
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE

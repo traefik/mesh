@@ -1,0 +1,285 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: traefik-mesh-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: maesh-mesh
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+  {{- with .Values.proxy.annotations }}
+  annotations:
+{{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app: maesh
+      component: maesh-mesh
+      release: {{ .Release.Name | quote }}
+  template:
+    metadata:
+      labels:
+        app: maesh
+        component: maesh-mesh
+        release: {{ .Release.Name | quote }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        {{- with .Values.proxy.podAnnotations }}
+{{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: traefik-mesh-proxy
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      terminationGracePeriodSeconds: 30
+      {{- if .Values.proxy.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.proxy.image.pullSecret }}
+      {{- end }}
+      {{- with .Values.proxy.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.proxy.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      containers:
+        - name: traefik-mesh-proxy
+          image: {{ include "traefikMesh.proxyImage" . | quote }}
+          imagePullPolicy: {{ .Values.proxy.image.pullPolicy | default "IfNotPresent" }}
+          {{- with .Values.proxy.env }}
+          env:
+{{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.proxy.envFrom }}
+          envFrom:
+{{- toYaml . | nindent 12 }}
+          {{- end }}
+          args:
+            - "--entryPoints.readiness.address=:1081"
+            - "--entryPoints.liveness.address=:1082"
+            {{- range $i, $port := untilStep 5000 ((add (.Values.limits.http|int) 5000)|int) 1 }}
+            - {{ printf "\"--entryPoints.http-%d.address=:%d\"" $port $port }}
+            - {{ printf "\"--entryPoints.http-%d.forwardedHeaders.insecure=true\"" $port }}
+            {{- end }}
+            {{- range $i, $port := untilStep 10000 ((add (.Values.limits.tcp|int) 10000)|int) 1 }}
+            - {{ printf "\"--entryPoints.tcp-%d.address=:%d\"" $port $port }}
+            - {{ printf "\"--entryPoints.tcp-%d.forwardedHeaders.insecure=true\"" $port }}
+            {{- end }}
+            {{- range $i, $port := untilStep 15000 ((add (.Values.limits.udp|int) 15000)|int) 1 }}
+            - {{ printf "\"--entryPoints.udp-%d.address=:%d/udp\"" $port $port }}
+            {{- end }}
+            - {{ printf "--providers.http.endpoint=http://traefik-mesh-controller.%s.svc.%s:9000/api/configuration/current" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
+            {{- if .Values.proxy.pollInterval }}
+            - "--providers.http.pollInterval={{ .Values.proxy.pollInterval }}"
+            {{- end }}
+            {{- if .Values.proxy.pollTimeout }}
+            - "--providers.http.pollTimeout={{ .Values.proxy.pollTimeout }}"
+            {{- end }}
+            {{- if .Values.tracing.jaeger.enabled }}
+              {{- if .Values.tracing.jaeger.localAgentHostPort }}
+            - "--tracing.jaeger.localAgentHostPort={{ .Values.tracing.jaeger.localAgentHostPort }}"
+              {{- else }}
+            - {{ printf "--tracing.jaeger.localagenthostport=jaeger-agent.%s.svc.%s:6831" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
+              {{- end }}
+              {{- if .Values.tracing.jaeger.localagenthostport }}
+            - "--tracing.jaeger.samplingServerURL={{ .Values.tracing.jaeger.samplingServerURL }}"
+              {{- else }}
+            - {{ printf "--tracing.jaeger.samplingServerURL=http://jaeger-agent.%s.svc.%s:5778/sampling" .Release.Namespace (default "cluster.local" .Values.clusterDomain) | quote }}
+              {{- end }}
+            - "--tracing.jaeger.disableAttemptReconnecting=false"
+            {{- end }}
+            {{- if .Values.tracing.datadog }}
+              {{- if .Values.tracing.datadog.localagenthostport }}
+            - "--tracing.datadog.localAgentHostPort={{ .Values.tracing.datadog.localAgentHostPort }}"
+              {{- end }}
+              {{- if .Values.tracing.datadog.debug }}
+            - "--tracing.datadog.debug=true"
+              {{- end }}
+              {{- if .Values.tracing.datadog.globalTag }}
+            - "--tracing.datadog.globalTag={{ .Values.tracing.datadog.globalTag }}"
+              {{- end }}
+              {{- if .Values.tracing.datadog.prioritySampling }}
+            - "--tracing.datadog.prioritySampling=true"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.tracing.zipkin }}
+              {{- if .Values.tracing.zipkin.httpEndpoint }}
+            - "--tracing.zipkin.httpEndpoint={{ .Values.tracing.zipkin.httpEndpoint }}"
+              {{- end }}
+              {{- if .Values.tracing.zipkin.sameSpan }}
+            - "--tracing.zipkin.sameSpan=true"
+              {{- end }}
+              {{- if .Values.tracing.zipkin.id128Bit }}
+            - "--tracing.zipkin.id128Bit=true"
+              {{- end }}
+              {{- if .Values.tracing.zipkin.sampleRate }}
+            - "--tracing.zipkin.sampleRate={{ .Values.tracing.zipkin.sampleRate }}"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.tracing.instana }}
+              {{- if .Values.tracing.instana.localAgentHost }}
+            - "--tracing.instana.localAgentHost={{ .Values.tracing.instana.localAgentHost }}"
+              {{- end }}
+              {{- if .Values.tracing.instana.localAgentPort }}
+            - "--tracing.instana.localAgentPort={{ .Values.tracing.instana.localAgentPort }}"
+              {{- end }}
+              {{- if .Values.tracing.instana.logLevel }}
+            - "--tracing.instana.logLevel={{ .Values.tracing.instana.logLevel }}"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.tracing.haystack }}
+              {{- if .Values.tracing.haystack.localAgentHost }}
+            - "--tracing.haystack.localAgentHost={{ .Values.tracing.haystack.localAgentHost }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.localAgentPort }}
+            - "--tracing.haystack.localAgentPort={{ .Values.tracing.haystack.localAgentPort }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.globalTag }}
+            - "--tracing.haystack.globalTag={{ .Values.tracing.haystack.globalTag }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.traceIDHeaderName }}
+            - "--tracing.haystack.traceIDHeaderName={{ .Values.tracing.haystack.traceIDHeaderName }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.parentIDHeaderName }}
+            - "--tracing.haystack.parentIDHeaderName={{ .Values.tracing.haystack.parentIDHeaderName }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.spanIDHeaderName }}
+            - "--tracing.haystack.spanIDHeaderName={{ .Values.tracing.haystack.spanIDHeaderName }}"
+              {{- end }}
+              {{- if .Values.tracing.haystack.baggagePrefixHeaderName }}
+            - "--tracing.haystack.baggagePrefixHeaderName={{ .Values.tracing.haystack.baggagePrefixHeaderName }}"
+              {{- end }}
+            {{- end }}
+            - "--api.dashboard=false"
+            - "--api.insecure"
+            - "--ping"
+            {{- if .Values.proxy.forwardingTimeouts }}
+              {{- if .Values.proxy.forwardingTimeouts.dialTimeout }}
+            - "--serversTransport.forwardingTimeouts.dialTimeout={{ .Values.proxy.forwardingTimeouts.dialTimeout }}"
+              {{- end }}
+              {{- if .Values.proxy.forwardingTimeouts.responseHeaderTimeout }}
+            - "--serversTransport.forwardingTimeouts.responseHeaderTimeout={{ .Values.proxy.forwardingTimeouts.responseHeaderTimeout }}"
+              {{- end }}
+              {{- if .Values.proxy.forwardingTimeouts.idleConnTimeout }}
+            - "--serversTransport.forwardingTimeouts.idleConnTimeout={{ .Values.proxy.forwardingTimeouts.idleConnTimeout }}"
+              {{- end }}
+            {{- end }}
+            {{- if or .Values.proxy.logLevel .Values.logLevel }}
+            - "--log.level={{ or .Values.proxy.logLevel .Values.logLevel }}"
+            {{- end }}
+            {{- if or .Values.proxy.logFormat .Values.logFormat }}
+            - "--log.format={{ or .Values.proxy.logFormat .Values.logFormat }}"
+            {{- end }}
+            {{- if .Values.metrics.prometheus.enabled }}
+            - "--metrics.prometheus=true"
+              {{- if hasKey .Values.metrics.prometheus "addEntrypointsLabels" }}
+            - "--metrics.prometheus.addEntryPointsLabels={{ .Values.metrics.prometheus.addEntrypointsLabels }}"
+              {{- end }}
+              {{- if hasKey .Values.metrics.prometheus "addServiceLabels" }}
+            - "--metrics.prometheus.addServicesLabels={{ .Values.metrics.prometheus.addServiceLabels }}"
+              {{- end }}
+              {{- if .Values.metrics.prometheus.buckets }}
+            - "--metrics.prometheus.buckets={{ .Values.metrics.prometheus.buckets }}"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.metrics.datadog }}
+            - "--metrics.datadog=true"
+              {{- if .Values.metrics.datadog.address }}
+            - "--metrics.datadog.address={{ .Values.metrics.datadog.address }}"
+              {{- end }}
+              {{- if hasKey .Values.metrics.datadog "addEntrypointsLabels" }}
+            - "--metrics.datadog.addEntryPointsLabels={{ .Values.metrics.datadog.addEntrypointsLabels }}"
+              {{- end }}
+              {{- if hasKey .Values.metrics.datadog "addServiceLabels" }}
+            - "--metrics.datadog.addServicesLabels={{ .Values.metrics.datadog.addServiceLabels }}"
+              {{- end }}
+              {{- if .Values.metrics.datadog.pushInterval }}
+            - "--metrics.datadog.pushInterval={{ .Values.metrics.datadog.pushInterval }}"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.metrics.influxdb }}
+            - "--metrics.influxdb=true"
+              {{- if .Values.metrics.influxdb.address }}
+            - "--metrics.influxdb.address={{ .Values.metrics.influxdb.address }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.protocol }}
+            - "--metrics.influxdb.protocol={{ .Values.metrics.influxdb.protocol }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.database }}
+            - "--metrics.influxdb.database={{ .Values.metrics.influxdb.database }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.retentionPolicy }}
+            - "--metrics.influxdb.retentionPolicy={{ .Values.metrics.influxdb.retentionPolicy }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.username }}
+            - "--metrics.influxdb.username={{ .Values.metrics.influxdb.username }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.password }}
+            - "--metrics.influxdb.password={{ .Values.metrics.influxdb.password }}"
+              {{- end }}
+              {{- if hasKey .Values.metrics.influxdb "addEntrypointsLabels" }}
+            - "--metrics.influxdb.addEntryPointsLabels={{ .Values.metrics.influxdb.addEntrypointsLabels }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb "addServiceLabels" }}
+            - "--metrics.influxdb.addServicesLabels={{ .Values.metrics.influxdb.addServiceLabels }}"
+              {{- end }}
+              {{- if .Values.metrics.influxdb.pushInterval }}
+            - "--metrics.influxdb.pushInterval={{ .Values.metrics.influxdb.pushInterval }}"
+              {{- end }}
+            {{- end }}
+            {{- if .Values.metrics.statsd }}
+            - "--metrics.statsd=true"
+              {{- if .Values.metrics.statsd.address }}
+            - "--metrics.statsd.address={{ .Values.metrics.statsd.address }}"
+              {{- end }}
+              {{- if hasKey .Values.metrics.statsd "addEntrypointsLabels" }}
+            - "--metrics.statsd.addEntryPointsLabels={{ .Values.metrics.statsd.addEntrypointsLabels }}"
+              {{- end }}
+              {{- if hasKey .Values.metrics.statsd "addServiceLabels" }}
+            - "--metrics.statsd.addServicesLabels={{ .Values.metrics.statsd.addServicesLabels }}"
+              {{- end }}
+              {{- if .Values.metrics.statsd.pushInterval }}
+            - "--metrics.statsd.pushInterval={{ .Values.metrics.statsd.pushInterval }}"
+              {{- end }}
+              {{- if .Values.metrics.statsd.prefix }}
+            - "--metrics.statsd.prefix={{ .Values.metrics.statsd.prefix }}"
+              {{- end }}
+            {{- end }}
+            {{- with .Values.proxy.additionalArguments }}
+            {{- range . }}
+            - {{ . | quote }}
+            {{- end }}
+            {{- end }}
+          ports:
+            - name: readiness
+              containerPort: 1081
+            - name: liveness
+              containerPort: 1082
+            - name: api
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: readiness
+            initialDelaySeconds: 3
+            periodSeconds: 1
+          livenessProbe:
+            tcpSocket:
+              port: liveness
+            initialDelaySeconds: 3
+            periodSeconds: 1
+          resources:
+            requests:
+              memory: {{ .Values.proxy.resources.request.mem }}
+              cpu: {{ .Values.proxy.resources.request.cpu }}
+            limits:
+              memory: {{ .Values.proxy.resources.limit.mem }}
+              cpu: {{ .Values.proxy.resources.limit.cpu }}

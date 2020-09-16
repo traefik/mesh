@@ -9,7 +9,7 @@
           "block-all-middleware"
         ],
         "service": "block-all-service",
-        "rule": "Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
+        "rule": "Host(`svc-a.my-ns.traefik.mesh`) || Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
         "priority": 1
       },
       "my-ns-svc-a-split-8080-traffic-split-direct": {
@@ -20,8 +20,8 @@
           "my-ns-svc-a-split-whitelist-traffic-split-direct"
         ],
         "service": "my-ns-svc-a-split-8080-traffic-split",
-        "rule": "(Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)) && (PathPrefix(`/{path:app}`))",
-        "priority": 4002
+        "rule": "(Host(`svc-a.my-ns.traefik.mesh`) || Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)) && (PathPrefix(`/{path:app}`))",
+        "priority": 4003
       },
 
       "my-ns-svc-b-8080": {
@@ -32,7 +32,7 @@
           "block-all-middleware"
         ],
         "service": "block-all-service",
-        "rule": "Host(`svc-b.my-ns.maesh`) || Host(`10.10.15.1`)",
+        "rule": "Host(`svc-b.my-ns.traefik.mesh`) || Host(`svc-b.my-ns.maesh`) || Host(`10.10.15.1`)",
         "priority": 1
       },
       "my-ns-svc-b-tt-8080-traffic-target-direct": {
@@ -43,8 +43,8 @@
           "my-ns-svc-b-tt-whitelist-traffic-target-direct"
         ],
         "service": "my-ns-svc-b-tt-8080-traffic-target",
-        "rule": "Host(`svc-b.my-ns.maesh`) || Host(`10.10.15.1`)",
-        "priority": 2001
+        "rule": "Host(`svc-b.my-ns.traefik.mesh`) || Host(`svc-b.my-ns.maesh`) || Host(`10.10.15.1`)",
+        "priority": 2002
       },
       "my-ns-svc-b-tt-8080-traffic-target-indirect": {
         "entryPoints": [
@@ -54,8 +54,8 @@
           "my-ns-svc-b-tt-whitelist-traffic-target-indirect"
         ],
         "service": "my-ns-svc-b-tt-8080-traffic-target",
-        "rule": "(Host(`svc-b.my-ns.maesh`) || Host(`10.10.15.1`)) && HeadersRegexp(`X-Forwarded-For`, `.+`)",
-        "priority": 3002
+        "rule": "(Host(`svc-b.my-ns.traefik.mesh`) || Host(`svc-b.my-ns.maesh`) || Host(`10.10.15.1`)) && HeadersRegexp(`X-Forwarded-For`, `.+`)",
+        "priority": 3003
       },
 
       "my-ns-svc-c-8080": {
@@ -66,7 +66,7 @@
           "block-all-middleware"
         ],
         "service": "block-all-service",
-        "rule": "Host(`svc-c.my-ns.maesh`) || Host(`10.10.16.1`)",
+        "rule": "Host(`svc-c.my-ns.traefik.mesh`) || Host(`svc-c.my-ns.maesh`) || Host(`10.10.16.1`)",
         "priority": 1
       },
       "my-ns-svc-c-tt-8080-traffic-target-direct": {
@@ -77,8 +77,8 @@
           "my-ns-svc-c-tt-whitelist-traffic-target-direct"
         ],
         "service": "my-ns-svc-c-tt-8080-traffic-target",
-        "rule": "Host(`svc-c.my-ns.maesh`) || Host(`10.10.16.1`)",
-        "priority": 2001
+        "rule": "Host(`svc-c.my-ns.traefik.mesh`) || Host(`svc-c.my-ns.maesh`) || Host(`10.10.16.1`)",
+        "priority": 2002
       },
       "my-ns-svc-c-tt-8080-traffic-target-indirect": {
         "entryPoints": [
@@ -88,8 +88,8 @@
           "my-ns-svc-c-tt-whitelist-traffic-target-indirect"
         ],
         "service": "my-ns-svc-c-tt-8080-traffic-target",
-        "rule": "(Host(`svc-c.my-ns.maesh`) || Host(`10.10.16.1`)) && HeadersRegexp(`X-Forwarded-For`, `.+`)",
-        "priority": 3002
+        "rule": "(Host(`svc-c.my-ns.traefik.mesh`) || Host(`svc-c.my-ns.maesh`) || Host(`10.10.16.1`)) && HeadersRegexp(`X-Forwarded-For`, `.+`)",
+        "priority": 3003
       },
 
       "readiness": {
@@ -124,7 +124,7 @@
         "loadBalancer": {
           "servers": [
             {
-              "url": "http://svc-b.my-ns.maesh:8080"
+              "url": "http://svc-b.my-ns.traefik.mesh:8080"
             }
           ],
           "passHostHeader": false
@@ -134,7 +134,7 @@
         "loadBalancer": {
           "servers": [
             {
-              "url": "http://svc-c.my-ns.maesh:8080"
+              "url": "http://svc-c.my-ns.traefik.mesh:8080"
             }
           ],
           "passHostHeader": false

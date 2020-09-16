@@ -3,11 +3,11 @@ package integration
 import (
 	"time"
 
-	"github.com/containous/maesh/integration/k3d"
-	"github.com/containous/maesh/integration/tool"
-	"github.com/containous/maesh/integration/try"
 	"github.com/go-check/check"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/integration/k3d"
+	"github.com/traefik/mesh/integration/tool"
+	"github.com/traefik/mesh/integration/try"
 	checker "github.com/vdemeester/shakers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,7 +23,7 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
-		{Name: "containous/whoami:v1.0.1"},
+		{Name: "traefik/whoami:latest"},
 		{Name: "coredns/coredns:1.6.3"},
 		{Name: "giantswarm/tiny-tools:3.9"},
 		{Name: "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7"},
@@ -39,7 +39,7 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	)
 	c.Assert(err, checker.IsNil)
 
-	c.Assert(s.cluster.CreateNamespace(s.logger, maeshNamespace), checker.IsNil)
+	c.Assert(s.cluster.CreateNamespace(s.logger, traefikMeshNamespace), checker.IsNil)
 	c.Assert(s.cluster.CreateNamespace(s.logger, testNamespace), checker.IsNil)
 
 	c.Assert(s.cluster.Apply(s.logger, smiCRDs), checker.IsNil)
@@ -49,7 +49,7 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 
 	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 60*time.Second), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDeployment("coredns", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("coredns", traefikMeshNamespace, 60*time.Second), checker.IsNil)
 
 	s.tool = tool.New(s.logger, "tool", testNamespace)
 }
@@ -63,13 +63,18 @@ func (s *KubeDNSSuite) TearDownSuite(c *check.C) {
 func (s *KubeDNSSuite) TestKubeDNSDig(c *check.C) {
 	s.logger.Info("Asserting KubeDNS has been patched successfully and can be dug")
 
-	c.Assert(maeshPrepare(), checker.IsNil)
+	c.Assert(traefikMeshPrepare(), checker.IsNil)
 
 	// Wait for kubeDNS, as the pods will be restarted by prepare.
 	c.Assert(s.cluster.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
 	err := try.Retry(func() error {
 		return s.tool.Dig("whoami.whoami.maesh")
+	}, 60*time.Second)
+	c.Assert(err, checker.IsNil)
+
+	err = try.Retry(func() error {
+		return s.tool.Dig("whoami.whoami.traefik.mesh")
 	}, 60*time.Second)
 	c.Assert(err, checker.IsNil)
 }

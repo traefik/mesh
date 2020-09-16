@@ -22,7 +22,7 @@ func TestBuildMiddleware(t *testing.T) {
 		{
 			desc: "retry-attempts annotation is valid",
 			annotations: map[string]string{
-				"maesh.containo.us/retry-attempts": "5",
+				"mesh.traefik.io/retry-attempts": "5",
 			},
 			want: map[string]*dynamic.Middleware{
 				"retry": {
@@ -35,14 +35,14 @@ func TestBuildMiddleware(t *testing.T) {
 		{
 			desc: "retry-attempts annotation is invalid",
 			annotations: map[string]string{
-				"maesh.containo.us/retry-attempts": "hello",
+				"mesh.traefik.io/retry-attempts": "hello",
 			},
 			err: true,
 		},
 		{
 			desc: "circuit-breaker-expression",
 			annotations: map[string]string{
-				"maesh.containo.us/circuit-breaker-expression": "LatencyAtQuantileMS(50.0) > 100",
+				"mesh.traefik.io/circuit-breaker-expression": "LatencyAtQuantileMS(50.0) > 100",
 			},
 			want: map[string]*dynamic.Middleware{
 				"circuit-breaker": {
@@ -55,8 +55,8 @@ func TestBuildMiddleware(t *testing.T) {
 		{
 			desc: "ratelimit-average and ratelimit-burst are both valid",
 			annotations: map[string]string{
-				"maesh.containo.us/ratelimit-average": "200",
-				"maesh.containo.us/ratelimit-burst":   "100",
+				"mesh.traefik.io/ratelimit-average": "200",
+				"mesh.traefik.io/ratelimit-burst":   "100",
 			},
 			want: map[string]*dynamic.Middleware{
 				"rate-limit": {
@@ -70,40 +70,40 @@ func TestBuildMiddleware(t *testing.T) {
 		{
 			desc: "ratelimit-average is valid but ratelimit-burst is invalid",
 			annotations: map[string]string{
-				"maesh.containo.us/ratelimit-average": "200",
-				"maesh.containo.us/ratelimit-burst":   "hello",
+				"mesh.traefik.io/ratelimit-average": "200",
+				"mesh.traefik.io/ratelimit-burst":   "hello",
 			},
 			err: true,
 		},
 		{
 			desc: "ratelimit-burst is valid but ratelimit-average is invalid",
 			annotations: map[string]string{
-				"maesh.containo.us/ratelimit-burst":   "200",
-				"maesh.containo.us/ratelimit-average": "hello",
+				"mesh.traefik.io/ratelimit-burst":   "200",
+				"mesh.traefik.io/ratelimit-average": "hello",
 			},
 			err: true,
 		},
 		{
 			desc: "ratelimit-average is set but ratelimit-burst is not",
 			annotations: map[string]string{
-				"maesh.containo.us/ratelimit-average": "200",
+				"mesh.traefik.io/ratelimit-average": "200",
 			},
 			want: map[string]*dynamic.Middleware{},
 		},
 		{
 			desc: "ratelimit-burst is set but ratelimit-average is not",
 			annotations: map[string]string{
-				"maesh.containo.us/ratelimit-burst": "200",
+				"mesh.traefik.io/ratelimit-burst": "200",
 			},
 			want: map[string]*dynamic.Middleware{},
 		},
 		{
 			desc: "multiple middlewares",
 			annotations: map[string]string{
-				"maesh.containo.us/retry-attempts":             "5",
-				"maesh.containo.us/ratelimit-average":          "200",
-				"maesh.containo.us/ratelimit-burst":            "100",
-				"maesh.containo.us/circuit-breaker-expression": "LatencyAtQuantileMS(50.0) > 100",
+				"mesh.traefik.io/retry-attempts":             "5",
+				"mesh.traefik.io/ratelimit-average":          "200",
+				"mesh.traefik.io/ratelimit-burst":            "100",
+				"mesh.traefik.io/circuit-breaker-expression": "LatencyAtQuantileMS(50.0) > 100",
 			},
 			want: map[string]*dynamic.Middleware{
 				"retry": {

@@ -5,7 +5,7 @@
       "namespace": "my-ns",
       "selector": {},
       "annotations": {
-        "maesh.containo.us/traffic-type": "tcp"
+        "mesh.traefik.io/traffic-type": "tcp"
       },
       "ports": [
         {
@@ -26,7 +26,7 @@
       "namespace": "my-ns",
       "selector": {},
       "annotations": {
-        "maesh.containo.us/traffic-type": "udp"
+        "mesh.traefik.io/traffic-type": "udp"
       },
       "ports": [
         {

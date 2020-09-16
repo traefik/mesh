@@ -5,10 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/traefik/mesh/pkg/k8s"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,7 +30,7 @@ func TestCleanup_CleanShadowServices(t *testing.T) {
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(logrus.DebugLevel)
 
-	cleanup := NewCleanup(logger, clientMock.KubernetesClient(), "maesh")
+	cleanup := NewCleanup(logger, clientMock.KubernetesClient(), "traefik-mesh")
 	require.NotNil(t, cleanup)
 
 	err := cleanup.CleanShadowServices(context.Background())

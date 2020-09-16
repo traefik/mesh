@@ -13,9 +13,9 @@ You can build the documentation and test it locally (with live reloading), using
 
 ```bash
 $ make serve
-docker build -t maesh-docs -f docs.Dockerfile ./
+docker build -t traefik-mesh-docs -f docs.Dockerfile ./
 # […]
-docker run  --rm -v /Users/kevinpollet/Documents/Dev/maesh/docs:/mkdocs  -p 8000:8000 maesh-docs mkdocs serve
+docker run  --rm -v /home/user/traefik-mesh/docs:/mkdocs  -p 8000:8000 traefik-mesh-docs mkdocs serve
 # […]
 INFO    -  Building documentation...
 INFO    -  Cleaning site directory
@@ -66,9 +66,9 @@ If you've made changes to the documentation, it's safer to clean it before verif
 
 ```bash
 $ make clean verify
-docker build -t maesh-docs -f docs.Dockerfile ./
+docker build -t traefik-mesh-docs -f docs.Dockerfile ./
 # […]
-docker run --rm -v /Users/kevinpollet/Documents/Dev/maesh/docs:/mkdocs  -p 8000:8000 maesh-docs sh -c "mkdocs build && chown -R 501:20 ./site"
+docker run --rm -v /home/user/traefik-mesh/docs:/mkdocs  -p 8000:8000 traefik-mesh-docs sh -c "mkdocs build && chown -R 501:20 ./site"
 === Checking HTML content...
 # […]
 ```
