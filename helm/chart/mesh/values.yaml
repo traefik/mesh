@@ -1,0 +1,208 @@
+# Default values for Traefik Mesh.
+
+# acl: true
+
+# kubedns: true
+
+# clusterDomain: cluster.local
+
+# logLevel: error
+# logFormat: common
+
+# defaultMode: http
+
+limits:
+  http: 10
+  tcp: 25
+  udp: 25
+
+controller:
+  image:
+    name: traefik/mesh
+    # (Optional)
+    # pullPolicy: IfNotPresent
+    # (Optional)
+    # tag: v1.1.0
+    # (Optional)
+    # pullSecret: xxx
+
+  # logLevel: error
+  # logFormat: common
+
+  # ignoreNamespaces:
+  #  - example
+
+  # watchNamespaces:
+  #  - example
+
+  resources:
+    limit:
+      mem: 100Mi
+      cpu: 200m
+    request:
+      mem: 50Mi
+      cpu: 100m
+
+  # Added so we can launch on nodes with restrictions.
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+proxy:
+  image:
+    name: traefik
+    # (Optional)
+    # pullPolicy: IfNotPresent
+    # (Optional)
+    # tag: v2.3
+    # (Optional)
+    # pullSecret: xxx
+
+  # logLevel: error
+  # logFormat: common
+
+  # pollInterval: 1s
+  # pollTimeout: 1s
+
+  # forwardingTimeouts:
+  #   dialTimeout: 30s
+  #   (Optional)
+  #   responseHeaderTimeout: 0s
+  #   (Optional)
+  #   idleConnTimeout: 1s
+
+  # env:
+  #   - name: NAME
+  #     value: "value"
+
+  # envFrom:
+  #   - configMapRef:
+  #       name: config
+
+  # additionalArguments:
+  #   - "--name=value"
+
+  resources:
+    limit:
+      mem: 100Mi
+      cpu: 200m
+    request:
+      mem: 50Mi
+      cpu: 100m
+
+  # Added so we can launch on nodes with restrictions.
+  nodeSelector: {}
+  tolerations: []
+
+  # Additional deployment annotations.
+  # annotations: {}
+
+  # Additional pod annotations.
+  # podAnnotations: {}
+
+#
+# Tracing configuration.
+#
+tracing:
+  deploy: true
+  jaeger:
+    enabled: true
+    # (Optional)
+    # localAgentHostPort: "127.0.0.1:6831"
+    # (Optional)
+    # samplingServerURL: "http://localhost:5778/sampling"
+  # datadog:
+    # localAgentHostPort: "127.0.0.1:8126"
+    # (Optional)
+    # debug: true
+    # (Optional)
+    # globalTag: "sample"
+    # (Optional)
+    # prioritySampling: true
+  # zipkin:
+    # httpEndpoint: "127.0.0.1:8125"
+    # (Optional)
+    # sameSpan: true
+    # (Optional)
+    # id128Bit: false
+    # (Optional)
+    # sampleRate: 0.2
+  # instana:
+    # localAgentHost: "127.0.0.1"
+    # localAgentPort: 42699
+    # logLevel: info
+  # haystack:
+    # localAgentHost: "127.0.0.1"
+    # localAgentPort: 42699
+    # (Optional)
+    # globalTag: "sample:test"
+    # (Optional)
+    # traceIDHeaderName: "sample"
+    # (Optional)
+    # parentIDHeaderName: "sample"
+    # (Optional)
+    # spanIDHeaderName: "sample"
+    # (Optional)
+    # baggagePrefixHeaderName: "sample"
+
+#
+# Metrics configuration.
+#
+metrics:
+  deploy: true
+  prometheus:
+    # whether to expose Prometheus metrics
+    enabled: true
+    # (Optional)
+    # addEntrypointsLabels: true
+    # (Optional)
+    # addServiceLabels: true
+    # (Optional)
+    # buckets: 0.100000, 0.300000, 1.200000, 5.000000
+  ## you can override values of the metrics subchart here.
+  ## check charts/metrics/values.yaml for the defaults.
+  ## example:
+  # grafana:
+  #   storageClassName: "metrics-storage"
+  #   resources:
+  #     limit:
+  #       mem: "500Mi"
+  #       cpu: "500m"
+  #     request:
+  #       mem: "200Mi"
+  #       cpu: "200m"
+  # datadog:
+    # address: "127.0.0.1:8125"
+    # (Optional)
+    # addEntrypointsLabels: true
+    # (Optional)
+    # addServiceLabels: true
+    # (Optional)
+    # pushInterval: 10s
+  # influxdb:
+    # address: "localhost:8089"
+    # protocol: "udp"
+    # (Optional)
+    # database: "db"
+    # (Optional)
+    # retentionPolicy: "two_hours"
+    # (Optional)
+    # username: "john"
+    # (Optional)
+    # password: "secret"
+    # (Optional)
+    # addEntrypointsLabels: true
+    # (Optional)
+    # addServiceLabels: true
+    # (Optional)
+    # pushInterval: 10s
+  # statsd:
+    # address: "127.0.0.1:8125"
+    # (Optional)
+    # addEntrypointsLabels: true
+    # (Optional)
+    # addServiceLabels: true
+    # (Optional)
+    # pushInterval: 10s
+    # (Optional)
+    # prefix: traefik

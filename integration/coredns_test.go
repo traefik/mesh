@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/containous/maesh/integration/k3d"
-	"github.com/containous/maesh/integration/tool"
-	"github.com/containous/maesh/integration/try"
 	"github.com/go-check/check"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/integration/k3d"
+	"github.com/traefik/mesh/integration/tool"
+	"github.com/traefik/mesh/integration/try"
 	checker "github.com/vdemeester/shakers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -26,7 +26,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
-		{Name: "containous/whoami:v1.0.1"},
+		{Name: "traefik/whoami:latest"},
 		{Name: "coredns/coredns:1.3.1"},
 		{Name: "coredns/coredns:1.4.0"},
 		{Name: "coredns/coredns:1.5.2"},
@@ -42,7 +42,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	)
 	c.Assert(err, checker.IsNil)
 
-	c.Assert(s.cluster.CreateNamespace(s.logger, maeshNamespace), checker.IsNil)
+	c.Assert(s.cluster.CreateNamespace(s.logger, traefikMeshNamespace), checker.IsNil)
 	c.Assert(s.cluster.CreateNamespace(s.logger, testNamespace), checker.IsNil)
 
 	c.Assert(s.cluster.Apply(s.logger, smiCRDs), checker.IsNil)
@@ -87,11 +87,16 @@ func (s *CoreDNSSuite) testCoreDNSVersion(c *check.C, version string) {
 	c.Assert(s.setCoreDNSVersion(version), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
-	c.Assert(maeshPrepare(), checker.IsNil)
+	c.Assert(traefikMeshPrepare(), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
 	err := try.Retry(func() error {
 		return s.tool.Dig("whoami.whoami.maesh")
+	}, 30*time.Second)
+	c.Assert(err, checker.IsNil)
+
+	err = try.Retry(func() error {
+		return s.tool.Dig("whoami.whoami.traefik.mesh")
 	}, 30*time.Second)
 	c.Assert(err, checker.IsNil)
 }

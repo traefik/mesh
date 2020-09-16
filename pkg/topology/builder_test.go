@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	mk8s "github.com/containous/maesh/pkg/k8s"
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha2"
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
 	split "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/split/v1alpha3"
@@ -26,6 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	mk8s "github.com/traefik/mesh/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -39,9 +39,9 @@ func TestTopologyBuilder_BuildIgnoresNamespaces(t *testing.T) {
 	selectorAppA := map[string]string{"app": "app-a"}
 	selectorAppB := map[string]string{"app": "app-b"}
 	annotations := map[string]string{
-		"maesh.containo.us/traffic-type":      "http",
-		"maesh.containo.us/ratelimit-average": "100",
-		"maesh.containo.us/ratelimit-burst":   "200",
+		"mesh.traefik.io/traffic-type":      "http",
+		"mesh.traefik.io/ratelimit-average": "100",
+		"mesh.traefik.io/ratelimit-burst":   "200",
 	}
 	svcbPorts := []corev1.ServicePort{svcPort("port-8080", 8080, 8080)}
 	svccPorts := []corev1.ServicePort{svcPort("port-9091", 9091, 9091)}
@@ -159,9 +159,9 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	selectorAppC := map[string]string{"app": "app-c"}
 	selectorAppD := map[string]string{"app": "app-d"}
 	annotations := map[string]string{
-		"maesh.containo.us/traffic-type":      "http",
-		"maesh.containo.us/ratelimit-average": "100",
-		"maesh.containo.us/ratelimit-burst":   "200",
+		"mesh.traefik.io/traffic-type":      "http",
+		"mesh.traefik.io/ratelimit-average": "100",
+		"mesh.traefik.io/ratelimit-burst":   "200",
 	}
 	svcPorts := []corev1.ServicePort{svcPort("port-8080", 8080, 8080)}
 
@@ -427,9 +427,9 @@ func TestTopologyBuilder_BuildWithTrafficTargetEmptyDestinationPort(t *testing.T
 	selectorAppA := map[string]string{"app": "app-a"}
 	selectorAppB := map[string]string{"app": "app-b"}
 	annotations := map[string]string{
-		"maesh.containo.us/traffic-type":      "http",
-		"maesh.containo.us/ratelimit-average": "100",
-		"maesh.containo.us/ratelimit-burst":   "200",
+		"mesh.traefik.io/traffic-type":      "http",
+		"mesh.traefik.io/ratelimit-average": "100",
+		"mesh.traefik.io/ratelimit-burst":   "200",
 	}
 	svcbPorts := []corev1.ServicePort{
 		svcPort("port-8080", 8080, 8080),

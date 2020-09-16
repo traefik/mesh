@@ -1,5 +1,5 @@
 version: v1.0
-name: Maesh Pipeline
+name: Traefik Mesh Pipeline
 
 agent:
   machine:
@@ -33,9 +33,9 @@ blocks:
         - name: Build and check
           commands:
             - make check build
-            - cache store maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID dist
-            - docker save containous/maesh:latest > maesh-img.tar
-            - cache store maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID maesh-img.tar
+            - cache store traefik-mesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID dist
+            - docker save traefik/mesh:latest > traefik-mesh-img.tar
+            - cache store traefik-mesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID traefik-mesh-img.tar
 
   - name: Unit Tests
     skip:
@@ -62,9 +62,9 @@ blocks:
           - sudo semgo go1.15
           - checkout
           - cache restore
-          - cache restore maesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
-          - cache restore maesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
-          - docker load < maesh-img.tar
+          - cache restore traefik-mesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
+          - cache restore traefik-mesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
+          - docker load < traefik-mesh-img.tar
       jobs:
         - name: ACL Enabled Suite
           commands:

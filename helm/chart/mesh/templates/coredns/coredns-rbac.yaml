@@ -1,0 +1,54 @@
+{{- if .Values.kubedns }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: maesh
+    component: coredns
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote}}
+    heritage: {{ .Release.Service | quote}}
+  name: traefik-mesh-coredns-role
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+      - services
+      - pods
+      - namespaces
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: traefik-mesh-coredns
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: coredns
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote}}
+    heritage: {{ .Release.Service | quote}}
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: traefik-mesh-coredns-role
+subjects:
+  - kind: ServiceAccount
+    name: traefik-mesh-coredns
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -1,9 +1,9 @@
 # Examples
 
-Here are some examples on how to easily deploy Maesh on your cluster.
+Here are some examples on how to easily deploy Traefik Mesh on your cluster.
 
 ??? Note "Prerequisites"
-    Before following those examples, make sure your cluster follows [the prerequisites for deploying Maesh](quickstart.md#prerequisites).
+    Before following those examples, make sure your cluster follows [the prerequisites for deploying Traefik Mesh](quickstart.md#prerequisites).
 
 ## Simple Example
 
@@ -50,7 +50,7 @@ spec:
       serviceAccount: whoami-server
       containers:
         - name: whoami
-          image: containous/whoami:v1.4.0
+          image: traefik/whoami:latest
           imagePullPolicy: IfNotPresent
 
 ---
@@ -72,7 +72,7 @@ spec:
       serviceAccount: whoami-server
       containers:
         - name: whoami-tcp
-          image: containous/whoamitcp:latest
+          image: traefik/whoamitcp:latest
           imagePullPolicy: IfNotPresent
 
 ---
@@ -174,13 +174,13 @@ my data
 Received: my data
 ```
 
-You can now install Maesh [by following this documentation](install.md) on your cluster.
+You can now install Traefik Mesh [by following this documentation](install.md) on your cluster.
 
-Since Maesh is not intrusive, it has to be explicitly given access to services before it can be used. You can ensure that the HTTP endpoint of your service does not pass through Maesh since no `X-Forwarded-For` header should be added.
+Since Traefik Mesh is not intrusive, it has to be explicitly given access to services before it can be used. You can ensure that the HTTP endpoint of your service does not pass through Traefik Mesh since no `X-Forwarded-For` header should be added.
 
-Now, in order to configure Maesh for your `whoami` service, you just need to update the `whoami` service specs, in order to add the appropriate annotations.
+Now, in order to configure Traefik Mesh for your `whoami` service, you just need to update the `whoami` service specs, in order to add the appropriate annotations.
 
-The HTTP service needs to have `maesh.containo.us/traffic-type: "http"` and the TCP service, `maesh.containo.us/traffic-type: "tcp"`.
+The HTTP service needs to have `mesh.traefik.io/traffic-type: "http"` and the TCP service, `mesh.traefik.io/traffic-type: "tcp"`.
 
 ```yaml
 ---
@@ -191,10 +191,9 @@ metadata:
   namespace: whoami
   labels:
     app: whoami
-  # These annotations enable Maesh for this service:
   annotations:
-    maesh.containo.us/traffic-type: "http"
-    maesh.containo.us/retry-attempts: "2"
+    mesh.traefik.io/traffic-type: "http"
+    mesh.traefik.io/retry-attempts: "2"
 spec:
   type: ClusterIP
   ports:
@@ -211,9 +210,8 @@ metadata:
   namespace: whoami
   labels:
     app: whoami-tcp
-  # These annotations enable Maesh for this service:
   annotations:
-    maesh.containo.us/traffic-type: "tcp"
+    mesh.traefik.io/traffic-type: "tcp"
 spec:
   type: ClusterIP
   ports:
@@ -223,10 +221,10 @@ spec:
     app: whoami-tcp
 ```
 
-You should now be able to access your HTTP and TCP services through the Maesh endpoint:
+You should now be able to access your HTTP and TCP services through the Traefik Mesh endpoint:
 
 ```bash tab="Command"
-kubectl -n whoami exec whoami-client -- curl -s whoami.whoami.maesh
+kubectl -n whoami exec whoami-client -- curl -s whoami.whoami.traefik.mesh
 ```
 
 ```text tab="Expected Output"
@@ -235,7 +233,7 @@ IP: 127.0.0.1
 IP: 5.6.7.8
 RemoteAddr: 1.2.3.4:12345
 GET / HTTP/1.1
-Host: whoami.whoami.maesh
+Host: whoami.whoami.traefik.mesh
 User-Agent: curl/7.64.0
 Accept: */*
 X-Forwarded-For: 3.4.5.6
@@ -243,12 +241,12 @@ X-Forwarded-For: 3.4.5.6
 
 ## ACL Example
 
-The [ACL mode](install.md#access-control-list) can be enabled when installing Maesh. Once activated, all traffic is forbidden unless explicitly authorized
-using the SMI [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md#traffictarget) resource. This example will present the configuration required to allow the client
-pod to send traffic to the HTTP and TCP services defined in the previous example.
+The [ACL mode](install.md#access-control-list) can be enabled when installing Traefik Mesh.
+Once activated, all traffic is forbidden unless explicitly authorized using the SMI [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md#traffictarget) resource.
+This example will present the configuration required to allow the client pod to send traffic to the HTTP and TCP services defined in the previous example.
 
-Each `TrafficTarget` defines that a set of source `ServiceAccount` is capable of sending traffic to a destination `ServiceAccount`. To authorize the `whoami-client` pod to send traffic to `whoami.whoami.maesh`, we need to
-explicitly allow it to hit the pods exposed by the `whoami` service. 
+Each `TrafficTarget` defines that a set of source `ServiceAccount` is capable of sending traffic to a destination `ServiceAccount`.
+To authorize the `whoami-client` pod to send traffic to `whoami.whoami.traefik.mesh`, we need to explicitly allow it to hit the pods exposed by the `whoami` service. 
 
 ```yaml
 ---

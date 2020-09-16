@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containous/maesh/pkg/k8s"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/traefik/mesh/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,7 +27,7 @@ func TestPortMapping_AddEmptyState(t *testing.T) {
 	serviceLister, err := newFakeServiceLister()
 	require.NoError(t, err)
 
-	p := NewPortMapping("maesh", serviceLister, logger, 10000, 10200)
+	p := NewPortMapping("traefik-mesh", serviceLister, logger, 10000, 10200)
 
 	wantSp := &servicePort{
 		Namespace: "my-ns",
@@ -50,7 +50,7 @@ func TestPortMapping_AddOverflow(t *testing.T) {
 	serviceLister, err := newFakeServiceLister()
 	require.NoError(t, err)
 
-	p := NewPortMapping("maesh", serviceLister, logger, 10000, 10001)
+	p := NewPortMapping("traefik-mesh", serviceLister, logger, 10000, 10001)
 
 	wantSp := &servicePort{
 		Namespace: "my-ns",
@@ -88,7 +88,7 @@ func TestPortMapping_FindWithState(t *testing.T) {
 	serviceLister, err := newFakeServiceLister()
 	require.NoError(t, err)
 
-	p := NewPortMapping("maesh", serviceLister, logger, 10000, 10200)
+	p := NewPortMapping("traefik-mesh", serviceLister, logger, 10000, 10200)
 
 	p.table[10000] = &servicePort{Namespace: "my-ns", Name: "my-app", Port: 9090}
 	p.table[10002] = &servicePort{Namespace: "my-ns", Name: "my-app2", Port: 9092}
@@ -108,7 +108,7 @@ func TestPortMapping_Remove(t *testing.T) {
 	serviceLister, err := newFakeServiceLister()
 	require.NoError(t, err)
 
-	p := NewPortMapping("maesh", serviceLister, logger, 10000, 10200)
+	p := NewPortMapping("traefik-mesh", serviceLister, logger, 10000, 10200)
 
 	p.table[10000] = &servicePort{Namespace: "my-ns", Name: "my-app", Port: 9090}
 
@@ -143,7 +143,7 @@ func TestPortMapping_LoadState(t *testing.T) {
 					Port:       80,
 					TargetPort: intstr.FromInt(10000),
 				}),
-				newShadowService("maesh-foo-6d61657368-maesh", corev1.ServicePort{
+				newShadowService("traefik-mesh-foo-6d61657368-traefik-mesh", corev1.ServicePort{
 					Port:       80,
 					TargetPort: intstr.FromInt(10001),
 				}),
@@ -153,7 +153,7 @@ func TestPortMapping_LoadState(t *testing.T) {
 			desc:     "should ignore the shadow service ports with an out of range target port",
 			expPorts: []int32{10001},
 			services: []runtime.Object{
-				newShadowService("maesh-foo-6d61657368-maesh",
+				newShadowService("traefik-mesh-foo-6d61657368-traefik-mesh",
 					corev1.ServicePort{
 						Port:       80,
 						TargetPort: intstr.FromInt(5000),
@@ -167,7 +167,7 @@ func TestPortMapping_LoadState(t *testing.T) {
 			desc:     "should initialize the state with all the shadow service target ports",
 			expPorts: []int32{10000, 10001, 10002, 10003},
 			services: []runtime.Object{
-				newShadowService("maesh-foo-6d61657368-maesh",
+				newShadowService("traefik-mesh-foo-6d61657368-traefik-mesh",
 					corev1.ServicePort{
 						Port:       80,
 						TargetPort: intstr.FromInt(10002),
@@ -175,7 +175,7 @@ func TestPortMapping_LoadState(t *testing.T) {
 						Port:       8080,
 						TargetPort: intstr.FromInt(10003),
 					}),
-				newShadowService("maesh-bar-6d61657368-maesh",
+				newShadowService("traefik-mesh-bar-6d61657368-traefik-mesh",
 					corev1.ServicePort{
 						Port:       80,
 						TargetPort: intstr.FromInt(10000),
@@ -195,7 +195,7 @@ func TestPortMapping_LoadState(t *testing.T) {
 			serviceLister, err := newFakeServiceLister(test.services...)
 			require.NoError(t, err)
 
-			portMapping := NewPortMapping("maesh", serviceLister, logger, 10000, 10005)
+			portMapping := NewPortMapping("traefik-mesh", serviceLister, logger, 10000, 10005)
 
 			err = portMapping.LoadState()
 
@@ -225,7 +225,7 @@ func TestPortMapping_parseServiceNamespaceAndName(t *testing.T) {
 		},
 		{
 			desc:          "should return the parsed service namespace and name from the shadow service name",
-			shadowSvcName: "maesh-foo-6d61657368-default",
+			shadowSvcName: "traefik-mesh-foo-6d61657368-default",
 			expNamespace:  "default",
 			expName:       "foo",
 		},
@@ -239,7 +239,7 @@ func TestPortMapping_parseServiceNamespaceAndName(t *testing.T) {
 			serviceLister, err := newFakeServiceLister()
 			require.NoError(t, err)
 
-			portMapping := NewPortMapping("maesh", serviceLister, logger, 10000, 10005)
+			portMapping := NewPortMapping("traefik-mesh", serviceLister, logger, 10000, 10005)
 
 			namespace, name, err := portMapping.parseServiceNamespaceAndName(test.shadowSvcName)
 			if test.expErr {
@@ -280,7 +280,7 @@ func newShadowService(name string, ports ...corev1.ServicePort) *corev1.Service 
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "maesh",
+			Namespace: "traefik-mesh",
 			Name:      name,
 			Labels: map[string]string{
 				"app":  "maesh",
