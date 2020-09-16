@@ -1,0 +1,155 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik-mesh-controller
+  namespace: traefik-mesh
+  labels:
+    app: maesh
+    component: controller
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: traefik-mesh-controller-role
+  namespace: traefik-mesh
+  labels:
+    app: maesh
+    component: controller
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - endpoints
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - create
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+      - delete
+      - create
+      - update
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - access.smi-spec.io
+      - specs.smi-spec.io
+      - split.smi-spec.io
+    resources:
+      - traffictargets
+      - tcproutes
+      - httproutegroups
+      - trafficsplits
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: traefik-mesh-controller
+  namespace: traefik-mesh
+  labels:
+    app: maesh
+    component: controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: traefik-mesh-controller-role
+subjects:
+  - kind: ServiceAccount
+    name: traefik-mesh-controller
+    namespace: traefik-mesh
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-mesh-controller
+  namespace: traefik-mesh
+  labels:
+    app: maesh
+    component: controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maesh
+      component: controller
+  template:
+    metadata:
+      labels:
+        app: maesh
+        component: controller
+    spec:
+      serviceAccountName: traefik-mesh-controller
+      containers:
+        - name: traefik-mesh-controller
+          image: "traefik/mesh:latest"
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--logLevel=DEBUG"
+            - "--defaultMode=http"
+            - "--namespace=traefik-mesh"
+            - "--limitHTTPPort=5"
+            - "--limitTCPPort=5"
+            - "--limitUDPPort=5"
+          ports:
+            - name: api
+              containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /api/status/readiness
+              port: api
+            initialDelaySeconds: 3
+            periodSeconds: 1
+      initContainers:
+        - name: traefik-mesh-prepare
+          image: "traefik/mesh:latest"
+          imagePullPolicy: IfNotPresent
+          args:
+            - "prepare"
+            - "--logLevel=DEBUG"
+            - "--clusterdomain=cluster.local"
+            - "--namespace=traefik-mesh"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-mesh-controller
+  namespace: traefik-mesh
+  labels:
+    app: maesh
+    component: controller
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9000
+      name: mesh-controller-api
+      targetPort: api
+  selector:
+    component: controller

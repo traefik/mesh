@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containous/maesh/cmd"
-	"github.com/containous/maesh/pkg/dns"
-	"github.com/containous/maesh/pkg/k8s"
+	"github.com/traefik/mesh/cmd"
+	"github.com/traefik/mesh/pkg/dns"
+	"github.com/traefik/mesh/pkg/k8s"
 	"github.com/traefik/paerser/cli"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,7 +32,7 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debug("Starting maesh prepare...")
+	log.Debug("Starting prepare...")
 	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
 	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
 

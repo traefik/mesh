@@ -1,4 +1,4 @@
-module github.com/containous/maesh
+module github.com/traefik/mesh
 
 go 1.15
 

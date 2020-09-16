@@ -10,7 +10,7 @@ spec:
   serviceAccountName: server
   containers:
     - name: server-http
-      image: containous/whoami:v1.0.1
+      image: traefik/whoami:latest
       imagePullPolicy: IfNotPresent
       readinessProbe:
         httpGet:
