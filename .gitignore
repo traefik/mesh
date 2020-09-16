@@ -14,5 +14,5 @@ traefik-mesh
 .vscode
 vendor
 pages/
-traefik-mesh-gh-pages*
+mesh-gh-pages*
 *.zip

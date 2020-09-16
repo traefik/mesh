@@ -5,7 +5,7 @@ SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')
 BINARY_NAME = traefik-mesh
 DIST_DIR = $(CURDIR)/dist
 DIST_DIR_TRAEFIK_MESH = $(DIST_DIR)/$(BINARY_NAME)
-PROJECT ?= github.com/traefik/$(BINARY_NAME)
+PROJECT ?= github.com/traefik/mesh
 
 TAG_NAME ?= $(shell git tag -l --contains HEAD)
 SHA := $(shell git rev-parse --short HEAD)
@@ -22,7 +22,7 @@ $(DIST_DIR):
 	mkdir -p $(DIST_DIR)
 
 clean:
-	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/traefik-mesh-gh-pages
+	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/mesh-gh-pages
 
 # Static linting of source files. See .golangci.toml for options
 local-check: $(DIST_DIR) helm-lint
@@ -112,12 +112,12 @@ k3d:
 
 pages:
 	mkdir -p $(CURDIR)/pages
-	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/traefik-mesh-gh-pages
+	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/mesh-gh-pages
 	curl -sSLO https://$(PROJECT)/archive/gh-pages.zip
 	unzip $(CURDIR)/gh-pages.zip
 	# We only keep the directory "charts" so documentation may remove files
-	cp -r $(CURDIR)/traefik-mesh-gh-pages/charts $(CURDIR)/pages/
-	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/traefik-mesh-gh-pages
+	cp -r $(CURDIR)/mesh-gh-pages/charts $(CURDIR)/pages/
+	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/mesh-gh-pages
 
 docs-package: pages
 	make -C $(CURDIR)/docs
