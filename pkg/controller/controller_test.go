@@ -4,21 +4,21 @@ import (
 	"os"
 	"testing"
 
-	"github.com/containous/maesh/pkg/k8s"
-	"github.com/containous/maesh/pkg/topology"
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/traefik/mesh/pkg/k8s"
+	"github.com/traefik/mesh/pkg/topology"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 )
 
 const (
-	meshNamespace string = "maesh"
-	minHTTPPort          = int32(5000)
-	maxHTTPPort          = int32(5005)
-	minTCPPort           = int32(10000)
-	maxTCPPort           = int32(10005)
-	minUDPPort           = int32(15000)
-	maxUDPPort           = int32(15005)
+	traefikMeshNamespace string = "traefik-mesh"
+	minHTTPPort                 = int32(5000)
+	maxHTTPPort                 = int32(5005)
+	minTCPPort                  = int32(10000)
+	maxTCPPort                  = int32(10005)
+	minUDPPort                  = int32(15000)
+	maxUDPPort                  = int32(15005)
 )
 
 type storeMock struct{}
@@ -39,7 +39,7 @@ func TestController_NewMeshController(t *testing.T) {
 	controller := NewMeshController(clientMock, Config{
 		ACLEnabled:       false,
 		DefaultMode:      "http",
-		Namespace:        meshNamespace,
+		Namespace:        traefikMeshNamespace,
 		IgnoreNamespaces: []string{},
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,
@@ -64,7 +64,7 @@ func TestController_NewMeshControllerWithSMI(t *testing.T) {
 	controller := NewMeshController(clientMock, Config{
 		ACLEnabled:       true,
 		DefaultMode:      "http",
-		Namespace:        meshNamespace,
+		Namespace:        traefikMeshNamespace,
 		IgnoreNamespaces: []string{},
 		MinHTTPPort:      minHTTPPort,
 		MaxHTTPPort:      maxHTTPPort,

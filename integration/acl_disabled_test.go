@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/containous/maesh/integration/k3d"
-	"github.com/containous/maesh/integration/tool"
-	"github.com/containous/maesh/integration/try"
 	"github.com/go-check/check"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/integration/k3d"
+	"github.com/traefik/mesh/integration/tool"
+	"github.com/traefik/mesh/integration/try"
 	checker "github.com/vdemeester/shakers"
 )
 
@@ -23,11 +23,11 @@ func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
-		{Name: "containous/maesh:latest", Local: true},
+		{Name: "traefik/mesh:latest", Local: true},
 		{Name: "traefik:v2.3"},
-		{Name: "containous/whoami:v1.0.1"},
-		{Name: "containous/whoamitcp:v0.0.2"},
-		{Name: "containous/whoamiudp:v0.0.1"},
+		{Name: "traefik/whoami:latest"},
+		{Name: "traefik/whoamitcp:latest"},
+		{Name: "traefik/whoamiudp:latest"},
 		{Name: "giantswarm/tiny-tools:3.9"},
 	}
 
@@ -38,17 +38,17 @@ func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 	)
 	c.Assert(err, checker.IsNil)
 
-	c.Assert(s.cluster.CreateNamespace(s.logger, maeshNamespace), checker.IsNil)
+	c.Assert(s.cluster.CreateNamespace(s.logger, traefikMeshNamespace), checker.IsNil)
 	c.Assert(s.cluster.CreateNamespace(s.logger, testNamespace), checker.IsNil)
 
 	c.Assert(s.cluster.Apply(s.logger, smiCRDs), checker.IsNil)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/tool/tool.yaml"), checker.IsNil)
-	c.Assert(s.cluster.Apply(s.logger, "testdata/maesh/controller-acl-disabled.yaml"), checker.IsNil)
-	c.Assert(s.cluster.Apply(s.logger, "testdata/maesh/proxy.yaml"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/traefik-mesh/controller-acl-disabled.yaml"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/traefik-mesh/proxy.yaml"), checker.IsNil)
 
 	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 60*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("traefik-mesh-controller", traefikMeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("traefik-mesh-proxy", traefikMeshNamespace, 60*time.Second), checker.IsNil)
 
 	s.tool = tool.New(s.logger, "tool", testNamespace)
 }
@@ -65,7 +65,7 @@ func (s *ACLDisabledSuite) TestHTTPService(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/http"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/http")
 
-	s.assertHTTPServiceReachable(c, "server-http.test.maesh:8080", "server-http", 60*time.Second)
+	s.assertHTTPServiceReachable(c, "server-http.test.traefik.mesh:8080", "server-http", 60*time.Second)
 }
 
 // TestTCPService deploys a TCP service "server" with one Pod called "server" and asserts this service is
@@ -74,7 +74,7 @@ func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/tcp"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/tcp")
 
-	s.assertTCPServiceReachable(c, "server-tcp.test.maesh", 8080, "server-tcp", 60*time.Second)
+	s.assertTCPServiceReachable(c, "server-tcp.test.traefik.mesh", 8080, "server-tcp", 60*time.Second)
 }
 
 // TestUDPService deploys a UDP service "server" with one Pod called "server" and asserts this service is
@@ -83,7 +83,7 @@ func (s *ACLDisabledSuite) TestUDPervice(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/udp"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/udp")
 
-	s.assertUDPServiceReachable(c, "server-udp.test.maesh", 8080, "server-udp", 60*time.Second)
+	s.assertUDPServiceReachable(c, "server-udp.test.traefik.mesh", 8080, "server-udp", 60*time.Second)
 }
 
 // TestSplitTraffic deploys an HTTP service "server" and a TrafficSplit attached to it configured to distribute equally
@@ -93,8 +93,7 @@ func (s *ACLDisabledSuite) TestSplitTraffic(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/traffic-split"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/traffic-split")
 
-	s.assertHTTPServiceReachable(c, "server-split.test.maesh:8080", "server-v1", 60*time.Second)
-	s.assertHTTPServiceReachable(c, "server-split.test.maesh:8080", "server-v2", 30*time.Second)
+	s.assertHTTPServiceReachable(c, "server-split.test.traefik.mesh:8080", "server-v1", 60*time.Second)
 }
 
 func (s *ACLDisabledSuite) assertHTTPServiceReachable(c *check.C, url, expectedHostname string, timeout time.Duration) {

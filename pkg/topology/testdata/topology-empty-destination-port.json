@@ -7,9 +7,9 @@
         "app": "app-b"
       },
       "annotations": {
-        "maesh.containo.us/ratelimit-average": "100",
-        "maesh.containo.us/ratelimit-burst": "200",
-        "maesh.containo.us/traffic-type": "http"
+        "mesh.traefik.io/ratelimit-average": "100",
+        "mesh.traefik.io/ratelimit-burst": "200",
+        "mesh.traefik.io/traffic-type": "http"
       },
       "ports": [
         {

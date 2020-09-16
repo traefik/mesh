@@ -1,0 +1,122 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-mesh-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: controller
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maesh
+      component: controller
+      release: {{ .Release.Name | quote }}
+  template:
+    metadata:
+      labels:
+        app: maesh
+        component: controller
+        release: {{ .Release.Name | quote }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4646"
+    spec:
+      serviceAccountName: traefik-mesh-controller
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      {{- if .Values.controller.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.controller.image.pullSecret }}
+      {{- end }}
+      {{- with .Values.controller.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.controller.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.controller.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      containers:
+        - name: traefik-mesh-controller
+          image: {{ include "traefikMesh.controllerImage" . | quote }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent" }}
+          args:
+            {{- if or .Values.controller.logLevel .Values.logLevel }}
+            - "--logLevel={{ or .Values.controller.logLevel .Values.logLevel }}"
+            {{- end }}
+            {{- if or .Values.controller.logFormat .Values.logFormat }}
+            - "--logFormat={{ or .Values.controller.logFormat .Values.logFormat }}"
+            {{- end }}
+            {{- if .Values.defaultMode }}
+            - "--defaultMode={{ .Values.defaultMode }}"
+            {{- end }}
+            {{- if .Values.acl }}
+            - "--acl"
+            {{- end }}
+            - "--namespace={{ .Release.Namespace }}"
+            {{- if .Values.controller.watchNamespaces }}
+            - {{ include "traefikMesh.controllerWatchNamespaces" . | quote }}
+            {{- end }}
+            {{- if .Values.controller.ignoreNamespaces }}
+            - {{ include "traefikMesh.controllerIgnoreNamespaces" . | quote }}
+            {{- end }}
+            {{- if .Values.limits.http }}
+            - "--limitHTTPPort={{ .Values.limits.http }}"
+            {{- end }}
+            {{- if .Values.limits.tcp }}
+            - "--limitTCPPort={{ .Values.limits.tcp }}"
+            {{- end }}
+            {{- if .Values.limits.udp }}
+            - "--limitUDPPort={{ .Values.limits.udp }}"
+            {{- end }}
+          resources:
+            requests:
+              memory: {{ .Values.controller.resources.request.mem }}
+              cpu: {{ .Values.controller.resources.request.cpu }}
+            limits:
+              memory: {{ .Values.controller.resources.limit.mem }}
+              cpu: {{ .Values.controller.resources.limit.cpu }}
+          ports:
+            - name: api
+              containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /api/status/readiness
+              port: api
+            initialDelaySeconds: 3
+            periodSeconds: 1
+      initContainers:
+        - name: traefik-mesh-prepare
+          image: {{ include "traefikMesh.controllerImage" . | quote }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy | default "IfNotPresent"}}
+          args:
+            - "prepare"
+            {{- if or .Values.controller.logLevel .Values.logLevel }}
+            - "--logLevel={{ or .Values.controller.logLevel .Values.logLevel }}"
+            {{- end }}
+            {{- if or .Values.controller.logFormat .Values.logFormat }}
+            - "--logFormat={{ or .Values.controller.logFormat .Values.logFormat }}"
+            {{- end }}
+            {{- if .Values.acl }}
+            - "--acl"
+            {{- end }}
+            - "--clusterdomain"
+            - {{ default "cluster.local" .Values.clusterDomain | quote }}
+            - "--namespace={{ .Release.Namespace }}"
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE

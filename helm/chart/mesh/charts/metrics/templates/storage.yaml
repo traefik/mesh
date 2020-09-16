@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: metrics-storage
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: grafana
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  {{- if .Values.grafana.storageClassName }}
+  storageClassName: "{{ .Values.grafana.storageClassName }}"
+  {{- end }}
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-storage
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: prometheus
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  {{- if .Values.prometheus.storageClassName }}
+  storageClassName: "{{ .Values.prometheus.storageClassName }}"
+  {{- end }}
