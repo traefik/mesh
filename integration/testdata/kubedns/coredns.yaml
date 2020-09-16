@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: coredns
-  namespace: maesh
+  namespace: traefik-mesh
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -46,13 +46,13 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: coredns
-    namespace: maesh
+    namespace: traefik-mesh
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: coredns
-  namespace: maesh
+  namespace: traefik-mesh
 data:
   Corefile: |
     .:53 {
@@ -76,7 +76,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: coredns
-  namespace: maesh
+  namespace: traefik-mesh
   labels:
     k8s-app: coredns
     kubernetes.io/name: "CoreDNS"
@@ -167,7 +167,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: coredns
-  namespace: maesh
+  namespace: traefik-mesh
   annotations:
     prometheus.io/port: "9153"
     prometheus.io/scrape: "true"

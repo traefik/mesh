@@ -9,7 +9,7 @@ metadata:
 spec:
   containers:
   - name: server-tcp
-    image: containous/whoamitcp:v0.0.2
+    image: traefik/whoamitcp:latest
     imagePullPolicy: IfNotPresent
     readinessProbe:
       tcpSocket:
@@ -26,7 +26,7 @@ metadata:
     app: server-tcp
     plop: cool
   annotations:
-    maesh.containo.us/traffic-type: tcp
+    mesh.traefik.io/traffic-type: tcp
 spec:
   type: ClusterIP
   ports:

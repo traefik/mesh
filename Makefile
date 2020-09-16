@@ -1,11 +1,11 @@
-DOCKER_IMAGE_NAME := containous/maesh
+DOCKER_IMAGE_NAME := traefik/mesh
 UNAME := $(shell uname)
 SRCS = $(shell git ls-files '*.go' | grep -v '^vendor/')
 
-BINARY_NAME = maesh
+BINARY_NAME = traefik-mesh
 DIST_DIR = $(CURDIR)/dist
-DIST_DIR_MAESH = $(DIST_DIR)/$(BINARY_NAME)
-PROJECT ?= github.com/containous/$(BINARY_NAME)
+DIST_DIR_TRAEFIK_MESH = $(DIST_DIR)/$(BINARY_NAME)
+PROJECT ?= github.com/traefik/mesh
 
 TAG_NAME ?= $(shell git tag -l --contains HEAD)
 SHA := $(shell git rev-parse --short HEAD)
@@ -22,7 +22,7 @@ $(DIST_DIR):
 	mkdir -p $(DIST_DIR)
 
 clean:
-	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
+	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/mesh-gh-pages
 
 # Static linting of source files. See .golangci.toml for options
 local-check: $(DIST_DIR) helm-lint
@@ -30,11 +30,11 @@ local-check: $(DIST_DIR) helm-lint
 
 # Local commands
 local-build: $(DIST_DIR)
-	CGO_ENABLED=0 go build -o ${DIST_DIR_MAESH} -ldflags="-s -w \
-	-X github.com/containous/$(BINARY_NAME)/pkg/version.Version=$(VERSION) \
-	-X github.com/containous/$(BINARY_NAME)/pkg/version.Commit=$(SHA) \
-	-X github.com/containous/$(BINARY_NAME)/pkg/version.Date=$(BUILD_DATE)" \
-	$(CURDIR)/cmd/$(BINARY_NAME)/*.go
+	CGO_ENABLED=0 go build -o ${DIST_DIR_TRAEFIK_MESH} -ldflags="-s -w \
+	-X github.com/traefik/mesh/pkg/version.Version=$(VERSION) \
+	-X github.com/traefik/mesh/pkg/version.Commit=$(SHA) \
+	-X github.com/traefik/mesh/pkg/version.Date=$(BUILD_DATE)" \
+	$(CURDIR)/cmd/mesh/mesh.go
 
 local-test: clean
 	go test -v -cover ./...
@@ -105,19 +105,19 @@ helm:
 	@command -v helm >/dev/null 2>&1 || curl -L https://git.io/get_helm.sh | bash -s -- -v v3.0.1
 
 helm-lint: helm
-	helm lint helm/chart/maesh
+	helm lint helm/chart/mesh
 
 k3d:
 	@command -v k3d >/dev/null 2>&1 || curl -s https://raw.githubusercontent.com/rancher/k3d/v3.0.1/install.sh | TAG=v3.0.1 bash
 
 pages:
 	mkdir -p $(CURDIR)/pages
-	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
+	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/mesh-gh-pages
 	curl -sSLO https://$(PROJECT)/archive/gh-pages.zip
 	unzip $(CURDIR)/gh-pages.zip
 	# We only keep the directory "charts" so documentation may remove files
-	cp -r $(CURDIR)/maesh-gh-pages/charts $(CURDIR)/pages/
-	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/maesh-gh-pages
+	cp -r $(CURDIR)/mesh-gh-pages/charts $(CURDIR)/pages/
+	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/mesh-gh-pages
 
 docs-package: pages
 	make -C $(CURDIR)/docs
@@ -125,8 +125,8 @@ docs-package: pages
 	cp $(CURDIR)/docs/CNAME $(CURDIR)/pages/CNAME
 
 helm-package: helm-lint pages
-	helm package --app-version $(TAG_NAME) $(CURDIR)/helm/chart/maesh
-	cp helm/chart/maesh/README.md index.md
+	helm package --app-version $(TAG_NAME) $(CURDIR)/helm/chart/mesh
+	cp helm/chart/mesh/README.md index.md
 	mkdir -p $(CURDIR)/pages/charts
 	mv *.tgz index.md $(CURDIR)/pages/charts/
 	helm repo index $(CURDIR)/pages/charts/
