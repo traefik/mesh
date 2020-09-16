@@ -1,22 +1,22 @@
 # Building and Testing
 
-So you want to build your own Maesh binary from the sources? Let's see how.
+So you want to build your own Traefik Mesh binary from the sources? Let's see how.
 
 ## Building
 
-To build Maesh from the sources you need either [Docker](https://github.com/docker/docker) and [make](https://www.gnu.org/software/make/manual/make.html), 
+To build Traefik Mesh from the sources you need either [Docker](https://github.com/docker/docker) and [make](https://www.gnu.org/software/make/manual/make.html), 
 or [Go](https://github.com/golang/go). 
 
 ### With `Docker` and `make`
 
-Maesh can be built from the sources by using the `make` command. This will create a binary for the Linux platform in 
-the `dist` directory and a Docker image:
+Traefik Mesh can be built from the sources by using the `make` command.
+This will create a binary for the Linux platform in the `dist` directory and a Docker image:
 
 ```bash
 $ make
 #[...]
-Successfully tagged containous/maesh:latest
-docker run --name=build -t "containous/maesh:latest" version
+Successfully tagged traefik/mesh:latest
+docker run --name=build -t "traefik/mesh:latest" version
 version:
  version     : b417901
  commit      : b417901
@@ -27,7 +27,7 @@ version:
 #[...]
 
 $ ls dist/
-maesh
+traefik-mesh
 ``` 
 
 !!! Note
@@ -40,12 +40,12 @@ Requirements:
 - `Go` v1.14+
 - Environment variable `GO111MODULE=on`
 
-One your Go environment is set up, you can build Maesh from the sources by using the `go build` command. The Go compiler 
-will build an executable for your platform.
+One your Go environment is set up, you can build Traefik Mesh from the sources by using the `go build` command.
+The Go compiler will build an executable for your platform.
 
 ```bash
-$ go build -o dist/maesh cmd/maesh/*.go
-$ ./dist/maesh version
+$ go build -o dist/traefik-mesh cmd/mesh/mesh.go
+$ ./dist/traefik-mesh version
 version:
  version     : dev
  commit      : I don't remember exactly
@@ -63,18 +63,18 @@ Run unit tests by using the `test` target:
 
 ```bash
 $ make test
-docker build --tag "containous/maesh:test" --target maker --build-arg="MAKE_TARGET=local-test" /home/user/maesh/
+docker build --tag "traefik/mesh:test" --target maker --build-arg="MAKE_TARGET=local-test" /home/user/traefik-mesh/
 #[...]
 --- PASS: TestBuildConfiguration (0.00s)
     --- PASS: TestBuildConfiguration/simple_configuration_build_with_HTTP_service (0.20s)
 PASS
 coverage: 69.7% of statements
-ok  	github.com/containous/maesh/pkg/providers/smi	1.982s	coverage: 69.7% of statements
-?   	github.com/containous/maesh/pkg/signals	[no test files]
+ok  	github.com/traefik/mesh/pkg/providers/smi	1.982s	coverage: 69.7% of statements
+?   	github.com/traefik/mesh/pkg/signals	[no test files]
 Removing intermediate container 4e887c16ddee
  ---> 75d44229a46e
 Successfully built 75d44229a46e
-Successfully tagged containous/maesh:test
+Successfully tagged traefik/mesh:test
 ```
 
 Run the integration tests by using the `test-integration` target. For development purposes, you can specify which tests 
@@ -117,8 +117,8 @@ time="2020-04-09T16:09:16+04:00" level=debug msg="Found trafficsplits for servic
 --- PASS: TestBuildConfiguration (0.00s)
     --- PASS: TestBuildConfiguration/simple_configuration_build_with_HTTP_service (0.21s)
 PASS
-ok  	github.com/containous/maesh/pkg/providers/smi	3.634s
-?   	github.com/containous/maesh/pkg/signals	[no test files]
+ok  	github.com/traefik/mesh/pkg/providers/smi	3.634s
+?   	github.com/traefik/mesh/pkg/signals	[no test files]
 ```
 
 Run the integration tests in the `integration` directory by using the `go test ./integration -integration` command:
@@ -129,9 +129,9 @@ $ go test -v ./integration -integration -check.f HelmSuite
 OK: 2 passed
 --- PASS: Test (161.20s)
 PASS
-ok  	github.com/containous/maesh/integration	162.695s
+ok  	github.com/traefik/mesh/integration	162.695s
 ```
 
 !!! Important
-    Before running the integration tests, build the Maesh Docker image. Check out the [Building](#building) section for 
-    more details.
+    Before running the integration tests, build the Traefik Mesh Docker image.
+    Check out the [Building](#building) section for more details.

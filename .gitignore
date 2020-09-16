@@ -9,11 +9,10 @@
 *.log
 *.exe
 cover.out
-maesh
-!maesh/
+traefik-mesh
 /dist/
 .vscode
 vendor
 pages/
-maesh-gh-pages*
+mesh-gh-pages*
 *.zip

@@ -1,0 +1,34 @@
+apiVersion: v2
+name: traefik-mesh
+version: 2.1.2
+appVersion: v1.3.2
+description: Traefik Mesh - Simpler Service Mesh
+type: application
+keywords:
+  - traefik
+  - mesh
+  - smi
+home: https://mae.sh/
+sources:
+  - https://github.com/traefik/mesh/
+maintainers:
+  - name: emilevauge
+    email: emile@vauge.com
+  - name: dtomcej
+    email: daniel.tomcej@gmail.com
+  - name: mmatur
+    email: michael@containo.us
+  - name: santode
+    email: manuel@containo.us
+  - name: jspdown
+    email: harold@containo.us
+  - name: kevinpollet
+    email: kevin@containo.us
+icon: https://raw.githubusercontent.com/traefik/mesh/master/docs/content/assets/img/traefik-mesh.png
+dependencies:
+  - name: tracing
+    version: 0.0.3
+    condition: tracing.deploy
+  - name: metrics
+    version: 0.1.0
+    condition: metrics.deploy

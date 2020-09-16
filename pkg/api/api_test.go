@@ -7,11 +7,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/containous/maesh/pkg/k8s"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/traefik/mesh/pkg/k8s"
 	"k8s.io/client-go/kubernetes/fake"
 )
 

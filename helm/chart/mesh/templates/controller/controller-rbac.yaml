@@ -1,0 +1,81 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: traefik-mesh-controller-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: controller
+    chart: {{ include "traefikMesh.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - endpoints
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - create
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+      - delete
+      - create
+      - update
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - access.smi-spec.io
+      - specs.smi-spec.io
+      - split.smi-spec.io
+    resources:
+      - traffictargets
+      - tcproutes
+      - httproutegroups
+      - trafficsplits
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: traefik-mesh-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: controller
+    chart: {{ include "traefikMesh.chartLabel" . | quote}}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: traefik-mesh-controller-role
+subjects:
+- kind: ServiceAccount
+  name: traefik-mesh-controller
+  namespace: {{ .Release.Namespace }}

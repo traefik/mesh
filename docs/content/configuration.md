@@ -1,6 +1,6 @@
 # Configuration
 
-The configuration for Maesh is broken down into two parts: the static configuration, and the dynamic configuration.
+The configuration for Traefik Mesh is broken down into two parts: the static configuration, and the dynamic configuration.
 The static configuration is configured when the service mesh is installed and is configured via the `values.yaml` file in the Helm install.
 
 ## Static configuration
@@ -15,13 +15,13 @@ The static configuration is configured when the service mesh is installed and is
 - Tracing can be enabled.
 
 - Access-Control List (ACL) mode can be enabled.
-  This configures Maesh to run in ACL mode, where all traffic is forbidden unless explicitly allowed via an SMI 
+  This configures Traefik Mesh to run in ACL mode, where all traffic is forbidden unless explicitly allowed via an SMI 
   [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md#traffictarget). Please see 
   the [SMI Specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md) for more information.
 
 ## Dynamic configuration
 
-Dynamic configuration can be provided to Maesh using annotations on Kubernetes services and via SMI objects. 
+Dynamic configuration can be provided to Traefik Mesh using annotations on Kubernetes services and via SMI objects. 
 
  | Features              | ACL disabled | ACL enabled |
  |-----------------------|--------------|-------------|
@@ -35,14 +35,14 @@ Dynamic configuration can be provided to Maesh using annotations on Kubernetes s
 
 ### Kubernetes Service Annotations
 
-Annotations on services give the ability to configure how Maesh interprets them.
+Annotations on services give the ability to configure how Traefik Mesh interprets them.
 
 #### Traffic type
 
 The traffic type can be configured by using the following annotation:
 
 ```yaml
-maesh.containo.us/traffic-type: "http"
+mesh.traefik.io/traffic-type: "http"
 ```
 
 This annotation can be set to either `http`, `tcp` or `udp` and will specifies the mode for that service operation.
@@ -58,32 +58,32 @@ If this annotation is not present, the mesh service will operate in the default 
 The scheme used to define custom scheme for request:
 
 ```yaml
-maesh.containo.us/scheme: "h2c"
+mesh.traefik.io/scheme: "h2c"
 ```
 
-This annotation can be set to either `http`, `https` or `h2c` and is available for `maesh.containo.us/traffic-type: "http"`.
+This annotation can be set to either `http`, `https` or `h2c` and is available for `mesh.traefik.io/traffic-type: "http"`.
 
 ??? Note "Limitations"
     Please keep in mind, that if you set the scheme to `https` your service needs to expose itself via HTTPS as there is no
-    mTLS in Maesh.
+    mTLS in Traefik Mesh.
 
 #### Retry
 
 Retries can be enabled by using the following annotation:
 
 ```yaml
-maesh.containo.us/retry-attempts: "2"
+mesh.traefik.io/retry-attempts: "2"
 ```
 
-This annotation sets the number of retry attempts that Maesh will make if a network error occurs.
+This annotation sets the number of retry attempts that Traefik Mesh will make if a network error occurs.
 Please note that this value is a string, and needs to be quoted.
 
 #### Circuit breaker
-
+    
 Circuit breaker can be enabled by using the following annotation:
 
 ```yaml
-maesh.containo.us/circuit-breaker-expression: "Expression"
+mesh.traefik.io/circuit-breaker-expression: "Expression"
 ```
 
 This annotation sets the expression for circuit breaking.
@@ -97,8 +97,8 @@ All configuration options are available [here](https://docs.traefik.io/v2.0/midd
 Rate limiting can be enabled by using the following annotations:
 
 ```yaml
-maesh.containo.us/ratelimit-average: "100"
-maesh.containo.us/ratelimit-burst: "200"
+mesh.traefik.io/ratelimit-average: "100"
+mesh.traefik.io/ratelimit-burst: "200"
 ```
 
 These annotation sets average and burst requests per second limit for the service.
@@ -170,7 +170,7 @@ spec:
 
 In this example, we grant access to all pods running with the service account `client` under the namespace `client` to the HTTP route `api` specified by on the group `server-routes` on all pods running with the service account `server` under the namespace `server`.
 
-Any client running with the service account `client` under the `client` namespace accessing `server.server.maesh/api` is allowed to access the `/api` resource. Others will receive 404 answers from the Maesh node.
+Any client running with the service account `client` under the `client` namespace accessing `server.server.traefik.mesh/api` is allowed to access the `/api` resource. Others will receive 404 answers from the Traefik Mesh node.
 
 More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md).
 
@@ -194,10 +194,10 @@ spec:
 ```
 
 In this example, we define a traffic split for our server service between two versions of our server, v1 and v2.
-`server.server.maesh` directs 80% of the traffic to the server-v1 pods, and 20% of the traffic to the server-v2 pods.
+`server.server.traefik.mesh` directs 80% of the traffic to the server-v1 pods, and 20% of the traffic to the server-v2 pods.
 
 More information can be found [in the SMI specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-split/v1alpha3/traffic-split.md).
 
 #### Traffic Metrics
 
-At the moment, Maesh does not implement the [Traffic Metrics specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-metrics/traffic-metrics-WD.md).
+At the moment, Traefik Mesh does not implement the [Traffic Metrics specification](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-metrics/traffic-metrics-WD.md).

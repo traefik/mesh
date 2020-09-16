@@ -1,14 +1,14 @@
-# Maesh: Simpler Service Mesh
+# Traefik Mesh: Simpler Service Mesh
 
 <p align="center">
-<img width="400" src="assets/img/maesh.png" alt="Maesh" title="Maesh" />
+<img width="400" src="assets/img/traefik-mesh.png" alt="Traefik Mesh" title="Traefik Mesh" />
 </p>
 
-Maesh is a lightweight and simpler service mesh designed from the ground up to be straightforward, easy to install and easy to use.
+Traefik Mesh is a lightweight and simpler service mesh designed from the ground up to be straightforward, easy to install and easy to use.
 
-Built on top of Traefik, Maesh fits as your de-facto service mesh in your Kubernetes cluster supporting the latest Service Mesh Interface specification (SMI).
+Built on top of Traefik, Traefik Mesh fits as your de-facto service mesh in your Kubernetes cluster supporting the latest Service Mesh Interface specification (SMI).
 
-Moreover, Maesh is opt-in by default, which means that your existing services are unaffected until you decide to add them to the mesh.
+Moreover, Traefik Mesh is opt-in by default, which means that your existing services are unaffected until you decide to add them to the mesh.
 
 <p align="center">
 <a href="https://smi-spec.io" target="_blank"><img width="150" src="assets/img/smi.png" alt="SMI" title="SMI" /></a>
@@ -16,15 +16,15 @@ Moreover, Maesh is opt-in by default, which means that your existing services ar
 
 ## Non-Invasive Service Mesh
 
-Maesh does not use any sidecar container but handles routing through proxy endpoints running on each node.
+Traefik Mesh does not use any sidecar container but handles routing through proxy endpoints running on each node.
 The mesh controller runs in a dedicated pod and handles all the configuration parsing and deployment to the proxy nodes.
-Maesh supports multiple configuration options: annotations on user service objects, and SMI objects.
-Not using sidecars means that Maesh does not modify your Kubernetes objects and does not modify your traffic without your knowledge.
-Using the Maesh endpoints is all that is required.
+Traefik Mesh supports multiple configuration options: annotations on user service objects, and SMI objects.
+Not using sidecars means that Traefik Mesh does not modify your Kubernetes objects and does not modify your traffic without your knowledge.
+Using the Traefik Mesh endpoints is all that is required.
 
 <p align="center">
-<img width="360" src="assets/img/before-maesh-graphic.png" alt="Maesh" title="Maesh" />
-<img width="360" src="assets/img/after-maesh-graphic.png" alt="Maesh" title="Maesh" />
+<img width="360" src="assets/img/before-traefik-mesh-graphic.png" alt="Traefik Mesh" title="Traefik Mesh" />
+<img width="360" src="assets/img/after-traefik-mesh-graphic.png" alt="Traefik Mesh" title="Traefik Mesh" />
 </p>
 
 ## Prerequisites

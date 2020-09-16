@@ -79,8 +79,8 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			},
 			expectedShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-foo-6d61657368-bar",
-					Namespace: "maesh",
+					Name:      "traefik-mesh-foo-6d61657368-bar",
+					Namespace: "traefik-mesh",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -113,8 +113,8 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			},
 			expectedShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-foo-6d61657368-bar",
-					Namespace: "maesh",
+					Name:      "traefik-mesh-foo-6d61657368-bar",
+					Namespace: "traefik-mesh",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -143,8 +143,8 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			},
 			currentShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-foo-6d61657368-bar",
-					Namespace: "maesh",
+					Name:      "traefik-mesh-foo-6d61657368-bar",
+					Namespace: "traefik-mesh",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -163,8 +163,8 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			},
 			expectedShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-foo-6d61657368-bar",
-					Namespace: "maesh",
+					Name:      "traefik-mesh-foo-6d61657368-bar",
+					Namespace: "traefik-mesh",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -193,8 +193,8 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			},
 			currentShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-foo-6d61657368-bar",
-					Namespace: "maesh",
+					Name:      "traefik-mesh-foo-6d61657368-bar",
+					Namespace: "traefik-mesh",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -208,8 +208,8 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			},
 			expectedShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-foo-6d61657368-bar",
-					Namespace: "maesh",
+					Name:      "traefik-mesh-foo-6d61657368-bar",
+					Namespace: "traefik-mesh",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -260,7 +260,7 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			shadowServiceManager := NewShadowServiceManager(
 				log,
 				lister,
-				"maesh",
+				"traefik-mesh",
 				tcpPortMapperMock,
 				portMapperMock{},
 				test.defaultMode,
@@ -307,8 +307,8 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 			namespace: "bar",
 			currentShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-foo-6d61657368-bar",
-					Namespace: "maesh",
+					Name:      "traefik-mesh-foo-6d61657368-bar",
+					Namespace: "traefik-mesh",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -327,8 +327,8 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 			namespace: "bar",
 			currentShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-foo-6d61657368-bar",
-					Namespace: "maesh",
+					Name:      "traefik-mesh-foo-6d61657368-bar",
+					Namespace: "traefik-mesh",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -347,8 +347,8 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 			namespace: "bar",
 			currentShadowSvc: &corev1.Service{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "maesh-foo-6d61657368-bar",
-					Namespace: "maesh",
+					Name:      "traefik-mesh-foo-6d61657368-bar",
+					Namespace: "traefik-mesh",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -403,7 +403,7 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 			shadowServiceManager := NewShadowServiceManager(
 				log,
 				lister,
-				"maesh",
+				"traefik-mesh",
 				tcpPortMapperMock,
 				udpPortMapperMock,
 				"http",
@@ -457,7 +457,7 @@ func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
 	shadowServiceManager := NewShadowServiceManager(
 		log,
 		lister,
-		"maesh",
+		"traefik-mesh",
 		portMapperMock{},
 		portMapperMock{},
 		"http",
@@ -468,7 +468,7 @@ func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
 
 	shadowSvcName := shadowServiceManager.getShadowServiceName(namespace, name)
 
-	assert.Equal(t, shadowSvcName, "maesh-foo-6d61657368-bar")
+	assert.Equal(t, shadowSvcName, "traefik-mesh-foo-6d61657368-bar")
 }
 
 func TestShadowServiceManager_getHTTPPort(t *testing.T) {
@@ -504,7 +504,7 @@ func TestShadowServiceManager_getHTTPPort(t *testing.T) {
 			shadowServiceManager := NewShadowServiceManager(
 				log,
 				lister,
-				"maesh",
+				"traefik-mesh",
 				portMapperMock{},
 				portMapperMock{},
 				"http",
