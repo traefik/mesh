@@ -9,7 +9,7 @@ metadata:
 spec:
   containers:
   - name: server-tcp
-    image: containous/whoamitcp:v0.0.2
+    image: traefik/whoamitcp:latest
     imagePullPolicy: IfNotPresent
     readinessProbe:
       tcpSocket:

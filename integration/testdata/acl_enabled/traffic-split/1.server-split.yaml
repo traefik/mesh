@@ -26,7 +26,7 @@ spec:
   serviceAccountName: server-split
   containers:
     - name: server-http-split-v1
-      image: containous/whoami:v1.0.1
+      image: traefik/whoami:latest
       imagePullPolicy: IfNotPresent
       readinessProbe:
         httpGet:
@@ -63,7 +63,7 @@ spec:
   serviceAccountName: server-split
   containers:
     - name: server-http-split-v2
-      image: containous/whoami:v1.0.1
+      image: traefik/whoami:latest
       imagePullPolicy: IfNotPresent
       readinessProbe:
         httpGet:

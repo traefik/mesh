@@ -26,7 +26,7 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	requiredImages := []k3d.DockerImage{
 		{Name: "traefik/mesh:latest", Local: true},
 		{Name: "traefik:v2.3"},
-		{Name: "containous/whoami:v1.0.1"},
+		{Name: "traefik/whoami:latest"},
 		{Name: "giantswarm/tiny-tools:3.9"},
 	}
 

@@ -50,7 +50,7 @@ spec:
       serviceAccount: whoami-server
       containers:
         - name: whoami
-          image: containous/whoami:v1.5.0
+          image: traefik/whoami:latest
           imagePullPolicy: IfNotPresent
 
 ---
@@ -72,7 +72,7 @@ spec:
       serviceAccount: whoami-server
       containers:
         - name: whoami-tcp
-          image: containous/whoamitcp:v0.0.2
+          image: traefik/whoamitcp:latest
           imagePullPolicy: IfNotPresent
 
 ---

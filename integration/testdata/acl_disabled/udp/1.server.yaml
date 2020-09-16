@@ -9,7 +9,7 @@ metadata:
 spec:
   containers:
     - name: server-udp
-      image: containous/whoamiudp:v0.0.1
+      image: traefik/whoamiudp:latest
       imagePullPolicy: IfNotPresent
       ports:
         - name: udp

@@ -71,7 +71,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: containous/whoami:v1.5.0
+          image: traefik/whoami:latest
           ports:
             - containerPort: 80
 ---

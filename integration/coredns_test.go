@@ -26,7 +26,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
-		{Name: "containous/whoami:v1.0.1"},
+		{Name: "traefik/whoami:latest"},
 		{Name: "coredns/coredns:1.3.1"},
 		{Name: "coredns/coredns:1.4.0"},
 		{Name: "coredns/coredns:1.5.2"},
