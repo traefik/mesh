@@ -27,7 +27,7 @@ theme:
     prev: 'Previous'
     next: 'Next'
 
-copyright: "Copyright &copy; 2020 Traefik labs"
+copyright: "Copyright &copy; 2020 Traefik Labs"
 
 extra_css:
   - assets/styles/root.css
