@@ -3,8 +3,8 @@ package annotations
 import (
 	"testing"
 
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/stretchr/testify/assert"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 )
 
 func TestBuildMiddleware(t *testing.T) {

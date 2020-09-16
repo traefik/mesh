@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 )
 
 type middlewareBuilder func(annotations map[string]string) (middleware *dynamic.Middleware, name string, err error)
