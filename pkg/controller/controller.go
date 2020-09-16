@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	accessinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/informers/externalversions"
 	accesslister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/access/listers/access/v1alpha2"
 	specsinformer "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/informers/externalversions"
@@ -19,6 +18,7 @@ import (
 	"github.com/traefik/mesh/pkg/k8s"
 	"github.com/traefik/mesh/pkg/provider"
 	"github.com/traefik/mesh/pkg/topology"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
