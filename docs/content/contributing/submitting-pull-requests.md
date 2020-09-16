@@ -1,6 +1,6 @@
 # Submitting Pull Requests
 
-So you've decided to improve Maesh? Thank You! Now the last step is to submit your Pull Request in a way that makes sure 
+So you've decided to improve Traefik Mesh? Thank You! Now the last step is to submit your Pull Request in a way that makes sure 
 it gets the attention it deserves.
 
 Let's go through the classic pitfalls to make sure everything is right. 
@@ -11,7 +11,7 @@ The title must be short and descriptive. (~60 characters)
 
 ## Description
 
-Follow the [pull request template](https://github.com/containous/maesh/blob/master/.github/PULL_REQUEST_TEMPLATE.md) 
+Follow the [pull request template](https://github.com/traefik/mesh/blob/master/.github/PULL_REQUEST_TEMPLATE.md) 
 as much as possible.
 
 Explain the conditions which led you to write this PR: give us context. The context should lead to something, an idea or 
