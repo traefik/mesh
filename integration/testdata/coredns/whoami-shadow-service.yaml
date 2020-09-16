@@ -2,8 +2,8 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: maesh-whoami-6d61657368-whoami
-  namespace: maesh
+  name: traefik-mesh-whoami-6d61657368-whoami
+  namespace: traefik-mesh
   labels:
     app: maesh
     type: shadow
@@ -14,4 +14,4 @@ spec:
       name: whoami
       targetPort: 80
   selector:
-    app: maesh-mesh
+    app: traefik-mesh-proxy

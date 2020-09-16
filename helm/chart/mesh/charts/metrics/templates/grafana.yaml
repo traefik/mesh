@@ -1,0 +1,191 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-core
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: grafana
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maesh
+      component: grafana
+  template:
+    metadata:
+      labels:
+        app: maesh
+        component: grafana
+    spec:
+      serviceAccountName: grafana-k8s
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 472
+        fsGroup: 472
+      containers:
+      - image: {{ .Values.image.grafana | quote }}
+        name: grafana-core
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: web
+          containerPort: 3000
+        {{- if .Values.grafana.resources }}
+        {{- toYaml .Values.grafana.resources | indent 8 }}
+        {{- end }}
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: web
+          initialDelaySeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: web
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: metrics-storage
+          mountPath: /var/lib/grafana
+        {{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
+        {{- $filename := trimSuffix (ext $path) (base $path) }}
+        - name: dashboards-grafana-{{ $filename }}
+          mountPath: "/var/lib/grafana/dashboards/{{ base $path }}"
+          subPath: {{ base $path }}
+          readOnly: false
+        {{- end }}
+        - name: grafana-config
+          mountPath: /etc/grafana
+          readOnly: true
+      initContainers:
+      - name: metrics-storage-permission-fix
+        image: busybox
+        command: ["chown", "-R", "472:472", "/var/lib/grafana"]
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - name: metrics-storage
+          mountPath: /var/lib/grafana
+      volumes:
+      - name: metrics-storage
+        persistentVolumeClaim:
+          claimName: metrics-storage
+      {{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
+      {{- $filename := trimSuffix (ext $path) (base $path) }}
+      - name: dashboards-grafana-{{ $filename }}
+        configMap:
+          name:  grafana-dashboard-{{ $filename }}
+      {{- end }}
+      - name: grafana-config
+        configMap:
+          name: grafana-config
+          items:
+          - key: grafana.ini
+            path: grafana.ini
+          - key: datasources.yaml
+            path: provisioning/datasources/datasources.yaml
+          - key: dashboards.yaml
+            path: provisioning/dashboards/dashboards.yaml
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: grafana-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: grafana
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+data:
+  grafana.ini: |-
+    instance_name = containous-grafana
+
+    [auth]
+    disable_login_form = true
+
+    [auth.anonymous]
+    enabled = true
+    org_role = Admin
+
+    [auth.basic]
+    enabled = false
+
+    [analytics]
+    check_for_updates = false
+  datasources.yaml: |-
+    apiVersion: 1
+    datasources:
+    - name: prometheus
+      type: prometheus
+      orgId: 1
+      url: http://prometheus.{{ .Release.Namespace }}.svc.{{ default "cluster.local" .Values.clusterDomain }}:{{ .Values.prometheus.service.port }}
+      isDefault: true
+      access: proxy
+      jsonData:
+        timeInterval: "5s"
+      version: 1
+      editable: true
+
+  dashboards.yaml: |-
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: true
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards
+        homeDashboardId: traefik-mesh
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: maesh
+    component: grafana
+    chart: {{ include "traefikMesh.chartLabel" . | quote }}
+    release: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+spec:
+  type: {{ .Values.grafana.service.type }}
+  ports:
+    - port: {{ .Values.grafana.service.port }}
+      targetPort: web
+      {{- if .Values.grafana.service.nodePort }}
+      nodePort: {{ .Values.grafana.service.nodePort }}
+      {{- end }}
+  selector:
+    app: maesh
+    component: grafana
+
+---
+{{- $files := .Files }}
+{{- $ns := .Release.Namespace }}
+{{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
+{{- $filename := trimSuffix (ext $path) (base $path) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-{{ $filename }}
+  namespace: {{ $ns }}
+  labels:
+    app: maesh
+    component: grafana
+data:
+  {{ base $path }}: '{{ $files.Get $path }}'
+---
+{{- end }}

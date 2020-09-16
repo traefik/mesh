@@ -1,0 +1,71 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: trafficsplits.split.smi-spec.io
+spec:
+  group: split.smi-spec.io
+  scope: Namespaced
+  names:
+    kind: TrafficSplit
+    listKind: TrafficSplitList
+    shortNames:
+      - ts
+    plural: trafficsplits
+    singular: trafficsplit
+  version: v1alpha3
+  versions:
+    - name: v1alpha3
+      served: true
+      storage: true
+    - name: v1alpha2
+      served: false
+      storage: false
+    - name: v1alpha1
+      served: false
+      storage: false
+  additionalPrinterColumns:
+    - name: Service
+      type: string
+      description: The apex service of this split.
+      JSONPath: .spec.service
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          type: object
+          required:
+            - service
+            - backends
+          properties:
+            service:
+              description: The apex service of this split.
+              type: string
+            matches:
+              description: The HTTP route groups that this traffic split should match.
+              type: array
+              items:
+                type: object
+                required: ['kind', 'name']
+                properties:
+                  kind:
+                    description: Kind of the matching group.
+                    type: string
+                    enum:
+                      - HTTPRouteGroup
+                  name:
+                    description: Name of the matching group.
+                    type: string
+            backends:
+              description: The backend services of this split.
+              type: array
+              items:
+                type: object
+                required: ['service', 'weight']
+                properties:
+                  service:
+                    description: Name of the Kubernetes service.
+                    type: string
+                  weight:
+                    description: Traffic weight value of this backend.
+                    type: number

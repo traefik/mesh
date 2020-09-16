@@ -1,16 +1,16 @@
-project_name: maesh
+project_name: traefik-mesh
 
 builds:
-  - binary: maesh
+  - binary: traefik-mesh
 
-    main: ./cmd/maesh/maesh.go
+    main: ./cmd/mesh/mesh.go
     env:
       - CGO_ENABLED=0
     ldflags:
       - -s -w
-      - -X github.com/containous/maesh/pkg/version.Version={{.Version}}
-      - -X github.com/containous/maesh/pkg/version.Commit={{.Commit}}
-      - -X github.com/containous/maesh/pkg/version.Date={{.Date}}
+      - -X github.com/traefik/mesh/pkg/version.Version={{.Version}}
+      - -X github.com/traefik/mesh/pkg/version.Commit={{.Commit}}
+      - -X github.com/traefik/mesh/pkg/version.Date={{.Date}}
     goos:
       - linux
       - freebsd
@@ -30,7 +30,7 @@ builds:
         goarch: arm64
 
 archives:
-  - id: maesh
+  - id: traefik-mesh
     name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     format: tar.gz
     files:

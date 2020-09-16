@@ -1,23 +1,23 @@
 # Installation
 
-To install Maesh, the installation method is quite simple:
+To install Traefik Mesh, the installation method is quite simple:
 
 ```bash
-helm repo add maesh https://containous.github.io/maesh/charts
+helm repo add traefik-mesh https://traefik.github.io/mesh/charts
 helm repo update
 ```
 
-Install Maesh Helm Chart:
+Install Traefik Mesh Helm Chart:
 
 ```bash
-helm install maesh maesh/maesh
+helm install traefik-mesh traefik-mesh/traefik-mesh
 ```
 
 ## Install from source
 
 !!! Note "Supported Installations"
     Please be aware that the supported installation method is via Helm, using official releases.
-    If you want to build/install/run Maesh from source, we may not be able to provide support.
+    If you want to build/install/run Traefik Mesh from source, we may not be able to provide support.
     Installing from source is intended for development/contributing.
 
 To build the image locally, run:
@@ -33,40 +33,39 @@ You will then be able to use the tagged image as your image in your `values.yaml
 To deploy the Helm Chart, run:
 
 ```shell
-helm install maesh helm/chart/maesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
+helm install traefik-mesh helm/chart/mesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
 ## KubeDNS support
 
-Maesh supports KubeDNS:
+Traefik Mesh supports KubeDNS:
 
 ```bash
-helm install maesh maesh/maesh --set kubedns=true
+helm install traefik-mesh traefik-mesh/traefik-mesh --set kubedns=true
 ```
 
-With the `kubedns` parameter Maesh will install CoreDNS and patch KubeDNS to use it as a [stubDomain](https://v1-17.docs.kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#example-stub-domain).
+With the `kubedns` parameter Traefik Mesh will install CoreDNS and patch KubeDNS to use it as a [stubDomain](https://v1-17.docs.kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#example-stub-domain).
 
 ## Custom cluster domain
 
 If you use a cluster domain other than `cluster.local` set it by using the `clusterDomain` parameter:
 
 ```bash
-helm install maesh maesh/maesh --set clusterDomain=my.custom.domain.com
+helm install traefik-mesh traefik-mesh/traefik-mesh --set clusterDomain=my.custom.domain.com
 ```
 
 ## Access Control List
 
-By default, Maesh does not restrict traffic between pods and services. However, some scenarios require more control
-over the rules for internal communication. The Access Control List mode (ACL) requires a set of rules to explicitly allow 
-traffic between different resources.
+By default, Traefik Mesh does not restrict traffic between pods and services. However, some scenarios require more control over the rules for internal communication.
+The Access Control List mode (ACL) requires a set of rules to explicitly allow traffic between different resources.
 
-To enable ACL, install Maesh in ACL mode by setting the `acl` Helm Chart option to `true`.
+To enable ACL, install Traefik Mesh in ACL mode by setting the `acl` Helm Chart option to `true`.
 
 ```bash
-helm install maesh --namespace=maesh maesh/maesh --set acl=true
+helm install traefik-mesh --namespace=traefik-mesh traefik-mesh/traefik-mesh --set acl=true
 ```
 
-Maesh supports the [SMI specification](https://smi-spec.io/) which defines a set of custom resources
+Traefik Mesh supports the [SMI specification](https://smi-spec.io/) which defines a set of custom resources
 to provide a fine-grained control over instrumentation, routing and access control of east-west communications.
 
 !!! Note "CRDs"
@@ -77,45 +76,45 @@ to provide a fine-grained control over instrumentation, routing and access contr
 
 ## Platform recommendations
 
-Maesh works on Kubernetes environments that conforms to the global Kubernetes specification.
+Traefik Mesh works on Kubernetes environments that conforms to the global Kubernetes specification.
 That being said, we have had users encounter issues when using variants such as minikube, microk8s,
 and other development distributions.
 
-Maesh runs without issue on most public clouds (AWS, GKE, Azure, DigitalOcean, and more).
-If you want to run Maesh in development, we would recommend using [k3s](https://k3s.io/), as it is fully conformant.
-We use k3s in Maesh's integration tests, so you can be sure that it works properly.
+Traefik Mesh runs without issue on most public clouds (AWS, GKE, Azure, DigitalOcean, and more).
+If you want to run Traefik Mesh in development, we would recommend using [k3s](https://k3s.io/), as it is fully conformant.
+We use k3s in Traefik Mesh's integration tests, so you can be sure that it works properly.
 
 If you encounter issues on variants such as minikube or microk8s, please try and reproduce the issue on k3s.
 If you are unable to reproduce, it may be an issue with the distribution behaving differently than official Kubernetes.
 
 ## Verify your installation
 
-You can check that Maesh has been installed properly by running the following command:
+You can check that Traefik Mesh has been installed properly by running the following command:
 
 ```bash tab="Command"
-kubectl get all -n maesh
+kubectl get all -n traefik-mesh
 ```
 
 ```text tab="Expected Output"
 
-NAME                                    READY   STATUS    RESTARTS   AGE
-pod/maesh-controller-676fb86b89-pj8ph   1/1     Running   0          11s
-pod/maesh-mesh-w62z5                    1/1     Running   0          11s
-pod/maesh-mesh-zjlpf                    1/1     Running   0          11s
+NAME                                            READY   STATUS    RESTARTS   AGE
+pod/traefik-mesh-controller-676fb86b89-pj8ph    1/1     Running   0          11s
+pod/traefik-mesh-proxy-w62z5                    1/1     Running   0          11s
+pod/traefik-mesh-proxy-zjlpf                    1/1     Running   0          11s
 
-NAME                        DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
-daemonset.apps/maesh-mesh   2         2         0       2            0           <none>          29s
+NAME                                DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+daemonset.apps/traefik-mesh-proxy   2         2         0       2            0           <none>          29s
 
-NAME                               DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/maesh-controller   1         1         1            0           28s
+NAME                                      DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/traefik-mesh-controller   1         1         1            0           28s
 
-NAME                                          DESIRED   CURRENT   READY   AGE
-replicaset.apps/maesh-controller-676fb86b89   1         1         0       28s
+NAME                                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/traefik-mesh-controller-676fb86b89   1         1         0       28s
 ```
 
 ## Usage
 
-To use Maesh, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.maesh`.
-This will access the Maesh service mesh, and will allow you to route requests through Maesh.
+To use Traefik Mesh, instead of referencing services via their normal `<servicename>.<namespace>`, instead use `<servicename>.<namespace>.traefik.mesh`.
+This will access the Traefik Mesh service mesh, and will allow you to route requests through Traefik Mesh.
 
-By default, Maesh is opt-in, meaning you have to use the Maesh service names to access the mesh, so you can have some services running through the mesh, and some services not.
+By default, Traefik Mesh is opt-in, meaning you have to use the Traefik Mesh service names to access the mesh, so you can have some services running through the mesh, and some services not.

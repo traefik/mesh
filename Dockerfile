@@ -1,4 +1,3 @@
-# Let's build maesh for linux-amd64
 FROM golang:1.15-alpine AS base-image
 
 # Package dependencies
@@ -16,7 +15,7 @@ RUN apk --no-cache --no-progress add \
     && update-ca-certificates \
     && rm -rf /var/cache/apk/*
 
-WORKDIR /go/src/github.com/containous/maesh
+WORKDIR /go/src/github.com/traefik/mesh
 
 # Download goreleaser binary to bin folder in $GOPATH
 RUN curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
@@ -42,6 +41,6 @@ RUN addgroup -g 1000 -S app && \
     adduser -u 1000 -S app -G app
 
 COPY --from=base-image /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=maker /go/src/github.com/containous/maesh/dist/maesh /app/
+COPY --from=maker /go/src/github.com/traefik/mesh/dist/traefik-mesh /app/
 
-ENTRYPOINT ["/app/maesh"]
+ENTRYPOINT ["/app/traefik-mesh"]

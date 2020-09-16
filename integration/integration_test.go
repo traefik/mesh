@@ -13,14 +13,14 @@ import (
 )
 
 var (
-	integration    = flag.Bool("integration", false, "run integration tests")
-	debug          = flag.Bool("debug", false, "debug log level")
-	masterURL      = "https://localhost:8443"
-	k3dClusterName = "maesh-integration"
-	maeshNamespace = "maesh"
-	maeshBinary    = "../dist/maesh"
-	smiCRDs        = "../helm/chart/maesh/crds/"
-	testNamespace  = "test"
+	integration          = flag.Bool("integration", false, "run integration tests")
+	debug                = flag.Bool("debug", false, "debug log level")
+	masterURL            = "https://localhost:8443"
+	k3dClusterName       = "traefik-mesh-integration"
+	traefikMeshNamespace = "traefik-mesh"
+	traefikMeshBinary    = "../dist/traefik-mesh"
+	smiCRDs              = "../helm/chart/mesh/crds/"
+	testNamespace        = "test"
 )
 
 func Test(t *testing.T) {
@@ -42,22 +42,22 @@ func Test(t *testing.T) {
 	check.TestingT(t)
 }
 
-func maeshPrepare() error {
+func traefikMeshPrepare() error {
 	args := []string{
 		"prepare",
 		"--masterurl=" + masterURL,
 		"--kubeconfig=" + os.Getenv("KUBECONFIG"),
 		"--loglevel=debug",
 		"--clusterdomain=cluster.local",
-		"--namespace=" + maeshNamespace,
+		"--namespace=" + traefikMeshNamespace,
 	}
 
-	cmd := exec.Command(maeshBinary, args...)
+	cmd := exec.Command(traefikMeshBinary, args...)
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("maesh prepare has failed - %s: %w", string(output), err)
+		return fmt.Errorf("traefik mesh prepare has failed - %s: %w", string(output), err)
 	}
 
 	return nil

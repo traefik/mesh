@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containous/maesh/pkg/dns"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/pkg/dns"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )

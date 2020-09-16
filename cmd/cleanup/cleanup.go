@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containous/maesh/cmd"
-	"github.com/containous/maesh/pkg/cleanup"
-	"github.com/containous/maesh/pkg/k8s"
+	"github.com/traefik/mesh/cmd"
+	"github.com/traefik/mesh/pkg/cleanup"
+	"github.com/traefik/mesh/pkg/k8s"
 	"github.com/traefik/paerser/cli"
 )
 
@@ -14,7 +14,7 @@ import (
 func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name:          "cleanup",
-		Description:   `Removes Maesh shadow services from a Kubernetes cluster.`,
+		Description:   `Removes Traefik Mesh shadow services from a Kubernetes cluster.`,
 		Configuration: cConfig,
 		Run: func(_ []string) error {
 			return cleanupCommand(cConfig)
@@ -31,7 +31,7 @@ func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	logger.Debug("Starting maesh cleanup...")
+	logger.Debug("Starting cleanup...")
 	logger.Debugf("Using masterURL: %q", cConfig.MasterURL)
 	logger.Debugf("Using kubeconfig: %q", cConfig.KubeConfig)
 
