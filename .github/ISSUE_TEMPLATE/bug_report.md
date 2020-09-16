@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Create a report to help us improve Maesh
+about: Create a report to help us improve Traefik Mesh.
 ---
 
 <!-- PLEASE FOLLOW THE ISSUE TEMPLATE TO HELP TRIAGE AND SUPPORT! -->
@@ -29,7 +29,7 @@ HOW TO WRITE A GOOD BUG REPORT?
 
 
 
-### Output of controller log: (_What version of Maesh are you using?_)
+### Output of controller log: (_What version of Traefik Mesh are you using?_)
 
 <!---
 `latest` is not considered as a valid version.

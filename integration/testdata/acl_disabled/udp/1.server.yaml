@@ -9,7 +9,7 @@ metadata:
 spec:
   containers:
     - name: server-udp
-      image: containous/whoamiudp:v0.0.1
+      image: traefik/whoamiudp:latest
       imagePullPolicy: IfNotPresent
       ports:
         - name: udp
@@ -25,7 +25,7 @@ metadata:
     app: server-udp
     plop: cool
   annotations:
-    maesh.containo.us/traffic-type: udp
+    mesh.traefik.io/traffic-type: udp
 spec:
   type: ClusterIP
   ports:

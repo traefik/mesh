@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containous/maesh/integration/try"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/integration/try"
 )
 
 // Tool is pod capable of running operations from within the cluster.

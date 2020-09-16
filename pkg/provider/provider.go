@@ -6,10 +6,10 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/containous/maesh/pkg/annotations"
-	"github.com/containous/maesh/pkg/topology"
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/pkg/annotations"
+	"github.com/traefik/mesh/pkg/topology"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -533,7 +533,7 @@ func (p *Provider) buildServicesForTrafficSplitBackends(t *topology.Topology, cf
 
 		if len(backendSvc.TrafficSplits) > 0 {
 			tsKey := topology.Key{Name: ts.Name, Namespace: ts.Namespace}
-			p.logger.Warnf("Nested TrafficSplits detected in TrafficSplit %q: Maesh doesn't support nested TrafficSplits", tsKey)
+			p.logger.Warnf("Nested TrafficSplits detected in TrafficSplit %q: Traefik Mesh doesn't support nested TrafficSplits", tsKey)
 		}
 
 		backendSvcKey := getServiceKeyFromTrafficSplitBackend(ts, svcPort.Port, backend)
@@ -854,7 +854,7 @@ func buildUDPServiceFromTrafficSplit(backendSvc []dynamic.UDPWRRService) *dynami
 
 func buildHTTPSplitTrafficBackendService(backend topology.TrafficSplitBackend, scheme string, port int32) *dynamic.Service {
 	server := dynamic.Server{
-		URL: fmt.Sprintf("%s://%s.%s.maesh:%d", scheme, backend.Service.Name, backend.Service.Namespace, port),
+		URL: fmt.Sprintf("%s://%s.%s.traefik.mesh:%d", scheme, backend.Service.Name, backend.Service.Namespace, port),
 	}
 
 	return &dynamic.Service{
@@ -867,7 +867,7 @@ func buildHTTPSplitTrafficBackendService(backend topology.TrafficSplitBackend, s
 
 func buildTCPSplitTrafficBackendService(backend topology.TrafficSplitBackend, port int32) *dynamic.TCPService {
 	server := dynamic.TCPServer{
-		Address: fmt.Sprintf("%s.%s.maesh:%d", backend.Service.Name, backend.Service.Namespace, port),
+		Address: fmt.Sprintf("%s.%s.traefik.mesh:%d", backend.Service.Name, backend.Service.Namespace, port),
 	}
 
 	return &dynamic.TCPService{
@@ -879,7 +879,7 @@ func buildTCPSplitTrafficBackendService(backend topology.TrafficSplitBackend, po
 
 func buildUDPSplitTrafficBackendService(backend topology.TrafficSplitBackend, port int32) *dynamic.UDPService {
 	server := dynamic.UDPServer{
-		Address: fmt.Sprintf("%s.%s.maesh:%d", backend.Service.Name, backend.Service.Namespace, port),
+		Address: fmt.Sprintf("%s.%s.traefik.mesh:%d", backend.Service.Name, backend.Service.Namespace, port),
 	}
 
 	return &dynamic.UDPService{

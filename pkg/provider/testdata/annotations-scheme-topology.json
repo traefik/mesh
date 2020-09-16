@@ -5,7 +5,7 @@
       "namespace": "my-ns",
       "selector": {},
       "annotations": {
-        "maesh.containo.us/scheme": "https"
+        "mesh.traefik.io/scheme": "https"
       },
       "ports": [
         {

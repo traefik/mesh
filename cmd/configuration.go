@@ -4,8 +4,8 @@ import (
 	"os"
 )
 
-// MaeshConfiguration wraps the static configuration and extra parameters.
-type MaeshConfiguration struct {
+// TraefikMeshConfiguration wraps the static configuration and extra parameters.
+type TraefikMeshConfiguration struct {
 	ConfigFile       string   `description:"Configuration file to use. If specified all other flags are ignored." export:"true"`
 	KubeConfig       string   `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL        string   `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
@@ -15,7 +15,7 @@ type MaeshConfiguration struct {
 	ACL              bool     `description:"Enable ACL mode." export:"true"`
 	SMI              bool     `description:"Enable SMI operation, deprecated, use --acl instead." export:"true"`
 	DefaultMode      string   `description:"Default mode for mesh services." export:"true"`
-	Namespace        string   `description:"The namespace that maesh is installed in." export:"true"`
+	Namespace        string   `description:"The namespace that Traefik Mesh is installed in." export:"true"`
 	WatchNamespaces  []string `description:"Namespaces to watch." export:"true"`
 	IgnoreNamespaces []string `description:"Namespaces to ignore." export:"true"`
 	APIPort          int32    `description:"API port for the controller." export:"true"`
@@ -25,9 +25,9 @@ type MaeshConfiguration struct {
 	LimitUDPPort     int32    `description:"Number of UDP ports allocated." export:"true"`
 }
 
-// NewMaeshConfiguration creates a MaeshConfiguration with default values.
-func NewMaeshConfiguration() *MaeshConfiguration {
-	return &MaeshConfiguration{
+// NewTraefikMeshConfiguration creates a TraefikMeshConfiguration with default values.
+func NewTraefikMeshConfiguration() *TraefikMeshConfiguration {
+	return &TraefikMeshConfiguration{
 		ConfigFile:    "",
 		KubeConfig:    os.Getenv("KUBECONFIG"),
 		LogLevel:      "error",
@@ -53,7 +53,7 @@ type PrepareConfiguration struct {
 	LogLevel      string `description:"The log level." export:"true"`
 	LogFormat     string `description:"The log format." export:"true"`
 	Debug         bool   `description:"Debug mode, deprecated, use --loglevel=debug instead." export:"true"`
-	Namespace     string `description:"The namespace that maesh is installed in." export:"true"`
+	Namespace     string `description:"The namespace that Traefik Mesh is installed in." export:"true"`
 	ClusterDomain string `description:"Your internal K8s cluster domain." export:"true"`
 	SMI           bool   `description:"Enable SMI operation, deprecated, use --acl instead." export:"true"`
 	ACL           bool   `description:"Enable ACL mode." export:"true"`
@@ -77,7 +77,7 @@ type CleanupConfiguration struct {
 	ConfigFile string `description:"Configuration file to use. If specified all other flags are ignored." export:"true"`
 	KubeConfig string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
-	Namespace  string `description:"The namespace that maesh is installed in." export:"true"`
+	Namespace  string `description:"The namespace that Traefik Mesh is installed in." export:"true"`
 	LogLevel   string `description:"The log level." export:"true"`
 	LogFormat  string `description:"The log format." export:"true"`
 }

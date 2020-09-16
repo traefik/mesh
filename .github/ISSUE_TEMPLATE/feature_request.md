@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Propose a change to Maesh!
+about: Propose a change to Traefik Mesh!
 ---
 
 <!-- ⚠️ If you do not respect this template your issue will be closed. -->

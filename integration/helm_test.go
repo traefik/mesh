@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containous/maesh/integration/k3d"
 	"github.com/go-check/check"
 	"github.com/sirupsen/logrus"
+	"github.com/traefik/mesh/integration/k3d"
 	checker "github.com/vdemeester/shakers"
 )
 
@@ -22,7 +22,7 @@ func (s *HelmSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
-		{Name: "containous/maesh:latest", Local: true},
+		{Name: "traefik/mesh:latest", Local: true},
 		{Name: "traefik:v2.3"},
 	}
 
@@ -33,7 +33,7 @@ func (s *HelmSuite) SetUpSuite(c *check.C) {
 	)
 	c.Assert(err, checker.IsNil)
 
-	c.Assert(s.cluster.CreateNamespace(s.logger, maeshNamespace), checker.IsNil)
+	c.Assert(s.cluster.CreateNamespace(s.logger, traefikMeshNamespace), checker.IsNil)
 }
 
 func (s *HelmSuite) TearDownSuite(c *check.C) {
@@ -43,36 +43,36 @@ func (s *HelmSuite) TearDownSuite(c *check.C) {
 }
 
 func (s *HelmSuite) TestACLDisabled(c *check.C) {
-	s.installHelmMaesh(c, false, false)
-	defer s.uninstallHelmMaesh(c)
+	s.installHelmTraefikMesh(c, false, false)
+	defer s.uninstallHelmTraefikMesh(c)
 
-	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("traefik-mesh-controller", traefikMeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("traefik-mesh-proxy", traefikMeshNamespace, 60*time.Second), checker.IsNil)
 }
 
 func (s *HelmSuite) TestACLEnabled(c *check.C) {
-	s.installHelmMaesh(c, true, false)
-	defer s.uninstallHelmMaesh(c)
+	s.installHelmTraefikMesh(c, true, false)
+	defer s.uninstallHelmTraefikMesh(c)
 
-	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("traefik-mesh-controller", traefikMeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("traefik-mesh-proxy", traefikMeshNamespace, 60*time.Second), checker.IsNil)
 }
 
 func (s *HelmSuite) TestKubeDNSEnabled(c *check.C) {
-	s.installHelmMaesh(c, false, true)
-	defer s.uninstallHelmMaesh(c)
+	s.installHelmTraefikMesh(c, false, true)
+	defer s.uninstallHelmTraefikMesh(c)
 
-	c.Assert(s.cluster.WaitReadyDeployment("maesh-controller", maeshNamespace, 60*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDaemonSet("maesh-mesh", maeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("traefik-mesh-controller", traefikMeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDaemonSet("traefik-mesh-proxy", traefikMeshNamespace, 60*time.Second), checker.IsNil)
 }
 
-func (s *HelmSuite) installHelmMaesh(c *check.C, acl bool, kubeDNS bool) {
-	s.logger.Info("Installing Maesh via helm...")
+func (s *HelmSuite) installHelmTraefikMesh(c *check.C, acl bool, kubeDNS bool) {
+	s.logger.Info("Installing Traefik Mesh via helm...")
 
 	args := []string{
-		"install", "powpow", "../helm/chart/maesh",
-		"--values", "testdata/maesh/values.yaml",
-		"--namespace", maeshNamespace,
+		"install", "powpow", "../helm/chart/mesh",
+		"--values", "testdata/traefik-mesh/values.yaml",
+		"--namespace", traefikMeshNamespace,
 	}
 
 	if kubeDNS {
@@ -93,12 +93,12 @@ func (s *HelmSuite) installHelmMaesh(c *check.C, acl bool, kubeDNS bool) {
 	}
 }
 
-func (s *HelmSuite) uninstallHelmMaesh(c *check.C) {
-	s.logger.Info("Uninstalling Maesh via helm...")
+func (s *HelmSuite) uninstallHelmTraefikMesh(c *check.C) {
+	s.logger.Info("Uninstalling Traefik Mesh via helm...")
 
 	args := []string{
 		"uninstall", "powpow",
-		"--namespace", maeshNamespace,
+		"--namespace", traefikMeshNamespace,
 	}
 
 	cmd := exec.Command("helm", args...)
