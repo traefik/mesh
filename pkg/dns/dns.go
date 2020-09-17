@@ -563,7 +563,7 @@ func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, tra
 
 	stubDomain := fmt.Sprintf(stubDomainFormat,
 		clusterDomain,
-		strings.Replace(clusterDomain, ".", "\\.", -1),
+		strings.ReplaceAll(clusterDomain, ".", "\\."),
 		traefikMeshNamespace,
 		blockHeader,
 		blockTrailer,

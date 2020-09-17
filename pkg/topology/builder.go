@@ -554,7 +554,9 @@ func buildHTTPRouteGroupMatches(ttMatches []string, httpRouteGroupMatches []spec
 			found = match.Name == name
 
 			if found {
+				match := match
 				httpMatches = append(httpMatches, &match)
+
 				break
 			}
 		}
