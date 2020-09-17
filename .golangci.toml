@@ -46,7 +46,6 @@
     "noctx", # Too strict
     "exhaustive", # Too strict
     "nlreturn", # Too strict
-    "exportloopref", # Too strict
   ]
 
 [issues]
