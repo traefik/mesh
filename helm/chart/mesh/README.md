@@ -16,7 +16,7 @@ Moreover, Traefik Mesh is opt-in by default, which means that your existing serv
 To install the chart with the release name `traefik-mesh`:
 
 ```bash
-$ helm repo add traefik-mesh https://traefik.github.io/mesh/charts
+$ helm repo add traefik-mesh https://helm.traefik.io/mesh
 $ helm repo update
 $ helm install traefik-mesh traefik-mesh/traefik-mesh
 ```

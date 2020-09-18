@@ -47,7 +47,7 @@ To run this app, you require the following:
 ## Install (Helm v3 only)
 
 ```shell
-helm repo add traefik-mesh https://traefik.github.io/mesh/charts
+helm repo add traefik-mesh https://helm.traefik.io/mesh
 helm repo update
 helm install traefik-mesh traefik-mesh/traefik-mesh
 ```

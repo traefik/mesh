@@ -3,7 +3,7 @@
 To install Traefik Mesh, the installation method is quite simple:
 
 ```bash
-helm repo add traefik-mesh https://traefik.github.io/mesh/charts
+helm repo add traefik-mesh https://helm.traefik.io/mesh
 helm repo update
 ```
 
