@@ -19,7 +19,7 @@ var (
 	k3dClusterName       = "traefik-mesh-integration"
 	traefikMeshNamespace = "traefik-mesh"
 	traefikMeshBinary    = "../dist/traefik-mesh"
-	smiCRDs              = "../helm/chart/mesh/crds/"
+	smiCRDs              = "./testdata/crds/"
 	testNamespace        = "test"
 )
 
@@ -37,7 +37,6 @@ func Test(t *testing.T) {
 	check.Suite(&ACLEnabledSuite{})
 	check.Suite(&CoreDNSSuite{})
 	check.Suite(&KubeDNSSuite{})
-	check.Suite(&HelmSuite{})
 
 	check.TestingT(t)
 }

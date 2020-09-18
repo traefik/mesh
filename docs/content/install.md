@@ -33,7 +33,7 @@ You will then be able to use the tagged image as your image in your `values.yaml
 To deploy the Helm Chart, run:
 
 ```shell
-helm install traefik-mesh helm/chart/mesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
+helm install traefik-mesh traefik-mesh/traefik-mesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
 ## KubeDNS support
