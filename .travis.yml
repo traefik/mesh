@@ -52,8 +52,6 @@ before_deploy:
       structor -o traefik -r mesh --dockerfile-url="https://raw.githubusercontent.com/traefik/mesh/master/docs/docs.Dockerfile" --menu.js-url="https://raw.githubusercontent.com/traefik/structor/master/traefik-menu.js.gotmpl" --rqts-url="https://raw.githubusercontent.com/traefik/structor/master/requirements-override.txt" --force-edit-url --exp-branch=master --debug;
       mixtus --dst-doc-path="./mesh" --dst-owner=traefik --dst-repo-name=doc --git-user-email="30906710+traefiker@users.noreply.github.com" --git-user-name=traefiker --src-doc-path="./site" --src-owner=traefik --src-repo-name=mesh;
     fi
-  # Copy helm packages
-  - cp -r pages/charts/. site/charts
   # Copy CNAME file
   - cp pages/CNAME site/CNAME
   # Copy Semaphore yml file
@@ -76,12 +74,6 @@ deploy:
   - provider: script
     skip_cleanup: true
     script: make publish-images
-    on:
-      tags: true
-      condition: $STABLE = true
-  - provider: script
-    skip_cleanup: true
-    script: make helm-package
     on:
       tags: true
       condition: $STABLE = true

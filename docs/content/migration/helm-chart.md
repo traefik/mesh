@@ -35,7 +35,7 @@ You should use the new `defaultMode` option to configure the default traffic mod
 
 Prior to version `v2.1`, when the Metrics chart is deployed, Prometheus and Grafana services are exposed by default through a `NodePort`.
 For security reasons, those services are not exposed by default anymore. 
-To expose them you should use the new `prometheus.service` and `grafana.service` options, more details in the corresponding [values.yaml](https://github.com/traefik/mesh/blob/e59b861ac91261b950663410a6223a02fc7e2290/helm/chart/maesh/charts/metrics/values.yaml).
+To expose them you should use the new `prometheus.service` and `grafana.service` options, more details in the corresponding [values.yaml](https://github.com/traefik/mesh-helm-chart/blob/8a7a193a1718129ad6e02ff313b219029d6daffe/mesh/charts/metrics/values.yaml).
 
 ## v1.x to v2.0
 
