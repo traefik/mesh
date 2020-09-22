@@ -1,5 +1,5 @@
 <p align="center">
-<img width="400" src="docs/content/assets/img/traefik-mesh.png" alt="Traefik Mesh" title="Traefik Mesh" />
+<img src="docs/content/assets/img/traefik-mesh.png" alt="Traefik Mesh" title="Traefik Mesh" />
 </p>
 
 
