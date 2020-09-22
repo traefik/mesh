@@ -50,7 +50,7 @@ before_deploy:
       curl -sfL https://raw.githubusercontent.com/traefik/structor/master/godownloader.sh | bash -s -- -b "${GOPATH}/bin" ${STRUCTOR_VERSION};
       curl -sSfL https://raw.githubusercontent.com/traefik/mixtus/master/godownloader.sh | sh -s -- -b "${GOPATH}/bin" ${MIXTUS_VERSION};
       structor -o traefik -r mesh --dockerfile-url="https://raw.githubusercontent.com/traefik/mesh/master/docs/docs.Dockerfile" --menu.js-url="https://raw.githubusercontent.com/traefik/structor/master/traefik-menu.js.gotmpl" --rqts-url="https://raw.githubusercontent.com/traefik/structor/master/requirements-override.txt" --force-edit-url --exp-branch=master --debug;
-      mixtus --dst-doc-path="./mesh" --dst-owner=traefik --dst-repo-name=doc --git-user-email="30906710+traefiker@users.noreply.github.com" --git-user-name=traefiker --src-doc-path="./site" --src-owner=traefik --src-repo-name=mesh;
+      mixtus --dst-doc-path="./traefik-mesh" --dst-owner=traefik --dst-repo-name=doc --git-user-email="30906710+traefiker@users.noreply.github.com" --git-user-name=traefiker --src-doc-path="./site" --src-owner=traefik --src-repo-name=mesh;
     fi
   # Copy CNAME file
   - cp pages/CNAME site/CNAME
