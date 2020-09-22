@@ -75,14 +75,3 @@ deploy:
     on:
       tags: true
       condition: $STABLE = true
-  - provider: pages
-    strategy: git
-    edge: false
-    token: ${GITHUB_TOKEN}
-    target_branch: gh-pages
-    local_dir: site
-    skip_cleanup: true
-    keep_history: true
-    on:
-      repo: traefik/mesh
-      all_branches: true
