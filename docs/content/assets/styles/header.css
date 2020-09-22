@@ -219,7 +219,7 @@
   width: 118px;
   height: 92px;
   position: absolute;
-  background: #f4f4f4;
+  /* background: #f4f4f4; */
   display: flex;
   align-items: center;
   justify-content: center;

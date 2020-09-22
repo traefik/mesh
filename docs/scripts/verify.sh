@@ -19,7 +19,6 @@ find "${PATH_TO_SITE}" -type f -not -path "/app/site/theme/*" \
   htmlproofer \
   --check-html \
   --check_external_hash \
-  --alt_ignore="/traefik-mesh-logo.png/" \
   --alt_ignore="/traefik-mesh-logo.svg/" \
   --http_status_ignore="0,500,501,503" \
   --url_ignore="/fonts.gstatic.com/,/traefik-mesh/,/github.com\/traefik\/mesh\/edit*/,/pilot.traefik.io\/profile/,/doc.traefik.io/,/www.mkdocs.org/,/squidfunk.github.io/,/ietf.org/" \
