@@ -5,7 +5,7 @@ Let's see how.
 
 ## Building
 
-This [documentation](https://docs.mae.sh/) is built with [MkDocs](https://mkdocs.org/).
+This [documentation](https://doc.traefik.io/traefik-mesh/) is built with [MkDocs](https://mkdocs.org/).
 
 ### With `Docker` and `make`
 
