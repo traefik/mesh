@@ -1,7 +1,7 @@
 # Traefik Mesh: Simpler Service Mesh
 
 <p align="center">
-<img width="400" src="assets/img/traefik-mesh.png" alt="Traefik Mesh" title="Traefik Mesh" />
+<img src="assets/img/traefik-mesh.png" alt="Traefik Mesh" title="Traefik Mesh" />
 </p>
 
 Traefik Mesh is a lightweight and simpler service mesh designed from the ground up to be straightforward, easy to install and easy to use.

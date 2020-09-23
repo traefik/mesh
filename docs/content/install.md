@@ -3,7 +3,7 @@
 To install Traefik Mesh, the installation method is quite simple:
 
 ```bash
-helm repo add traefik-mesh https://traefik.github.io/mesh/charts
+helm repo add traefik-mesh https://helm.traefik.io/mesh
 helm repo update
 ```
 
@@ -33,7 +33,7 @@ You will then be able to use the tagged image as your image in your `values.yaml
 To deploy the Helm Chart, run:
 
 ```shell
-helm install traefik-mesh helm/chart/mesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
+helm install traefik-mesh traefik-mesh/traefik-mesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
 ## KubeDNS support
