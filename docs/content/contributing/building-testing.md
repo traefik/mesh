@@ -124,7 +124,7 @@ ok  	github.com/traefik/mesh/pkg/providers/smi	3.634s
 Run the integration tests in the `integration` directory by using the `go test ./integration -integration` command:
 
 ```bash
-$ go test -v ./integration -integration -check.f HelmSuite
+$ go test -v ./integration -integration -check.f CoreDNSSuite
 #[...]
 OK: 2 passed
 --- PASS: Test (161.20s)

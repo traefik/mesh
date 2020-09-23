@@ -25,7 +25,7 @@ clean:
 	rm -rf $(CURDIR)/dist/ cover.out $(CURDIR)/pages $(CURDIR)/gh-pages.zip $(CURDIR)/mesh-gh-pages
 
 # Static linting of source files. See .golangci.toml for options
-local-check: $(DIST_DIR) helm-lint
+local-check: $(DIST_DIR)
 	golangci-lint run --config .golangci.toml
 
 # Local commands
@@ -40,13 +40,13 @@ local-test: clean
 	go test -v -cover ./...
 
 ifeq ($(UNAME), Linux)
-test-integration: $(DIST_DIR) kubectl helm build k3d
+test-integration: $(DIST_DIR) kubectl build k3d
 else
-test-integration: $(DIST_DIR) kubectl helm build local-build k3d
+test-integration: $(DIST_DIR) kubectl build local-build k3d
 endif
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) $(TESTFLAGS)
 
-test-integration-nobuild: $(DIST_DIR) kubectl helm k3d
+test-integration-nobuild: $(DIST_DIR) kubectl k3d
 	CGO_ENABLED=0 go test ./integration -integration $(INTEGRATION_TEST_OPTS) $(TESTFLAGS)
 
 kubectl:
@@ -61,7 +61,7 @@ build: $(DIST_DIR)
 test: $(DIST_DIR)
 	docker build --tag "$(DOCKER_IMAGE_NAME):test" --target maker --build-arg="MAKE_TARGET=local-test" $(CURDIR)/
 
-check: $(DIST_DIR) helm-lint
+check: $(DIST_DIR)
 	docker build --tag "$(DOCKER_IMAGE_NAME):check" --target base-image $(CURDIR)/
 	docker run --rm \
       -v $(CURDIR):/go/src/$(PROJECT) \
@@ -101,36 +101,13 @@ upgrade:
 tidy:
 	go mod tidy
 
-helm:
-	@command -v helm >/dev/null 2>&1 || curl -L https://git.io/get_helm.sh | bash -s -- -v v3.0.1
-
-helm-lint: helm
-	helm lint helm/chart/mesh
-
 k3d:
 	@command -v k3d >/dev/null 2>&1 || curl -s https://raw.githubusercontent.com/rancher/k3d/v3.0.1/install.sh | TAG=v3.0.1 bash
 
-pages:
+docs-package:
 	mkdir -p $(CURDIR)/pages
-	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/mesh-gh-pages
-	curl -sSLO https://$(PROJECT)/archive/gh-pages.zip
-	unzip $(CURDIR)/gh-pages.zip
-	# We only keep the directory "charts" so documentation may remove files
-	cp -r $(CURDIR)/mesh-gh-pages/charts $(CURDIR)/pages/
-	rm -rf $(CURDIR)/gh-pages.zip $(CURDIR)/mesh-gh-pages
-
-docs-package: pages
 	make -C $(CURDIR)/docs
 	cp -r $(CURDIR)/docs/site/* $(CURDIR)/pages/
-	cp $(CURDIR)/docs/CNAME $(CURDIR)/pages/CNAME
-
-helm-package: helm-lint pages
-	helm package --app-version $(TAG_NAME) $(CURDIR)/helm/chart/mesh
-	cp helm/chart/mesh/README.md index.md
-	mkdir -p $(CURDIR)/pages/charts
-	mv *.tgz index.md $(CURDIR)/pages/charts/
-	helm repo index $(CURDIR)/pages/charts/
 
 .PHONY: local-check local-build local-test check build test publish-images \
-		vendor kubectl test-integration local-test-integration pages \
-		helm helm-lint helm-package k3d
+		vendor kubectl test-integration local-test-integration pages k3d

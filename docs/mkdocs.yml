@@ -1,7 +1,7 @@
 site_name: Traefik Mesh
 site_description: Traefik Mesh Documentation
-site_author: containo.us
-site_url: https://docs.mae.sh
+site_author: traefik.io
+site_url: https://doc.traefik.io/traefik-mesh
 dev_addr: 0.0.0.0:8000
 
 repo_name: 'GitHub'

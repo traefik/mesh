@@ -1,6 +1,0 @@
-apiVersion: v1
-description: A metrics Helm chart for Kubernetes
-name: metrics
-version: 0.1.0
-appVersion: 0.0.1
-tillerVersion: ">=2.7.2"

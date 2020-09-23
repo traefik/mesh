@@ -78,6 +78,3 @@ blocks:
         - name: KubeDNS Suite
           commands:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f KubeDNSSuite\""
-        - name: Helm Suite
-          commands:
-            - "make test-integration-nobuild TESTFLAGS=\"-check.f HelmSuite\""
