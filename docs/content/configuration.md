@@ -90,7 +90,7 @@ This annotation sets the expression for circuit breaking.
 The circuit breaker protects your system from stacking requests to unhealthy services (resulting in cascading failures).
 When your system is healthy, the circuit is closed (normal operations). When your system becomes unhealthy, the circuit opens, and requests are no longer forwarded (but handled by a fallback mechanism).
 
-All configuration options are available [here](https://docs.traefik.io/v2.0/middlewares/circuitbreaker/#configuration-options).
+All configuration options are available [here](https://doc.traefik.io/traefik/v2.0/middlewares/circuitbreaker/#configuration-options).
 
 #### Rate Limit
 
@@ -104,7 +104,7 @@ mesh.traefik.io/ratelimit-burst: "200"
 These annotation sets average and burst requests per second limit for the service.
 Please note that this value is a string, and needs to be quoted.
 
-Further details about the rate limiting can be found [here](https://docs.traefik.io/v2.0/middlewares/ratelimit/#configuration-options).
+Further details about the rate limiting can be found [here](https://doc.traefik.io/traefik/v2.0/middlewares/ratelimit/#configuration-options).
 
 ### Service Mesh Interface
 

@@ -108,7 +108,6 @@ docs-package:
 	mkdir -p $(CURDIR)/pages
 	make -C $(CURDIR)/docs
 	cp -r $(CURDIR)/docs/site/* $(CURDIR)/pages/
-	cp $(CURDIR)/docs/CNAME $(CURDIR)/pages/CNAME
 
 .PHONY: local-check local-build local-test check build test publish-images \
 		vendor kubectl test-integration local-test-integration pages k3d
