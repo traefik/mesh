@@ -31,9 +31,9 @@ local-check: $(DIST_DIR)
 # Local commands
 local-build: $(DIST_DIR)
 	CGO_ENABLED=0 go build -o ${DIST_DIR_TRAEFIK_MESH} -ldflags="-s -w \
-	-X github.com/traefik/mesh/pkg/version.Version=$(VERSION) \
-	-X github.com/traefik/mesh/pkg/version.Commit=$(SHA) \
-	-X github.com/traefik/mesh/pkg/version.Date=$(BUILD_DATE)" \
+	-X github.com/traefik/mesh/v2/pkg/version.Version=$(VERSION) \
+	-X github.com/traefik/mesh/v2/pkg/version.Commit=$(SHA) \
+	-X github.com/traefik/mesh/v2/pkg/version.Date=$(BUILD_DATE)" \
 	$(CURDIR)/cmd/mesh/mesh.go
 
 local-test: clean

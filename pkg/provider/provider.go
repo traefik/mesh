@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/sirupsen/logrus"
-	"github.com/traefik/mesh/pkg/annotations"
-	"github.com/traefik/mesh/pkg/topology"
+	"github.com/traefik/mesh/v2/pkg/annotations"
+	"github.com/traefik/mesh/v2/pkg/topology"
 	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 	corev1 "k8s.io/api/core/v1"
 )
