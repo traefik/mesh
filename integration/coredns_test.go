@@ -91,11 +91,6 @@ func (s *CoreDNSSuite) testCoreDNSVersion(c *check.C, version string) {
 	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
 	err := try.Retry(func() error {
-		return s.tool.Dig("whoami.whoami.maesh")
-	}, 30*time.Second)
-	c.Assert(err, checker.IsNil)
-
-	err = try.Retry(func() error {
 		return s.tool.Dig("whoami.whoami.traefik.mesh")
 	}, 30*time.Second)
 	c.Assert(err, checker.IsNil)

@@ -26,30 +26,30 @@ metadata:
 data:
   Corefile: |
     .:53 {
-            errors
-            health {
-                lameduck 5s
-            }
-            ready
-            kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {
-                pods insecure
-                fallthrough in-addr.arpa ip6.arpa
-                ttl 30
-            }
-            prometheus :9153
-            forward . /etc/resolv.conf
-            cache 30
-            loop
-            reload
-            loadbalance
+        errors
+        health {
+            lameduck 5s
         }
+        ready
+        kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+        prometheus :9153
+        forward . /etc/resolv.conf
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
 
-    #### Begin Maesh Block
-    maesh:53 {
+    #### Begin Traefik Mesh Block
+    traefik.mesh:53 {
         errors
         rewrite continue {
-            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.maesh toto-{1}-6d61657368-{2}.toto.svc.titi
-            answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.toto\.svc\.titi {1}.{2}.maesh
+            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.traefik\.mesh toto-{1}-6d61657368-{2}.toto.svc.titi
+            answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.toto\.svc\.titi {1}.{2}.traefik.meshs
         }
         kubernetes titi in-addr.arpa ip6.arpa {
             pods insecure
@@ -62,5 +62,5 @@ data:
         reload
         loadbalance
     }
-    #### End Maesh Block
+    #### End Traefik Mesh Block
     # This is test data that must be present
