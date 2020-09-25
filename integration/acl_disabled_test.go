@@ -79,7 +79,7 @@ func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
 
 // TestUDPService deploys a UDP service "server" with one Pod called "server" and asserts this service is
 // reachable and that a connection has been established with this Pod.
-func (s *ACLDisabledSuite) TestUDPervice(c *check.C) {
+func (s *ACLDisabledSuite) TestUDPService(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/udp"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/udp")
 
