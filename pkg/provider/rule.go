@@ -90,7 +90,7 @@ func appendHeaderFilter(matchParts []string, match *specs.HTTPMatch) []string {
 }
 
 func buildHTTPRuleFromService(svc *topology.Service) string {
-	return fmt.Sprintf("Host(`%[1]s.%[2]s.traefik.mesh`) || Host(`%[1]s.%[2]s.maesh`) || Host(`%s`)", svc.Name, svc.Namespace, svc.ClusterIP)
+	return fmt.Sprintf("Host(`%[1]s.%[2]s.traefik.mesh`) || Host(`%[3]s`)", svc.Name, svc.Namespace, svc.ClusterIP)
 }
 
 func buildHTTPRuleFromTrafficTarget(tt *topology.ServiceTrafficTarget, ttSvc *topology.Service) string {
