@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/traefik/mesh/integration/try"
+	"github.com/traefik/mesh/v2/integration/try"
 )
 
 // Tool is pod capable of running operations from within the cluster.

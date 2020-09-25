@@ -10,7 +10,7 @@ import (
 	speclister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/specs/listers/specs/v1alpha3"
 	splitlister "github.com/servicemeshinterface/smi-sdk-go/pkg/gen/client/split/listers/split/v1alpha3"
 	"github.com/sirupsen/logrus"
-	mk8s "github.com/traefik/mesh/pkg/k8s"
+	mk8s "github.com/traefik/mesh/v2/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	listers "k8s.io/client-go/listers/core/v1"

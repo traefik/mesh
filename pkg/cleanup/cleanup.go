@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
-	"github.com/traefik/mesh/pkg/dns"
+	"github.com/traefik/mesh/v2/pkg/dns"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )

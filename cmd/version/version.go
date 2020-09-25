@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/traefik/mesh/pkg/version"
+	"github.com/traefik/mesh/v2/pkg/version"
 	"github.com/traefik/paerser/cli"
 )
 

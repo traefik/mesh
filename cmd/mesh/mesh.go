@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/traefik/mesh/cmd"
-	"github.com/traefik/mesh/cmd/cleanup"
-	"github.com/traefik/mesh/cmd/prepare"
-	"github.com/traefik/mesh/cmd/version"
-	"github.com/traefik/mesh/pkg/api"
-	"github.com/traefik/mesh/pkg/controller"
-	"github.com/traefik/mesh/pkg/k8s"
+	"github.com/traefik/mesh/v2/cmd"
+	"github.com/traefik/mesh/v2/cmd/cleanup"
+	"github.com/traefik/mesh/v2/cmd/prepare"
+	"github.com/traefik/mesh/v2/cmd/version"
+	"github.com/traefik/mesh/v2/pkg/api"
+	"github.com/traefik/mesh/v2/pkg/controller"
+	"github.com/traefik/mesh/v2/pkg/k8s"
 	"github.com/traefik/paerser/cli"
 )
 
