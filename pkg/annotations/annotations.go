@@ -23,12 +23,13 @@ const (
 )
 
 const (
-	annotationServiceType              = "traffic-type"
-	annotationScheme                   = "scheme"
-	annotationRetryAttempts            = "retry-attempts"
-	annotationCircuitBreakerExpression = "circuit-breaker-expression"
-	annotationRateLimitAverage         = "ratelimit-average"
-	annotationRateLimitBurst           = "ratelimit-burst"
+	baseAnnotation                     = "mesh.traefik.io/"
+	annotationServiceType              = baseAnnotation + "traffic-type"
+	annotationScheme                   = baseAnnotation + "scheme"
+	annotationRetryAttempts            = baseAnnotation + "retry-attempts"
+	annotationCircuitBreakerExpression = baseAnnotation + "circuit-breaker-expression"
+	annotationRateLimitAverage         = baseAnnotation + "ratelimit-average"
+	annotationRateLimitBurst           = baseAnnotation + "ratelimit-burst"
 )
 
 // ErrNotFound indicates that the annotation hasn't been found.
@@ -36,7 +37,7 @@ var ErrNotFound = errors.New("annotation not found")
 
 // GetTrafficType returns the value of the traffic-type annotation.
 func GetTrafficType(defaultTrafficType string, annotations map[string]string) (string, error) {
-	trafficType, exists := getAnnotation(annotations, annotationServiceType)
+	trafficType, exists := annotations[annotationServiceType]
 	if !exists {
 		return defaultTrafficType, nil
 	}
@@ -54,7 +55,7 @@ func GetTrafficType(defaultTrafficType string, annotations map[string]string) (s
 
 // GetScheme returns the value of the scheme annotation.
 func GetScheme(annotations map[string]string) (string, error) {
-	scheme, exists := getAnnotation(annotations, annotationScheme)
+	scheme, exists := annotations[annotationScheme]
 	if !exists {
 		return SchemeHTTP, nil
 	}
@@ -72,7 +73,7 @@ func GetScheme(annotations map[string]string) (string, error) {
 
 // GetRetryAttempts returns the value of the retry-attempts annotation.
 func GetRetryAttempts(annotations map[string]string) (int, error) {
-	retryAttempts, exists := getAnnotation(annotations, annotationRetryAttempts)
+	retryAttempts, exists := annotations[annotationRetryAttempts]
 	if !exists {
 		return 0, ErrNotFound
 	}
@@ -87,7 +88,7 @@ func GetRetryAttempts(annotations map[string]string) (int, error) {
 
 // GetCircuitBreakerExpression returns the value of the circuit-breaker-expression annotation.
 func GetCircuitBreakerExpression(annotations map[string]string) (string, error) {
-	circuitBreakerExpression, exists := getAnnotation(annotations, annotationCircuitBreakerExpression)
+	circuitBreakerExpression, exists := annotations[annotationCircuitBreakerExpression]
 	if !exists {
 		return "", ErrNotFound
 	}
@@ -97,7 +98,7 @@ func GetCircuitBreakerExpression(annotations map[string]string) (string, error) 
 
 // GetRateLimitBurst returns the value of the rate-limit-burst annotation.
 func GetRateLimitBurst(annotations map[string]string) (int, error) {
-	rateLimitBurst, exists := getAnnotation(annotations, annotationRateLimitBurst)
+	rateLimitBurst, exists := annotations[annotationRateLimitBurst]
 	if !exists {
 		return 0, ErrNotFound
 	}
@@ -112,7 +113,7 @@ func GetRateLimitBurst(annotations map[string]string) (int, error) {
 
 // GetRateLimitAverage returns the value of the rate-limit-average annotation.
 func GetRateLimitAverage(annotations map[string]string) (int, error) {
-	rateLimitAverage, ok := getAnnotation(annotations, annotationRateLimitAverage)
+	rateLimitAverage, ok := annotations[annotationRateLimitAverage]
 	if !ok {
 		return 0, ErrNotFound
 	}
@@ -123,16 +124,4 @@ func GetRateLimitAverage(annotations map[string]string) (int, error) {
 	}
 
 	return average, nil
-}
-
-// getAnnotation returns the value of the annotation with the given name and a boolean evaluating to true if the
-// annotation has been found, false otherwise. This function will try to resolve the annotation with the traefik mesh
-// domain prefix and fallback to the deprecated maesh domain prefix if not found.
-func getAnnotation(annotations map[string]string, name string) (string, bool) {
-	value, exists := annotations["mesh.traefik.io/"+name]
-	if !exists {
-		value, exists = annotations["maesh.containo.us/"+name]
-	}
-
-	return value, exists
 }
