@@ -388,7 +388,7 @@ func (c *Client) RestoreKubeDNS(ctx context.Context) error {
 		return fmt.Errorf("unable to unmarshal stubdomains: %w", err)
 	}
 
-	// Delete our stubDomains.
+	// Delete our stubDomain.
 	delete(stubDomains, "traefik.mesh")
 
 	configMapData, err := json.Marshal(stubDomains)
