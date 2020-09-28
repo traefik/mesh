@@ -23,9 +23,9 @@ const (
 
 type storeMock struct{}
 
-func (a *storeMock) SetConfig(cfg *dynamic.Configuration) {}
-func (a *storeMock) SetTopology(topo *topology.Topology)  {}
-func (a *storeMock) SetReadiness(isReady bool)            {}
+func (a *storeMock) SetConfig(_ *dynamic.Configuration) {}
+func (a *storeMock) SetTopology(_ *topology.Topology)   {}
+func (a *storeMock) SetReadiness(_ bool)                {}
 
 func TestController_NewMeshController(t *testing.T) {
 	store := &storeMock{}
@@ -35,7 +35,7 @@ func TestController_NewMeshController(t *testing.T) {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	// Create a new controller with base HTTP mode.
+	// Create a new controller with HTTP as a default traffic type.
 	controller := NewMeshController(clientMock, Config{
 		ACLEnabled:       false,
 		DefaultMode:      "http",
@@ -52,7 +52,7 @@ func TestController_NewMeshController(t *testing.T) {
 	assert.NotNil(t, controller)
 }
 
-func TestController_NewMeshControllerWithSMI(t *testing.T) {
+func TestController_NewMeshControllerWithACLEnabled(t *testing.T) {
 	store := &storeMock{}
 	clientMock := k8s.NewClientMock(t, "mock.yaml")
 	log := logrus.New()
@@ -60,7 +60,7 @@ func TestController_NewMeshControllerWithSMI(t *testing.T) {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
-	// Create a new controller with base HTTP mode, in SMI mode.
+	// Create a new controller with HTTP as a default traffic type and ACL enabled.
 	controller := NewMeshController(clientMock, Config{
 		ACLEnabled:       true,
 		DefaultMode:      "http",
