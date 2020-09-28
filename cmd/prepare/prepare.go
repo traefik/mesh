@@ -43,15 +43,9 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 
 	dnsClient := dns.NewClient(log, client.KubernetesClient())
 
-	if pConfig.SMI {
-		log.Warnf("SMI mode is deprecated, please consider using --acl instead")
-	}
+	log.Debugf("ACL mode enabled: %t", pConfig.ACL)
 
-	aclEnabled := pConfig.ACL || pConfig.SMI
-
-	log.Debugf("ACL mode enabled: %t", aclEnabled)
-
-	if err = k8s.CheckSMIVersion(client.KubernetesClient(), aclEnabled); err != nil {
+	if err = k8s.CheckSMIVersion(client.KubernetesClient(), pConfig.ACL); err != nil {
 		return fmt.Errorf("unsupported SMI version: %w", err)
 	}
 
