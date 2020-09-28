@@ -69,11 +69,6 @@ func (s *KubeDNSSuite) TestKubeDNSDig(c *check.C) {
 	c.Assert(s.cluster.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
 	err := try.Retry(func() error {
-		return s.tool.Dig("whoami.whoami.maesh")
-	}, 60*time.Second)
-	c.Assert(err, checker.IsNil)
-
-	err = try.Retry(func() error {
 		return s.tool.Dig("whoami.whoami.traefik.mesh")
 	}, 60*time.Second)
 	c.Assert(err, checker.IsNil)

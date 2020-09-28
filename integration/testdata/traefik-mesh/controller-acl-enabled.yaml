@@ -9,8 +9,8 @@ metadata:
     component: controller
 
 ---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: traefik-mesh-controller-role
   namespace: traefik-mesh
@@ -67,8 +67,8 @@ rules:
       - list
       - watch
 ---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: traefik-mesh-controller
   namespace: traefik-mesh

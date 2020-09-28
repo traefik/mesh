@@ -6,32 +6,32 @@
           "http-10000"
         ],
         "service": "my-ns-svc-a-8080",
-        "rule": "Host(`svc-a.my-ns.traefik.mesh`) || Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
-        "priority": 1002
+        "rule": "Host(`svc-a.my-ns.traefik.mesh`) || Host(`10.10.14.1`)",
+        "priority": 1001
       },
       "my-ns-svc-b-8080": {
         "entryPoints": [
           "http-10000"
         ],
         "service": "my-ns-svc-b-8080",
-        "rule": "Host(`svc-b.my-ns.traefik.mesh`) || Host(`svc-b.my-ns.maesh`) || Host(`10.10.15.1`)",
-        "priority": 1002
+        "rule": "Host(`svc-b.my-ns.traefik.mesh`) || Host(`10.10.15.1`)",
+        "priority": 1001
       },
       "my-ns-svc-c-8080": {
         "entryPoints": [
           "http-10000"
         ],
         "service": "my-ns-svc-c-8080",
-        "rule": "Host(`svc-c.my-ns.traefik.mesh`) || Host(`svc-c.my-ns.maesh`) || Host(`10.10.16.1`)",
-        "priority": 1002
+        "rule": "Host(`svc-c.my-ns.traefik.mesh`) || Host(`10.10.16.1`)",
+        "priority": 1001
       },
       "my-ns-svc-a-split-8080-traffic-split-direct": {
         "entryPoints": [
           "http-10000"
         ],
         "service": "my-ns-svc-a-split-8080-traffic-split",
-        "rule": "Host(`svc-a.my-ns.traefik.mesh`) || Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
-        "priority": 4002
+        "rule": "Host(`svc-a.my-ns.traefik.mesh`) || Host(`10.10.14.1`)",
+        "priority": 4001
       },
       "readiness": {
         "entryPoints": [

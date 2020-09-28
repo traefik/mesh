@@ -6,16 +6,16 @@
           "http-10000"
         ],
         "service": "my-ns-svc-a-8080",
-        "rule": "Host(`svc-a.my-ns.traefik.mesh`) || Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
-        "priority": 1002
+        "rule": "Host(`svc-a.my-ns.traefik.mesh`) || Host(`10.10.14.1`)",
+        "priority": 1001
       },
       "my-ns-svc-a-8081": {
         "entryPoints": [
           "http-10001"
         ],
         "service": "my-ns-svc-a-8081",
-        "rule": "Host(`svc-a.my-ns.traefik.mesh`) || Host(`svc-a.my-ns.maesh`) || Host(`10.10.14.1`)",
-        "priority": 1002
+        "rule": "Host(`svc-a.my-ns.traefik.mesh`) || Host(`10.10.14.1`)",
+        "priority": 1001
       },
       "readiness": {
         "entryPoints": [
