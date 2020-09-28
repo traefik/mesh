@@ -69,8 +69,8 @@ docker build --tag "traefik/mesh:test" --target maker --build-arg="MAKE_TARGET=l
     --- PASS: TestBuildConfiguration/simple_configuration_build_with_HTTP_service (0.20s)
 PASS
 coverage: 69.7% of statements
-ok  	github.com/traefik/mesh/pkg/providers/smi	1.982s	coverage: 69.7% of statements
-?   	github.com/traefik/mesh/pkg/signals	[no test files]
+ok  	github.com/traefik/mesh/v2/pkg/providers/smi	1.982s	coverage: 69.7% of statements
+?   	github.com/traefik/mesh/v2/pkg/signals	[no test files]
 Removing intermediate container 4e887c16ddee
  ---> 75d44229a46e
 Successfully built 75d44229a46e
@@ -117,8 +117,8 @@ time="2020-04-09T16:09:16+04:00" level=debug msg="Found trafficsplits for servic
 --- PASS: TestBuildConfiguration (0.00s)
     --- PASS: TestBuildConfiguration/simple_configuration_build_with_HTTP_service (0.21s)
 PASS
-ok  	github.com/traefik/mesh/pkg/providers/smi	3.634s
-?   	github.com/traefik/mesh/pkg/signals	[no test files]
+ok  	github.com/traefik/mesh/v2/pkg/providers/smi	3.634s
+?   	github.com/traefik/mesh/v2/pkg/signals	[no test files]
 ```
 
 Run the integration tests in the `integration` directory by using the `go test ./integration -integration` command:
@@ -129,7 +129,7 @@ $ go test -v ./integration -integration -check.f CoreDNSSuite
 OK: 2 passed
 --- PASS: Test (161.20s)
 PASS
-ok  	github.com/traefik/mesh/integration	162.695s
+ok  	github.com/traefik/mesh/v2/integration	162.695s
 ```
 
 !!! Important

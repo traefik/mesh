@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/traefik/mesh/pkg/k8s"
+	"github.com/traefik/mesh/v2/pkg/k8s"
 	"k8s.io/client-go/kubernetes/fake"
 )
 

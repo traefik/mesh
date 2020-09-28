@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/traefik/mesh/integration/try"
-	"github.com/traefik/mesh/pkg/k8s"
+	"github.com/traefik/mesh/v2/integration/try"
+	"github.com/traefik/mesh/v2/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

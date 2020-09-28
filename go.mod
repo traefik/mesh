@@ -1,4 +1,4 @@
-module github.com/traefik/mesh
+module github.com/traefik/mesh/v2
 
 go 1.15
 

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/traefik/mesh/pkg/safe"
+	"github.com/traefik/mesh/v2/pkg/safe"
 )
 
 // CITimeoutMultiplier is the multiplier for all timeout in the CI.

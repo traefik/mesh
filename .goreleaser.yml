@@ -8,9 +8,9 @@ builds:
       - CGO_ENABLED=0
     ldflags:
       - -s -w
-      - -X github.com/traefik/mesh/pkg/version.Version={{.Version}}
-      - -X github.com/traefik/mesh/pkg/version.Commit={{.Commit}}
-      - -X github.com/traefik/mesh/pkg/version.Date={{.Date}}
+      - -X github.com/traefik/mesh/v2/pkg/version.Version={{.Version}}
+      - -X github.com/traefik/mesh/v2/pkg/version.Commit={{.Commit}}
+      - -X github.com/traefik/mesh/v2/pkg/version.Date={{.Date}}
     goos:
       - linux
       - freebsd

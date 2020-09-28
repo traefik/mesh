@@ -3,7 +3,7 @@ package provider
 import (
 	"fmt"
 
-	"github.com/traefik/mesh/pkg/topology"
+	"github.com/traefik/mesh/v2/pkg/topology"
 )
 
 const (
