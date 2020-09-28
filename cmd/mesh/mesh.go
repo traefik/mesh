@@ -82,12 +82,7 @@ func traefikMeshCommand(config *cmd.TraefikMeshConfiguration) error {
 		return fmt.Errorf("error building clients: %w", err)
 	}
 
-	if config.SMI {
-		log.Warn("SMI mode is deprecated, please consider using --acl instead")
-	}
-
-	aclEnabled := config.ACL || config.SMI
-	log.Debugf("ACL mode enabled: %t", aclEnabled)
+	log.Debugf("ACL mode enabled: %t", config.ACL)
 
 	apiServer, err := api.NewAPI(log, config.APIPort, config.APIHost, clients.KubernetesClient(), config.Namespace)
 	if err != nil {
@@ -95,7 +90,7 @@ func traefikMeshCommand(config *cmd.TraefikMeshConfiguration) error {
 	}
 
 	ctr := controller.NewMeshController(clients, controller.Config{
-		ACLEnabled:       aclEnabled,
+		ACLEnabled:       config.ACL,
 		DefaultMode:      config.DefaultMode,
 		Namespace:        config.Namespace,
 		WatchNamespaces:  config.WatchNamespaces,
