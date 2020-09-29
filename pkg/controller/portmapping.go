@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/traefik/mesh/v2/pkg/k8s"
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
@@ -43,16 +43,7 @@ func NewPortMapping(namespace string, serviceLister listers.ServiceLister, logge
 
 // LoadState initializes the mapping table from the current shadow service state.
 func (p *PortMapping) LoadState() error {
-	labelSelector := &metav1.LabelSelector{
-		MatchLabels: map[string]string{"app": "maesh", "type": "shadow"},
-	}
-
-	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
-	if err != nil {
-		return err
-	}
-
-	shadowServices, err := p.serviceLister.Services(p.namespace).List(selector)
+	shadowServices, err := p.serviceLister.Services(p.namespace).List(k8s.ShadowServiceSelector())
 	if err != nil {
 		return fmt.Errorf("unable to list shadow services: %w", err)
 	}

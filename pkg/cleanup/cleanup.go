@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/traefik/mesh/v2/pkg/dns"
+	"github.com/traefik/mesh/v2/pkg/k8s"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -33,7 +34,7 @@ func NewCleanup(logger logrus.FieldLogger, kubeClient kubernetes.Interface, name
 // CleanShadowServices deletes all shadow services from the cluster.
 func (c *Cleanup) CleanShadowServices(ctx context.Context) error {
 	serviceList, err := c.kubeClient.CoreV1().Services(c.namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "app=maesh,type=shadow",
+		LabelSelector: k8s.ShadowServiceSelector().String(),
 	})
 	if err != nil {
 		return err
