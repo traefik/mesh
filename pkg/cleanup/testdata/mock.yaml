@@ -5,11 +5,14 @@ metadata:
   name: test1
   namespace: traefik-mesh
   labels:
-    app: maesh
-    type: shadow
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: shadow-service
+    app.kubernetes.io/part-of: traefik-mesh
 spec:
   selector:
-    app: test
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/part-of: traefik-mesh
   ports:
   - protocol: TCP
     port: 80
@@ -22,11 +25,14 @@ metadata:
   name: test2
   namespace: traefik-mesh
   labels:
-    app: maesh
-    type: shadow
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: shadow-service
+    app.kubernetes.io/part-of: traefik-mesh
 spec:
   selector:
-    app: test
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/part-of: traefik-mesh
   ports:
   - protocol: TCP
     port: 80

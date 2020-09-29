@@ -10,7 +10,7 @@ type ResourceFilter struct {
 	watchedNamespaces []string
 	ignoredNamespaces []string
 	ignoredServices   []namespaceName
-	ignoredApps       []string
+	ignoredLabels     map[string]string
 }
 
 type namespaceName struct {
@@ -35,11 +35,10 @@ func IgnoreNamespaces(namespaces ...string) ResourceFilterOption {
 	}
 }
 
-// IgnoreApps add the given apps to the list of apps to ignore. An app is a Kubernetes object
-// with an "app" label, the name of the app being the value of the label.
-func IgnoreApps(apps ...string) ResourceFilterOption {
+// IgnoreLabel ignores resources with the given label and value.
+func IgnoreLabel(name, value string) ResourceFilterOption {
 	return func(filter *ResourceFilter) {
-		filter.ignoredApps = append(filter.ignoredApps, apps...)
+		filter.ignoredLabels[name] = value
 	}
 }
 
@@ -55,7 +54,9 @@ func IgnoreService(namespace, name string) ResourceFilterOption {
 
 // NewResourceFilter creates a new ResourceFilter, configured with the given options.
 func NewResourceFilter(opts ...ResourceFilterOption) *ResourceFilter {
-	filter := &ResourceFilter{}
+	filter := &ResourceFilter{
+		ignoredLabels: make(map[string]string),
+	}
 
 	for _, opt := range opts {
 		opt(filter)
@@ -83,9 +84,11 @@ func (f *ResourceFilter) IsIgnored(obj interface{}) bool {
 		return true
 	}
 
-	// Check if the "app" label doesn't contain a value which is ignored.
-	if contains(f.ignoredApps, pMeta.Labels["app"]) {
-		return true
+	// Check if the resource contains an ignored label.
+	for ignoredName, ignoredValue := range f.ignoredLabels {
+		if value, ok := pMeta.Labels[ignoredName]; ok && value == ignoredValue {
+			return true
+		}
 	}
 
 	if svc, ok := obj.(*corev1.Service); ok {
