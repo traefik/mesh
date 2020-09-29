@@ -5,44 +5,10 @@ metadata:
   name: traefik-mesh-proxy
   namespace: traefik-mesh
   labels:
-    app: maesh
-    component: maesh-mesh
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/part-of: traefik-mesh
 automountServiceAccountToken: false
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: traefik-mesh-proxy-role
-  namespace: traefik-mesh
-  labels:
-    app: maesh
-    component: maesh-mesh
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-      - services
-    verbs:
-      - list
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: traefik-mesh-proxy
-  namespace: traefik-mesh
-  labels:
-    app: maesh
-    component: maesh-mesh
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: traefik-mesh-proxy-role
-subjects:
-  - kind: ServiceAccount
-    name: traefik-mesh-proxy
-    namespace: traefik-mesh
 
 ---
 apiVersion: apps/v1
@@ -51,18 +17,21 @@ metadata:
   name: traefik-mesh-proxy
   namespace: traefik-mesh
   labels:
-    app: maesh
-    component: maesh-mesh
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/part-of: traefik-mesh
 spec:
   selector:
     matchLabels:
-      app: maesh
-      component: maesh-mesh
+      app.kubernetes.io/name: traefik-mesh
+      app.kubernetes.io/component: proxy
+      app.kubernetes.io/part-of: traefik-mesh
   template:
     metadata:
       labels:
-        app: maesh
-        component: maesh-mesh
+        app.kubernetes.io/name: traefik-mesh
+        app.kubernetes.io/component: proxy
+        app.kubernetes.io/part-of: traefik-mesh
     spec:
       serviceAccountName: traefik-mesh-proxy
       terminationGracePeriodSeconds: 30

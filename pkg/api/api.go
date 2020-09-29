@@ -44,17 +44,10 @@ type podInfo struct {
 
 // NewAPI creates a new api.
 func NewAPI(log logrus.FieldLogger, port int32, host string, client kubernetes.Interface, namespace string) (*API, error) {
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{"component": "maesh-mesh"},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to create label selector: %w", err)
-	}
-
 	informerFactory := informers.NewSharedInformerFactoryWithOptions(client, k8s.ResyncPeriod,
 		informers.WithNamespace(namespace),
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.LabelSelector = selector.String()
+			options.LabelSelector = k8s.ProxySelector().String()
 		}))
 
 	podLister := informerFactory.Core().V1().Pods().Lister()
