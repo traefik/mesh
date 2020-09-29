@@ -13,7 +13,6 @@ type TraefikMeshConfiguration struct {
 	LogFormat        string   `description:"The log format." export:"true"`
 	Debug            bool     `description:"Debug mode, deprecated, use --loglevel=debug instead." export:"true"`
 	ACL              bool     `description:"Enable ACL mode." export:"true"`
-	SMI              bool     `description:"Enable SMI operation, deprecated, use --acl instead." export:"true"`
 	DefaultMode      string   `description:"Default mode for mesh services." export:"true"`
 	Namespace        string   `description:"The namespace that Traefik Mesh is installed in." export:"true"`
 	WatchNamespaces  []string `description:"Namespaces to watch." export:"true"`
@@ -34,7 +33,6 @@ func NewTraefikMeshConfiguration() *TraefikMeshConfiguration {
 		LogFormat:     "common",
 		Debug:         false,
 		ACL:           false,
-		SMI:           false,
 		DefaultMode:   "http",
 		Namespace:     "maesh",
 		APIPort:       9000,
@@ -55,7 +53,6 @@ type PrepareConfiguration struct {
 	Debug         bool   `description:"Debug mode, deprecated, use --loglevel=debug instead." export:"true"`
 	Namespace     string `description:"The namespace that Traefik Mesh is installed in." export:"true"`
 	ClusterDomain string `description:"Your internal K8s cluster domain." export:"true"`
-	SMI           bool   `description:"Enable SMI operation, deprecated, use --acl instead." export:"true"`
 	ACL           bool   `description:"Enable ACL mode." export:"true"`
 }
 
@@ -68,7 +65,6 @@ func NewPrepareConfiguration() *PrepareConfiguration {
 		Debug:         false,
 		Namespace:     "maesh",
 		ClusterDomain: "cluster.local",
-		SMI:           false,
 	}
 }
 
