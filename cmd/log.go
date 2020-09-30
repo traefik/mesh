@@ -24,20 +24,13 @@ func parseLogFormat(format string) (logrus.Formatter, error) {
 	}
 }
 
-// NewLogger returns a new field logger with the provided format, level, and debug configurations.
-func NewLogger(format, level string, debug bool) (logrus.FieldLogger, error) {
+// NewLogger returns a new field logger with the provided format and level.
+func NewLogger(format, level string) (logrus.FieldLogger, error) {
 	log := logrus.New()
 
 	log.SetOutput(os.Stdout)
 
-	logLevelStr := level
-	if debug {
-		logLevelStr = "debug"
-
-		log.Warnf("Debug flag is deprecated, please consider using --loglevel=DEBUG instead")
-	}
-
-	logLevel, err := parseLogLevel(logLevelStr)
+	logLevel, err := parseLogLevel(level)
 	if err != nil {
 		return log, err
 	}
