@@ -27,7 +27,7 @@ func NewCmd(pConfig *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cl
 func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	log, err := cmd.NewLogger(pConfig.LogFormat, pConfig.LogLevel, pConfig.Debug)
+	log, err := cmd.NewLogger(pConfig.LogFormat, pConfig.LogLevel)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
