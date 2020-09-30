@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/traefik/mesh/v2/pkg/annotations"
+	"github.com/traefik/mesh/v2/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,16 +77,11 @@ func (s *ShadowServiceManager) CreateOrUpdate(ctx context.Context, svc *corev1.S
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      shadowSvcName,
 			Namespace: s.namespace,
-			Labels: map[string]string{
-				"app":  "maesh",
-				"type": "shadow",
-			},
+			Labels:    k8s.ShadowServiceLabels,
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: ports,
-			Selector: map[string]string{
-				"component": "maesh-mesh",
-			},
+			Ports:    ports,
+			Selector: k8s.ProxyLabels,
 		},
 	}
 

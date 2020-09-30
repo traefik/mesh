@@ -106,14 +106,16 @@ func TestResourceFilter_IsIgnoredWithWatchedNamespacesAndIgnoredNamespaces(t *te
 	assert.True(t, got)
 }
 
-func TestResourceFilter_IsIgnoredWithIgnoredApps(t *testing.T) {
+func TestResourceFilter_IsIgnoredWithIgnoredLabels(t *testing.T) {
 	filter := NewResourceFilter()
-	filter.ignoredApps = []string{"app-1"}
+	filter.ignoredLabels = map[string]string{
+		"foo": "bar",
+	}
 
 	got := filter.IsIgnored(&v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				"app": "app-1",
+				"foo": "bar",
 			},
 		},
 	})
@@ -123,7 +125,7 @@ func TestResourceFilter_IsIgnoredWithIgnoredApps(t *testing.T) {
 	got = filter.IsIgnored(&v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				"app": "app-2",
+				"bar": "baz",
 			},
 		},
 	})
@@ -196,7 +198,7 @@ func TestResourceFilter_WatchNamespaces(t *testing.T) {
 	assert.Equal(t, []string{"ns-1", "ns-2"}, filter.watchedNamespaces)
 	assert.Len(t, filter.ignoredNamespaces, 0)
 	assert.Len(t, filter.ignoredServices, 0)
-	assert.Len(t, filter.ignoredApps, 0)
+	assert.Len(t, filter.ignoredLabels, 0)
 }
 
 func TestResourceFilter_IgnoreNamespaces(t *testing.T) {
@@ -207,15 +209,15 @@ func TestResourceFilter_IgnoreNamespaces(t *testing.T) {
 	assert.Equal(t, []string{"ns-1", "ns-2"}, filter.ignoredNamespaces)
 	assert.Len(t, filter.watchedNamespaces, 0)
 	assert.Len(t, filter.ignoredServices, 0)
-	assert.Len(t, filter.ignoredApps, 0)
+	assert.Len(t, filter.ignoredLabels, 0)
 }
 
 func TestResourceFilter_IgnoreApps(t *testing.T) {
 	filter := NewResourceFilter()
 
-	IgnoreApps("app-1", "app-2")(filter)
+	IgnoreLabel("foo", "bar")(filter)
 
-	assert.Equal(t, []string{"app-1", "app-2"}, filter.ignoredApps)
+	assert.Equal(t, map[string]string{"foo": "bar"}, filter.ignoredLabels)
 	assert.Len(t, filter.ignoredNamespaces, 0)
 	assert.Len(t, filter.watchedNamespaces, 0)
 	assert.Len(t, filter.ignoredServices, 0)
@@ -229,5 +231,5 @@ func TestResourceFilter_IgnoreService(t *testing.T) {
 	assert.Equal(t, []namespaceName{{Namespace: "ns-1", Name: "svc-1"}}, filter.ignoredServices)
 	assert.Len(t, filter.ignoredNamespaces, 0)
 	assert.Len(t, filter.watchedNamespaces, 0)
-	assert.Len(t, filter.ignoredApps, 0)
+	assert.Len(t, filter.ignoredLabels, 0)
 }
