@@ -11,7 +11,6 @@ type TraefikMeshConfiguration struct {
 	MasterURL        string   `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	LogLevel         string   `description:"The log level." export:"true"`
 	LogFormat        string   `description:"The log format." export:"true"`
-	Debug            bool     `description:"Debug mode, deprecated, use --loglevel=debug instead." export:"true"`
 	ACL              bool     `description:"Enable ACL mode." export:"true"`
 	SMI              bool     `description:"Enable SMI operation, deprecated, use --acl instead." export:"true"`
 	DefaultMode      string   `description:"Default mode for mesh services." export:"true"`
@@ -32,7 +31,6 @@ func NewTraefikMeshConfiguration() *TraefikMeshConfiguration {
 		KubeConfig:    os.Getenv("KUBECONFIG"),
 		LogLevel:      "error",
 		LogFormat:     "common",
-		Debug:         false,
 		ACL:           false,
 		SMI:           false,
 		DefaultMode:   "http",
@@ -52,7 +50,6 @@ type PrepareConfiguration struct {
 	MasterURL     string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	LogLevel      string `description:"The log level." export:"true"`
 	LogFormat     string `description:"The log format." export:"true"`
-	Debug         bool   `description:"Debug mode, deprecated, use --loglevel=debug instead." export:"true"`
 	Namespace     string `description:"The namespace that Traefik Mesh is installed in." export:"true"`
 	ClusterDomain string `description:"Your internal K8s cluster domain." export:"true"`
 	SMI           bool   `description:"Enable SMI operation, deprecated, use --acl instead." export:"true"`
@@ -65,7 +62,6 @@ func NewPrepareConfiguration() *PrepareConfiguration {
 		KubeConfig:    os.Getenv("KUBECONFIG"),
 		LogLevel:      "error",
 		LogFormat:     "common",
-		Debug:         false,
 		Namespace:     "maesh",
 		ClusterDomain: "cluster.local",
 		SMI:           false,
