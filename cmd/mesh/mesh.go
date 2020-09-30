@@ -68,7 +68,7 @@ func main() {
 func traefikMeshCommand(config *cmd.TraefikMeshConfiguration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel, config.Debug)
+	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
