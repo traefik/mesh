@@ -6,7 +6,6 @@ import (
 
 // TraefikMeshConfiguration wraps the static configuration and extra parameters.
 type TraefikMeshConfiguration struct {
-	ConfigFile       string   `description:"Configuration file to use. If specified all other flags are ignored." export:"true"`
 	KubeConfig       string   `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL        string   `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	LogLevel         string   `description:"The log level." export:"true"`
@@ -26,7 +25,6 @@ type TraefikMeshConfiguration struct {
 // NewTraefikMeshConfiguration creates a TraefikMeshConfiguration with default values.
 func NewTraefikMeshConfiguration() *TraefikMeshConfiguration {
 	return &TraefikMeshConfiguration{
-		ConfigFile:    "",
 		KubeConfig:    os.Getenv("KUBECONFIG"),
 		LogLevel:      "error",
 		LogFormat:     "common",
@@ -43,7 +41,6 @@ func NewTraefikMeshConfiguration() *TraefikMeshConfiguration {
 
 // PrepareConfiguration holds the configuration to prepare the cluster.
 type PrepareConfiguration struct {
-	ConfigFile    string `description:"Configuration file to use. If specified all other flags are ignored." export:"true"`
 	KubeConfig    string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL     string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	LogLevel      string `description:"The log level." export:"true"`
@@ -66,7 +63,6 @@ func NewPrepareConfiguration() *PrepareConfiguration {
 
 // CleanupConfiguration holds the configuration for the cleanup command.
 type CleanupConfiguration struct {
-	ConfigFile string `description:"Configuration file to use. If specified all other flags are ignored." export:"true"`
 	KubeConfig string `description:"Path to a kubeconfig. Only required if out-of-cluster." export:"true"`
 	MasterURL  string `description:"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster." export:"true"`
 	Namespace  string `description:"The namespace that Traefik Mesh is installed in." export:"true"`

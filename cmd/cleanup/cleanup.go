@@ -11,36 +11,36 @@ import (
 )
 
 // NewCmd builds a new Cleanup command.
-func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cli.Command {
+func NewCmd(config *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name:          "cleanup",
 		Description:   `Removes Traefik Mesh shadow services from a Kubernetes cluster.`,
-		Configuration: cConfig,
+		Configuration: config,
 		Run: func(_ []string) error {
-			return cleanupCommand(cConfig)
+			return cleanupCommand(config)
 		},
 		Resources: loaders,
 	}
 }
 
-func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
+func cleanupCommand(config *cmd.CleanupConfiguration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	logger, err := cmd.NewLogger(cConfig.LogFormat, cConfig.LogLevel)
+	logger, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
 	logger.Debug("Starting cleanup...")
-	logger.Debugf("Using masterURL: %q", cConfig.MasterURL)
-	logger.Debugf("Using kubeconfig: %q", cConfig.KubeConfig)
+	logger.Debugf("Using masterURL: %q", config.MasterURL)
+	logger.Debugf("Using kubeconfig: %q", config.KubeConfig)
 
-	clients, err := k8s.NewClient(logger, cConfig.MasterURL, cConfig.KubeConfig)
+	clients, err := k8s.NewClient(logger, config.MasterURL, config.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %w", err)
 	}
 
-	c := cleanup.NewCleanup(logger, clients.KubernetesClient(), cConfig.Namespace)
+	c := cleanup.NewCleanup(logger, clients.KubernetesClient(), config.Namespace)
 
 	if err := c.CleanShadowServices(ctx); err != nil {
 		return fmt.Errorf("error encountered during cluster cleanup: %w", err)
