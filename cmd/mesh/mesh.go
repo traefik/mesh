@@ -27,37 +27,37 @@ const (
 )
 
 func main() {
-	traefikMeshConfig := cmd.NewTraefikMeshConfiguration()
-	traefikMeshLoaders := []cli.ResourceLoader{&cli.FlagLoader{}, &cmd.EnvLoader{}}
+	config := cmd.NewTraefikMeshConfiguration()
+	loaders := []cli.ResourceLoader{&cli.FlagLoader{}, &cmd.EnvLoader{}}
 
-	cmdTraefikMesh := &cli.Command{
+	traefikMeshCmd := &cli.Command{
 		Name:          "traefik-mesh",
 		Description:   `traefik-mesh`,
-		Configuration: traefikMeshConfig,
-		Resources:     traefikMeshLoaders,
+		Configuration: config,
+		Resources:     loaders,
 		Run: func(_ []string) error {
-			return traefikMeshCommand(traefikMeshConfig)
+			return traefikMeshCommand(config)
 		},
 	}
 
 	prepareConfig := cmd.NewPrepareConfiguration()
-	if err := cmdTraefikMesh.AddCommand(prepare.NewCmd(prepareConfig, traefikMeshLoaders)); err != nil {
+	if err := traefikMeshCmd.AddCommand(prepare.NewCmd(prepareConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
 	cleanupConfig := cmd.NewCleanupConfiguration()
-	if err := cmdTraefikMesh.AddCommand(cleanup.NewCmd(cleanupConfig, traefikMeshLoaders)); err != nil {
+	if err := traefikMeshCmd.AddCommand(cleanup.NewCmd(cleanupConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	if err := cmdTraefikMesh.AddCommand(version.NewCmd()); err != nil {
+	if err := traefikMeshCmd.AddCommand(version.NewCmd()); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	if err := cli.Execute(cmdTraefikMesh); err != nil {
+	if err := cli.Execute(traefikMeshCmd); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
