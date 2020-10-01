@@ -12,40 +12,40 @@ import (
 )
 
 // NewCmd builds a new Prepare command.
-func NewCmd(pConfig *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cli.Command {
+func NewCmd(config *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name:          "prepare",
 		Description:   `Prepare command.`,
-		Configuration: pConfig,
+		Configuration: config,
 		Run: func(_ []string) error {
-			return prepareCommand(pConfig)
+			return prepareCommand(config)
 		},
 		Resources: loaders,
 	}
 }
 
-func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
+func prepareCommand(config *cmd.PrepareConfiguration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	log, err := cmd.NewLogger(pConfig.LogFormat, pConfig.LogLevel)
+	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
 	log.Debug("Starting prepare...")
-	log.Debugf("Using masterURL: %q", pConfig.MasterURL)
-	log.Debugf("Using kubeconfig: %q", pConfig.KubeConfig)
+	log.Debugf("Using masterURL: %q", config.MasterURL)
+	log.Debugf("Using kubeconfig: %q", config.KubeConfig)
 
-	client, err := k8s.NewClient(log, pConfig.MasterURL, pConfig.KubeConfig)
+	client, err := k8s.NewClient(log, config.MasterURL, config.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("unable to create kubernetes client: %w", err)
 	}
 
 	dnsClient := dns.NewClient(log, client.KubernetesClient())
 
-	log.Debugf("ACL mode enabled: %t", pConfig.ACL)
+	log.Debugf("ACL mode enabled: %t", config.ACL)
 
-	if err = k8s.CheckSMIVersion(client.KubernetesClient(), pConfig.ACL); err != nil {
+	if err = k8s.CheckSMIVersion(client.KubernetesClient(), config.ACL); err != nil {
 		return fmt.Errorf("unsupported SMI version: %w", err)
 	}
 
@@ -58,11 +58,11 @@ func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
 
 	switch dnsProvider {
 	case dns.CoreDNS:
-		if err := dnsClient.ConfigureCoreDNS(ctx, metav1.NamespaceSystem, pConfig.ClusterDomain, pConfig.Namespace); err != nil {
+		if err := dnsClient.ConfigureCoreDNS(ctx, metav1.NamespaceSystem, config.ClusterDomain, config.Namespace); err != nil {
 			return fmt.Errorf("unable to configure CoreDNS: %w", err)
 		}
 	case dns.KubeDNS:
-		if err := dnsClient.ConfigureKubeDNS(ctx, pConfig.ClusterDomain, pConfig.Namespace); err != nil {
+		if err := dnsClient.ConfigureKubeDNS(ctx, config.ClusterDomain, config.Namespace); err != nil {
 			return fmt.Errorf("unable to configure KubeDNS: %w", err)
 		}
 	}
