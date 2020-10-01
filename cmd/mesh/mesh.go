@@ -28,7 +28,7 @@ const (
 
 func main() {
 	traefikMeshConfig := cmd.NewTraefikMeshConfiguration()
-	traefikMeshLoaders := []cli.ResourceLoader{&cmd.FileLoader{}, &cli.FlagLoader{}, &cmd.EnvLoader{}}
+	traefikMeshLoaders := []cli.ResourceLoader{&cli.FlagLoader{}, &cmd.EnvLoader{}}
 
 	cmdTraefikMesh := &cli.Command{
 		Name:          "traefik-mesh",
