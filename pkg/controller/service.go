@@ -77,11 +77,11 @@ func (s *ShadowServiceManager) CreateOrUpdate(ctx context.Context, svc *corev1.S
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      shadowSvcName,
 			Namespace: s.namespace,
-			Labels:    k8s.ShadowServiceLabels,
+			Labels:    k8s.ShadowServiceLabels(),
 		},
 		Spec: corev1.ServiceSpec{
 			Ports:    ports,
-			Selector: k8s.ProxyLabels,
+			Selector: k8s.ProxyLabels(),
 		},
 	}
 

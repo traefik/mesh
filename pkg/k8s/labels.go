@@ -22,24 +22,28 @@ const (
 	ComponentShadowService = "shadow-service"
 )
 
-// ShadowServiceLabels are the labels of a shadow service.
-var ShadowServiceLabels = map[string]string{
-	LabelName:      AppName,
-	LabelComponent: ComponentShadowService,
-	LabelPartOf:    AppName,
+// ShadowServiceLabels returns the labels of a shadow service.
+func ShadowServiceLabels() map[string]string {
+	return map[string]string{
+		LabelName:      AppName,
+		LabelComponent: ComponentShadowService,
+		LabelPartOf:    AppName,
+	}
 }
 
-// ProxyLabels are the labels of a proxy.
-var ProxyLabels = map[string]string{
-	LabelName:      AppName,
-	LabelComponent: ComponentProxy,
-	LabelPartOf:    AppName,
+// ProxyLabels returns the labels of a proxy.
+func ProxyLabels() map[string]string {
+	return map[string]string{
+		LabelName:      AppName,
+		LabelComponent: ComponentProxy,
+		LabelPartOf:    AppName,
+	}
 }
 
 // ShadowServiceSelector creates a label selector for shadow services.
 func ShadowServiceSelector() labels.Selector {
 	selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: ShadowServiceLabels,
+		MatchLabels: ShadowServiceLabels(),
 	})
 
 	return selector
@@ -48,7 +52,7 @@ func ShadowServiceSelector() labels.Selector {
 // ProxySelector creates a label selector for proxies.
 func ProxySelector() labels.Selector {
 	selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: ProxyLabels,
+		MatchLabels: ProxyLabels(),
 	})
 
 	return selector

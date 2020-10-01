@@ -282,7 +282,7 @@ func newShadowService(name string, ports ...corev1.ServicePort) *corev1.Service 
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "traefik-mesh",
 			Name:      name,
-			Labels:    k8s.ShadowServiceLabels,
+			Labels:    k8s.ShadowServiceLabels(),
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: ports,
