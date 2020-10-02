@@ -5,8 +5,9 @@ metadata:
   name: traefik-mesh-whoami-6d61657368-whoami
   namespace: traefik-mesh
   labels:
-    app: maesh
-    type: shadow
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: shadow-service
+    app.kubernetes.io/part-of: traefik-mesh
 spec:
   type: ClusterIP
   ports:

@@ -5,8 +5,9 @@ metadata:
   name: traefik-mesh-controller
   namespace: traefik-mesh
   labels:
-    app: maesh
-    component: controller
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/part-of: traefik-mesh
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -15,8 +16,9 @@ metadata:
   name: traefik-mesh-controller-role
   namespace: traefik-mesh
   labels:
-    app: maesh
-    component: controller
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/part-of: traefik-mesh
 rules:
   - apiGroups:
       - ""
@@ -73,8 +75,9 @@ metadata:
   name: traefik-mesh-controller
   namespace: traefik-mesh
   labels:
-    app: maesh
-    component: controller
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/part-of: traefik-mesh
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -91,19 +94,22 @@ metadata:
   name: traefik-mesh-controller
   namespace: traefik-mesh
   labels:
-    app: maesh
-    component: controller
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/part-of: traefik-mesh
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: maesh
-      component: controller
+      app.kubernetes.io/name: traefik-mesh
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/part-of: traefik-mesh
   template:
     metadata:
       labels:
-        app: maesh
-        component: controller
+        app.kubernetes.io/name: traefik-mesh
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/part-of: traefik-mesh
     spec:
       serviceAccountName: traefik-mesh-controller
       automountServiceAccountToken: true
@@ -146,8 +152,9 @@ metadata:
   name: traefik-mesh-controller
   namespace: traefik-mesh
   labels:
-    app: maesh
-    component: controller
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/part-of: traefik-mesh
 spec:
   type: ClusterIP
   ports:
@@ -155,4 +162,6 @@ spec:
       name: mesh-controller-api
       targetPort: api
   selector:
-    component: controller
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/part-of: traefik-mesh
