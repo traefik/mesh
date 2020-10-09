@@ -27,7 +27,7 @@ const (
 )
 
 func main() {
-	config := cmd.NewTraefikMeshConfiguration()
+	config := NewConfiguration()
 	loaders := []cli.ResourceLoader{&cli.FlagLoader{}, &cmd.EnvLoader{}}
 
 	traefikMeshCmd := &cli.Command{
@@ -40,13 +40,13 @@ func main() {
 		},
 	}
 
-	prepareConfig := cmd.NewPrepareConfiguration()
+	prepareConfig := prepare.NewConfiguration()
 	if err := traefikMeshCmd.AddCommand(prepare.NewCmd(prepareConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	cleanupConfig := cmd.NewCleanupConfiguration()
+	cleanupConfig := cleanup.NewConfiguration()
 	if err := traefikMeshCmd.AddCommand(cleanup.NewCmd(cleanupConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
@@ -65,7 +65,7 @@ func main() {
 	os.Exit(0)
 }
 
-func traefikMeshCommand(config *cmd.TraefikMeshConfiguration) error {
+func traefikMeshCommand(config *Configuration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
 	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
