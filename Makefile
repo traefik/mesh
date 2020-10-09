@@ -34,7 +34,7 @@ local-build: $(DIST_DIR)
 	-X github.com/traefik/mesh/v2/pkg/version.Version=$(VERSION) \
 	-X github.com/traefik/mesh/v2/pkg/version.Commit=$(SHA) \
 	-X github.com/traefik/mesh/v2/pkg/version.Date=$(BUILD_DATE)" \
-	$(CURDIR)/cmd/mesh/mesh.go
+	$(CURDIR)/cmd/mesh
 
 local-test: clean
 	go test -v -cover ./...
