@@ -44,7 +44,7 @@ One your Go environment is set up, you can build Traefik Mesh from the sources b
 The Go compiler will build an executable for your platform.
 
 ```bash
-$ go build -o dist/traefik-mesh cmd/mesh/mesh.go
+$ go build -o dist/traefik-mesh ./cmd/mesh
 $ ./dist/traefik-mesh version
 version:
  version     : dev

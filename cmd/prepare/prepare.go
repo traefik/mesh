@@ -12,7 +12,7 @@ import (
 )
 
 // NewCmd builds a new Prepare command.
-func NewCmd(config *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cli.Command {
+func NewCmd(config *Configuration, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name:          "prepare",
 		Description:   `Prepare command.`,
@@ -24,7 +24,7 @@ func NewCmd(config *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cli
 	}
 }
 
-func prepareCommand(config *cmd.PrepareConfiguration) error {
+func prepareCommand(config *Configuration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
 	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
