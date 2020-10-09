@@ -11,7 +11,7 @@ import (
 )
 
 // NewCmd builds a new Cleanup command.
-func NewCmd(config *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cli.Command {
+func NewCmd(config *Configuration, loaders []cli.ResourceLoader) *cli.Command {
 	return &cli.Command{
 		Name:          "cleanup",
 		Description:   `Removes Traefik Mesh shadow services from a Kubernetes cluster.`,
@@ -23,7 +23,7 @@ func NewCmd(config *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cli
 	}
 }
 
-func cleanupCommand(config *cmd.CleanupConfiguration) error {
+func cleanupCommand(config *Configuration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
 	logger, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
