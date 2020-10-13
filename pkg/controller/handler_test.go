@@ -12,14 +12,14 @@ import (
 )
 
 func TestEnqueueWorkHandler_OnAdd(t *testing.T) {
-	log := logrus.New()
+	logger := logrus.New()
 
-	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.DebugLevel)
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logrus.DebugLevel)
 
 	workQueue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
-	handler := &enqueueWorkHandler{logger: log, workQueue: workQueue}
+	handler := &enqueueWorkHandler{logger: logger, workQueue: workQueue}
 	handler.OnAdd(&corev1.Pod{})
 
 	assert.Equal(t, 1, workQueue.Len())
@@ -30,14 +30,14 @@ func TestEnqueueWorkHandler_OnAdd(t *testing.T) {
 }
 
 func TestEnqueueWorkHandler_OnDelete(t *testing.T) {
-	log := logrus.New()
+	logger := logrus.New()
 
-	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.DebugLevel)
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logrus.DebugLevel)
 
 	workQueue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
-	handler := &enqueueWorkHandler{logger: log, workQueue: workQueue}
+	handler := &enqueueWorkHandler{logger: logger, workQueue: workQueue}
 	handler.OnDelete(&corev1.Pod{})
 
 	assert.Equal(t, 1, workQueue.Len())
@@ -78,14 +78,14 @@ func TestEnqueueWorkHandler_OnUpdate(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
 			workQueue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
-			handler := &enqueueWorkHandler{logger: log, workQueue: workQueue}
+			handler := &enqueueWorkHandler{logger: logger, workQueue: workQueue}
 			handler.OnUpdate(test.oldObj, test.newObj)
 
 			assert.Equal(t, test.expectedLen, workQueue.Len())
@@ -121,14 +121,14 @@ func TestEnqueueWorkHandler_enqueueWork(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
 			workQueue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
-			handler := &enqueueWorkHandler{logger: log, workQueue: workQueue}
+			handler := &enqueueWorkHandler{logger: logger, workQueue: workQueue}
 			handler.enqueueWork(test.obj)
 
 			assert.Equal(t, test.expectedLen, workQueue.Len())

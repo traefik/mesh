@@ -67,23 +67,23 @@ func main() {
 func traefikMeshCommand(config *Configuration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
+	logger, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debug("Starting controller...")
-	log.Debugf("Using masterURL: %q", config.MasterURL)
-	log.Debugf("Using kubeconfig: %q", config.KubeConfig)
+	logger.Debug("Starting controller...")
+	logger.Debugf("Using masterURL: %q", config.MasterURL)
+	logger.Debugf("Using kubeconfig: %q", config.KubeConfig)
 
-	clients, err := k8s.NewClient(log, config.MasterURL, config.KubeConfig)
+	clients, err := k8s.NewClient(logger, config.MasterURL, config.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %w", err)
 	}
 
-	log.Debugf("ACL mode enabled: %t", config.ACL)
+	logger.Debugf("ACL mode enabled: %t", config.ACL)
 
-	apiServer, err := api.NewAPI(log, config.APIPort, config.APIHost, clients.KubernetesClient(), config.Namespace)
+	apiServer, err := api.NewAPI(logger, config.APIPort, config.APIHost, clients.KubernetesClient(), config.Namespace)
 	if err != nil {
 		return fmt.Errorf("unable to create the API server: %w", err)
 	}
@@ -100,7 +100,7 @@ func traefikMeshCommand(config *Configuration) error {
 		MaxTCPPort:       getMaxPort(minTCPPort, config.LimitTCPPort),
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       getMaxPort(minUDPPort, config.LimitUDPPort),
-	}, apiServer, log)
+	}, apiServer, logger)
 
 	var wg sync.WaitGroup
 
@@ -140,7 +140,7 @@ func traefikMeshCommand(config *Configuration) error {
 
 	case err := <-ctrlErrCh:
 		if stopErr := stopAPIServer(apiServer); stopErr != nil {
-			log.Errorf("Unable to stop the API server: %v", stopErr)
+			logger.Errorf("Unable to stop the API server: %v", stopErr)
 		}
 
 		return err
