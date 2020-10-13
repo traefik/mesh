@@ -30,10 +30,10 @@ func (a *storeMock) SetReadiness(_ bool)                {}
 func TestController_NewMeshController(t *testing.T) {
 	store := &storeMock{}
 	clientMock := k8s.NewClientMock(t, "mock.yaml")
-	log := logrus.New()
+	logger := logrus.New()
 
-	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.DebugLevel)
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with HTTP as a default traffic type.
 	controller := NewMeshController(clientMock, Config{
@@ -47,7 +47,7 @@ func TestController_NewMeshController(t *testing.T) {
 		MaxTCPPort:       maxTCPPort,
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       maxUDPPort,
-	}, store, log)
+	}, store, logger)
 
 	assert.NotNil(t, controller)
 }
@@ -55,10 +55,10 @@ func TestController_NewMeshController(t *testing.T) {
 func TestController_NewMeshControllerWithACLEnabled(t *testing.T) {
 	store := &storeMock{}
 	clientMock := k8s.NewClientMock(t, "mock.yaml")
-	log := logrus.New()
+	logger := logrus.New()
 
-	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.DebugLevel)
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with HTTP as a default traffic type and ACL enabled.
 	controller := NewMeshController(clientMock, Config{
@@ -72,7 +72,7 @@ func TestController_NewMeshControllerWithACLEnabled(t *testing.T) {
 		MaxTCPPort:       maxTCPPort,
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       maxUDPPort,
-	}, store, log)
+	}, store, logger)
 
 	assert.NotNil(t, controller)
 }

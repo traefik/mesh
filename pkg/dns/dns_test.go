@@ -53,12 +53,12 @@ func TestCheckDNSProvider(t *testing.T) {
 
 			k8sClient := k8s.NewClientMock(t, test.mockFile)
 
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
-			client := NewClient(log, k8sClient.KubernetesClient())
+			client := NewClient(logger, k8sClient.KubernetesClient())
 
 			provider, err := client.CheckDNSProvider(ctx)
 			if test.expErr {
@@ -160,12 +160,12 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			k8sClient := k8s.NewClientMock(t, test.mockFile)
 
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
-			client := NewClient(log, k8sClient.KubernetesClient())
+			client := NewClient(logger, k8sClient.KubernetesClient())
 
 			err := client.ConfigureCoreDNS(ctx, "kube-system", "titi", "toto")
 			if test.expErr {
@@ -236,12 +236,12 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			k8sClient := k8s.NewClientMock(t, test.mockFile)
 
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
-			client := NewClient(log, k8sClient.KubernetesClient())
+			client := NewClient(logger, k8sClient.KubernetesClient())
 
 			err := client.ConfigureKubeDNS(ctx, "cluster.local", "traefik-mesh")
 			if test.expErr {
@@ -297,12 +297,12 @@ func TestRestoreCoreDNS(t *testing.T) {
 
 			k8sClient := k8s.NewClientMock(t, test.mockFile)
 
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
-			client := NewClient(log, k8sClient.KubernetesClient())
+			client := NewClient(logger, k8sClient.KubernetesClient())
 
 			err := client.RestoreCoreDNS(ctx)
 			require.NoError(t, err)
@@ -351,12 +351,12 @@ func TestRestoreKubeDNS(t *testing.T) {
 
 			k8sClient := k8s.NewClientMock(t, test.mockFile)
 
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
-			client := NewClient(log, k8sClient.KubernetesClient())
+			client := NewClient(logger, k8sClient.KubernetesClient())
 
 			err := client.RestoreKubeDNS(ctx)
 			require.NoError(t, err)
