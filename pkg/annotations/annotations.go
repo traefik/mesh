@@ -53,6 +53,11 @@ func GetTrafficType(defaultTrafficType string, annotations map[string]string) (s
 	return trafficType, nil
 }
 
+// SetTrafficType sets the traffic-type annotation to the given value.
+func SetTrafficType(trafficType string, annotations map[string]string) {
+	annotations[annotationServiceType] = trafficType
+}
+
 // GetScheme returns the value of the scheme annotation.
 func GetScheme(annotations map[string]string) (string, error) {
 	scheme, exists := annotations[annotationScheme]
