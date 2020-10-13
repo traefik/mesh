@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/traefik/mesh/v2/cmd"
 	"github.com/traefik/mesh/v2/cmd/cleanup"
 	"github.com/traefik/mesh/v2/cmd/prepare"
@@ -134,15 +133,21 @@ func traefikMeshCommand(config *Configuration) error {
 	select {
 	case <-ctx.Done():
 		ctr.Shutdown()
-		stopAPIServer(apiServer, log)
 
-	case err := <-apiErrCh:
-		log.Error(err)
-		ctr.Shutdown()
+		if err := stopAPIServer(apiServer); err != nil {
+			return fmt.Errorf("unable to stop the API server: %w", err)
+		}
 
 	case err := <-ctrlErrCh:
-		log.Error(err)
-		stopAPIServer(apiServer, log)
+		if stopErr := stopAPIServer(apiServer); stopErr != nil {
+			log.Errorf("Unable to stop the API server: %v", stopErr)
+		}
+
+		return err
+
+	case err := <-apiErrCh:
+		ctr.Shutdown()
+		return err
 	}
 
 	wg.Wait()
@@ -150,13 +155,11 @@ func traefikMeshCommand(config *Configuration) error {
 	return nil
 }
 
-func stopAPIServer(apiServer *api.API, log logrus.FieldLogger) {
-	stopCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+func stopAPIServer(apiServer *api.API) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := apiServer.Shutdown(stopCtx); err != nil {
-		log.Errorf("Unable to stop the API server: %v", err)
-	}
+	return apiServer.Shutdown(ctx)
 }
 
 func getMaxPort(min int32, limit int32) int32 {
