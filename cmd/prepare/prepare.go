@@ -27,23 +27,23 @@ func NewCmd(config *Configuration, loaders []cli.ResourceLoader) *cli.Command {
 func prepareCommand(config *Configuration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
+	logger, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debug("Starting prepare...")
-	log.Debugf("Using masterURL: %q", config.MasterURL)
-	log.Debugf("Using kubeconfig: %q", config.KubeConfig)
+	logger.Debug("Starting prepare...")
+	logger.Debugf("Using masterURL: %q", config.MasterURL)
+	logger.Debugf("Using kubeconfig: %q", config.KubeConfig)
 
-	client, err := k8s.NewClient(log, config.MasterURL, config.KubeConfig)
+	client, err := k8s.NewClient(logger, config.MasterURL, config.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("unable to create kubernetes client: %w", err)
 	}
 
-	dnsClient := dns.NewClient(log, client.KubernetesClient())
+	dnsClient := dns.NewClient(logger, client.KubernetesClient())
 
-	log.Debugf("ACL mode enabled: %t", config.ACL)
+	logger.Debugf("ACL mode enabled: %t", config.ACL)
 
 	if err = k8s.CheckSMIVersion(client.KubernetesClient(), config.ACL); err != nil {
 		return fmt.Errorf("unsupported SMI version: %w", err)

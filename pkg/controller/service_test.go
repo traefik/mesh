@@ -228,10 +228,10 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			ctx := context.Background()
 
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
 			currentShadowServices := make([]runtime.Object, 0)
 			if test.currentShadowSvc != nil {
@@ -258,7 +258,7 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 			}
 
 			shadowServiceManager := NewShadowServiceManager(
-				log,
+				logger,
 				lister,
 				"traefik-mesh",
 				tcpPortMapperMock,
@@ -372,10 +372,10 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			ctx := context.Background()
 
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
 			removedUDPPorts := make(map[servicePort]bool)
 			udpPortMapperMock := portMapperMock{
@@ -401,7 +401,7 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 			client, lister := newFakeClient("v1.17", currentShadowServices...)
 
 			shadowServiceManager := NewShadowServiceManager(
-				log,
+				logger,
 				lister,
 				"traefik-mesh",
 				tcpPortMapperMock,
@@ -444,18 +444,15 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 }
 
 func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
-	name := "foo"
-	namespace := "bar"
+	logger := logrus.New()
 
-	log := logrus.New()
-
-	log.SetOutput(os.Stdout)
-	log.SetLevel(logrus.DebugLevel)
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logrus.DebugLevel)
 
 	client, lister := newFakeClient("v1.17")
 
 	shadowServiceManager := NewShadowServiceManager(
-		log,
+		logger,
 		lister,
 		"traefik-mesh",
 		portMapperMock{},
@@ -466,7 +463,7 @@ func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
 		client,
 	)
 
-	shadowSvcName := shadowServiceManager.getShadowServiceName(namespace, name)
+	shadowSvcName := shadowServiceManager.getShadowServiceName("bar", "foo")
 
 	assert.Equal(t, shadowSvcName, "traefik-mesh-foo-6d61657368-bar")
 }
@@ -491,10 +488,10 @@ func TestShadowServiceManager_getHTTPPort(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			log := logrus.New()
+			logger := logrus.New()
 
-			log.SetOutput(os.Stdout)
-			log.SetLevel(logrus.DebugLevel)
+			logger.SetOutput(os.Stdout)
+			logger.SetLevel(logrus.DebugLevel)
 
 			client, lister := newFakeClient("v1.17")
 
@@ -502,7 +499,7 @@ func TestShadowServiceManager_getHTTPPort(t *testing.T) {
 			maxHTTPPort := int32(5002)
 
 			shadowServiceManager := NewShadowServiceManager(
-				log,
+				logger,
 				lister,
 				"traefik-mesh",
 				portMapperMock{},

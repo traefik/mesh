@@ -33,28 +33,28 @@ type ClientWrapper struct {
 }
 
 // NewClient creates and returns a ClientWrapper that satisfies the Client interface.
-func NewClient(log logrus.FieldLogger, masterURL, kubeConfig string) (Client, error) {
-	config, err := buildConfig(log, masterURL, kubeConfig)
+func NewClient(logger logrus.FieldLogger, masterURL, kubeConfig string) (Client, error) {
+	config, err := buildConfig(logger, masterURL, kubeConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	kubeClient, err := buildKubernetesClient(log, config)
+	kubeClient, err := buildKubernetesClient(logger, config)
 	if err != nil {
 		return nil, err
 	}
 
-	accessClient, err := buildSmiAccessClient(log, config)
+	accessClient, err := buildSmiAccessClient(logger, config)
 	if err != nil {
 		return nil, err
 	}
 
-	specsClient, err := buildSmiSpecsClient(log, config)
+	specsClient, err := buildSmiSpecsClient(logger, config)
 	if err != nil {
 		return nil, err
 	}
 
-	splitClient, err := buildSmiSplitClient(log, config)
+	splitClient, err := buildSmiSplitClient(logger, config)
 	if err != nil {
 		return nil, err
 	}
@@ -68,15 +68,15 @@ func NewClient(log logrus.FieldLogger, masterURL, kubeConfig string) (Client, er
 }
 
 // buildConfig takes the master URL and kubeconfig, and returns an external or internal config.
-func buildConfig(log logrus.FieldLogger, masterURL, kubeConfig string) (*rest.Config, error) {
+func buildConfig(logger logrus.FieldLogger, masterURL, kubeConfig string) (*rest.Config, error) {
 	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("KUBERNETES_SERVICE_PORT") != "" {
 		// If these env vars are set, we can build an in-cluster config.
-		log.Debug("Creating in-cluster client")
+		logger.Debug("Creating in-cluster client")
 		return rest.InClusterConfig()
 	}
 
 	if masterURL != "" || kubeConfig != "" {
-		log.Debug("Creating cluster-external client from provided masterURL or kubeconfig")
+		logger.Debug("Creating cluster-external client from provided masterURL or kubeconfig")
 		return clientcmd.BuildConfigFromFlags(masterURL, kubeConfig)
 	}
 
@@ -104,8 +104,8 @@ func (w *ClientWrapper) SplitClient() splitclient.Interface {
 }
 
 // buildClient returns a useable kubernetes client.
-func buildKubernetesClient(log logrus.FieldLogger, config *rest.Config) (*kubernetes.Clientset, error) {
-	log.Debug("Building Kubernetes Client...")
+func buildKubernetesClient(logger logrus.FieldLogger, config *rest.Config) (*kubernetes.Clientset, error) {
+	logger.Debug("Building Kubernetes Client...")
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -116,8 +116,8 @@ func buildKubernetesClient(log logrus.FieldLogger, config *rest.Config) (*kubern
 }
 
 // buildSmiAccessClient returns a client to manage SMI Access objects.
-func buildSmiAccessClient(log logrus.FieldLogger, config *rest.Config) (*accessclient.Clientset, error) {
-	log.Debug("Building SMI Access Client...")
+func buildSmiAccessClient(logger logrus.FieldLogger, config *rest.Config) (*accessclient.Clientset, error) {
+	logger.Debug("Building SMI Access Client...")
 
 	client, err := accessclient.NewForConfig(config)
 	if err != nil {
@@ -128,8 +128,8 @@ func buildSmiAccessClient(log logrus.FieldLogger, config *rest.Config) (*accessc
 }
 
 // buildSmiSpecsClient returns a client to manage SMI Specs objects.
-func buildSmiSpecsClient(log logrus.FieldLogger, config *rest.Config) (*specsclient.Clientset, error) {
-	log.Debug("Building SMI Specs Client...")
+func buildSmiSpecsClient(logger logrus.FieldLogger, config *rest.Config) (*specsclient.Clientset, error) {
+	logger.Debug("Building SMI Specs Client...")
 
 	client, err := specsclient.NewForConfig(config)
 	if err != nil {
@@ -140,8 +140,8 @@ func buildSmiSpecsClient(log logrus.FieldLogger, config *rest.Config) (*specscli
 }
 
 // buildSmiSplitClient returns a client to manage SMI Split objects.
-func buildSmiSplitClient(log logrus.FieldLogger, config *rest.Config) (*splitclient.Clientset, error) {
-	log.Debug("Building SMI Split Client...")
+func buildSmiSplitClient(logger logrus.FieldLogger, config *rest.Config) (*splitclient.Clientset, error) {
+	logger.Debug("Building SMI Split Client...")
 
 	client, err := splitclient.NewForConfig(config)
 	if err != nil {

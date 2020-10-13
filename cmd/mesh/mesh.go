@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/traefik/mesh/v2/cmd"
 	"github.com/traefik/mesh/v2/cmd/cleanup"
 	"github.com/traefik/mesh/v2/cmd/prepare"
@@ -68,23 +67,23 @@ func main() {
 func traefikMeshCommand(config *Configuration) error {
 	ctx := cmd.ContextWithSignal(context.Background())
 
-	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
+	logger, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
 
-	log.Debug("Starting controller...")
-	log.Debugf("Using masterURL: %q", config.MasterURL)
-	log.Debugf("Using kubeconfig: %q", config.KubeConfig)
+	logger.Debug("Starting controller...")
+	logger.Debugf("Using masterURL: %q", config.MasterURL)
+	logger.Debugf("Using kubeconfig: %q", config.KubeConfig)
 
-	clients, err := k8s.NewClient(log, config.MasterURL, config.KubeConfig)
+	clients, err := k8s.NewClient(logger, config.MasterURL, config.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %w", err)
 	}
 
-	log.Debugf("ACL mode enabled: %t", config.ACL)
+	logger.Debugf("ACL mode enabled: %t", config.ACL)
 
-	apiServer, err := api.NewAPI(log, config.APIPort, config.APIHost, clients.KubernetesClient(), config.Namespace)
+	apiServer, err := api.NewAPI(logger, config.APIPort, config.APIHost, clients.KubernetesClient(), config.Namespace)
 	if err != nil {
 		return fmt.Errorf("unable to create the API server: %w", err)
 	}
@@ -101,7 +100,7 @@ func traefikMeshCommand(config *Configuration) error {
 		MaxTCPPort:       getMaxPort(minTCPPort, config.LimitTCPPort),
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       getMaxPort(minUDPPort, config.LimitUDPPort),
-	}, apiServer, log)
+	}, apiServer, logger)
 
 	var wg sync.WaitGroup
 
@@ -134,15 +133,21 @@ func traefikMeshCommand(config *Configuration) error {
 	select {
 	case <-ctx.Done():
 		ctr.Shutdown()
-		stopAPIServer(apiServer, log)
 
-	case err := <-apiErrCh:
-		log.Error(err)
-		ctr.Shutdown()
+		if err := stopAPIServer(apiServer); err != nil {
+			return fmt.Errorf("unable to stop the API server: %w", err)
+		}
 
 	case err := <-ctrlErrCh:
-		log.Error(err)
-		stopAPIServer(apiServer, log)
+		if stopErr := stopAPIServer(apiServer); stopErr != nil {
+			logger.Errorf("Unable to stop the API server: %v", stopErr)
+		}
+
+		return err
+
+	case err := <-apiErrCh:
+		ctr.Shutdown()
+		return err
 	}
 
 	wg.Wait()
@@ -150,13 +155,11 @@ func traefikMeshCommand(config *Configuration) error {
 	return nil
 }
 
-func stopAPIServer(apiServer *api.API, log logrus.FieldLogger) {
-	stopCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+func stopAPIServer(apiServer *api.API) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := apiServer.Shutdown(stopCtx); err != nil {
-		log.Errorf("Unable to stop the API server: %v", err)
-	}
+	return apiServer.Shutdown(ctx)
 }
 
 func getMaxPort(min int32, limit int32) int32 {
