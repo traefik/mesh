@@ -16,10 +16,10 @@ import (
 	"github.com/traefik/mesh/v2/cmd"
 	"github.com/traefik/mesh/v2/pkg/annotations"
 	"github.com/traefik/mesh/v2/pkg/k8s"
+	"github.com/traefik/mesh/v2/pkg/portmapping"
 	"github.com/traefik/mesh/v2/pkg/provider"
 	"github.com/traefik/mesh/v2/pkg/topology"
 	"github.com/traefik/traefik/v2/pkg/config/dynamic"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -76,8 +76,9 @@ type Controller struct {
 	shadowServiceManager *ShadowServiceManager
 	provider             *provider.Provider
 	resourceFilter       *k8s.ResourceFilter
-	tcpStateTable        *PortMapping
-	udpStateTable        *PortMapping
+	httpStateTable       *portmapping.MultiplexedPortMapping
+	tcpStateTable        *portmapping.PortMapping
+	udpStateTable        *portmapping.PortMapping
 	topologyBuilder      TopologyBuilder
 	store                SharedStore
 	logger               logrus.FieldLogger
@@ -151,21 +152,20 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 		c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(handler)
 	}
 
-	c.tcpStateTable = NewPortMapping(c.cfg.Namespace, c.serviceLister, logger, c.cfg.MinTCPPort, c.cfg.MaxTCPPort)
+	c.httpStateTable = portmapping.NewMultiplexedPortMapping(c.cfg.MinHTTPPort, c.cfg.MaxHTTPPort)
+	c.tcpStateTable = portmapping.NewPortMapping(c.cfg.MinTCPPort, c.cfg.MaxTCPPort)
+	c.udpStateTable = portmapping.NewPortMapping(c.cfg.MinUDPPort, c.cfg.MaxUDPPort)
 
-	c.udpStateTable = NewPortMapping(c.cfg.Namespace, c.serviceLister, logger, c.cfg.MinUDPPort, c.cfg.MaxUDPPort)
-
-	c.shadowServiceManager = NewShadowServiceManager(
-		c.logger,
-		c.serviceLister,
-		c.cfg.Namespace,
-		c.tcpStateTable,
-		c.udpStateTable,
-		c.cfg.DefaultMode,
-		c.cfg.MinHTTPPort,
-		c.cfg.MaxHTTPPort,
-		c.clients.KubernetesClient(),
-	)
+	c.shadowServiceManager = &ShadowServiceManager{
+		namespace:          c.cfg.Namespace,
+		serviceLister:      c.serviceLister,
+		httpStateTable:     c.httpStateTable,
+		tcpStateTable:      c.tcpStateTable,
+		udpStateTable:      c.udpStateTable,
+		defaultTrafficType: c.cfg.DefaultMode,
+		kubeClient:         c.clients.KubernetesClient(),
+		logger:             c.logger,
+	}
 
 	c.topologyBuilder = topology.NewBuilder(
 		c.serviceLister,
@@ -179,13 +179,18 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 	)
 
 	providerCfg := provider.Config{
-		MinHTTPPort:        c.cfg.MinHTTPPort,
-		MaxHTTPPort:        c.cfg.MaxHTTPPort,
 		ACL:                c.cfg.ACLEnabled,
 		DefaultTrafficType: c.cfg.DefaultMode,
 	}
 
-	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddlewares, providerCfg, c.logger)
+	c.provider = provider.New(
+		c.httpStateTable,
+		c.tcpStateTable,
+		c.udpStateTable,
+		annotations.BuildMiddlewares,
+		providerCfg,
+		c.logger,
+	)
 
 	return c
 }
@@ -211,8 +216,8 @@ func (c *Controller) Run() error {
 		return fmt.Errorf("could not start informers: %w", err)
 	}
 
-	// Load the TCP and UDP port mapper states.
-	if err := c.loadPortMappersState(); err != nil {
+	// Load port mappings.
+	if err := c.shadowServiceManager.LoadPortMapping(); err != nil {
 		return fmt.Errorf("could not load port mapper states: %w", err)
 	}
 
@@ -308,19 +313,6 @@ func (c *Controller) startACLInformers(stopCh <-chan struct{}) error {
 	return nil
 }
 
-// loadPortMappersState loads the TCP and UDP port mapper states.
-func (c *Controller) loadPortMappersState() error {
-	if err := c.tcpStateTable.LoadState(); err != nil {
-		return fmt.Errorf("unable to load TCP state table: %w", err)
-	}
-
-	if err := c.udpStateTable.LoadState(); err != nil {
-		return fmt.Errorf("unable to load UDP state table: %w", err)
-	}
-
-	return nil
-}
-
 // isWatchedResource returns true if the given resource is not ignored, false otherwise.
 func (c *Controller) isWatchedResource(obj interface{}) bool {
 	return !c.resourceFilter.IsIgnored(obj)
@@ -376,21 +368,7 @@ func (c *Controller) syncShadowService(key string) error {
 		return err
 	}
 
-	svc, err := c.serviceLister.Services(namespace).Get(name)
-	if errors.IsNotFound(err) {
-		return c.shadowServiceManager.Delete(ctx, namespace, name)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	_, err = c.shadowServiceManager.CreateOrUpdate(ctx, svc)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.shadowServiceManager.SyncService(ctx, namespace, name)
 }
 
 // handleErr re-queues the given work key only if the maximum number of attempts is not exceeded.
