@@ -2,527 +2,423 @@ package controller
 
 import (
 	"context"
-	"os"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
-	goversion "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/traefik/mesh/v2/pkg/annotations"
+	"github.com/traefik/mesh/v2/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/version"
-	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	listers "k8s.io/client-go/listers/core/v1"
 )
 
-type portMapperMock struct {
-	findFunc   func(namespace, name string, port int32) (int32, bool)
-	addFunc    func(namespace, name string, port int32) (int32, error)
-	removeFunc func(namespace, name string, port int32) (int32, error)
-}
+const (
+	testNamespace          = "test"
+	testDefaultTrafficType = annotations.ServiceTypeHTTP
+)
 
-func (t portMapperMock) Find(namespace, name string, port int32) (int32, bool) {
-	if t.findFunc == nil {
-		return 0, false
-	}
-
-	return t.findFunc(namespace, name, port)
-}
-
-func (t portMapperMock) Add(namespace, name string, port int32) (int32, error) {
-	if t.addFunc == nil {
-		return 0, nil
-	}
-
-	return t.addFunc(namespace, name, port)
-}
-
-func (t portMapperMock) Remove(namespace, name string, port int32) (int32, error) {
-	if t.removeFunc == nil {
-		return 0, nil
-	}
-
-	return t.removeFunc(namespace, name, port)
-}
-
-func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
-	tests := []struct {
-		desc              string
-		defaultMode       string
-		svc               *corev1.Service
-		serverVersion     string
-		currentShadowSvc  *corev1.Service
-		expectedShadowSvc *corev1.Service
-	}{
-		{
-			desc:        "should create a shadow service",
-			defaultMode: "tcp",
-			svc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol: corev1.ProtocolTCP,
-							Port:     8080,
-						},
-					},
-				},
-			},
-			expectedShadowSvc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "traefik-mesh-foo-6d61657368-bar",
-					Namespace: "traefik-mesh",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol:   corev1.ProtocolTCP,
-							Port:       8080,
-							TargetPort: intstr.FromInt(10000),
-						},
-					},
-				},
-			},
-		},
-		{
-			desc:          "should create a shadow service without the topology keys",
-			defaultMode:   "tcp",
-			serverVersion: "v1.16.6-beta.0",
-			svc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol: corev1.ProtocolTCP,
-							Port:     8080,
-						},
-					},
-				},
-			},
-			expectedShadowSvc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "traefik-mesh-foo-6d61657368-bar",
-					Namespace: "traefik-mesh",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol:   corev1.ProtocolTCP,
-							Port:       8080,
-							TargetPort: intstr.FromInt(10000),
-						},
-					},
-				},
-			},
-		},
-		{
-			desc:        "should update the existing shadow service and remove the unused port",
-			defaultMode: "tcp",
-			svc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{Protocol: corev1.ProtocolTCP, Port: 8080},
-					},
-				},
-			},
-			currentShadowSvc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "traefik-mesh-foo-6d61657368-bar",
-					Namespace: "traefik-mesh",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol:   corev1.ProtocolTCP,
-							Port:       8080,
-							TargetPort: intstr.FromInt(10005),
-						},
-						{
-							Protocol:   corev1.ProtocolTCP,
-							Port:       8081,
-							TargetPort: intstr.FromInt(10001),
-						},
-					},
-				},
-			},
-			expectedShadowSvc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "traefik-mesh-foo-6d61657368-bar",
-					Namespace: "traefik-mesh",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol:   corev1.ProtocolTCP,
-							Port:       8080,
-							TargetPort: intstr.FromInt(10000),
-						},
-					},
-				},
-			},
-		},
-		{
-			desc:        "should update existing shadow service and reuse port mappings",
-			defaultMode: "tcp",
-			svc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{Protocol: corev1.ProtocolTCP, Port: 8080},
-					},
-				},
-			},
-			currentShadowSvc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "traefik-mesh-foo-6d61657368-bar",
-					Namespace: "traefik-mesh",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol:   corev1.ProtocolTCP,
-							Port:       8080,
-							TargetPort: intstr.FromInt(10000),
-						},
-					},
-				},
-			},
-			expectedShadowSvc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "traefik-mesh-foo-6d61657368-bar",
-					Namespace: "traefik-mesh",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol:   corev1.ProtocolTCP,
-							Port:       8080,
-							TargetPort: intstr.FromInt(10000),
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.desc, func(t *testing.T) {
-			ctx := context.Background()
-
-			logger := logrus.New()
-
-			logger.SetOutput(os.Stdout)
-			logger.SetLevel(logrus.DebugLevel)
-
-			currentShadowServices := make([]runtime.Object, 0)
-			if test.currentShadowSvc != nil {
-				currentShadowServices = append(currentShadowServices, test.currentShadowSvc)
-			}
-
-			serverVersionStr := "v1.17"
-			if test.serverVersion != "" {
-				serverVersionStr = test.serverVersion
-			}
-
-			client, lister := newFakeClient(serverVersionStr, currentShadowServices...)
-
-			tcpPortMapperMock := portMapperMock{
-				findFunc: func(namespace, name string, port int32) (int32, bool) {
-					return 0, false
-				},
-				addFunc: func(namespace, name string, port int32) (int32, error) {
-					return 10000, nil
-				},
-				removeFunc: func(namespace, name string, port int32) (int32, error) {
-					return 10000, nil
-				},
-			}
-
-			shadowServiceManager := NewShadowServiceManager(
-				logger,
-				lister,
-				"traefik-mesh",
-				tcpPortMapperMock,
-				portMapperMock{},
-				test.defaultMode,
-				5000,
-				5002,
-				client,
-			)
-
-			shadowSvc, err := shadowServiceManager.CreateOrUpdate(ctx, test.svc)
-			require.NoError(t, err)
-
-			assert.Equal(t, test.expectedShadowSvc.Name, shadowSvc.Name)
-			assert.Equal(t, test.expectedShadowSvc.Namespace, shadowSvc.Namespace)
-
-			for i, port := range test.expectedShadowSvc.Spec.Ports {
-				assert.Equal(t, port, shadowSvc.Spec.Ports[i])
-			}
-
-			serverVersion, err := goversion.NewVersion(serverVersionStr)
-			require.NoError(t, err)
-
-			if serverVersion.GreaterThanOrEqual(versionTopologyKeys) {
-				assert.True(t, len(shadowSvc.Spec.TopologyKeys) > 0)
-			}
-		})
-	}
-}
-
-func TestShadowServiceManager_Delete(t *testing.T) {
-	tests := []struct {
-		desc             string
-		name             string
-		namespace        string
-		currentShadowSvc *corev1.Service
-	}{
-		{
-			desc:      "should return nil if the corresponding shadow service cannot be found",
-			name:      "foo",
-			namespace: "bar",
-		},
-		{
-			desc:      "should remove the TCP ports mapped for the deleted service",
-			name:      "foo",
-			namespace: "bar",
-			currentShadowSvc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "traefik-mesh-foo-6d61657368-bar",
-					Namespace: "traefik-mesh",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol:   corev1.ProtocolTCP,
-							TargetPort: intstr.FromInt(10000),
-							Port:       8080,
-						},
-					},
-				},
-			},
-		},
-		{
-			desc:      "should remove the UDP ports mapped for the deleted service",
-			name:      "foo",
-			namespace: "bar",
-			currentShadowSvc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "traefik-mesh-foo-6d61657368-bar",
-					Namespace: "traefik-mesh",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol:   corev1.ProtocolUDP,
-							TargetPort: intstr.FromInt(15000),
-							Port:       8081,
-						},
-					},
-				},
-			},
-		},
-		{
-			desc:      "should remove the UDP and TCP ports mapped for the deleted service",
-			name:      "foo",
-			namespace: "bar",
-			currentShadowSvc: &corev1.Service{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "traefik-mesh-foo-6d61657368-bar",
-					Namespace: "traefik-mesh",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Protocol:   corev1.ProtocolTCP,
-							TargetPort: intstr.FromInt(10000),
-							Port:       8080,
-						},
-						{
-							Protocol:   corev1.ProtocolUDP,
-							TargetPort: intstr.FromInt(15000),
-							Port:       8081,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.desc, func(t *testing.T) {
-			ctx := context.Background()
-
-			logger := logrus.New()
-
-			logger.SetOutput(os.Stdout)
-			logger.SetLevel(logrus.DebugLevel)
-
-			removedUDPPorts := make(map[servicePort]bool)
-			udpPortMapperMock := portMapperMock{
-				removeFunc: func(namespace, name string, port int32) (int32, error) {
-					removedUDPPorts[servicePort{Namespace: namespace, Name: name, Port: port}] = true
-					return 0, nil
-				},
-			}
-
-			removedTCPPorts := make(map[servicePort]bool)
-			tcpPortMapperMock := portMapperMock{
-				removeFunc: func(namespace, name string, port int32) (int32, error) {
-					removedTCPPorts[servicePort{Namespace: namespace, Name: name, Port: port}] = true
-					return 0, nil
-				},
-			}
-
-			currentShadowServices := make([]runtime.Object, 0)
-			if test.currentShadowSvc != nil {
-				currentShadowServices = append(currentShadowServices, test.currentShadowSvc)
-			}
-
-			client, lister := newFakeClient("v1.17", currentShadowServices...)
-
-			shadowServiceManager := NewShadowServiceManager(
-				logger,
-				lister,
-				"traefik-mesh",
-				tcpPortMapperMock,
-				udpPortMapperMock,
-				"http",
-				5000,
-				5002,
-				client,
-			)
-
-			err := shadowServiceManager.Delete(ctx, test.namespace, test.name)
-			require.NoError(t, err)
-
-			if test.currentShadowSvc == nil {
-				assert.Equal(t, 0, len(removedTCPPorts))
-				assert.Equal(t, 0, len(removedUDPPorts))
-				return
-			}
-
-			for _, svcPort := range test.currentShadowSvc.Spec.Ports {
-				svcWithPort := servicePort{
-					Namespace: test.namespace,
-					Name:      test.name,
-					Port:      svcPort.Port,
-				}
-
-				switch svcPort.Protocol {
-				case corev1.ProtocolTCP:
-					assert.True(t, removedTCPPorts[svcWithPort])
-
-				case corev1.ProtocolUDP:
-					assert.True(t, removedUDPPorts[svcWithPort])
-
-				default:
-					t.Fail()
-				}
-			}
-		})
-	}
-}
-
-func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
+func TestShadowServiceManager_LoadPortMapping(t *testing.T) {
 	logger := logrus.New()
 
-	logger.SetOutput(os.Stdout)
-	logger.SetLevel(logrus.DebugLevel)
+	svc1 := newFakeService("svc-1", map[int]int{8000: 80}, annotations.ServiceTypeTCP)
+	svc2 := newFakeService("svc-2", map[int]int{8000: 80}, annotations.ServiceTypeTCP)
 
-	client, lister := newFakeClient("v1.17")
+	shadowSvc1 := newFakeShadowService(t, svc1, map[int]int{8000: 5000})
+	shadowSvc2 := newFakeShadowService(t, svc2, map[int]int{8000: 5001})
 
-	shadowServiceManager := NewShadowServiceManager(
-		logger,
-		lister,
-		"traefik-mesh",
-		portMapperMock{},
-		portMapperMock{},
-		"http",
-		5000,
-		5002,
-		client,
-	)
+	// Add an incompatible port: UDP in a TCP.
+	shadowSvc1.Spec.Ports = append(shadowSvc1.Spec.Ports, corev1.ServicePort{
+		Name:       "incompatible-port",
+		Protocol:   corev1.ProtocolUDP,
+		Port:       9000,
+		TargetPort: intstr.FromInt(5002),
+	})
 
-	shadowSvcName := shadowServiceManager.getShadowServiceName("bar", "foo")
-
-	assert.Equal(t, shadowSvcName, "traefik-mesh-foo-6d61657368-bar")
-}
-
-func TestShadowServiceManager_getHTTPPort(t *testing.T) {
-	tests := []struct {
-		desc        string
-		portID      int
-		expectedErr bool
-	}{
-		{
-			desc:        "should return an error if no HTTP port mapping is available",
-			portID:      3,
-			expectedErr: true,
-		},
-		{
-			desc:        "should return the HTTP port mapping associated with the given portID",
-			portID:      0,
-			expectedErr: false,
+	tcpPortMapper := &portMappingMock{
+		t: t,
+		setCalledWith: []portMapping{
+			{namespace: svc1.Namespace, name: svc1.Name, fromPort: 8000, toPort: 5000},
+			{namespace: svc2.Namespace, name: svc2.Name, fromPort: 8000, toPort: 5001},
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.desc, func(t *testing.T) {
-			logger := logrus.New()
+	_, svcLister := newFakeK8sClient(t, svc1, svc2, shadowSvc1, shadowSvc2)
 
-			logger.SetOutput(os.Stdout)
-			logger.SetLevel(logrus.DebugLevel)
+	mgr := ShadowServiceManager{
+		namespace:          testNamespace,
+		defaultTrafficType: testDefaultTrafficType,
+		serviceLister:      svcLister,
+		tcpStateTable:      tcpPortMapper,
+		logger:             logger,
+	}
 
-			client, lister := newFakeClient("v1.17")
+	assert.NoError(t, mgr.LoadPortMapping())
 
-			minHTTPPort := int32(5000)
-			maxHTTPPort := int32(5002)
+	assert.Equal(t, 2, tcpPortMapper.setCounter)
+}
 
-			shadowServiceManager := NewShadowServiceManager(
-				logger,
-				lister,
-				"traefik-mesh",
-				portMapperMock{},
-				portMapperMock{},
-				"http",
-				minHTTPPort,
-				maxHTTPPort,
-				client,
-			)
+// TestShadowServiceManager_SyncServiceHandlesUnknownTrafficTypes tests the case where a service is updated with an
+// invalid traffic type. It makes sure the shadow service won't be updated.
+func TestShadowServiceManager_SyncServiceHandlesUnknownTrafficTypes(t *testing.T) {
+	logger := logrus.New()
 
-			port, err := shadowServiceManager.getHTTPPort(test.portID)
-			if test.expectedErr {
-				require.Error(t, err)
-				return
-			}
+	// Create a service and simulate an update on the ports from 8000 to 9000 and with an invalid traffic type.
+	svc := newFakeService("svc", map[int]int{9000: 80}, "pigeon")
 
-			require.NoError(t, err)
-			assert.Equal(t, minHTTPPort+int32(test.portID), port)
+	shadowSvc := newFakeShadowService(t, svc, map[int]int{8000: 5000})
+
+	client, svcLister := newFakeK8sClient(t, svc, shadowSvc)
+
+	mgr := ShadowServiceManager{
+		namespace:          testNamespace,
+		defaultTrafficType: testDefaultTrafficType,
+		kubeClient:         client,
+		serviceLister:      svcLister,
+		logger:             logger,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	assert.NoError(t, mgr.SyncService(ctx, svc.Namespace, svc.Name))
+
+	// Make sure the shadow service stays intact.
+	syncedShadowSvc, err := client.CoreV1().Services(testNamespace).Get(ctx, shadowSvc.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	assert.Equal(t, shadowSvc.Annotations, syncedShadowSvc.Annotations)
+	assert.Equal(t, shadowSvc.Spec.Ports, syncedShadowSvc.Spec.Ports)
+}
+
+// TestShadowServiceManager_SyncServiceCreateShadowService tests the case where a service has been created. It makes
+// sure the shadow service is created.
+func TestShadowServiceManager_SyncServiceCreateShadowService(t *testing.T) {
+	logger := logrus.New()
+
+	svc := newFakeService("svc", map[int]int{9000: 8080, 9001: 8081}, annotations.ServiceTypeHTTP)
+
+	httpPortMapper := &portMappingMock{
+		t: t,
+		addCalledWith: []portMapping{
+			{namespace: svc.Namespace, name: svc.Name, fromPort: 9000, toPort: 5000},
+			{namespace: svc.Namespace, name: svc.Name, fromPort: 9001, toPort: 5001},
+		},
+	}
+
+	client, svcLister := newFakeK8sClient(t, svc)
+
+	mgr := ShadowServiceManager{
+		namespace:          testNamespace,
+		defaultTrafficType: testDefaultTrafficType,
+		kubeClient:         client,
+		serviceLister:      svcLister,
+		httpStateTable:     httpPortMapper,
+		logger:             logger,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	assert.NoError(t, mgr.SyncService(ctx, svc.Namespace, svc.Name))
+
+	// Make sure the shadow service has been created.
+	shadowSvcName, err := getShadowServiceName(svc.Namespace, svc.Name)
+	require.NoError(t, err)
+
+	shadowSvc, err := client.CoreV1().Services(testNamespace).Get(ctx, shadowSvcName, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	assert.Len(t, shadowSvc.Spec.Ports, 2)
+	assert.ElementsMatch(t, shadowSvc.Spec.Ports, []corev1.ServicePort{
+		{
+			Name:       "port-9000",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       9000,
+			TargetPort: intstr.FromInt(5000),
+		},
+		{
+			Name:       "port-9001",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       9001,
+			TargetPort: intstr.FromInt(5001),
+		},
+	})
+
+	assert.Equal(t, 2, httpPortMapper.addCounter)
+}
+
+// TestShadowServiceManager_SyncServiceUpdateShadowService tests the case where a service has been updated and
+// the shadow service already exist. It makes sure the shadow service is updated accordingly.
+func TestShadowServiceManager_SyncServiceUpdateShadowService(t *testing.T) {
+	logger := logrus.New()
+
+	// Create a service and simulate an update on the ports.
+	svc := newFakeService("svc", map[int]int{8000: 80, 9001: 8081}, annotations.ServiceTypeHTTP)
+	updatedSvc := newFakeService("svc", map[int]int{9000: 8080, 9001: 8081}, annotations.ServiceTypeHTTP)
+
+	shadowSvc := newFakeShadowService(t, svc, map[int]int{8000: 5000, 9001: 5001})
+
+	httpPortMapper := &portMappingMock{
+		t: t,
+		removeCalledWith: []portMapping{
+			{namespace: svc.Namespace, name: svc.Name, fromPort: 8000, toPort: 5000},
+		},
+		addCalledWith: []portMapping{
+			{namespace: svc.Namespace, name: svc.Name, fromPort: 9000, toPort: 5000},
+			{namespace: svc.Namespace, name: svc.Name, fromPort: 9001, toPort: 5001},
+		},
+	}
+
+	client, svcLister := newFakeK8sClient(t, updatedSvc, shadowSvc)
+
+	mgr := ShadowServiceManager{
+		namespace:          testNamespace,
+		defaultTrafficType: testDefaultTrafficType,
+		kubeClient:         client,
+		serviceLister:      svcLister,
+		httpStateTable:     httpPortMapper,
+		logger:             logger,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	assert.NoError(t, mgr.SyncService(ctx, svc.Namespace, svc.Name))
+
+	// Make sure the shadow service has been updated.
+	updateShadowSvc, err := client.CoreV1().Services(testNamespace).Get(ctx, shadowSvc.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	assert.Len(t, updateShadowSvc.Spec.Ports, 2)
+	assert.Equal(t, corev1.ProtocolTCP, updateShadowSvc.Spec.Ports[0].Protocol)
+
+	assert.ElementsMatch(t, updateShadowSvc.Spec.Ports, []corev1.ServicePort{
+		{
+			Name:       "port-9000",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       9000,
+			TargetPort: intstr.FromInt(5000),
+		},
+		{
+			Name:       "port-9001",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       9001,
+			TargetPort: intstr.FromInt(5001),
+		},
+	})
+
+	assert.Equal(t, 1, httpPortMapper.removeCounter)
+	assert.Equal(t, 2, httpPortMapper.addCounter)
+}
+
+// TestShadowServiceManager_SyncServiceUpdateShadowServicesAndHandleTrafficTypeChanges tests the case a service has
+// been updated and its traffic type has changed.
+func TestShadowServiceManager_SyncServiceUpdateShadowServicesAndHandleTrafficTypeChanges(t *testing.T) {
+	logger := logrus.New()
+
+	// Create a service and simulate an update on the ports and traffic type.
+	svc := newFakeService("svc", map[int]int{8000: 80}, annotations.ServiceTypeHTTP)
+	updatedSvc := newFakeService("svc", map[int]int{9000: 1010}, annotations.ServiceTypeUDP)
+
+	shadowSvc := newFakeShadowService(t, svc, map[int]int{8000: 5000})
+
+	httpPortMapper := &portMappingMock{
+		t: t,
+		removeCalledWith: []portMapping{
+			{namespace: svc.Namespace, name: svc.Name, fromPort: 8000, toPort: 5000},
+		},
+	}
+	udpPortMapper := &portMappingMock{
+		t: t,
+		addCalledWith: []portMapping{
+			{namespace: svc.Namespace, name: svc.Name, fromPort: 9000, toPort: 10000},
+		},
+	}
+
+	client, svcLister := newFakeK8sClient(t, updatedSvc, shadowSvc)
+
+	mgr := ShadowServiceManager{
+		namespace:          testNamespace,
+		defaultTrafficType: testDefaultTrafficType,
+		kubeClient:         client,
+		serviceLister:      svcLister,
+		httpStateTable:     httpPortMapper,
+		udpStateTable:      udpPortMapper,
+		logger:             logger,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	assert.NoError(t, mgr.SyncService(ctx, svc.Namespace, svc.Name))
+
+	// Make sure the shadow service has been updated.
+	updateShadowSvc, err := client.CoreV1().Services(testNamespace).Get(ctx, shadowSvc.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	trafficType, err := annotations.GetTrafficType("", updateShadowSvc.Annotations)
+	require.NoError(t, err)
+	assert.Equal(t, annotations.ServiceTypeUDP, trafficType)
+
+	assert.Len(t, updateShadowSvc.Spec.Ports, 1)
+	assert.Equal(t, corev1.ProtocolUDP, updateShadowSvc.Spec.Ports[0].Protocol)
+	assert.Equal(t, int32(9000), updateShadowSvc.Spec.Ports[0].Port)
+	assert.Equal(t, int32(10000), updateShadowSvc.Spec.Ports[0].TargetPort.IntVal)
+
+	assert.Equal(t, 1, httpPortMapper.removeCounter)
+	assert.Equal(t, 1, udpPortMapper.addCounter)
+}
+
+// TestShadowServiceManager_SyncServiceDeleteShadowServices checks the case where the given service has been removed
+// and there are still some shadow services left.
+func TestShadowServiceManager_SyncServiceDeleteShadowServices(t *testing.T) {
+	logger := logrus.New()
+
+	// Simulate a service that have been removed.
+	svc := newFakeService("svc", map[int]int{8000: 80}, annotations.ServiceTypeHTTP)
+
+	shadowSvc := newFakeShadowService(t, svc, map[int]int{8000: 5000})
+
+	httpPortMapper := &portMappingMock{
+		t: t,
+		removeCalledWith: []portMapping{
+			{namespace: svc.Namespace, name: svc.Name, fromPort: 8000, toPort: 5000},
+		},
+	}
+
+	client, svcLister := newFakeK8sClient(t, shadowSvc)
+
+	mgr := ShadowServiceManager{
+		namespace:          testNamespace,
+		defaultTrafficType: testDefaultTrafficType,
+		kubeClient:         client,
+		serviceLister:      svcLister,
+		httpStateTable:     httpPortMapper,
+		logger:             logger,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	assert.NoError(t, mgr.SyncService(ctx, svc.Namespace, svc.Name))
+
+	// Check if the shadow service have been removed.
+	_, err := client.CoreV1().Services(testNamespace).Get(ctx, shadowSvc.Name, metav1.GetOptions{})
+	assert.True(t, kerrors.IsNotFound(err))
+
+	assert.Equal(t, 1, httpPortMapper.removeCounter)
+}
+
+func newFakeService(name string, ports map[int]int, trafficType string) *corev1.Service {
+	var svcPorts []corev1.ServicePort
+
+	protocol := corev1.ProtocolTCP
+	if trafficType == annotations.ServiceTypeUDP {
+		protocol = corev1.ProtocolUDP
+	}
+
+	for port, targetPort := range ports {
+		svcPorts = append(svcPorts, corev1.ServicePort{
+			Name:       fmt.Sprintf("port-%d", port),
+			Protocol:   protocol,
+			Port:       int32(port),
+			TargetPort: intstr.FromInt(targetPort),
 		})
 	}
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   "default",
+			Annotations: map[string]string{},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: svcPorts,
+		},
+	}
+
+	if trafficType != "" {
+		annotations.SetTrafficType(trafficType, svc.Annotations)
+	}
+
+	return svc
 }
 
-func TestShadowServiceManager_isPortSuitable(t *testing.T) {
+func newFakeShadowService(t *testing.T, svc *corev1.Service, ports map[int]int) *corev1.Service {
+	var svcPorts []corev1.ServicePort
+
+	name, err := getShadowServiceName(svc.Namespace, svc.Name)
+	require.NoError(t, err)
+
+	trafficType, _ := annotations.GetTrafficType(testDefaultTrafficType, svc.Annotations)
+
+	protocol := corev1.ProtocolTCP
+	if trafficType == annotations.ServiceTypeUDP {
+		protocol = corev1.ProtocolUDP
+	}
+
+	for port, targetPort := range ports {
+		svcPorts = append(svcPorts, corev1.ServicePort{
+			Name:       fmt.Sprintf("port-%d", port),
+			Protocol:   protocol,
+			Port:       int32(port),
+			TargetPort: intstr.FromInt(targetPort),
+		})
+	}
+
+	labels := k8s.ShadowServiceLabels()
+	labels[k8s.LabelServiceNamespace] = svc.Namespace
+	labels[k8s.LabelServiceName] = svc.Name
+
+	shadowSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   testNamespace,
+			Labels:      labels,
+			Annotations: map[string]string{},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: k8s.ProxyLabels(),
+			Ports:    svcPorts,
+		},
+	}
+
+	annotations.SetTrafficType(trafficType, shadowSvc.Annotations)
+
+	return shadowSvc
+}
+
+func newFakeK8sClient(t *testing.T, objects ...runtime.Object) (*fake.Clientset, listers.ServiceLister) {
+	client := fake.NewSimpleClientset(objects...)
+
+	informerFactory := informers.NewSharedInformerFactory(client, 5*time.Minute)
+	svcLister := informerFactory.Core().V1().Services().Lister()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	informerFactory.Start(ctx.Done())
+
+	for typ, ok := range informerFactory.WaitForCacheSync(ctx.Done()) {
+		if !ok {
+			require.NoError(t, fmt.Errorf("timed out waiting for controller caches to sync: %s", typ))
+		}
+	}
+
+	return client, svcLister
+}
+
+func TestShadowServiceManager_isPortCompatible(t *testing.T) {
 	tests := []struct {
 		desc           string
 		trafficType    string
@@ -531,37 +427,37 @@ func TestShadowServiceManager_isPortSuitable(t *testing.T) {
 	}{
 		{
 			desc:           "should return true if the traffic type is udp and the port protocol is UDP",
-			trafficType:    "udp",
+			trafficType:    annotations.ServiceTypeUDP,
 			portProtocol:   corev1.ProtocolUDP,
 			expectedResult: true,
 		},
 		{
 			desc:           "should return false if the traffic type is udp and the port protocol is not UDP",
-			trafficType:    "udp",
+			trafficType:    annotations.ServiceTypeUDP,
 			portProtocol:   corev1.ProtocolSCTP,
 			expectedResult: false,
 		},
 		{
 			desc:           "should return true if the traffic type is http and the port protocol is TCP",
-			trafficType:    "http",
+			trafficType:    annotations.ServiceTypeHTTP,
 			portProtocol:   corev1.ProtocolTCP,
 			expectedResult: true,
 		},
 		{
 			desc:           "should return true if the traffic type is tcp and the port protocol is TCP",
-			trafficType:    "tcp",
+			trafficType:    annotations.ServiceTypeTCP,
 			portProtocol:   corev1.ProtocolTCP,
 			expectedResult: true,
 		},
 		{
 			desc:           "should return false if the traffic type is http and the port protocol is not TCP",
-			trafficType:    "http",
+			trafficType:    annotations.ServiceTypeHTTP,
 			portProtocol:   corev1.ProtocolSCTP,
 			expectedResult: false,
 		},
 		{
 			desc:           "should return false if the traffic type is http and the port protocol is not TCP",
-			trafficType:    "tcp",
+			trafficType:    annotations.ServiceTypeTCP,
 			portProtocol:   corev1.ProtocolUDP,
 			expectedResult: false,
 		},
@@ -569,7 +465,7 @@ func TestShadowServiceManager_isPortSuitable(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			result := isPortSuitable(test.trafficType, corev1.ServicePort{
+			result := isPortCompatible(test.trafficType, corev1.ServicePort{
 				Protocol: test.portProtocol,
 			})
 
@@ -578,125 +474,120 @@ func TestShadowServiceManager_isPortSuitable(t *testing.T) {
 	}
 }
 
-func TestShadowServiceManager_containsPort(t *testing.T) {
-	tests := []struct {
-		desc           string
-		port           corev1.ServicePort
-		ports          []corev1.ServicePort
-		expectedResult bool
-	}{
-		{
-			desc: "should return true if the given service port exists",
-			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolTCP},
-			ports: []corev1.ServicePort{
-				{Port: 80, Protocol: corev1.ProtocolTCP},
-			},
-			expectedResult: true,
-		},
-		{
-			desc:           "should return false if the given service port list is empty",
-			port:           corev1.ServicePort{Port: 8080, Protocol: corev1.ProtocolTCP},
-			expectedResult: false,
-		},
-		{
-			desc: "should return false if the given service port does not have the same port",
-			port: corev1.ServicePort{Port: 8080, Protocol: corev1.ProtocolTCP},
-			ports: []corev1.ServicePort{
-				{Port: 80, Protocol: corev1.ProtocolTCP},
-			},
-			expectedResult: false,
-		},
-		{
-			desc: "should return false if the given service port does not have the same protocol",
-			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolUDP},
-			ports: []corev1.ServicePort{
-				{Port: 80, Protocol: corev1.ProtocolTCP},
-			},
-			expectedResult: false,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.desc, func(t *testing.T) {
-			result := containsPort(test.ports, test.port)
-
-			assert.Equal(t, test.expectedResult, result)
-		})
-	}
+type portMapping struct {
+	namespace string
+	name      string
+	fromPort  int32
+	toPort    int32
+	called    bool
 }
 
-func TestShadowServiceManager_needsCleanup(t *testing.T) {
-	tests := []struct {
-		desc           string
-		port           corev1.ServicePort
-		ports          []corev1.ServicePort
-		expectedResult bool
-	}{
-		{
-			desc: "should return false if the given service port exists",
-			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
-			ports: []corev1.ServicePort{
-				{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
-			},
-			expectedResult: false,
-		},
-		{
-			desc:           "should return true if the given service port list is empty",
-			port:           corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
-			expectedResult: true,
-		},
-		{
-			desc: "should return true if the given service port does not have the same port",
-			port: corev1.ServicePort{Port: 90, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
-			ports: []corev1.ServicePort{
-				{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
-			},
-			expectedResult: true,
-		},
-		{
-			desc: "should return true if the given service port does not have the same protocol",
-			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt(80)},
-			ports: []corev1.ServicePort{
-				{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
-			},
-			expectedResult: true,
-		},
-		{
-			desc: "should return true if the given service port does not have the same target port",
-			port: corev1.ServicePort{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(90)},
-			ports: []corev1.ServicePort{
-				{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(80)},
-			},
-			expectedResult: true,
-		},
-	}
+type portMappingMock struct {
+	t *testing.T
 
-	for _, test := range tests {
-		t.Run(test.desc, func(t *testing.T) {
-			result := needsCleanup(test.ports, test.port)
+	setCalledWith    []portMapping
+	addCalledWith    []portMapping
+	findCalledWith   []portMapping
+	removeCalledWith []portMapping
 
-			assert.Equal(t, test.expectedResult, result)
-		})
-	}
+	setCounter    int
+	addCounter    int
+	findCounter   int
+	removeCounter int
 }
 
-func newFakeClient(serverVersion string, objects ...runtime.Object) (*fake.Clientset, listers.ServiceLister) {
-	client := fake.NewSimpleClientset(objects...)
-
-	discovery, _ := client.Discovery().(*fakediscovery.FakeDiscovery)
-	discovery.FakedServerVersion = &version.Info{
-		GitVersion: serverVersion,
+func (m *portMappingMock) Set(namespace, name string, fromPort, toPort int32) error {
+	if m.setCalledWith == nil {
+		assert.FailNowf(m.t, "Set has been called", "%s/%s %d-%d", name, namespace, fromPort, toPort)
 	}
 
-	informerFactory := informers.NewSharedInformerFactory(client, 5*time.Minute)
-	lister := informerFactory.Core().V1().Services().Lister()
+	m.setCounter++
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	for _, callArgs := range m.setCalledWith {
+		if callArgs.called {
+			continue
+		}
 
-	stop := make(<-chan struct{})
-	informerFactory.Start(stop)
-	informerFactory.WaitForCacheSync(ctx.Done())
+		if namespace == callArgs.namespace && name == callArgs.name && fromPort == callArgs.fromPort && toPort == callArgs.toPort {
+			callArgs.called = true
 
-	return client, lister
+			return nil
+		}
+	}
+
+	assert.FailNowf(m.t, "unexpected call to Set", "%s/%s %d->%d", name, namespace, fromPort, toPort)
+
+	return errors.New("fail")
+}
+
+func (m *portMappingMock) Add(namespace, name string, fromPort int32) (int32, error) {
+	if m.addCalledWith == nil {
+		assert.FailNowf(m.t, "Add has been called", "%s/%s %d", name, namespace, fromPort)
+	}
+
+	m.addCounter++
+
+	for _, callArgs := range m.addCalledWith {
+		if callArgs.called {
+			continue
+		}
+
+		if namespace == callArgs.namespace && name == callArgs.name && fromPort == callArgs.fromPort {
+			callArgs.called = true
+
+			return callArgs.toPort, nil
+		}
+	}
+
+	assert.FailNowf(m.t, "unexpected call to Add", "%s/%s %d", name, namespace, fromPort)
+
+	return 0, errors.New("fail")
+}
+
+func (m *portMappingMock) Find(namespace, name string, fromPort int32) (int32, bool) {
+	if m.findCalledWith == nil {
+		assert.FailNowf(m.t, "Find has been called", "%s/%s %d", name, namespace, fromPort)
+	}
+
+	m.findCounter++
+
+	for _, callArgs := range m.findCalledWith {
+		if callArgs.called {
+			continue
+		}
+
+		if namespace == callArgs.namespace && name == callArgs.name && fromPort == callArgs.fromPort {
+			callArgs.called = true
+
+			return callArgs.toPort, true
+		}
+	}
+
+	assert.FailNowf(m.t, "unexpected call to Find", "%s/%s %d", name, namespace, fromPort)
+
+	return 0, false
+}
+
+func (m *portMappingMock) Remove(namespace, name string, fromPort int32) (int32, bool) {
+	if m.removeCalledWith == nil {
+		assert.FailNowf(m.t, "Remove has been called", "%s/%s %d", name, namespace, fromPort)
+	}
+
+	m.removeCounter++
+
+	for _, callArgs := range m.removeCalledWith {
+		if callArgs.called {
+			continue
+		}
+
+		if namespace == callArgs.namespace && name == callArgs.name && fromPort == callArgs.fromPort {
+			callArgs.called = true
+
+			return callArgs.toPort, true
+		}
+	}
+
+	assert.FailNowf(m.t, "unexpected call to Remove", "%s/%s %d", name, namespace, fromPort)
+
+	return 0, false
 }

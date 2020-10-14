@@ -38,8 +38,6 @@ const (
 
 // Config holds the Provider configuration.
 type Config struct {
-	MinHTTPPort        int32
-	MaxHTTPPort        int32
 	ACL                bool
 	DefaultTrafficType string
 }
@@ -48,6 +46,7 @@ type Config struct {
 type Provider struct {
 	config Config
 
+	httpStateTable         PortFinder
 	tcpStateTable          PortFinder
 	udpStateTable          PortFinder
 	buildServiceMiddleware MiddlewareBuilder
@@ -56,9 +55,10 @@ type Provider struct {
 }
 
 // New creates a new Provider.
-func New(tcpStateTable, udpStateTable PortFinder, middlewareBuilder MiddlewareBuilder, cfg Config, logger logrus.FieldLogger) *Provider {
+func New(httpStateTable, tcpStateTable, udpStateTable PortFinder, middlewareBuilder MiddlewareBuilder, cfg Config, logger logrus.FieldLogger) *Provider {
 	return &Provider{
 		config:                 cfg,
+		httpStateTable:         httpStateTable,
 		tcpStateTable:          tcpStateTable,
 		udpStateTable:          udpStateTable,
 		logger:                 logger,
@@ -232,8 +232,8 @@ func (p *Provider) buildServicesAndRoutersForService(t *topology.Topology, cfg *
 func (p *Provider) buildServicesAndRoutersForHTTPService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service, scheme string, middlewares []string, svcKey topology.Key) {
 	httpRule := buildHTTPRuleFromService(svc)
 
-	for portID, svcPort := range svc.Ports {
-		entrypoint, err := p.buildHTTPEntrypoint(portID)
+	for _, svcPort := range svc.Ports {
+		entrypoint, err := p.buildHTTPEntrypoint(svc, svcPort.Port)
 		if err != nil {
 			err = fmt.Errorf("unable to build HTTP entrypoint for port %d: %v", svcPort.Port, err)
 			svc.AddError(err)
@@ -318,8 +318,8 @@ func (p *Provider) buildHTTPServicesAndRoutersForTrafficTarget(t *topology.Topol
 
 	rule := buildHTTPRuleFromTrafficTarget(tt, ttSvc)
 
-	for portID, svcPort := range tt.Destination.Ports {
-		entrypoint, err := p.buildHTTPEntrypoint(portID)
+	for _, svcPort := range tt.Destination.Ports {
+		entrypoint, err := p.buildHTTPEntrypoint(ttSvc, svcPort.Port)
 		if err != nil {
 			err = fmt.Errorf("unable to build HTTP entrypoint for port %d: %v", svcPort.Port, err)
 			tt.AddError(err)
@@ -417,7 +417,7 @@ func (p *Provider) buildHTTPServiceAndRoutersForTrafficSplit(t *topology.Topolog
 		rtrMiddlewares = addToSliceCopy(middlewares, whitelistDirectKey)
 	}
 
-	for portID, svcPort := range tsSvc.Ports {
+	for _, svcPort := range tsSvc.Ports {
 		backendSvcs, err := p.buildServicesForTrafficSplitBackends(t, cfg, ts, svcPort, scheme)
 		if err != nil {
 			err = fmt.Errorf("unable to build HTTP backend services and port %d: %v", svcPort.Port, err)
@@ -427,7 +427,7 @@ func (p *Provider) buildHTTPServiceAndRoutersForTrafficSplit(t *topology.Topolog
 			continue
 		}
 
-		entrypoint, err := p.buildHTTPEntrypoint(portID)
+		entrypoint, err := p.buildHTTPEntrypoint(tsSvc, svcPort.Port)
 		if err != nil {
 			err = fmt.Errorf("unable to build HTTP entrypoint for port %d: %v", svcPort.Port, err)
 			ts.AddError(err)
@@ -551,8 +551,8 @@ func (p *Provider) buildServicesForTrafficSplitBackends(t *topology.Topology, cf
 func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topology.Service) {
 	rule := buildHTTPRuleFromService(svc)
 
-	for portID, svcPort := range svc.Ports {
-		entrypoint, err := p.buildHTTPEntrypoint(portID)
+	for _, svcPort := range svc.Ports {
+		entrypoint, err := p.buildHTTPEntrypoint(svc, svcPort.Port)
 		if err != nil {
 			svcKey := topology.Key{Name: svc.Name, Namespace: svc.Namespace}
 			err = fmt.Errorf("unable to build HTTP entrypoint for port %d: %w", svcPort.Port, err)
@@ -573,13 +573,13 @@ func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topolog
 	}
 }
 
-func (p Provider) buildHTTPEntrypoint(portID int) (string, error) {
-	port := p.config.MinHTTPPort + int32(portID)
-	if port > p.config.MaxHTTPPort {
-		return "", errors.New("too many HTTP entrypoints")
+func (p Provider) buildHTTPEntrypoint(svc *topology.Service, port int32) (string, error) {
+	meshPort, ok := p.httpStateTable.Find(svc.Namespace, svc.Name, port)
+	if !ok {
+		return "", errors.New("port not found")
 	}
 
-	return fmt.Sprintf("http-%d", port), nil
+	return fmt.Sprintf("http-%d", meshPort), nil
 }
 
 func (p Provider) buildTCPEntrypoint(svc *topology.Service, port int32) (string, error) {
