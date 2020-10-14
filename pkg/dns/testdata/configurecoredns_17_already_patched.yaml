@@ -50,8 +50,8 @@ data:
     traefik.mesh:53 {
         errors
         rewrite continue {
-            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.traefik\.mesh toto-{1}-6d61657368-{2}.toto.svc.titi
-            answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.toto\.svc\.titi {1}.{2}.traefik.mesh
+            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.traefik\.mesh {1}-6d61657368-{2}.toto.svc.titi
+            answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.toto\.svc\.titi {1}.{2}.traefik.mesh
         }
         kubernetes titi in-addr.arpa ip6.arpa {
             pods insecure
