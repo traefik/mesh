@@ -83,10 +83,7 @@ func traefikMeshCommand(config *Configuration) error {
 
 	logger.Debugf("ACL mode enabled: %t", config.ACL)
 
-	apiServer, err := api.NewAPI(logger, config.APIPort, config.APIHost, clients.KubernetesClient(), config.Namespace)
-	if err != nil {
-		return fmt.Errorf("unable to create the API server: %w", err)
-	}
+	apiServer := api.NewAPI(logger, config.APIPort, config.APIHost, config.Namespace)
 
 	ctr := controller.NewMeshController(clients, controller.Config{
 		ACLEnabled:       config.ACL,

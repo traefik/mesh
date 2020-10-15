@@ -41,7 +41,7 @@ const (
 
 // SharedStore is used to share the controller state.
 type SharedStore interface {
-	SetConfig(cfg *dynamic.Configuration)
+	SetConfiguration(cfg *dynamic.Configuration)
 	SetTopology(topo *topology.Topology)
 	SetReadiness(isReady bool)
 }
@@ -359,7 +359,7 @@ func (c *Controller) processNextWorkItem() bool {
 	conf := c.provider.BuildConfig(topo)
 
 	c.store.SetTopology(topo)
-	c.store.SetConfig(conf)
+	c.store.SetConfiguration(conf)
 
 	c.workQueue.Forget(key)
 
