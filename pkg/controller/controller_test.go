@@ -23,9 +23,9 @@ const (
 
 type storeMock struct{}
 
-func (a *storeMock) SetConfig(_ *dynamic.Configuration) {}
-func (a *storeMock) SetTopology(_ *topology.Topology)   {}
-func (a *storeMock) SetReadiness(_ bool)                {}
+func (a *storeMock) SetConfiguration(_ *dynamic.Configuration) {}
+func (a *storeMock) SetTopology(_ *topology.Topology)          {}
+func (a *storeMock) SetReadiness(_ bool)                       {}
 
 func TestController_NewMeshController(t *testing.T) {
 	store := &storeMock{}

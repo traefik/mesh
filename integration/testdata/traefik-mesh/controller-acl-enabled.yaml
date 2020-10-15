@@ -130,7 +130,7 @@ spec:
               containerPort: 9000
           readinessProbe:
             httpGet:
-              path: /api/status/readiness
+              path: /api/ready
               port: api
             initialDelaySeconds: 3
             periodSeconds: 1

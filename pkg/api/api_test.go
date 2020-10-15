@@ -1,32 +1,20 @@
 package api
 
 import (
-	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/traefik/mesh/v2/pkg/k8s"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 var localhost = "127.0.0.1"
 
 func TestEnableReadiness(t *testing.T) {
-	logger := logrus.New()
+	api := NewAPI(logrus.New(), 9000, localhost, "foo")
 
-	logger.SetOutput(os.Stdout)
-	logger.SetLevel(logrus.DebugLevel)
-
-	client := fake.NewSimpleClientset()
-	api, err := NewAPI(logger, 9000, localhost, client, "foo")
-
-	require.NoError(t, err)
 	assert.Equal(t, false, api.readiness.Get().(bool))
 
 	api.SetReadiness(true)
@@ -57,24 +45,14 @@ func TestGetReadiness(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			logger := logrus.New()
+			api := NewAPI(logrus.New(), 9000, localhost, "foo")
 
-			logger.SetOutput(os.Stdout)
-			logger.SetLevel(logrus.DebugLevel)
-
-			client := fake.NewSimpleClientset()
-			api, err := NewAPI(logger, 9000, localhost, client, "foo")
-
-			require.NoError(t, err)
 			api.readiness.Set(test.readiness)
 
 			res := httptest.NewRecorder()
 
-			req, err := http.NewRequest(http.MethodGet, "/api/status/readiness", nil)
-			if err != nil {
-				require.NoError(t, err)
-				return
-			}
+			req, err := http.NewRequest(http.MethodGet, "/api/ready", nil)
+			require.NoError(t, err)
 
 			api.getReadiness(res, req)
 
@@ -83,168 +61,32 @@ func TestGetReadiness(t *testing.T) {
 	}
 }
 
-func TestGetCurrentConfiguration(t *testing.T) {
-	logger := logrus.New()
+func TestGetConfiguration(t *testing.T) {
+	api := NewAPI(logrus.New(), 9000, localhost, "foo")
 
-	logger.SetOutput(os.Stdout)
-	logger.SetLevel(logrus.DebugLevel)
-
-	client := fake.NewSimpleClientset()
-	api, err := NewAPI(logger, 9000, localhost, client, "foo")
-
-	require.NoError(t, err)
 	api.configuration.Set("foo")
 
 	res := httptest.NewRecorder()
 
-	req, err := http.NewRequest(http.MethodGet, "/api/configuration/current", nil)
-	if err != nil {
-		require.NoError(t, err)
-		return
-	}
+	req, err := http.NewRequest(http.MethodGet, "/api/configuration", nil)
+	require.NoError(t, err)
 
-	api.getCurrentConfiguration(res, req)
+	api.getConfiguration(res, req)
 
 	assert.Equal(t, "\"foo\"\n", res.Body.String())
 }
 
-func TestGetMeshNodes(t *testing.T) {
-	testCases := []struct {
-		desc               string
-		mockFile           string
-		expectedBody       string
-		expectedStatusCode int
-		podError           bool
-	}{
-		{
-			desc:               "empty mesh node list",
-			mockFile:           "getmeshnodes_empty.yaml",
-			expectedBody:       "[]\n",
-			expectedStatusCode: http.StatusOK,
-		},
-		{
-			desc:               "one item in mesh node list",
-			mockFile:           "getmeshnodes_one_mesh_pod.yaml",
-			expectedBody:       "[{\"Name\":\"mesh-pod-1\",\"IP\":\"10.4.3.2\",\"Ready\":true}]\n",
-			expectedStatusCode: http.StatusOK,
-		},
-		{
-			desc:               "one item in mesh node list with non ready pod",
-			mockFile:           "getmeshnodes_one_nonready_mesh_pod.yaml",
-			expectedBody:       "[{\"Name\":\"mesh-pod-1\",\"IP\":\"10.4.19.1\",\"Ready\":false}]\n",
-			expectedStatusCode: http.StatusOK,
-		},
-	}
+func TestGetTopology(t *testing.T) {
+	api := NewAPI(logrus.New(), 9000, localhost, "foo")
 
-	for _, test := range testCases {
-		test := test
-		t.Run(test.desc, func(t *testing.T) {
-			t.Parallel()
+	api.topology.Set("foo")
 
-			logger := logrus.New()
+	res := httptest.NewRecorder()
 
-			logger.SetOutput(os.Stdout)
-			logger.SetLevel(logrus.DebugLevel)
+	req, err := http.NewRequest(http.MethodGet, "/api/topology", nil)
+	require.NoError(t, err)
 
-			clientMock := k8s.NewClientMock(t, test.mockFile)
-			api, err := NewAPI(logger, 9000, localhost, clientMock.KubernetesClient(), "foo")
+	api.getTopology(res, req)
 
-			require.NoError(t, err)
-
-			res := httptest.NewRecorder()
-
-			req, err := http.NewRequest(http.MethodGet, "/api/status/nodes", nil)
-			if err != nil {
-				require.NoError(t, err)
-				return
-			}
-
-			api.getMeshNodes(res, req)
-
-			assert.Equal(t, test.expectedBody, res.Body.String())
-			assert.Equal(t, test.expectedStatusCode, res.Code)
-		})
-	}
-}
-
-func TestGetMeshNodeConfiguration(t *testing.T) {
-	testCases := []struct {
-		desc               string
-		mockFile           string
-		expectedBody       string
-		expectedStatusCode int
-		podError           bool
-	}{
-		{
-			desc:               "simple mesh node configuration",
-			mockFile:           "getmeshnodeconfiguration_simple.yaml",
-			expectedBody:       "{test_configuration_json}",
-			expectedStatusCode: http.StatusOK,
-		},
-		{
-			desc:               "pod not found",
-			mockFile:           "getmeshnodeconfiguration_empty.yaml",
-			expectedBody:       "\n",
-			expectedStatusCode: http.StatusNotFound,
-		},
-	}
-
-	apiServer := startTestAPIServer("8080", http.StatusOK, []byte("{test_configuration_json}"))
-	defer apiServer.Close()
-
-	for _, test := range testCases {
-		t.Run(test.desc, func(t *testing.T) {
-			logger := logrus.New()
-
-			logger.SetOutput(os.Stdout)
-			logger.SetLevel(logrus.DebugLevel)
-
-			clientMock := k8s.NewClientMock(t, test.mockFile)
-			api, err := NewAPI(logger, 9000, localhost, clientMock.KubernetesClient(), "foo")
-
-			require.NoError(t, err)
-
-			res := httptest.NewRecorder()
-
-			req, err := http.NewRequest(http.MethodGet, "/api/status/node/mesh-pod-1/configuration", nil)
-			if err != nil {
-				require.NoError(t, err)
-				return
-			}
-
-			// fake gorilla/mux vars
-			vars := map[string]string{
-				"node": "mesh-pod-1",
-			}
-
-			req = mux.SetURLVars(req, vars)
-
-			api.getMeshNodeConfiguration(res, req)
-
-			assert.Equal(t, test.expectedBody, res.Body.String())
-			assert.Equal(t, test.expectedStatusCode, res.Code)
-		})
-	}
-}
-
-func startTestAPIServer(port string, statusCode int, bodyData []byte) (ts *httptest.Server) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(statusCode)
-		w.Header().Set("Content-Type", "application/json")
-
-		_, _ = w.Write(bodyData)
-	})
-
-	listener, err := net.Listen("tcp", "127.0.0.1:"+port)
-	if err != nil {
-		panic(err)
-	}
-
-	ts = &httptest.Server{
-		Listener: listener,
-		Config:   &http.Server{Handler: handler},
-	}
-	ts.Start()
-
-	return ts
+	assert.Equal(t, "\"foo\"\n", res.Body.String())
 }
