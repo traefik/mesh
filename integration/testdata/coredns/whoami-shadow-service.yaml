@@ -2,12 +2,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: traefik-mesh-whoami-6d61657368-whoami
+  name: whoami-6d61657368-whoami
   namespace: traefik-mesh
   labels:
     app.kubernetes.io/name: traefik-mesh
     app.kubernetes.io/component: shadow-service
     app.kubernetes.io/part-of: traefik-mesh
+    service-namespace: whoami
+    service-name: whoami
+  annotations:
+    mesh.traefik.io/traffic-type: http
 spec:
   type: ClusterIP
   ports:

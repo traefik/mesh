@@ -26,7 +26,7 @@
 
       "my-ns-svc-b-8080": {
         "entryPoints": [
-          "http-10000"
+          "http-10001"
         ],
         "middlewares": [
           "block-all-middleware"
@@ -37,7 +37,7 @@
       },
       "my-ns-svc-b-tt-8080-traffic-target-direct": {
         "entryPoints": [
-          "http-10000"
+          "http-10001"
         ],
         "middlewares": [
           "my-ns-svc-b-tt-whitelist-traffic-target-direct"
@@ -48,7 +48,7 @@
       },
       "my-ns-svc-b-tt-8080-traffic-target-indirect": {
         "entryPoints": [
-          "http-10000"
+          "http-10001"
         ],
         "middlewares": [
           "my-ns-svc-b-tt-whitelist-traffic-target-indirect"
@@ -60,7 +60,7 @@
 
       "my-ns-svc-c-8080": {
         "entryPoints": [
-          "http-10000"
+          "http-10002"
         ],
         "middlewares": [
           "block-all-middleware"
@@ -71,7 +71,7 @@
       },
       "my-ns-svc-c-tt-8080-traffic-target-direct": {
         "entryPoints": [
-          "http-10000"
+          "http-10002"
         ],
         "middlewares": [
           "my-ns-svc-c-tt-whitelist-traffic-target-direct"
@@ -82,7 +82,7 @@
       },
       "my-ns-svc-c-tt-8080-traffic-target-indirect": {
         "entryPoints": [
-          "http-10000"
+          "http-10002"
         ],
         "middlewares": [
           "my-ns-svc-c-tt-whitelist-traffic-target-indirect"
