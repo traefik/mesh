@@ -12,10 +12,18 @@ import (
 	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 )
 
-type stateTableMock func(namespace, name string, port int32) (int32, bool)
+type stateTableMock struct {
+	table map[servicePort]int32
+}
 
-func (t stateTableMock) Find(namespace, name string, port int32) (int32, bool) {
-	return t(namespace, name, port)
+func (t *stateTableMock) Find(namespace, name string, port int32) (int32, bool) {
+	if t.table == nil {
+		return 0, false
+	}
+
+	p, ok := t.table[servicePort{Namespace: namespace, Name: name, Port: port}]
+
+	return p, ok
 }
 
 type servicePort struct {
@@ -29,6 +37,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 		desc               string
 		acl                bool
 		defaultTrafficType string
+		httpStateTable     map[servicePort]int32
 		tcpStateTable      map[servicePort]int32
 		udpStateTable      map[servicePort]int32
 		topology           string
@@ -51,15 +60,22 @@ func TestProvider_BuildConfig(t *testing.T) {
 			desc:               "Annotations: scheme",
 			acl:                false,
 			defaultTrafficType: "http",
-			topology:           "testdata/annotations-scheme-topology.json",
-			wantConfig:         "testdata/annotations-scheme-config.json",
+			httpStateTable: map[servicePort]int32{
+				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 10000,
+			},
+			topology:   "testdata/annotations-scheme-topology.json",
+			wantConfig: "testdata/annotations-scheme-config.json",
 		},
 		{
 			desc:               "ACL disabled: basic HTTP service",
 			acl:                false,
 			defaultTrafficType: "http",
-			topology:           "testdata/acl-disabled-http-basic-topology.json",
-			wantConfig:         "testdata/acl-disabled-http-basic-config.json",
+			httpStateTable: map[servicePort]int32{
+				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 10000,
+				{Namespace: "my-ns", Name: "svc-a", Port: 8081}: 10001,
+			},
+			topology:   "testdata/acl-disabled-http-basic-topology.json",
+			wantConfig: "testdata/acl-disabled-http-basic-config.json",
 		},
 		{
 			desc:               "ACL disabled: basic TCP service",
@@ -87,15 +103,24 @@ func TestProvider_BuildConfig(t *testing.T) {
 			desc:               "ACL disabled: HTTP service with traffic-split",
 			acl:                false,
 			defaultTrafficType: "http",
-			topology:           "testdata/acl-disabled-http-traffic-split-topology.json",
-			wantConfig:         "testdata/acl-disabled-http-traffic-split-config.json",
+			httpStateTable: map[servicePort]int32{
+				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 10000,
+				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 10001,
+				{Namespace: "my-ns", Name: "svc-c", Port: 8080}: 10002,
+			},
+			topology:   "testdata/acl-disabled-http-traffic-split-topology.json",
+			wantConfig: "testdata/acl-disabled-http-traffic-split-config.json",
 		},
 		{
 			desc:               "ACL enabled: basic HTTP service",
 			acl:                true,
 			defaultTrafficType: "http",
-			topology:           "testdata/acl-enabled-http-basic-topology.json",
-			wantConfig:         "testdata/acl-enabled-http-basic-config.json",
+			httpStateTable: map[servicePort]int32{
+				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 10000,
+				{Namespace: "my-ns", Name: "svc-b", Port: 8081}: 10001,
+			},
+			topology:   "testdata/acl-enabled-http-basic-topology.json",
+			wantConfig: "testdata/acl-enabled-http-basic-config.json",
 		},
 		{
 			desc:               "ACL enabled: basic TCP service",
@@ -112,22 +137,35 @@ func TestProvider_BuildConfig(t *testing.T) {
 			desc:               "ACL enabled: HTTP service with http-route-group",
 			acl:                true,
 			defaultTrafficType: "http",
-			topology:           "testdata/acl-enabled-http-route-group-topology.json",
-			wantConfig:         "testdata/acl-enabled-http-route-group-config.json",
+			httpStateTable: map[servicePort]int32{
+				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 10000,
+			},
+			topology:   "testdata/acl-enabled-http-route-group-topology.json",
+			wantConfig: "testdata/acl-enabled-http-route-group-config.json",
 		},
 		{
 			desc:               "ACL enabled: HTTP service with traffic-split",
 			acl:                true,
 			defaultTrafficType: "http",
-			topology:           "testdata/acl-enabled-http-traffic-split-topology.json",
-			wantConfig:         "testdata/acl-enabled-http-traffic-split-config.json",
+			httpStateTable: map[servicePort]int32{
+				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 10000,
+				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 10001,
+				{Namespace: "my-ns", Name: "svc-c", Port: 8080}: 10002,
+			},
+			topology:   "testdata/acl-enabled-http-traffic-split-topology.json",
+			wantConfig: "testdata/acl-enabled-http-traffic-split-config.json",
 		},
 		{
 			desc:               "ACL enabled: HTTP service with traffic-split and http-route-group",
 			acl:                true,
 			defaultTrafficType: "http",
-			topology:           "testdata/acl-enabled-http-traffic-split-http-route-group-topology.json",
-			wantConfig:         "testdata/acl-enabled-http-traffic-split-http-route-group-config.json",
+			httpStateTable: map[servicePort]int32{
+				{Namespace: "my-ns", Name: "svc-a", Port: 8080}: 10000,
+				{Namespace: "my-ns", Name: "svc-b", Port: 8080}: 10001,
+				{Namespace: "my-ns", Name: "svc-c", Port: 8080}: 10002,
+			},
+			topology:   "testdata/acl-enabled-http-traffic-split-http-route-group-topology.json",
+			wantConfig: "testdata/acl-enabled-http-traffic-split-http-route-group-config.json",
 		},
 	}
 
@@ -142,33 +180,22 @@ func TestProvider_BuildConfig(t *testing.T) {
 			}
 
 			cfg := Config{
-				MinHTTPPort:        10000,
-				MaxHTTPPort:        10010,
 				ACL:                test.acl,
 				DefaultTrafficType: defaultTrafficType,
 			}
 
-			tcpStateTable := func(namespace, name string, port int32) (int32, bool) {
-				if test.tcpStateTable == nil {
-					return 0, false
-				}
-
-				p, ok := test.tcpStateTable[servicePort{Namespace: namespace, Name: name, Port: port}]
-				return p, ok
-			}
-			udpStateTable := func(namespace, name string, port int32) (int32, bool) {
-				if test.udpStateTable == nil {
-					return 0, false
-				}
-
-				p, ok := test.udpStateTable[servicePort{Namespace: namespace, Name: name, Port: port}]
-				return p, ok
-			}
 			middlewareBuilder := func(a map[string]string) (map[string]*dynamic.Middleware, error) {
 				return nil, nil
 			}
 
-			p := New(stateTableMock(tcpStateTable), stateTableMock(udpStateTable), middlewareBuilder, cfg, logger)
+			p := New(
+				&stateTableMock{test.httpStateTable},
+				&stateTableMock{test.tcpStateTable},
+				&stateTableMock{test.udpStateTable},
+				middlewareBuilder,
+				cfg,
+				logger,
+			)
 
 			topo, err := loadTopology(test.topology)
 			require.NoError(t, err)
