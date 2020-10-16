@@ -123,9 +123,13 @@ func (p *Provider) BuildConfig(t *topology.Topology) *dynamic.Configuration {
 
 // buildConfigForService builds the dynamic configuration for the given service.
 func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service) error {
-	trafficType, err := annotations.GetTrafficType(p.config.DefaultTrafficType, svc.Annotations)
-	if err != nil {
+	trafficType, err := annotations.GetTrafficType(svc.Annotations)
+	if err != nil && err != annotations.ErrNotFound {
 		return fmt.Errorf("unable to evaluate traffic-type annotation: %w", err)
+	}
+
+	if err == annotations.ErrNotFound {
+		trafficType = p.config.DefaultTrafficType
 	}
 
 	scheme, err := annotations.GetScheme(svc.Annotations)
@@ -146,11 +150,8 @@ func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Conf
 	// When ACL mode is on, all traffic must be forbidden unless explicitly authorized via a TrafficTarget.
 	if p.config.ACL {
 		p.buildACLConfigRoutersAndServices(t, cfg, svc, scheme, trafficType, middlewareKeys)
-	} else {
-		err = p.buildConfigRoutersAndServices(t, cfg, svc, scheme, trafficType, middlewareKeys)
-		if err != nil {
-			return err
-		}
+	} else if err = p.buildConfigRoutersAndServices(t, cfg, svc, scheme, trafficType, middlewareKeys); err != nil {
+		return err
 	}
 
 	for _, tsKey := range svc.TrafficSplits {
