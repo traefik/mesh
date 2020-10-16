@@ -46,13 +46,15 @@ func (s *ShadowServiceManager) LoadPortMapping() error {
 	}
 
 	for _, shadowSvc := range shadowSvcs {
+		// If the traffic-type annotation has been manually removed we can't load its ports.
 		trafficType, err := annotations.GetTrafficType("", shadowSvc.Annotations)
-		if err == nil && trafficType == "" {
-			err = errors.New("traffic-type has been removed")
-		}
-
 		if err != nil {
 			s.logger.Errorf("Unable to load port mapping of shadow service %q: %v", shadowSvc.Name, err)
+			continue
+		}
+
+		if trafficType == "" {
+			s.logger.Errorf("Unable to find traffic-type on shadow service %q", shadowSvc.Name)
 			continue
 		}
 
@@ -99,18 +101,20 @@ func (s *ShadowServiceManager) deleteShadowService(ctx context.Context, namespac
 	s.logger.Debugf("Deleting shadow service %q...", shadowSvcName)
 
 	trafficType, err := annotations.GetTrafficType("", shadowSvc.Annotations)
-	if err == nil && trafficType == "" {
-		err = errors.New("traffic-type annotation cannot be found")
-	}
-
 	if err != nil {
 		s.logger.Errorf("Unable to delete shadow service for service %q in namespace %q: %v", name, namespace, err)
 		return nil
 	}
 
+	// If the traffic-type annotation has been manually removed we can't unmap ports.
+	if trafficType == "" {
+		s.logger.Errorf("Unable to find traffic-type of the shadow service for service %q in namespace %q: %v", name, namespace, err)
+		return nil
+	}
+
 	for _, sp := range shadowSvc.Spec.Ports {
 		if err = s.unmapPort(namespace, name, trafficType, sp.Port); err != nil {
-			s.logger.Errorf("Unable to unmap port %d of service %q in namespace %q: %v", sp.Port, name, namespace)
+			s.logger.Errorf("Unable to unmap port %d of service %q in namespace %q: %v", sp.Port, name, namespace, err)
 		}
 	}
 
@@ -124,25 +128,19 @@ func (s *ShadowServiceManager) deleteShadowService(ctx context.Context, namespac
 
 // upsertShadowService updates or create the shadow service associated with the given user service.
 func (s *ShadowServiceManager) upsertShadowService(ctx context.Context, svc *corev1.Service, shadowSvcName string) error {
-	var (
-		err         error
-		trafficType string
-		shadowSvc   *corev1.Service
-	)
-
-	trafficType, err = annotations.GetTrafficType(s.defaultTrafficType, svc.Annotations)
+	trafficType, err := annotations.GetTrafficType(s.defaultTrafficType, svc.Annotations)
 	if err != nil {
 		s.logger.Errorf("Unable to create or update shadow services for service %q in namespace %q: %v", svc.Name, svc.Namespace, err)
 		return nil
 	}
 
-	shadowSvc, err = s.serviceLister.Services(s.namespace).Get(shadowSvcName)
-	if err != nil && !kerrors.IsNotFound(err) {
-		return err
-	}
-
+	shadowSvc, err := s.serviceLister.Services(s.namespace).Get(shadowSvcName)
 	if kerrors.IsNotFound(err) {
 		return s.createShadowService(ctx, svc, shadowSvcName, trafficType)
+	}
+
+	if err != nil {
+		return err
 	}
 
 	return s.updateShadowService(ctx, svc, shadowSvc, trafficType)

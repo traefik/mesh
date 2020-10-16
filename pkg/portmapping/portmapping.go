@@ -105,15 +105,23 @@ func (p *PortMapping) Set(namespace, name string, fromPort, toPort int32) error 
 
 // Remove removes the mapping associated with the given service port.
 func (p *PortMapping) Remove(namespace, name string, port int32) (int32, bool) {
-	port, ok := p.Find(namespace, name, port)
-	if !ok {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	var targetPort int32
+
+	// Check if there is a port mapped to the given port and service.
+	for mappedPort, v := range p.table {
+		if v.Name == name && v.Namespace == namespace && v.Port == port {
+			targetPort = mappedPort
+		}
+	}
+
+	if targetPort == 0 {
 		return 0, false
 	}
 
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	delete(p.table, targetPort)
 
-	delete(p.table, port)
-
-	return port, true
+	return targetPort, true
 }
