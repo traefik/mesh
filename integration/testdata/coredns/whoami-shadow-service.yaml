@@ -8,8 +8,8 @@ metadata:
     app.kubernetes.io/name: traefik-mesh
     app.kubernetes.io/component: shadow-service
     app.kubernetes.io/part-of: traefik-mesh
-    service-namespace: whoami
-    service-name: whoami
+    mesh.traefik.io/service-namespace: whoami
+    mesh.traefik.io/service-name: whoami
   annotations:
     mesh.traefik.io/traffic-type: http
 spec:

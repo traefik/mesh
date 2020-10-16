@@ -13,9 +13,9 @@ const (
 	// LabelPartOf is used for specifying the name of a higher level app it is part of.
 	LabelPartOf = "app.kubernetes.io/part-of"
 	// LabelServiceName is the name of the label for storing the name of the source service for a shadow service.
-	LabelServiceName = "service-name"
+	LabelServiceName = "mesh.traefik.io/service-name"
 	// LabelServiceNamespace is the name of the label for storing the namespace of the source service for a shadow service.
-	LabelServiceNamespace = "service-namespace"
+	LabelServiceNamespace = "mesh.traefik.io/service-namespace"
 
 	// AppName is the name of the app.
 	AppName = "traefik-mesh"
@@ -47,11 +47,7 @@ func ProxyLabels() map[string]string {
 // ShadowServiceSelector creates a label selector for shadow services.
 func ShadowServiceSelector() labels.Selector {
 	selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			LabelName:      AppName,
-			LabelComponent: ComponentShadowService,
-			LabelPartOf:    AppName,
-		},
+		MatchLabels: ShadowServiceLabels(),
 	})
 
 	return selector

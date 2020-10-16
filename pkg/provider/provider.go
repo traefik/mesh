@@ -578,30 +578,30 @@ func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topolog
 }
 
 func (p Provider) buildHTTPEntrypoint(svc *topology.Service, port int32) (string, error) {
-	meshPort, ok := p.httpStateTable.Find(svc.Namespace, svc.Name, port)
+	targetPort, ok := p.httpStateTable.Find(svc.Namespace, svc.Name, port)
 	if !ok {
 		return "", errors.New("port not found")
 	}
 
-	return fmt.Sprintf("http-%d", meshPort), nil
+	return fmt.Sprintf("http-%d", targetPort), nil
 }
 
 func (p Provider) buildTCPEntrypoint(svc *topology.Service, port int32) (string, error) {
-	meshPort, ok := p.tcpStateTable.Find(svc.Namespace, svc.Name, port)
+	targetPort, ok := p.tcpStateTable.Find(svc.Namespace, svc.Name, port)
 	if !ok {
 		return "", errors.New("port not found")
 	}
 
-	return fmt.Sprintf("tcp-%d", meshPort), nil
+	return fmt.Sprintf("tcp-%d", targetPort), nil
 }
 
 func (p Provider) buildUDPEntrypoint(svc *topology.Service, port int32) (string, error) {
-	meshPort, ok := p.udpStateTable.Find(svc.Namespace, svc.Name, port)
+	targetPort, ok := p.udpStateTable.Find(svc.Namespace, svc.Name, port)
 	if !ok {
 		return "", errors.New("port not found")
 	}
 
-	return fmt.Sprintf("udp-%d", meshPort), nil
+	return fmt.Sprintf("udp-%d", targetPort), nil
 }
 
 func (p *Provider) buildHTTPServiceFromService(t *topology.Topology, svc *topology.Service, scheme string, svcPort corev1.ServicePort) *dynamic.Service {
