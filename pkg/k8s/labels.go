@@ -12,6 +12,10 @@ const (
 	LabelComponent = "app.kubernetes.io/component"
 	// LabelPartOf is used for specifying the name of a higher level app it is part of.
 	LabelPartOf = "app.kubernetes.io/part-of"
+	// LabelServiceName is the name of the label for storing the name of the source service for a shadow service.
+	LabelServiceName = "mesh.traefik.io/service-name"
+	// LabelServiceNamespace is the name of the label for storing the namespace of the source service for a shadow service.
+	LabelServiceNamespace = "mesh.traefik.io/service-namespace"
 
 	// AppName is the name of the app.
 	AppName = "traefik-mesh"

@@ -36,10 +36,10 @@ const (
 var ErrNotFound = errors.New("annotation not found")
 
 // GetTrafficType returns the value of the traffic-type annotation.
-func GetTrafficType(defaultTrafficType string, annotations map[string]string) (string, error) {
+func GetTrafficType(annotations map[string]string) (string, error) {
 	trafficType, exists := annotations[annotationServiceType]
 	if !exists {
-		return defaultTrafficType, nil
+		return "", ErrNotFound
 	}
 
 	switch trafficType {
@@ -51,6 +51,11 @@ func GetTrafficType(defaultTrafficType string, annotations map[string]string) (s
 	}
 
 	return trafficType, nil
+}
+
+// SetTrafficType sets the traffic-type annotation to the given value.
+func SetTrafficType(trafficType string, annotations map[string]string) {
+	annotations[annotationServiceType] = trafficType
 }
 
 // GetScheme returns the value of the scheme annotation.
