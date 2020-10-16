@@ -266,7 +266,7 @@ func TestShadowServiceManager_SyncServiceUpdateShadowServicesAndHandleTrafficTyp
 	updateShadowSvc, err := client.CoreV1().Services(testNamespace).Get(ctx, shadowSvc.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
-	trafficType, err := annotations.GetTrafficType("", updateShadowSvc.Annotations)
+	trafficType, err := annotations.GetTrafficType(updateShadowSvc.Annotations)
 	require.NoError(t, err)
 	assert.Equal(t, annotations.ServiceTypeUDP, trafficType)
 
@@ -360,7 +360,10 @@ func newFakeShadowService(t *testing.T, svc *corev1.Service, ports map[int]int) 
 	name, err := getShadowServiceName(svc.Namespace, svc.Name)
 	require.NoError(t, err)
 
-	trafficType, _ := annotations.GetTrafficType(testDefaultTrafficType, svc.Annotations)
+	trafficType, err := annotations.GetTrafficType(svc.Annotations)
+	if err == annotations.ErrNotFound {
+		trafficType = testDefaultTrafficType
+	}
 
 	protocol := corev1.ProtocolTCP
 	if trafficType == annotations.ServiceTypeUDP {
@@ -393,7 +396,9 @@ func newFakeShadowService(t *testing.T, svc *corev1.Service, ports map[int]int) 
 		},
 	}
 
-	annotations.SetTrafficType(trafficType, shadowSvc.Annotations)
+	if trafficType != "" {
+		annotations.SetTrafficType(trafficType, shadowSvc.Annotations)
+	}
 
 	return shadowSvc
 }
