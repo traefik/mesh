@@ -521,52 +521,35 @@ func (b *Builder) buildHTTPRouteGroup(httpRtGrps map[Key]*specs.HTTPRouteGroup, 
 		return TrafficSpec{}, fmt.Errorf("unable to find HTTPRouteGroup %q", key)
 	}
 
-	var (
-		httpMatches []*specs.HTTPMatch
-		err         error
-	)
-
 	if len(matches) == 0 {
-		httpMatches = make([]*specs.HTTPMatch, len(httpRouteGroup.Spec.Matches))
-
-		for i, match := range httpRouteGroup.Spec.Matches {
-			m := match
-			httpMatches[i] = &m
-		}
-	} else {
-		httpMatches, err = buildHTTPRouteGroupMatches(matches, httpRouteGroup.Spec.Matches, httpMatches, key)
-		if err != nil {
-			return TrafficSpec{}, err
-		}
+		return TrafficSpec{HTTPRouteGroup: httpRouteGroup}, nil
 	}
 
-	return TrafficSpec{
-		HTTPRouteGroup: httpRouteGroup,
-		HTTPMatches:    httpMatches,
-	}, nil
-}
+	var httpMatches []specs.HTTPMatch
 
-func buildHTTPRouteGroupMatches(ttMatches []string, httpRouteGroupMatches []specs.HTTPMatch, httpMatches []*specs.HTTPMatch, key Key) ([]*specs.HTTPMatch, error) {
-	for _, name := range ttMatches {
-		var found bool
+	// Copy HTTPRouteGroup and filter out matches that are not wanted.
+	for _, matchName := range matches {
+		var matchFound bool
 
-		for _, match := range httpRouteGroupMatches {
-			found = match.Name == name
+		for _, match := range httpRouteGroup.Spec.Matches {
+			matchFound = match.Name == matchName
 
-			if found {
-				match := match
-				httpMatches = append(httpMatches, &match)
+			if matchFound {
+				httpMatches = append(httpMatches, match)
 
 				break
 			}
 		}
 
-		if !found {
-			return nil, fmt.Errorf("unable to find match %q in HTTPRouteGroup %q", name, key)
+		if !matchFound {
+			return TrafficSpec{}, fmt.Errorf("unable to find match %q in HTTPRouteGroup %q", name, key)
 		}
 	}
 
-	return httpMatches, nil
+	httpRouteGroup = httpRouteGroup.DeepCopy()
+	httpRouteGroup.Spec.Matches = httpMatches
+
+	return TrafficSpec{HTTPRouteGroup: httpRouteGroup}, nil
 }
 
 func (b *Builder) buildTCPRoute(tcpRts map[Key]*specs.TCPRoute, ns, name string) (TrafficSpec, error) {

@@ -103,6 +103,17 @@ spec:
       weight: 50
 
 ---
+apiVersion: specs.smi-spec.io/v1alpha3
+kind: HTTPRouteGroup
+metadata:
+  name: all
+  namespace: test
+spec:
+  matches:
+    - name: all
+      methods: ["*"]
+
+---
 apiVersion: access.smi-spec.io/v1alpha2
 kind: TrafficTarget
 metadata:
@@ -117,3 +128,6 @@ spec:
     - kind: ServiceAccount
       name: tool-authorized
       namespace: test
+  rules:
+    - kind: HTTPRouteGroup
+      name: all

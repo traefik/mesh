@@ -97,32 +97,10 @@
                       "User-Agent": "curl/.*"
                     }
                   ]
-                },
-                {
-                  "name": "metric",
-                  "methods": [
-                    "GET"
-                  ],
-                  "pathRegex": "/metric"
                 }
               ]
             }
-          },
-          "httpMatches": [
-            {
-              "name": "api",
-              "methods": [
-                "GET",
-                "POST"
-              ],
-              "pathRegex": "/api",
-              "headers": [
-                {
-                  "User-Agent": "curl/.*"
-                }
-              ]
-            }
-          ]
+          }
         }
       ]
     }
