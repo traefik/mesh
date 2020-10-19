@@ -218,27 +218,10 @@
                     "POST"
                   ],
                   "pathRegex": "/api"
-                },
-                {
-                  "name": "metric",
-                  "methods": [
-                    "GET"
-                  ],
-                  "pathRegex": "/metric"
                 }
               ]
             }
-          },
-          "httpMatches": [
-            {
-              "name": "api",
-              "methods": [
-                "GET",
-                "POST"
-              ],
-              "pathRegex": "/api"
-            }
-          ]
+          }
         }
       ],
       "errors": null
@@ -297,27 +280,10 @@
                     "POST"
                   ],
                   "pathRegex": "/api"
-                },
-                {
-                  "name": "metric",
-                  "methods": [
-                    "GET"
-                  ],
-                  "pathRegex": "/metric"
                 }
               ]
             }
-          },
-          "httpMatches": [
-            {
-              "name": "api",
-              "methods": [
-                "GET",
-                "POST"
-              ],
-              "pathRegex": "/api"
-            }
-          ]
+          }
         }
       ],
       "errors": null
@@ -369,27 +335,10 @@
                     "POST"
                   ],
                   "pathRegex": "/api"
-                },
-                {
-                  "name": "metric",
-                  "methods": [
-                    "GET"
-                  ],
-                  "pathRegex": "/metric"
                 }
               ]
             }
-          },
-          "httpMatches": [
-            {
-              "name": "api",
-              "methods": [
-                "GET",
-                "POST"
-              ],
-              "pathRegex": "/api"
-            }
-          ]
+          }
         }
       ],
       "errors": null
@@ -441,27 +390,10 @@
                     "POST"
                   ],
                   "pathRegex": "/api"
-                },
-                {
-                  "name": "metric",
-                  "methods": [
-                    "GET"
-                  ],
-                  "pathRegex": "/metric"
                 }
               ]
             }
-          },
-          "httpMatches": [
-            {
-              "name": "api",
-              "methods": [
-                "GET",
-                "POST"
-              ],
-              "pathRegex": "/api"
-            }
-          ]
+          }
         }
       ],
       "errors": null

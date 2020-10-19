@@ -114,14 +114,7 @@
                 }
               ]
             }
-          },
-          "httpMatches": [
-            {
-              "name": "app",
-              "methods": ["*"],
-              "pathRegex": "/app"
-            }
-          ]
+          }
         }
       ]
     }

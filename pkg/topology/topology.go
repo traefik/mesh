@@ -225,9 +225,6 @@ type TrafficSplit struct {
 type TrafficSpec struct {
 	HTTPRouteGroup *specs.HTTPRouteGroup `json:"httpRouteGroup,omitempty"`
 	TCPRoute       *specs.TCPRoute       `json:"tcpRoute,omitempty"`
-
-	// HTTPMatches is the list of HTTPMatch selected from the HTTPRouteGroup.
-	HTTPMatches []*specs.HTTPMatch `json:"httpMatches,omitempty"`
 }
 
 // AddError adds the given error to this TrafficSplit.
