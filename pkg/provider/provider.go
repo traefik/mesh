@@ -312,6 +312,10 @@ func (p *Provider) buildServicesAndRoutersForTrafficTarget(t *topology.Topology,
 }
 
 func (p *Provider) buildHTTPServicesAndRoutersForTrafficTarget(t *topology.Topology, tt *topology.ServiceTrafficTarget, cfg *dynamic.Configuration, ttSvc *topology.Service, ttKey topology.ServiceTrafficTargetKey, scheme string, middlewares []string) {
+	if !hasTrafficTargetRuleHTTPRouteGroup(tt) {
+		return
+	}
+
 	whitelistDirect := p.buildWhitelistMiddlewareFromTrafficTargetDirect(t, tt)
 	whitelistDirectKey := getWhitelistMiddlewareKeyFromTrafficTargetDirect(tt)
 	cfg.HTTP.Middlewares[whitelistDirectKey] = whitelistDirect
@@ -917,6 +921,16 @@ func buildUDPRouter(entrypoint string, svcKey string) *dynamic.UDPRouter {
 func hasTrafficTargetRuleTCPRoute(tt *topology.ServiceTrafficTarget) bool {
 	for _, rule := range tt.Rules {
 		if rule.TCPRoute != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+func hasTrafficTargetRuleHTTPRouteGroup(tt *topology.ServiceTrafficTarget) bool {
+	for _, rule := range tt.Rules {
+		if rule.HTTPRouteGroup != nil {
 			return true
 		}
 	}
