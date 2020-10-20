@@ -11,7 +11,7 @@
       },
       "my-ns-svc-b-8080": {
         "entryPoints": [
-          "http-10000"
+          "http-10001"
         ],
         "service": "my-ns-svc-b-8080",
         "rule": "Host(`svc-b.my-ns.traefik.mesh`) || Host(`10.10.15.1`)",
@@ -19,7 +19,7 @@
       },
       "my-ns-svc-c-8080": {
         "entryPoints": [
-          "http-10000"
+          "http-10002"
         ],
         "service": "my-ns-svc-c-8080",
         "rule": "Host(`svc-c.my-ns.traefik.mesh`) || Host(`10.10.16.1`)",

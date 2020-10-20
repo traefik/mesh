@@ -13,6 +13,7 @@ func TestGetTrafficType(t *testing.T) {
 		annotations map[string]string
 		want        string
 		err         bool
+		errNotFound bool
 	}{
 		{
 			desc: "unknown service type",
@@ -24,7 +25,7 @@ func TestGetTrafficType(t *testing.T) {
 		{
 			desc:        "returns the default traffic-type if not set",
 			annotations: map[string]string{},
-			want:        ServiceTypeHTTP,
+			errNotFound: true,
 		},
 		{
 			desc: "http",
@@ -51,7 +52,11 @@ func TestGetTrafficType(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			tt, err := GetTrafficType(ServiceTypeHTTP, test.annotations)
+			tt, err := GetTrafficType(test.annotations)
+			if test.errNotFound {
+				require.Equal(t, ErrNotFound, err)
+				return
+			}
 			if test.err {
 				require.Error(t, err)
 				return
