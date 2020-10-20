@@ -193,6 +193,7 @@ func (s *ShadowServiceManager) updateShadowService(ctx context.Context, svc, sha
 		ports = []corev1.ServicePort{buildUnresolvablePort()}
 	}
 
+	shadowSvc = shadowSvc.DeepCopy()
 	shadowSvc.Spec.Ports = ports
 
 	annotations.SetTrafficType(trafficType, shadowSvc.Annotations)
