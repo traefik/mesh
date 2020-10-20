@@ -499,8 +499,8 @@ func addStubDomain(config, blockHeader, blockTrailer, clusterDomain, traefikMesh
 traefik.mesh:53 {
     errors
     rewrite continue {
-        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.traefik\.mesh %[3]s-{1}-6d61657368-{2}.%[3]s.svc.%[1]s
-        answer name %[3]s-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.%[3]s\.svc\.%[2]s {1}.{2}.traefik.mesh
+        name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.traefik\.mesh {1}-6d61657368-{2}.%[3]s.svc.%[1]s
+        answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.%[3]s\.svc\.%[2]s {1}.{2}.traefik.mesh
     }
     kubernetes %[1]s in-addr.arpa ip6.arpa {
         pods insecure
