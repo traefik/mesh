@@ -159,6 +159,6 @@ func stopAPIServer(apiServer *api.API) error {
 	return apiServer.Shutdown(ctx)
 }
 
-func getMaxPort(min int32, limit int32) int32 {
+func getMaxPort(min, limit int32) int32 {
 	return min + limit - 1
 }
