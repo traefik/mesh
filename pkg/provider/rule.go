@@ -12,7 +12,11 @@ func buildHTTPRuleFromTrafficSpecs(specs []topology.TrafficSpec) string {
 	var orRules []string
 
 	for _, spec := range specs {
-		for _, match := range spec.HTTPMatches {
+		if spec.HTTPRouteGroup == nil {
+			continue
+		}
+
+		for _, match := range spec.HTTPRouteGroup.Spec.Matches {
 			var matchParts []string
 
 			// Handle Path filtering.
@@ -40,7 +44,7 @@ func buildHTTPRuleFromTrafficSpecs(specs []topology.TrafficSpec) string {
 	return strings.Join(orRules, " || ")
 }
 
-func appendPathFilter(matchParts []string, match *specs.HTTPMatch) []string {
+func appendPathFilter(matchParts []string, match specs.HTTPMatch) []string {
 	if match.PathRegex == "" {
 		return matchParts
 	}
@@ -53,7 +57,7 @@ func appendPathFilter(matchParts []string, match *specs.HTTPMatch) []string {
 	return append(matchParts, fmt.Sprintf("PathPrefix(`/{path:%s}`)", pathRegex))
 }
 
-func appendMethodFilter(matchParts []string, match *specs.HTTPMatch) []string {
+func appendMethodFilter(matchParts []string, match specs.HTTPMatch) []string {
 	if len(match.Methods) == 0 {
 		return matchParts
 	}
@@ -75,7 +79,7 @@ func appendMethodFilter(matchParts []string, match *specs.HTTPMatch) []string {
 	return matchParts
 }
 
-func appendHeaderFilter(matchParts []string, match *specs.HTTPMatch) []string {
+func appendHeaderFilter(matchParts []string, match specs.HTTPMatch) []string {
 	rules := make([]string, 0, len(match.Headers))
 
 	for name, value := range match.Headers {

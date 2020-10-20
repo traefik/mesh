@@ -90,14 +90,7 @@
                 }
               ]
             }
-          },
-          "httpMatches": [
-            {
-              "name": "app",
-              "methods": ["*"],
-              "pathRegex": "/app"
-            }
-          ]
+          }
         },
         {
           "httpRouteGroup": {
@@ -109,11 +102,6 @@
             },
             "spec": {
               "matches": [
-                {
-                  "name": "users",
-                  "methods": ["GET", "POST", "PUT"],
-                  "pathRegex": "/api/users"
-                },
                 {
                   "name": "notifications",
                   "methods": ["GET"],
@@ -129,22 +117,7 @@
                 }
               ]
             }
-          },
-          "httpMatches": [
-            {
-              "name": "notifications",
-              "methods": ["GET"],
-              "pathRegex": "/api/notifications"
-            },
-            {
-              "name": "firefox-beta",
-              "headers": [
-                {
-                  "User-Agent": "Mozilla/.*"
-                }
-              ]
-            }
-          ]
+          }
         }
       ]
     }

@@ -126,7 +126,27 @@
         "pods": [
           "pod-b@my-ns"
         ]
-      }
+      },
+      "rules": [
+        {
+          "httpRouteGroup": {
+            "kind": "HTTPRouteGroup",
+            "apiVersion": "specs.smi-spec.io/v1alpha3",
+            "metadata": {
+              "name": "app-route-group",
+              "namespace": "my-ns"
+            },
+            "spec": {
+              "matches": [
+                {
+                  "name": "all",
+                  "methods": ["*"]
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     "svc-c@my-ns:tt@my-ns": {
       "service": "svc-c@my-ns",
@@ -155,7 +175,27 @@
         "pods": [
           "pod-c@my-ns"
         ]
-      }
+      },
+      "rules": [
+        {
+          "httpRouteGroup": {
+            "kind": "HTTPRouteGroup",
+            "apiVersion": "specs.smi-spec.io/v1alpha3",
+            "metadata": {
+              "name": "app-route-group",
+              "namespace": "my-ns"
+            },
+            "spec": {
+              "matches": [
+                {
+                  "name": "all",
+                  "methods": ["*"]
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }
