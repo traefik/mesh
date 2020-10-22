@@ -30,7 +30,7 @@ func NewConfiguration() *Configuration {
 		LogFormat:     "common",
 		ACL:           false,
 		DefaultMode:   "http",
-		Namespace:     "maesh",
+		Namespace:     "default",
 		APIPort:       9000,
 		APIHost:       "",
 		LimitHTTPPort: 10,
