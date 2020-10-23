@@ -1,3 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-mesh-dns
+  namespace: traefik-mesh
+spec:
+  clusterIP: 10.10.10.10
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,66 +18,10 @@ spec:
       volumes:
         - configMap:
             name: "kube-dns"
+
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kube-dns
   namespace: kube-system
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: coredns
-  namespace: traefik-mesh
-spec:
-  clusterIP: "1.2.3.4"
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: coredns
-  namespace: traefik-mesh
-spec:
-  template:
-    spec:
-      containers:
-        - name: coredns
-          image: coredns:1.6.0
-      volumes:
-        - configMap:
-            name: "other-cfgmap"
-        - configMap:
-            name: "coredns"
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: other-cfgmap
-  namespace: traefik-mesh
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: coredns
-  namespace: traefik-mesh
-data:
-  Corefile: |
-    .:53 {
-        errors
-        health {
-            lameduck 5s
-        }
-        ready
-        kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {
-            pods insecure
-            fallthrough in-addr.arpa ip6.arpa
-            ttl 30
-        }
-        prometheus :9153
-        forward . /etc/resolv.conf
-        cache 30
-        loop
-        reload
-        loadbalance
-    }
