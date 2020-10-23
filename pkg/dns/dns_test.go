@@ -85,14 +85,14 @@ func TestConfigureCoreDNS(t *testing.T) {
 			desc:        "First time config of CoreDNS",
 			mockFile:    "configurecoredns_not_patched.yaml",
 			expErr:      false,
-			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.traefik\\.mesh {1}-6d61657368-{2}.toto.svc.titi\n        answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.traefik.mesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        upstream\n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Traefik Mesh Block\n",
+			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    cache 30\n    forward . 10.10.10.10:53\n}\n#### End Traefik Mesh Block\n",
 			expRestart:  true,
 		},
 		{
 			desc:        "Already patched CoreDNS config",
 			mockFile:    "configurecoredns_already_patched.yaml",
 			expErr:      false,
-			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.traefik\\.mesh {1}-6d61657368-{2}.toto.svc.titi\n        answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.traefik.mesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        upstream\n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Traefik Mesh Block\n",
+			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    cache 30\n    forward . 10.10.10.10:53\n}\n#### End Traefik Mesh Block\n",
 			expRestart:  false,
 		},
 		{
@@ -107,7 +107,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 			expErr:      false,
 			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n",
 			expCustoms: map[string]string{
-				"traefik.mesh.server": "\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.traefik\\.mesh {1}-6d61657368-{2}.toto.svc.titi\n        answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.traefik.mesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        upstream\n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Traefik Mesh Block\n",
+				"traefik.mesh.server": "\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    cache 30\n    forward . 10.10.10.10:53\n}\n#### End Traefik Mesh Block\n",
 			},
 			expRestart: true,
 		},
@@ -117,33 +117,23 @@ func TestConfigureCoreDNS(t *testing.T) {
 			expErr:      false,
 			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n",
 			expCustoms: map[string]string{
-				"traefik.mesh.server": "#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.traefik\\.mesh {1}-6d61657368-{2}.toto.svc.titi\n        answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.traefik.mesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        upstream\n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Traefik Mesh Block\n",
+				"traefik.mesh.server": "#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    cache 30\n    forward . 10.10.10.10:53\n}\n#### End Traefik Mesh Block\n",
 			},
 			expRestart: false,
 		},
 		{
-			desc:        "Config of CoreDNS 1.7",
-			mockFile:    "configurecoredns_17.yaml",
+			desc:        "Config of CoreDNS 1.3",
+			mockFile:    "configurecoredns_1_3.yaml",
 			expErr:      false,
-			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.traefik\\.mesh {1}-6d61657368-{2}.toto.svc.titi\n        answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.traefik.mesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        \n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Traefik Mesh Block\n",
+			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    proxy . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    cache 30\n    proxy . 10.10.10.10:53\n}\n#### End Traefik Mesh Block\n",
 			expRestart:  true,
 		},
 		{
-			desc:        "CoreDNS 1.7 already patched for an older version of CoreDNS",
-			mockFile:    "configurecoredns_17_already_patched.yaml",
+			desc:        "CoreDNS 1.4 already patched for an older version of CoreDNS",
+			mockFile:    "configurecoredns_1_4_already_patched.yaml",
 			expErr:      false,
-			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.traefik\\.mesh {1}-6d61657368-{2}.toto.svc.titi\n        answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.traefik.mesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        \n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Traefik Mesh Block\n",
+			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    cache 30\n    forward . 10.10.10.10:53\n}\n#### End Traefik Mesh Block\n",
 			expRestart:  true,
-		},
-		{
-			desc:        "CoreDNS 1.7 custom config already patched for an older version of CoreDNS",
-			mockFile:    "configurecoredns_17_custom_already_patched.yaml",
-			expErr:      false,
-			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n",
-			expCustoms: map[string]string{
-				"traefik.mesh.server": "\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.traefik\\.mesh {1}-6d61657368-{2}.toto.svc.titi\n        answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.traefik.mesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        \n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Traefik Mesh Block\n",
-			},
-			expRestart: true,
 		},
 		{
 			desc:       "Missing CoreDNS deployment",
@@ -167,7 +157,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			client := NewClient(logger, k8sClient.KubernetesClient())
 
-			err := client.ConfigureCoreDNS(ctx, "traefik-mesh", "traefik-mesh-dns")
+			err := client.ConfigureCoreDNS(ctx, "traefik-mesh", "traefik-mesh-dns", 53)
 			if test.expErr {
 				require.Error(t, err)
 				return
@@ -215,17 +205,17 @@ func TestConfigureKubeDNS(t *testing.T) {
 		{
 			desc:           "should add stubdomains config in kube-dns configmap",
 			mockFile:       "configurekubedns_not_patched.yaml",
-			expStubDomains: `{"traefik.mesh":["1.2.3.4"]}`,
+			expStubDomains: `{"traefik.mesh":["10.10.10.10:53"]}`,
 		},
 		{
 			desc:           "should replace stubdomains config in kube-dns configmap",
 			mockFile:       "configurekubedns_already_patched.yaml",
-			expStubDomains: `{"traefik.mesh":["1.2.3.4"]}`,
+			expStubDomains: `{"traefik.mesh":["10.10.10.10:53"]}`,
 		},
 		{
 			desc:           "should create optional kube-dns configmap and add stubdomains config",
 			mockFile:       "configurekubedns_optional_configmap.yaml",
-			expStubDomains: `{"traefik.mesh":["1.2.3.4"]}`,
+			expStubDomains: `{"traefik.mesh":["10.10.10.10:53"]}`,
 		},
 	}
 
@@ -243,7 +233,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 
 			client := NewClient(logger, k8sClient.KubernetesClient())
 
-			err := client.ConfigureKubeDNS(ctx, "cluster.local", "traefik-mesh")
+			err := client.ConfigureKubeDNS(ctx, "traefik-mesh", "traefik-mesh-dns", 53)
 			if test.expErr {
 				require.Error(t, err)
 				return

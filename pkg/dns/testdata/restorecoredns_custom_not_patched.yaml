@@ -11,6 +11,7 @@ spec:
             name: "coredns-custom"
         - configMap:
             name: "coredns"
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -19,6 +20,7 @@ metadata:
   namespace: kube-system
 data:
   test.server: must be present
+
 ---
 apiVersion: v1
 kind: ConfigMap

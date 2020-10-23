@@ -1,3 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-mesh-dns
+  namespace: traefik-mesh
+spec:
+  clusterIP: 10.10.10.10
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -8,18 +17,20 @@ spec:
     spec:
       containers:
         - name: coredns
-          image: coredns:1.7.0
+          image: coredns:1.4.0
       volumes:
         - configMap:
             name: "other-cfgmap"
         - configMap:
             name: "coredns"
+
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: other-cfgmap
   namespace: kube-system
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -46,3 +57,11 @@ data:
         reload
         loadbalance
     }
+
+    #### Begin Traefik Mesh Block
+    traefik.mesh:53 {
+        errors
+        cache 30
+        proxy . 10.10.10.10:53
+    }
+    #### End Traefik Mesh Block

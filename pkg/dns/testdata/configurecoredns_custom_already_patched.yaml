@@ -1,3 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-mesh-dns
+  namespace: traefik-mesh
+spec:
+  clusterIP: 10.10.10.10
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,20 +34,8 @@ data:
     #### Begin Traefik Mesh Block
     traefik.mesh:53 {
         errors
-        rewrite continue {
-            name regex ([a-zA-Z0-9-_]*)\.([a-zv0-9-_]*)\.traefik\.mesh {1}-6d61657368-{2}.toto.svc.titi
-            answer name ([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\.toto\.svc\.titi {1}.{2}.traefik.mesh
-        }
-        kubernetes titi in-addr.arpa ip6.arpa {
-            pods insecure
-            upstream
-            fallthrough in-addr.arpa ip6.arpa
-        }
-        forward . /etc/resolv.conf
         cache 30
-        loop
-        reload
-        loadbalance
+        forward . 10.10.10.10:53
     }
     #### End Traefik Mesh Block
 
