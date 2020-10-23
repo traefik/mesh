@@ -141,7 +141,6 @@ spec:
           args:
             - "prepare"
             - "--logLevel=DEBUG"
-            - "--clusterdomain=cluster.local"
             - "--namespace=traefik-mesh"
             - "--acl"
 
