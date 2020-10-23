@@ -167,7 +167,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 
 			client := NewClient(logger, k8sClient.KubernetesClient())
 
-			err := client.ConfigureCoreDNS(ctx, "kube-system", "titi", "toto")
+			err := client.ConfigureCoreDNS(ctx, "traefik-mesh", "traefik-mesh-dns")
 			if test.expErr {
 				require.Error(t, err)
 				return
