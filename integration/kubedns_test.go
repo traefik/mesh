@@ -23,8 +23,8 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
+		{Name: "traefik/mesh:latest", Local: true},
 		{Name: "traefik/whoami:v1.6.0"},
-		{Name: "coredns/coredns:1.6.3"},
 		{Name: "giantswarm/tiny-tools:3.9"},
 		{Name: "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7"},
 		{Name: "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"},
@@ -44,12 +44,12 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 
 	c.Assert(s.cluster.Apply(s.logger, smiCRDs), checker.IsNil)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/tool/tool.yaml"), checker.IsNil)
-	c.Assert(s.cluster.Apply(s.logger, "testdata/kubedns/"), checker.IsNil)
-	c.Assert(s.cluster.Apply(s.logger, "testdata/coredns/whoami-shadow-service.yaml"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/dns/"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/traefik-mesh/dns.yaml"), checker.IsNil)
 
 	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 60*time.Second), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
-	c.Assert(s.cluster.WaitReadyDeployment("coredns", traefikMeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("traefik-mesh-dns", traefikMeshNamespace, 60*time.Second), checker.IsNil)
 
 	s.tool = tool.New(s.logger, "tool", testNamespace)
 }
@@ -63,9 +63,7 @@ func (s *KubeDNSSuite) TearDownSuite(c *check.C) {
 func (s *KubeDNSSuite) TestKubeDNSDig(c *check.C) {
 	s.logger.Info("Asserting KubeDNS has been patched successfully and can be dug")
 
-	c.Assert(traefikMeshPrepare(), checker.IsNil)
-
-	// Wait for kubeDNS, as the pods will be restarted by prepare.
+	// Wait for kubeDNS, as the pods will be restarted by DNS patching.
 	c.Assert(s.cluster.WaitReadyDeployment("kube-dns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
 	err := try.Retry(func() error {
