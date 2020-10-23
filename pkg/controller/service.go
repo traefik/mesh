@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
+	"hash/fnv"
 
 	"github.com/sirupsen/logrus"
 	"github.com/traefik/mesh/v2/pkg/annotations"
@@ -13,7 +13,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	listers "k8s.io/client-go/listers/core/v1"
 )
@@ -69,7 +68,7 @@ func (s *ShadowServiceManager) LoadPortMapping() error {
 func (s *ShadowServiceManager) SyncService(ctx context.Context, namespace, name string) error {
 	s.logger.Debugf("Syncing service %q in namespace %q...", name, namespace)
 
-	shadowSvcName, err := getShadowServiceName(namespace, name)
+	shadowSvcName, err := GetShadowServiceName(namespace, name)
 	if err != nil {
 		s.logger.Errorf("Unable to sync service %q in namespace %q: %v", name, namespace, err)
 		return nil
@@ -129,8 +128,7 @@ func (s *ShadowServiceManager) deleteShadowService(ctx context.Context, namespac
 func (s *ShadowServiceManager) upsertShadowService(ctx context.Context, svc *corev1.Service, shadowSvcName string) error {
 	trafficType, err := annotations.GetTrafficType(svc.Annotations)
 	if err != nil && !errors.Is(err, annotations.ErrNotFound) {
-		s.logger.Errorf("Unable to create or update shadow services for service %q in namespace %q: %v", svc.Name, svc.Namespace, err)
-		return nil
+		return fmt.Errorf("unable to create or update shadow service for service %q in namespace %q: %w", svc.Name, svc.Namespace, err)
 	}
 
 	if errors.Is(err, annotations.ErrNotFound) {
@@ -144,6 +142,10 @@ func (s *ShadowServiceManager) upsertShadowService(ctx context.Context, svc *cor
 
 	if err != nil {
 		return err
+	}
+
+	if shadowSvc.Labels[k8s.LabelServiceNamespace] != svc.Namespace || shadowSvc.Labels[k8s.LabelServiceName] != svc.Name {
+		return fmt.Errorf("service labels in %q does not match service name %q and namespace %q", shadowSvcName, svc.Name, svc.Namespace)
 	}
 
 	return s.updateShadowService(ctx, svc, shadowSvc, trafficType)
@@ -414,14 +416,14 @@ func (s *ShadowServiceManager) getShadowServices() ([]*corev1.Service, error) {
 	return shadowSvcs, nil
 }
 
-// getShadowServiceName returns the shadow service name corresponding to the given service name and namespace.
-func getShadowServiceName(namespace, name string) (string, error) {
-	shadowSvcName := fmt.Sprintf("%s-6d61657368-%s", name, namespace)
+// GetShadowServiceName returns the shadow service name corresponding to the given service namespace and name.
+func GetShadowServiceName(namespace, name string) (string, error) {
+	hash := fnv.New128a()
 
-	errs := validation.IsDNS1123Label(name)
-	if len(errs) != 0 {
-		return "", fmt.Errorf("invalid shadow service name: %w", errors.New(strings.Join(errs, ",")))
+	_, err := hash.Write([]byte(namespace + name))
+	if err != nil {
+		return "", fmt.Errorf("unable to hash service namespace and name: %w", err)
 	}
 
-	return shadowSvcName, nil
+	return fmt.Sprintf("shadow-svc-%x", hash.Sum(nil)), nil
 }

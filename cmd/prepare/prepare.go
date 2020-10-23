@@ -1,14 +1,11 @@
 package prepare
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/traefik/mesh/v2/cmd"
-	"github.com/traefik/mesh/v2/pkg/dns"
 	"github.com/traefik/mesh/v2/pkg/k8s"
 	"github.com/traefik/paerser/cli"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // NewCmd builds a new Prepare command.
@@ -25,8 +22,6 @@ func NewCmd(config *Configuration, loaders []cli.ResourceLoader) *cli.Command {
 }
 
 func prepareCommand(config *Configuration) error {
-	ctx := cmd.ContextWithSignal(context.Background())
-
 	logger, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
@@ -35,36 +30,15 @@ func prepareCommand(config *Configuration) error {
 	logger.Debug("Starting prepare...")
 	logger.Debugf("Using masterURL: %q", config.MasterURL)
 	logger.Debugf("Using kubeconfig: %q", config.KubeConfig)
-
-	client, err := k8s.NewClient(logger, config.MasterURL, config.KubeConfig)
-	if err != nil {
-		return fmt.Errorf("unable to create kubernetes client: %w", err)
-	}
-
-	dnsClient := dns.NewClient(logger, client.KubernetesClient())
-
 	logger.Debugf("ACL mode enabled: %t", config.ACL)
 
-	if err = k8s.CheckSMIVersion(client.KubernetesClient(), config.ACL); err != nil {
-		return fmt.Errorf("unsupported SMI version: %w", err)
-	}
-
-	var dnsProvider dns.Provider
-
-	dnsProvider, err = dnsClient.CheckDNSProvider(ctx)
+	clients, err := k8s.NewClient(logger, config.MasterURL, config.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("unable to find suitable DNS provider: %w", err)
+		return fmt.Errorf("error building clients: %w", err)
 	}
 
-	switch dnsProvider {
-	case dns.CoreDNS:
-		if err := dnsClient.ConfigureCoreDNS(ctx, metav1.NamespaceSystem, config.ClusterDomain, config.Namespace); err != nil {
-			return fmt.Errorf("unable to configure CoreDNS: %w", err)
-		}
-	case dns.KubeDNS:
-		if err := dnsClient.ConfigureKubeDNS(ctx, config.ClusterDomain, config.Namespace); err != nil {
-			return fmt.Errorf("unable to configure KubeDNS: %w", err)
-		}
+	if err = k8s.CheckSMIVersion(clients.KubernetesClient(), config.ACL); err != nil {
+		return fmt.Errorf("unsupported SMI version: %w", err)
 	}
 
 	return nil

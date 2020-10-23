@@ -12,6 +12,7 @@ import (
 
 	"github.com/traefik/mesh/v2/cmd"
 	"github.com/traefik/mesh/v2/cmd/cleanup"
+	"github.com/traefik/mesh/v2/cmd/dns"
 	"github.com/traefik/mesh/v2/cmd/prepare"
 	"github.com/traefik/mesh/v2/cmd/version"
 	"github.com/traefik/mesh/v2/pkg/api"
@@ -38,6 +39,12 @@ func main() {
 		Run: func(_ []string) error {
 			return traefikMeshCommand(config)
 		},
+	}
+
+	dnsConfig := dns.NewConfiguration()
+	if err := traefikMeshCmd.AddCommand(dns.NewCmd(dnsConfig, loaders)); err != nil {
+		stdlog.Println(err)
+		os.Exit(1)
 	}
 
 	prepareConfig := prepare.NewConfiguration()
@@ -76,13 +83,12 @@ func traefikMeshCommand(config *Configuration) error {
 	logger.Debug("Starting controller...")
 	logger.Debugf("Using masterURL: %q", config.MasterURL)
 	logger.Debugf("Using kubeconfig: %q", config.KubeConfig)
+	logger.Debugf("ACL mode enabled: %t", config.ACL)
 
 	clients, err := k8s.NewClient(logger, config.MasterURL, config.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %w", err)
 	}
-
-	logger.Debugf("ACL mode enabled: %t", config.ACL)
 
 	apiServer := api.NewAPI(logger, config.APIPort, config.APIHost, config.Namespace)
 
