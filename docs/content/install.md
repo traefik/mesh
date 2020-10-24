@@ -36,16 +36,6 @@ To deploy the Helm Chart, run:
 helm install traefik-mesh traefik-mesh/traefik-mesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
-## KubeDNS support
-
-Traefik Mesh supports KubeDNS:
-
-```bash
-helm install traefik-mesh traefik-mesh/traefik-mesh --set kubedns=true
-```
-
-With the `kubedns` parameter Traefik Mesh will install CoreDNS and patch KubeDNS to use it as a [stubDomain](https://v1-17.docs.kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/#example-stub-domain).
-
 ## Custom cluster domain
 
 If you use a cluster domain other than `cluster.local` set it by using the `clusterDomain` parameter:
