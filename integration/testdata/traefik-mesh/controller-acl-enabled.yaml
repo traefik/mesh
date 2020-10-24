@@ -31,14 +31,6 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - configmaps
-    verbs:
-      - get
-      - create
-      - update
-  - apiGroups:
-      - ""
-    resources:
       - services
     verbs:
       - get
@@ -46,13 +38,6 @@ rules:
       - watch
       - delete
       - create
-      - update
-  - apiGroups:
-      - apps
-    resources:
-      - deployments
-    verbs:
-      - get
       - update
   - apiGroups:
       - access.smi-spec.io
@@ -134,15 +119,6 @@ spec:
               port: api
             initialDelaySeconds: 3
             periodSeconds: 1
-      initContainers:
-        - name: traefik-mesh-prepare
-          image: "traefik/mesh:latest"
-          imagePullPolicy: IfNotPresent
-          args:
-            - "prepare"
-            - "--logLevel=DEBUG"
-            - "--namespace=traefik-mesh"
-            - "--acl"
 
 ---
 apiVersion: v1
