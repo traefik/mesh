@@ -36,14 +36,6 @@ To deploy the Helm Chart, run:
 helm install traefik-mesh traefik-mesh/traefik-mesh --set controller.image.pullPolicy=IfNotPresent --set controller.image.tag=latest
 ```
 
-## Custom cluster domain
-
-If you use a cluster domain other than `cluster.local` set it by using the `clusterDomain` parameter:
-
-```bash
-helm install traefik-mesh traefik-mesh/traefik-mesh --set clusterDomain=my.custom.domain.com
-```
-
 ## Access Control List
 
 By default, Traefik Mesh does not restrict traffic between pods and services. However, some scenarios require more control over the rules for internal communication.
