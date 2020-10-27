@@ -1,0 +1,157 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: traefik-mesh-dns
+  namespace: traefik-mesh
+  labels:
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: traefik-mesh
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: traefik-mesh-dns
+  namespace: traefik-mesh
+  labels:
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: traefik-mesh
+roleRef:
+  kind: Role
+  name: traefik-mesh-dns
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: traefik-mesh-dns
+    namespace: traefik-mesh
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: traefik-mesh-dns-patch
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: traefik-mesh
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - create
+      - update
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: traefik-mesh-dns-patch
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: traefik-mesh
+roleRef:
+  kind: Role
+  name: traefik-mesh-dns-patch
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: traefik-mesh-dns
+    namespace: traefik-mesh
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik-mesh-dns
+  namespace: traefik-mesh
+  labels:
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: traefik-mesh
+automountServiceAccountToken: true
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-mesh-dns
+  namespace: traefik-mesh
+  labels:
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: traefik-mesh
+spec:
+  type: ClusterIP
+  ports:
+    - port: 53
+      protocol: UDP
+      targetPort: dns
+  selector:
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: traefik-mesh
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-mesh-dns
+  namespace: traefik-mesh
+  labels:
+    app.kubernetes.io/name: traefik-mesh
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: traefik-mesh
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik-mesh
+      app.kubernetes.io/component: dns
+      app.kubernetes.io/part-of: traefik-mesh
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: traefik-mesh
+        app.kubernetes.io/component: dns
+        app.kubernetes.io/part-of: traefik-mesh
+    spec:
+      serviceAccountName: traefik-mesh-dns
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      containers:
+        - name: traefik-mesh-dns
+          image: "traefik/mesh:latest"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - dns
+            - --namespace=traefik-mesh
+            - --logLevel=DEBUG
+          ports:
+            - name: dns
+              protocol: UDP
+              containerPort: 9053

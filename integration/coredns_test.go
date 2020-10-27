@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-check/check"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/traefik/mesh/v2/integration/k3d"
 	"github.com/traefik/mesh/v2/integration/tool"
@@ -26,6 +27,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
+		{Name: "traefik/mesh:latest", Local: true},
 		{Name: "traefik/whoami:v1.6.0"},
 		{Name: "coredns/coredns:1.3.1"},
 		{Name: "coredns/coredns:1.4.0"},
@@ -47,9 +49,11 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 
 	c.Assert(s.cluster.Apply(s.logger, smiCRDs), checker.IsNil)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/tool/tool.yaml"), checker.IsNil)
-	c.Assert(s.cluster.Apply(s.logger, "testdata/coredns/whoami-shadow-service.yaml"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/dns/whoami-shadow-service.yaml"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/traefik-mesh/dns.yaml"), checker.IsNil)
 
 	c.Assert(s.cluster.WaitReadyPod("tool", testNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("traefik-mesh-dns", traefikMeshNamespace, 60*time.Second), checker.IsNil)
 
 	s.tool = tool.New(s.logger, "tool", testNamespace)
 }
@@ -87,7 +91,8 @@ func (s *CoreDNSSuite) testCoreDNSVersion(c *check.C, version string) {
 	c.Assert(s.setCoreDNSVersion(version), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
-	c.Assert(traefikMeshPrepare(), checker.IsNil)
+	c.Assert(s.restartTraefikMeshDNS(), checker.IsNil)
+
 	c.Assert(s.cluster.WaitReadyDeployment("coredns", metav1.NamespaceSystem, 60*time.Second), checker.IsNil)
 
 	err := try.Retry(func() error {
@@ -170,6 +175,30 @@ func (s *CoreDNSSuite) resetCoreDNSCorefile(ready bool) error {
 `, readyPlugin)
 
 		_, err = s.cluster.Client.KubernetesClient().CoreV1().ConfigMaps(metav1.NamespaceSystem).Update(ctx, configmap, metav1.UpdateOptions{})
+		return err
+	})
+}
+
+func (s *CoreDNSSuite) restartTraefikMeshDNS() error {
+	ctx := context.Background()
+
+	s.logger.Debugf("Restarting Traefik Mesh DNS...")
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		deployment, err := s.cluster.Client.KubernetesClient().AppsV1().Deployments(traefikMeshNamespace).Get(ctx, "traefik-mesh-dns", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		annotations := deployment.Spec.Template.Annotations
+		if len(annotations) == 0 {
+			annotations = make(map[string]string)
+		}
+
+		annotations["traefik-mesh-dns-hash"] = uuid.New().String()
+		deployment.Spec.Template.Annotations = annotations
+
+		_, err = s.cluster.Client.KubernetesClient().AppsV1().Deployments(deployment.Namespace).Update(context.Background(), deployment, metav1.UpdateOptions{})
 		return err
 	})
 }
