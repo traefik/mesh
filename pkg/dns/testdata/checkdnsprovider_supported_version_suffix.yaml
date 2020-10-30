@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: coredns
+          image: image-registry.dkr.ecr.eu-west-1.amazonaws.com/eks/coredns:v1.6.6-eksbuild.1
+        - name: titi
+          image: titi/toto:latest

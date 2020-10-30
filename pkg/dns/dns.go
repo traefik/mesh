@@ -33,7 +33,12 @@ const (
 	traefikMeshBlockTrailer = "#### End Traefik Mesh Block"
 )
 
-var versionCoreDNS17 = goversion.Must(goversion.NewVersion("1.7"))
+var (
+	versionCoreDNS17 = goversion.Must(goversion.NewVersion("1.7"))
+
+	versionCoreDNSMin = goversion.Must(goversion.NewVersion("1.3"))
+	versionCoreDNSMax = goversion.Must(goversion.NewVersion("1.8"))
+)
 
 // Client holds the client for interacting with the k8s DNS system.
 type Client struct {
@@ -92,13 +97,8 @@ func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	versionConstraint, err := goversion.NewConstraint(">= 1.3, < 1.8")
-	if err != nil {
-		return false, err
-	}
-
-	if !versionConstraint.Check(version) {
-		c.logger.Debugf("CoreDNS version is not supported, must satisfy %q, got %q", versionConstraint, version)
+	if !(version.GreaterThanOrEqual(versionCoreDNSMin) && version.LessThan(versionCoreDNSMax)) {
+		c.logger.Debug(`CoreDNS version is not supported, must satisfy ">= %s, < %s", got %q`, versionCoreDNSMin, versionCoreDNSMax, version)
 
 		return false, fmt.Errorf("unsupported CoreDNS version %q", version)
 	}
