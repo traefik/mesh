@@ -104,7 +104,7 @@ func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 	}
 
 	if !(version.GreaterThanOrEqual(versionCoreDNSMin) && version.LessThan(versionCoreDNSMax)) {
-		c.logger.Debugf("CoreDNS version is not supported, must satisfy >= %q, < %q, got %q", versionCoreDNSMin, versionCoreDNSMax, version)
+		c.logger.Debug(`CoreDNS version is not supported, must satisfy ">= %s, < %s", got %q`, versionCoreDNSMin, versionCoreDNSMax, version)
 
 		return false, fmt.Errorf("unsupported CoreDNS version %q", version)
 	}
