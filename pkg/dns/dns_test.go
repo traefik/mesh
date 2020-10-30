@@ -27,6 +27,12 @@ func TestCheckDNSProvider(t *testing.T) {
 			expErr:      false,
 		},
 		{
+			desc:        "CoreDNS supported version with suffix",
+			mockFile:    "checkdnsprovider_supported_version_suffix.yaml",
+			expProvider: CoreDNS,
+			expErr:      false,
+		},
+		{
 			desc:        "KubeDNS",
 			mockFile:    "checkdnsprovider_kubedns.yaml",
 			expProvider: KubeDNS,
