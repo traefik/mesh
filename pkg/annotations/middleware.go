@@ -38,7 +38,7 @@ func buildRetryMiddleware(annotations map[string]string) (middleware *dynamic.Mi
 
 	retryAttempts, err = GetRetryAttempts(annotations)
 	if err != nil {
-		if err == ErrNotFound {
+		if errors.Is(err, ErrNotFound) {
 			return nil, "", nil
 		}
 
@@ -60,14 +60,14 @@ func buildRateLimitMiddleware(annotations map[string]string) (middleware *dynami
 	)
 
 	rateLimitBurst, err = GetRateLimitBurst(annotations)
-	if err == ErrNotFound {
+	if errors.Is(err, ErrNotFound) {
 		return nil, "", nil
 	} else if err != nil {
 		return nil, "", fmt.Errorf("unable to build rate-limit middleware: %w", err)
 	}
 
 	rateLimitAverage, err = GetRateLimitAverage(annotations)
-	if err == ErrNotFound {
+	if errors.Is(err, ErrNotFound) {
 		return nil, "", nil
 	} else if err != nil {
 		return nil, "", fmt.Errorf("unable to build rate-limit middleware: %w", err)
@@ -93,7 +93,7 @@ func buildCircuitBreakerMiddleware(annotations map[string]string) (middleware *d
 
 	circuitBreakerExpression, err = GetCircuitBreakerExpression(annotations)
 	if err != nil {
-		if err == ErrNotFound {
+		if errors.Is(err, ErrNotFound) {
 			return nil, "", nil
 		}
 
