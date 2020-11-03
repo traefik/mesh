@@ -19,7 +19,7 @@ func Retry(f func() error, timeout time.Duration) error {
 	ebo.MaxElapsedTime = applyCIMultiplier(timeout)
 
 	if err := backoff.Retry(safe.OperationWithRecover(f), ebo); err != nil {
-		return fmt.Errorf("unable execute function: %v", err)
+		return fmt.Errorf("unable execute function: %w", err)
 	}
 
 	return nil
