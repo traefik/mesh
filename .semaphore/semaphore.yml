@@ -14,16 +14,21 @@ fail_fast:
   stop:
     when: "branch != 'master'"
 
+global_job_config:
+  secrets:
+    - name: dockerhub-pull-secrets
+  prologue:
+    commands:
+      - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
+      - sudo semgo go1.15
+      - echo "${DOCKERHUB_PASSWORD}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+      - checkout
+
 blocks:
   - name: Build
     skip:
       when: "branch = 'gh-pages'"
     task:
-      prologue:
-        commands:
-          - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
-          - sudo semgo go1.15
-          - checkout
       jobs:
         - name: Cache Go dependencies
           commands:
@@ -43,9 +48,6 @@ blocks:
     task:
       prologue:
         commands:
-          - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
-          - sudo semgo go1.15
-          - checkout
           - cache restore
       jobs:
         - name: Unit Tests
@@ -58,9 +60,6 @@ blocks:
     task:
       prologue:
         commands:
-          - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
-          - sudo semgo go1.15
-          - checkout
           - cache restore
           - cache restore traefik-mesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
           - cache restore traefik-mesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID

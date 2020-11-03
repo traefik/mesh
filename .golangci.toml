@@ -46,6 +46,9 @@
     "noctx", # Too strict
     "exhaustive", # Too strict
     "nlreturn", # Too strict
+    "wrapcheck",
+    "exhaustivestruct",
+    "tparallel",
   ]
 
 [issues]
