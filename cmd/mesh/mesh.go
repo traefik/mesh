@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	stdlog "log"
 	"net/http"
@@ -110,7 +111,7 @@ func traefikMeshCommand(config *Configuration) error {
 	go func() {
 		defer wg.Done()
 
-		if err := apiServer.ListenAndServe(); err != http.ErrServerClosed {
+		if err := apiServer.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
 			apiErrCh <- fmt.Errorf("API server has stopped unexpectedly: %w", err)
 		}
 	}()
