@@ -109,7 +109,7 @@ func buildKubernetesClient(logger logrus.FieldLogger, config *rest.Config) (*kub
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create kubernetes client: %v", err)
+		return nil, fmt.Errorf("unable to create kubernetes client: %w", err)
 	}
 
 	return client, nil
@@ -121,7 +121,7 @@ func buildSmiAccessClient(logger logrus.FieldLogger, config *rest.Config) (*acce
 
 	client, err := accessclient.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create SMI Access Client: %v", err)
+		return nil, fmt.Errorf("unable to create SMI Access Client: %w", err)
 	}
 
 	return client, nil
@@ -133,7 +133,7 @@ func buildSmiSpecsClient(logger logrus.FieldLogger, config *rest.Config) (*specs
 
 	client, err := specsclient.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create SMI Specs Client: %v", err)
+		return nil, fmt.Errorf("unable to create SMI Specs Client: %w", err)
 	}
 
 	return client, nil
@@ -145,7 +145,7 @@ func buildSmiSplitClient(logger logrus.FieldLogger, config *rest.Config) (*split
 
 	client, err := splitclient.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create SMI Split Client: %v", err)
+		return nil, fmt.Errorf("unable to create SMI Split Client: %w", err)
 	}
 
 	return client, nil
