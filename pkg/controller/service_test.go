@@ -361,7 +361,7 @@ func newFakeShadowService(t *testing.T, svc *corev1.Service, ports map[int]int) 
 	require.NoError(t, err)
 
 	trafficType, err := annotations.GetTrafficType(svc.Annotations)
-	if err == annotations.ErrNotFound {
+	if errors.Is(err, annotations.ErrNotFound) {
 		trafficType = testDefaultTrafficType
 	}
 

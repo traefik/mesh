@@ -48,7 +48,7 @@ func (s *ShadowServiceManager) LoadPortMapping() error {
 	for _, shadowSvc := range shadowSvcs {
 		// If the traffic-type annotation has been manually removed we can't load its ports.
 		trafficType, err := annotations.GetTrafficType(shadowSvc.Annotations)
-		if err == annotations.ErrNotFound {
+		if errors.Is(err, annotations.ErrNotFound) {
 			s.logger.Errorf("Unable to find traffic-type on shadow service %q", shadowSvc.Name)
 			continue
 		}
@@ -101,7 +101,7 @@ func (s *ShadowServiceManager) deleteShadowService(ctx context.Context, namespac
 	s.logger.Debugf("Deleting shadow service %q...", shadowSvcName)
 
 	trafficType, err := annotations.GetTrafficType(shadowSvc.Annotations)
-	if err == annotations.ErrNotFound {
+	if errors.Is(err, annotations.ErrNotFound) {
 		s.logger.Errorf("Unable to find traffic-type of the shadow service for service %q in namespace %q", name, namespace)
 		return nil
 	}
@@ -128,12 +128,12 @@ func (s *ShadowServiceManager) deleteShadowService(ctx context.Context, namespac
 // upsertShadowService updates or create the shadow service associated with the given user service.
 func (s *ShadowServiceManager) upsertShadowService(ctx context.Context, svc *corev1.Service, shadowSvcName string) error {
 	trafficType, err := annotations.GetTrafficType(svc.Annotations)
-	if err != nil && err != annotations.ErrNotFound {
+	if err != nil && !errors.Is(err, annotations.ErrNotFound) {
 		s.logger.Errorf("Unable to create or update shadow services for service %q in namespace %q: %v", svc.Name, svc.Namespace, err)
 		return nil
 	}
 
-	if err == annotations.ErrNotFound {
+	if errors.Is(err, annotations.ErrNotFound) {
 		trafficType = s.defaultTrafficType
 	}
 
@@ -233,7 +233,7 @@ func (s *ShadowServiceManager) getServicePorts(svc *corev1.Service, trafficType 
 // cleanupShadowServicePorts unmap ports that have changed since the last update of the service.
 func (s *ShadowServiceManager) cleanupShadowServicePorts(svc, shadowSvc *corev1.Service, trafficType string) {
 	oldTrafficType, err := annotations.GetTrafficType(shadowSvc.Annotations)
-	if err == annotations.ErrNotFound {
+	if errors.Is(err, annotations.ErrNotFound) {
 		s.logger.Errorf("Unable find traffic-type for shadow service %q", shadowSvc.Name)
 		return
 	}

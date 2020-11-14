@@ -124,11 +124,11 @@ func (p *Provider) BuildConfig(t *topology.Topology) *dynamic.Configuration {
 // buildConfigForService builds the dynamic configuration for the given service.
 func (p *Provider) buildConfigForService(t *topology.Topology, cfg *dynamic.Configuration, svc *topology.Service) error {
 	trafficType, err := annotations.GetTrafficType(svc.Annotations)
-	if err != nil && err != annotations.ErrNotFound {
+	if err != nil && !errors.Is(err, annotations.ErrNotFound) {
 		return fmt.Errorf("unable to evaluate traffic-type annotation: %w", err)
 	}
 
-	if err == annotations.ErrNotFound {
+	if errors.Is(err, annotations.ErrNotFound) {
 		trafficType = p.config.DefaultTrafficType
 	}
 
