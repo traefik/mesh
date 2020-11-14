@@ -272,7 +272,7 @@ spec:
     kind: ServiceAccount
     name: whoami-server
     namespace: whoami
-    port: "80"
+    port: 80
   rules:
     - kind: HTTPRouteGroup
       name: http-everything
