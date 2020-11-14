@@ -90,7 +90,7 @@ func NewCluster(logger logrus.FieldLogger, masterURL string, name string, opts .
 	}
 
 	if err = createCluster(logger, name, clusterOpts.Cmd); err != nil {
-		return nil, fmt.Errorf("unable to create k3s cluster: %d", err)
+		return nil, fmt.Errorf("unable to create k3s cluster: %w", err)
 	}
 
 	if err = importDockerImages(logger, name, clusterOpts.Images); err != nil {
@@ -199,7 +199,7 @@ func (c *Cluster) WaitReadyDeployment(name, namespace string, timeout time.Durat
 				return fmt.Errorf("deployment %q has not been yet created", name)
 			}
 
-			return fmt.Errorf("unable get deployment %q in namespace %q: %v", name, namespace, err)
+			return fmt.Errorf("unable get deployment %q in namespace %q: %w", name, namespace, err)
 		}
 
 		if d.Status.UpdatedReplicas == *(d.Spec.Replicas) &&
@@ -230,7 +230,7 @@ func (c *Cluster) WaitReadyDaemonSet(name, namespace string, timeout time.Durati
 				return fmt.Errorf("daemonset %q has not been yet created", name)
 			}
 
-			return fmt.Errorf("unable get daemonset %q in namespace %q: %v", name, namespace, err)
+			return fmt.Errorf("unable get daemonset %q in namespace %q: %w", name, namespace, err)
 		}
 		if d.Status.NumberReady == d.Status.DesiredNumberScheduled {
 			return nil
@@ -257,7 +257,7 @@ func (c *Cluster) WaitReadyPod(name, namespace string, timeout time.Duration) er
 				return fmt.Errorf("pod %q has not been yet created", name)
 			}
 
-			return fmt.Errorf("unable get pod %q in namespace %q: %v", name, namespace, err)
+			return fmt.Errorf("unable get pod %q in namespace %q: %w", name, namespace, err)
 		}
 
 		if !isPodReady(pod) {
@@ -370,11 +370,11 @@ func createK8sClient(logger logrus.FieldLogger, clusterName, masterURL string) (
 	err = try.Retry(func() error {
 		client, err = k8s.NewClient(logger, masterURL, kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf("unable to create clients: %v", err)
+			return fmt.Errorf("unable to create clients: %w", err)
 		}
 
 		if _, err = client.KubernetesClient().Discovery().ServerVersion(); err != nil {
-			return fmt.Errorf("unable to get server version: %v", err)
+			return fmt.Errorf("unable to get server version: %w", err)
 		}
 
 		return nil
