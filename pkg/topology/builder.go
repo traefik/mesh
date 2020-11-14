@@ -139,7 +139,7 @@ func (b *Builder) evaluateTrafficTarget(res *resources, topology *Topology, tt *
 
 		stt.Rules, err = b.buildTrafficTargetRules(res, tt)
 		if err != nil {
-			err = fmt.Errorf("unable to build spec: %v", err)
+			err = fmt.Errorf("unable to build spec: %w", err)
 			stt.AddError(err)
 			b.logger.Errorf("Error building topology for TrafficTarget %q: %v", Key{tt.Name, tt.Namespace}, err)
 
@@ -226,7 +226,7 @@ func (b *Builder) evaluateTrafficSplit(res *resources, topology *Topology, traff
 
 	ts.Rules, err = b.buildTrafficSplitSpecs(res, trafficSplit)
 	if err != nil {
-		err = fmt.Errorf("unable to build spec: %v", err)
+		err = fmt.Errorf("unable to build spec: %w", err)
 		ts.AddError(err)
 		b.logger.Errorf("Error building topology for TrafficTarget %q: %v", tsKey, err)
 
@@ -311,7 +311,7 @@ func (b *Builder) populateTrafficSplitsAuthorizedIncomingTraffic(topology *Topol
 			if err != nil {
 				loopCausingTrafficSplitsByService[svc] = append(loopCausingTrafficSplitsByService[svc], tsKey)
 
-				err = fmt.Errorf("unable to get incoming pods: %v", err)
+				err = fmt.Errorf("unable to get incoming pods: %w", err)
 				ts.AddError(err)
 				b.logger.Errorf("Error building topology for TrafficSplit %q: %v", tsKey, err)
 

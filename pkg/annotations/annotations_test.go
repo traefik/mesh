@@ -1,6 +1,7 @@
 package annotations
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -159,7 +160,7 @@ func TestGetRetryAttempts(t *testing.T) {
 			attempts, err := GetRetryAttempts(test.annotations)
 			if test.err {
 				require.Error(t, err)
-				assert.Equal(t, test.wantNotFound, err == ErrNotFound)
+				assert.Equal(t, test.wantNotFound, errors.Is(err, ErrNotFound))
 				return
 			}
 
@@ -197,7 +198,7 @@ func TestGetCircuitBreakerExpression(t *testing.T) {
 			value, err := GetCircuitBreakerExpression(test.annotations)
 			if test.err {
 				require.Error(t, err)
-				assert.Equal(t, test.wantNotFound, err == ErrNotFound)
+				assert.Equal(t, test.wantNotFound, errors.Is(err, ErrNotFound))
 				return
 			}
 
@@ -242,7 +243,7 @@ func TestGetRateLimitBurst(t *testing.T) {
 			value, err := GetRateLimitBurst(test.annotations)
 			if test.err {
 				require.Error(t, err)
-				assert.Equal(t, test.wantNotFound, err == ErrNotFound)
+				assert.Equal(t, test.wantNotFound, errors.Is(err, ErrNotFound))
 				return
 			}
 
@@ -287,7 +288,7 @@ func TestGetRateLimitAverage(t *testing.T) {
 			value, err := GetRateLimitAverage(test.annotations)
 			if test.err {
 				require.Error(t, err)
-				assert.Equal(t, test.wantNotFound, err == ErrNotFound)
+				assert.Equal(t, test.wantNotFound, errors.Is(err, ErrNotFound))
 				return
 			}
 
