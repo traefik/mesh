@@ -90,7 +90,44 @@ func TestShadowServiceManager_SyncServiceHandlesUnknownTrafficTypes(t *testing.T
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	assert.NoError(t, mgr.SyncService(ctx, svc.Namespace, svc.Name))
+	require.Error(t, mgr.SyncService(ctx, svc.Namespace, svc.Name))
+
+	// Make sure the shadow service stays intact.
+	syncedShadowSvc, err := client.CoreV1().Services(testNamespace).Get(ctx, shadowSvc.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	assert.Equal(t, shadowSvc.Annotations, syncedShadowSvc.Annotations)
+	assert.Equal(t, shadowSvc.Spec.Ports, syncedShadowSvc.Spec.Ports)
+}
+
+// TestShadowServiceManager_SyncServiceHandlesServiceLabelsMismatch tests the case where the service labels in the shadow service
+// does not match the synced service due to a hash collision.
+func TestShadowServiceManager_SyncServiceHandlesServiceLabelsMismatch(t *testing.T) {
+	logger := logrus.New()
+
+	// Create a service and simulate an update on the ports from 8000 to 9000 and with an invalid traffic type.
+	svc := newFakeService("svc", map[int]int{9000: 80}, "pigeon")
+
+	shadowSvc := newFakeShadowService(t, svc, map[int]int{8000: 5000})
+
+	// Modify the service labels in the shadow service to simulate a hash collision.
+	shadowSvc.Labels[k8s.LabelServiceName] = "name"
+	shadowSvc.Labels[k8s.LabelServiceNamespace] = "namespace"
+
+	client, svcLister := newFakeK8sClient(t, svc, shadowSvc)
+
+	mgr := ShadowServiceManager{
+		namespace:          testNamespace,
+		defaultTrafficType: testDefaultTrafficType,
+		kubeClient:         client,
+		serviceLister:      svcLister,
+		logger:             logger,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	require.Error(t, mgr.SyncService(ctx, svc.Namespace, svc.Name))
 
 	// Make sure the shadow service stays intact.
 	syncedShadowSvc, err := client.CoreV1().Services(testNamespace).Get(ctx, shadowSvc.Name, metav1.GetOptions{})
@@ -132,7 +169,7 @@ func TestShadowServiceManager_SyncServiceCreateShadowService(t *testing.T) {
 	assert.NoError(t, mgr.SyncService(ctx, svc.Namespace, svc.Name))
 
 	// Make sure the shadow service has been created.
-	shadowSvcName, err := getShadowServiceName(svc.Namespace, svc.Name)
+	shadowSvcName, err := GetShadowServiceName(svc.Namespace, svc.Name)
 	require.NoError(t, err)
 
 	shadowSvc, err := client.CoreV1().Services(testNamespace).Get(ctx, shadowSvcName, metav1.GetOptions{})
@@ -357,7 +394,7 @@ func newFakeService(name string, ports map[int]int, trafficType string) *corev1.
 func newFakeShadowService(t *testing.T, svc *corev1.Service, ports map[int]int) *corev1.Service {
 	var svcPorts []corev1.ServicePort
 
-	name, err := getShadowServiceName(svc.Namespace, svc.Name)
+	name, err := GetShadowServiceName(svc.Namespace, svc.Name)
 	require.NoError(t, err)
 
 	trafficType, err := annotations.GetTrafficType(svc.Annotations)

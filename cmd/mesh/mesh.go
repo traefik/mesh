@@ -12,7 +12,7 @@ import (
 
 	"github.com/traefik/mesh/v2/cmd"
 	"github.com/traefik/mesh/v2/cmd/cleanup"
-	"github.com/traefik/mesh/v2/cmd/prepare"
+	"github.com/traefik/mesh/v2/cmd/dns"
 	"github.com/traefik/mesh/v2/cmd/version"
 	"github.com/traefik/mesh/v2/pkg/api"
 	"github.com/traefik/mesh/v2/pkg/controller"
@@ -40,8 +40,8 @@ func main() {
 		},
 	}
 
-	prepareConfig := prepare.NewConfiguration()
-	if err := traefikMeshCmd.AddCommand(prepare.NewCmd(prepareConfig, loaders)); err != nil {
+	dnsConfig := dns.NewConfiguration()
+	if err := traefikMeshCmd.AddCommand(dns.NewCmd(dnsConfig, loaders)); err != nil {
 		stdlog.Println(err)
 		os.Exit(1)
 	}
@@ -76,14 +76,19 @@ func traefikMeshCommand(config *Configuration) error {
 	logger.Debug("Starting controller...")
 	logger.Debugf("Using masterURL: %q", config.MasterURL)
 	logger.Debugf("Using kubeconfig: %q", config.KubeConfig)
+	logger.Debugf("ACL mode enabled: %t", config.ACL)
 
 	clients, err := k8s.NewClient(logger, config.MasterURL, config.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error building clients: %w", err)
 	}
 
-	logger.Debugf("ACL mode enabled: %t", config.ACL)
+	// Check SMI versions.
+	if err = k8s.CheckSMIVersion(clients.KubernetesClient(), config.ACL); err != nil {
+		return fmt.Errorf("unsupported SMI version: %w", err)
+	}
 
+	// Start controller and API server.
 	apiServer := api.NewAPI(logger, config.APIPort, config.APIHost, config.Namespace)
 
 	ctr := controller.NewMeshController(clients, controller.Config{

@@ -15,7 +15,7 @@ type Configuration struct {
 func NewConfiguration() *Configuration {
 	return &Configuration{
 		KubeConfig: os.Getenv("KUBECONFIG"),
-		Namespace:  "maesh",
+		Namespace:  "default",
 		LogLevel:   "error",
 		LogFormat:  "common",
 	}
