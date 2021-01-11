@@ -15,11 +15,3 @@ kind: ConfigMap
 metadata:
   name: kube-dns
   namespace: kube-system
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: coredns
-  namespace: traefik-mesh
-spec:
-  clusterIP: "1.2.3.4"

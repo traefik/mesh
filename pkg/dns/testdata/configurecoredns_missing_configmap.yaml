@@ -1,3 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-mesh-dns
+  namespace: traefik-mesh
+spec:
+  clusterIP: 10.10.10.10
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -45,11 +45,13 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/tool/tool-forbidden.yaml"), checker.IsNil)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/traefik-mesh/controller-acl-enabled.yaml"), checker.IsNil)
 	c.Assert(s.cluster.Apply(s.logger, "testdata/traefik-mesh/proxy.yaml"), checker.IsNil)
+	c.Assert(s.cluster.Apply(s.logger, "testdata/traefik-mesh/dns.yaml"), checker.IsNil)
 
 	c.Assert(s.cluster.WaitReadyPod("tool-authorized", testNamespace, 60*time.Second), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyPod("tool-forbidden", testNamespace, 60*time.Second), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDeployment("traefik-mesh-controller", traefikMeshNamespace, 60*time.Second), checker.IsNil)
 	c.Assert(s.cluster.WaitReadyDaemonSet("traefik-mesh-proxy", traefikMeshNamespace, 60*time.Second), checker.IsNil)
+	c.Assert(s.cluster.WaitReadyDeployment("traefik-mesh-dns", traefikMeshNamespace, 60*time.Second), checker.IsNil)
 
 	s.toolAuthorized = tool.New(s.logger, "tool-authorized", testNamespace)
 	s.toolForbidden = tool.New(s.logger, "tool-forbidden", testNamespace)

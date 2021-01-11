@@ -52,12 +52,3 @@ func ShadowServiceSelector() labels.Selector {
 
 	return selector
 }
-
-// ProxySelector creates a label selector for proxies.
-func ProxySelector() labels.Selector {
-	selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: ProxyLabels(),
-	})
-
-	return selector
-}

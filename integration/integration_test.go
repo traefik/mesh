@@ -2,10 +2,7 @@ package integration
 
 import (
 	"flag"
-	"fmt"
 	"log"
-	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/go-check/check"
@@ -18,7 +15,6 @@ var (
 	masterURL            = "https://localhost:8443"
 	k3dClusterName       = "traefik-mesh-integration"
 	traefikMeshNamespace = "traefik-mesh"
-	traefikMeshBinary    = "../dist/traefik-mesh"
 	smiCRDs              = "./testdata/crds/"
 	testNamespace        = "test"
 )
@@ -39,25 +35,4 @@ func Test(t *testing.T) {
 	check.Suite(&KubeDNSSuite{})
 
 	check.TestingT(t)
-}
-
-func traefikMeshPrepare() error {
-	args := []string{
-		"prepare",
-		"--masterurl=" + masterURL,
-		"--kubeconfig=" + os.Getenv("KUBECONFIG"),
-		"--loglevel=debug",
-		"--clusterdomain=cluster.local",
-		"--namespace=" + traefikMeshNamespace,
-	}
-
-	cmd := exec.Command(traefikMeshBinary, args...)
-	cmd.Env = os.Environ()
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("traefik mesh prepare has failed - %s: %w", string(output), err)
-	}
-
-	return nil
 }

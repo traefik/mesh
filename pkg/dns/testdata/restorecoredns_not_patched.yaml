@@ -11,12 +11,14 @@ spec:
             name: "other-cfgmap"
         - configMap:
             name: "coredns"
+
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: other-cfgmap
   namespace: kube-system
+
 ---
 apiVersion: v1
 kind: ConfigMap
