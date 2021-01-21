@@ -51,7 +51,7 @@ If this annotation is not present, the mesh service will operate in the default 
 !!! Info
     For now, the `udp` traffic type does not work when ACL mode is enabled. In ACL mode, all traffic is forbidden unless it
     is explicitly allowed with a [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md#traffictarget) and
-    unfortunately the SMI specification does not yet define a [Traffic Spec](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-specs/traffic-specs-WD.md) for `UDP`.
+    unfortunately the SMI specification does not yet define a [Traffic Spec](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-specs/v1alpha4/traffic-specs.md) for `UDP`.
     
 #### Scheme
 
