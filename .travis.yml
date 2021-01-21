@@ -34,6 +34,7 @@ services:
 
 script:
   - echo "Skipping tests... (Tests are executed on SemaphoreCI)"
+  - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin;
   - make docs-package
 
 install:
@@ -43,11 +44,6 @@ install:
   - go mod download
 
 before_deploy:
-  - >
-    if ! [ "$BEFORE_DEPLOY_RUN" ]; then
-      export BEFORE_DEPLOY_RUN=1;
-      echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin;
-    fi
   # Copy Semaphore yml file
   - mkdir -p site/.semaphore
   - cp ./.semaphore/semaphore.yml site/.semaphore/semaphore.yml
