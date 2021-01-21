@@ -1,0 +1,20 @@
+name: Build Documentation
+
+on:
+  pull_request:
+
+jobs:
+
+  docs:
+    name: Doc pacckage
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Package documentation
+        run: make docs-package
