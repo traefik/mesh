@@ -6,7 +6,7 @@ on:
 jobs:
 
   docs:
-    name: Doc pacckage
+    name: Doc package
     runs-on: ubuntu-latest
 
     steps:
