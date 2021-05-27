@@ -40,8 +40,10 @@ const (
 )
 
 var (
+	// First CoreDNS version to remove the deprecated `upstream` and `resyncperiod` options in the `kubrnetes` plugin.
 	versionCoreDNS17 = goversion.Must(goversion.NewVersion("1.7"))
 
+	// Currently supported CoreDNS versions range.
 	versionCoreDNSMin = goversion.Must(goversion.NewVersion("1.3"))
 	versionCoreDNSMax = goversion.Must(goversion.NewVersion("1.8"))
 )
@@ -557,7 +559,7 @@ func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, tra
 
 	upstream := ""
 
-	if coreDNSVersion.LessThan(versionCoreDNS17) {
+	if coreDNSVersion.Core().LessThan(versionCoreDNS17) {
 		upstream = "upstream"
 	}
 
