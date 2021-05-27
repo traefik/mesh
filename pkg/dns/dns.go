@@ -45,7 +45,7 @@ var (
 
 	// Currently supported CoreDNS versions range.
 	versionCoreDNSMin = goversion.Must(goversion.NewVersion("1.3"))
-	versionCoreDNSMax = goversion.Must(goversion.NewVersion("1.8"))
+	versionCoreDNSMax = goversion.Must(goversion.NewVersion("1.9"))
 )
 
 // Client holds the client for interacting with the k8s DNS system.
