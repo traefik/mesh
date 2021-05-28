@@ -4,11 +4,13 @@ FROM alpine:3.10
 # It compile ruby-nokogiri, because alpine native version is always out of date
 # This virtual package is cleaned at the end.
 RUN apk --no-cache --no-progress add \
+    build-base \
     libcurl \
+    libffi-dev \
     ruby \
+    ruby-dev \
     ruby-bigdecimal \
     ruby-etc \
-    ruby-ffi \
     ruby-json \
     ruby-nokogiri
 RUN NOKOGIRI_USE_SYSTEM_LIBRARIES=true gem install --no-document html-proofer -v 3.12.0
@@ -24,7 +26,7 @@ RUN npm config set unsafe-perm true
 
 RUN npm install --global \
     markdownlint@0.16.0 \
-    markdownlint-cli@0.18.0 
+    markdownlint-cli@0.18.0
 
 # Finally the shell tools we need for later
 # tini helps to terminate properly all the parallelized tasks when sending CTRL-C
