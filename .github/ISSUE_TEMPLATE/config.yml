@@ -3,4 +3,6 @@ contact_links:
   - name: Question
     about: Please ask and answer questions here.
     url: https://community.traefik.io/c/traefik-mesh
-
+  - name: Documentation
+    url: https://doc.traefik.io/traefik-mesh/
+    about: Please take a look to our documenation.
