@@ -2,7 +2,7 @@ package k8s
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -56,7 +56,7 @@ type ClientMock struct {
 
 // NewClientMock create a new client mock.
 func NewClientMock(testingT *testing.T, path string) *ClientMock {
-	yamlContent, err := ioutil.ReadFile(filepath.FromSlash("./testdata/" + path))
+	yamlContent, err := os.ReadFile(filepath.FromSlash("./testdata/" + path))
 	if err != nil {
 		panic(err)
 	}

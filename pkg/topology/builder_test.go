@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -688,7 +689,7 @@ func createBuilder(k8sClient k8s.Interface, smiAccessClient accessclient.Interfa
 	}
 
 	logger := logrus.New()
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 
 	return &Builder{
 		serviceLister:        svcLister,
@@ -919,7 +920,7 @@ func createServiceAccount(namespace, name string) *corev1.ServiceAccount {
 }
 
 func assertTopology(t *testing.T, filename string, got *Topology) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
 	var want Topology
