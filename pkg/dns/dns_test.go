@@ -33,8 +33,8 @@ func TestCheckDNSProvider(t *testing.T) {
 			expErr:      false,
 		},
 		{
-			desc:        "CoreDNS supported min version ith suffix",
-			mockFile:    "checkdnsprovider_supported_version_minsuffix.yaml",
+			desc:        "CoreDNS supported min version with suffix",
+			mockFile:    "checkdnsprovider_supported_min_version_suffix.yaml",
 			expProvider: CoreDNS,
 			expErr:      false,
 		},

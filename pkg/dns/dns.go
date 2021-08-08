@@ -40,7 +40,7 @@ const (
 )
 
 var (
-	// First CoreDNS version to remove the deprecated `upstream` and `resyncperiod` options in the `kubrnetes` plugin.
+	// First CoreDNS version to remove the deprecated upstream and resyncperiod options in the kubernetes plugin.
 	versionCoreDNS17 = goversion.Must(goversion.NewVersion("1.7"))
 
 	// Currently supported CoreDNS versions range.
