@@ -33,6 +33,12 @@ func TestCheckDNSProvider(t *testing.T) {
 			expErr:      false,
 		},
 		{
+			desc:        "CoreDNS supported min version with suffix",
+			mockFile:    "checkdnsprovider_supported_min_version_suffix.yaml",
+			expProvider: CoreDNS,
+			expErr:      false,
+		},
+		{
 			desc:        "KubeDNS",
 			mockFile:    "checkdnsprovider_kubedns.yaml",
 			expProvider: KubeDNS,
@@ -41,6 +47,12 @@ func TestCheckDNSProvider(t *testing.T) {
 		{
 			desc:        "CoreDNS unsupported version",
 			mockFile:    "checkdnsprovider_unsupported_version.yaml",
+			expProvider: UnknownDNS,
+			expErr:      true,
+		},
+		{
+			desc:        "CoreDNS unsupported next version with suffix",
+			mockFile:    "checkdnsprovider_unsupported_version_suffix.yaml",
 			expProvider: UnknownDNS,
 			expErr:      true,
 		},
@@ -132,6 +144,13 @@ func TestConfigureCoreDNS(t *testing.T) {
 		{
 			desc:        "Config of CoreDNS 1.7",
 			mockFile:    "configurecoredns_17.yaml",
+			expErr:      false,
+			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Maesh Block\nmaesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.maesh toto-{1}-6d61657368-{2}.toto.svc.titi\n        answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.maesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        \n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Maesh Block\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.traefik.mesh toto-{1}-6d61657368-{2}.toto.svc.titi\n        answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.traefik.mesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        \n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Traefik Mesh Block\n",
+			expRestart:  true,
+		},
+		{
+			desc:        "Config of CoreDNS 1.7 with version suffix",
+			mockFile:    "configurecoredns_17_suffix.yaml",
 			expErr:      false,
 			expCorefile: ".:53 {\n    errors\n    health {\n        lameduck 5s\n    }\n    ready\n    kubernetes {{ pillar['dns_domain'] }} in-addr.arpa ip6.arpa {\n        pods insecure\n        fallthrough in-addr.arpa ip6.arpa\n        ttl 30\n    }\n    prometheus :9153\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n\n#### Begin Maesh Block\nmaesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.maesh toto-{1}-6d61657368-{2}.toto.svc.titi\n        answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.maesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        \n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Maesh Block\n\n#### Begin Traefik Mesh Block\ntraefik.mesh:53 {\n    errors\n    rewrite continue {\n        name regex ([a-zA-Z0-9-_]*)\\.([a-zv0-9-_]*)\\.traefik.mesh toto-{1}-6d61657368-{2}.toto.svc.titi\n        answer name toto-([a-zA-Z0-9-_]*)-6d61657368-([a-zA-Z0-9-_]*)\\.toto\\.svc\\.titi {1}.{2}.traefik.mesh\n    }\n    kubernetes titi in-addr.arpa ip6.arpa {\n        pods insecure\n        \n        fallthrough in-addr.arpa ip6.arpa\n    }\n    forward . /etc/resolv.conf\n    cache 30\n    loop\n    reload\n    loadbalance\n}\n#### End Traefik Mesh Block\n",
 			expRestart:  true,
