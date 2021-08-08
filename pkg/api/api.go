@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -217,7 +217,7 @@ func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		a.log.Errorf("Unable to get configuration response body from pod %q: %v", pod.Name, err)
 		http.Error(w, "", http.StatusBadGateway)
