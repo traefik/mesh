@@ -3,7 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
@@ -22,7 +22,7 @@ import (
 
 func TestPortMapping_AddEmptyState(t *testing.T) {
 	logger := logrus.New()
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 
 	serviceLister, err := newFakeServiceLister()
 	require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestPortMapping_AddEmptyState(t *testing.T) {
 
 func TestPortMapping_AddOverflow(t *testing.T) {
 	logger := logrus.New()
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 
 	serviceLister, err := newFakeServiceLister()
 	require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestPortMapping_AddOverflow(t *testing.T) {
 
 func TestPortMapping_FindWithState(t *testing.T) {
 	logger := logrus.New()
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 
 	serviceLister, err := newFakeServiceLister()
 	require.NoError(t, err)
@@ -103,7 +103,7 @@ func TestPortMapping_FindWithState(t *testing.T) {
 
 func TestPortMapping_Remove(t *testing.T) {
 	logger := logrus.New()
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 
 	serviceLister, err := newFakeServiceLister()
 	require.NoError(t, err)
@@ -190,7 +190,7 @@ func TestPortMapping_LoadState(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			logger := logrus.New()
-			logger.SetOutput(ioutil.Discard)
+			logger.SetOutput(io.Discard)
 
 			serviceLister, err := newFakeServiceLister(test.services...)
 			require.NoError(t, err)
@@ -234,7 +234,7 @@ func TestPortMapping_parseServiceNamespaceAndName(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			logger := logrus.New()
-			logger.SetOutput(ioutil.Discard)
+			logger.SetOutput(io.Discard)
 
 			serviceLister, err := newFakeServiceLister()
 			require.NoError(t, err)

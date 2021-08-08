@@ -2,7 +2,8 @@ package provider
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -134,7 +135,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			logger := logrus.New()
-			logger.SetOutput(ioutil.Discard)
+			logger.SetOutput(io.Discard)
 
 			defaultTrafficType := "http"
 			if test.defaultTrafficType != "" {
@@ -181,7 +182,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 }
 
 func loadTopology(filename string) (*topology.Topology, error) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +197,7 @@ func loadTopology(filename string) (*topology.Topology, error) {
 }
 
 func assertConfig(t *testing.T, filename string, got *dynamic.Configuration) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
 	var want dynamic.Configuration
