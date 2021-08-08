@@ -12,6 +12,9 @@ RUN apk --no-cache --no-progress add \
     ruby-json \
     ruby-nokogiri
 RUN NOKOGIRI_USE_SYSTEM_LIBRARIES=true gem install --no-document html-proofer -v 3.12.0
+    ruby-nokogiri \
+    ruby-dev \
+    build-base
 
 # After Ruby, some NodeJS YAY!
 RUN apk --no-cache --no-progress add \
