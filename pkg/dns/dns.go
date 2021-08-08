@@ -40,10 +40,12 @@ const (
 )
 
 var (
+	// First CoreDNS version to remove the deprecated upstream and resyncperiod options in the kubernetes plugin.
 	versionCoreDNS17 = goversion.Must(goversion.NewVersion("1.7"))
 
+	// Currently supported CoreDNS versions range.
 	versionCoreDNSMin = goversion.Must(goversion.NewVersion("1.3"))
-	versionCoreDNSMax = goversion.Must(goversion.NewVersion("1.8"))
+	versionCoreDNSMax = goversion.Must(goversion.NewVersion("1.9"))
 )
 
 // Client holds the client for interacting with the k8s DNS system.
@@ -103,7 +105,7 @@ func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if !(version.GreaterThanOrEqual(versionCoreDNSMin) && version.LessThan(versionCoreDNSMax)) {
+	if !(version.Core().GreaterThanOrEqual(versionCoreDNSMin) && version.Core().LessThan(versionCoreDNSMax)) {
 		c.logger.Debugf(`CoreDNS version is not supported, must satisfy ">= %s, < %s", got %q`, versionCoreDNSMin, versionCoreDNSMax, version)
 
 		return false, fmt.Errorf("unsupported CoreDNS version %q", version)
@@ -557,7 +559,7 @@ func addStubDomain(config, blockHeader, blockTrailer, domain, clusterDomain, tra
 
 	upstream := ""
 
-	if coreDNSVersion.LessThan(versionCoreDNS17) {
+	if coreDNSVersion.Core().LessThan(versionCoreDNS17) {
 		upstream = "upstream"
 	}
 
