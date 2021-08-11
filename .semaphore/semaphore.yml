@@ -99,7 +99,7 @@ blocks:
         - name: Publish Images
           commands:
             # Install Docker image multi-arch builder
-            - curl -sfL https://raw.githubusercontent.com/ldez/seihon/master/godownloader.sh | sudo bash -s -- -b "${GOPATH}/bin" ${SEIHON_VERSION}
+            - curl -sfL https://raw.githubusercontent.com/ldez/seihon/master/godownloader.sh | sudo bash -s -- -b "/usr/local/bin" ${SEIHON_VERSION}
             - seihon --version
             - docker run --rm --privileged hypriot/qemu-register
             - make publish-images
