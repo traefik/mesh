@@ -36,7 +36,6 @@ blocks:
             - go mod tidy
             - git diff --exit-code go.mod
             - git diff --exit-code go.sum
-            - go mod download -x
             - cache store
         - name: Build and check
           commands:
