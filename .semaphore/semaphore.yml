@@ -28,8 +28,6 @@ blocks:
   - name: Build
     run:
       when: "branch =~ '.*' OR pull_request =~'.*'"
-    skip:
-      when: "branch = 'gh-pages'"
     task:
       jobs:
         - name: Cache Go dependencies
@@ -49,8 +47,6 @@ blocks:
   - name: Unit Tests
     run:
       when: "branch =~ '.*' OR pull_request =~'.*'"
-    skip:
-      when: "branch = 'gh-pages'"
     task:
       prologue:
         commands:
@@ -63,8 +59,6 @@ blocks:
   - name: Integration Tests
     run:
       when: "branch =~ '.*' OR pull_request =~'.*'"
-    skip:
-      when: "branch = 'gh-pages'"
     task:
       prologue:
         commands:
