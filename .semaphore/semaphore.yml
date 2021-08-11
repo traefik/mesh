@@ -33,6 +33,9 @@ blocks:
         - name: Cache Go dependencies
           commands:
             - cache restore
+            - go mod tidy
+            - git diff --exit-code go.mod
+            - git diff --exit-code go.sum
             - go mod download -x
             - cache store
         - name: Build and check
@@ -77,3 +80,24 @@ blocks:
         - name: KubeDNS Suite
           commands:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f KubeDNSSuite\""
+
+  - name: Release
+    dependencies: [ ]
+    run:
+      when: "tag =~ '.*'"
+    task:
+      secrets:
+        - name: mesh
+
+      jobs:
+        - name: Release
+          commands:
+            - curl -sL https://git.io/goreleaser | bash -s -- --timeout="60m"
+
+        - name: Publish Images
+          commands:
+            # Install Docker image multi-arch builder
+            - curl -sfL https://raw.githubusercontent.com/ldez/seihon/master/godownloader.sh | bash -s -- -b "${GOPATH}/bin" ${SEIHON_VERSION}
+            - seihon --version
+            - docker run --rm --privileged hypriot/qemu-register
+            - make publish-images
