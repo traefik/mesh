@@ -26,6 +26,8 @@ global_job_config:
 
 blocks:
   - name: Build
+    run:
+      when: "branch =~ '.*' OR pull_request =~'.*'"
     skip:
       when: "branch = 'gh-pages'"
     task:
@@ -45,6 +47,8 @@ blocks:
             - cache store traefik-mesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID traefik-mesh-img.tar
 
   - name: Unit Tests
+    run:
+      when: "branch =~ '.*' OR pull_request =~'.*'"
     skip:
       when: "branch = 'gh-pages'"
     task:
@@ -57,6 +61,8 @@ blocks:
             - make local-test
 
   - name: Integration Tests
+    run:
+      when: "branch =~ '.*' OR pull_request =~'.*'"
     skip:
       when: "branch = 'gh-pages'"
     task:
@@ -89,7 +95,7 @@ blocks:
 
       env_vars:
         - name: SEIHON_VERSION
-          value: 0.8.3
+          value: v0.8.3
 
       jobs:
         - name: Release
