@@ -82,7 +82,6 @@ blocks:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f KubeDNSSuite\""
 
   - name: Release
-    dependencies: [ ]
     run:
       when: "tag =~ '.*'"
     task:
