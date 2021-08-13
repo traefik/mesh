@@ -36,8 +36,9 @@ const (
 var (
 	versionCoreDNS14 = goversion.Must(goversion.NewVersion("1.4"))
 
+	// Currently supported CoreDNS versions range.
 	versionCoreDNSMin = goversion.Must(goversion.NewVersion("1.3"))
-	versionCoreDNSMax = goversion.Must(goversion.NewVersion("1.8"))
+	versionCoreDNSMax = goversion.Must(goversion.NewVersion("1.9"))
 )
 
 // Client holds the client for interacting with the k8s DNS system.
@@ -84,7 +85,7 @@ func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 
 	dnsDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
-		c.logger.Debug("CoreDNS dnsDeployment not found")
+		c.logger.Debug("CoreDNS deployment not found")
 		return false, nil
 	}
 
@@ -97,7 +98,7 @@ func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if !(version.GreaterThanOrEqual(versionCoreDNSMin) && version.LessThan(versionCoreDNSMax)) {
+	if !(version.Core().GreaterThanOrEqual(versionCoreDNSMin) && version.Core().LessThan(versionCoreDNSMax)) {
 		c.logger.Debugf(`CoreDNS version is not supported, must satisfy ">= %s, < %s", got %q`, versionCoreDNSMin, versionCoreDNSMax, version)
 
 		return false, fmt.Errorf("unsupported CoreDNS version %q", version)
