@@ -10,8 +10,11 @@ RUN apk --no-cache --no-progress add \
     ruby-etc \
     ruby-ffi \
     ruby-json \
-    ruby-nokogiri
-RUN NOKOGIRI_USE_SYSTEM_LIBRARIES=true gem install --no-document html-proofer -v 3.12.0
+    ruby-nokogiri \
+    ruby-dev \
+    build-base
+
+RUN gem install --no-document html-proofer -v 3.19.0 -- --use-system-libraries
 
 # After Ruby, some NodeJS YAY!
 RUN apk --no-cache --no-progress add \
@@ -23,8 +26,8 @@ RUN apk --no-cache --no-progress add \
 RUN npm config set unsafe-perm true
 
 RUN npm install --global \
-    markdownlint@0.16.0 \
-    markdownlint-cli@0.18.0 
+    markdownlint@0.23.1 \
+    markdownlint-cli@0.28.1
 
 # Finally the shell tools we need for later
 # tini helps to terminate properly all the parallelized tasks when sending CTRL-C

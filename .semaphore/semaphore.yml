@@ -20,20 +20,22 @@ global_job_config:
   prologue:
     commands:
       - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
-      - sudo semgo go1.15
+      - sudo semgo go1.16
       - echo "${DOCKERHUB_PASSWORD}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
       - checkout
 
 blocks:
   - name: Build
-    skip:
-      when: "branch = 'gh-pages'"
+    run:
+      when: "branch =~ '.*' OR pull_request =~'.*'"
     task:
       jobs:
         - name: Cache Go dependencies
           commands:
             - cache restore
-            - go mod download -x
+            - go mod tidy
+            - git diff --exit-code go.mod
+            - git diff --exit-code go.sum
             - cache store
         - name: Build and check
           commands:
@@ -43,8 +45,8 @@ blocks:
             - cache store traefik-mesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID traefik-mesh-img.tar
 
   - name: Unit Tests
-    skip:
-      when: "branch = 'gh-pages'"
+    run:
+      when: "branch =~ '.*' OR pull_request =~'.*'"
     task:
       prologue:
         commands:
@@ -55,8 +57,8 @@ blocks:
             - make local-test
 
   - name: Integration Tests
-    skip:
-      when: "branch = 'gh-pages'"
+    run:
+      when: "branch =~ '.*' OR pull_request =~'.*'"
     task:
       prologue:
         commands:
@@ -77,3 +79,27 @@ blocks:
         - name: KubeDNS Suite
           commands:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f KubeDNSSuite\""
+
+  - name: Release
+    run:
+      when: "tag =~ '.*'"
+    task:
+      secrets:
+        - name: mesh
+
+      env_vars:
+        - name: SEIHON_VERSION
+          value: v0.8.3
+
+      jobs:
+        - name: Release
+          commands:
+            - curl -sL https://git.io/goreleaser | bash -s -- --timeout="60m"
+
+        - name: Publish Images
+          commands:
+            # Install Docker image multi-arch builder
+            - curl -sfL https://raw.githubusercontent.com/ldez/seihon/master/godownloader.sh | sudo bash -s -- -b "/usr/local/bin" ${SEIHON_VERSION}
+            - seihon --version
+            - docker run --rm --privileged hypriot/qemu-register
+            - make publish-images
