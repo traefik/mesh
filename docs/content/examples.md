@@ -32,8 +32,8 @@ metadata:
 
 ```yaml tab="deployment.yaml"
 ---
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: whoami
   namespace: whoami
@@ -54,8 +54,8 @@ spec:
           imagePullPolicy: IfNotPresent
 
 ---
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: whoami-tcp
   namespace: whoami
@@ -262,8 +262,8 @@ spec:
       methods: ["*"]
 
 ---
-kind: TrafficTarget
 apiVersion: access.smi-spec.io/v1alpha2
+kind: TrafficTarget
 metadata:
   name: whatever
   namespace: whoami
@@ -284,33 +284,33 @@ spec:
       namespace: whoami
 ```
 
-
-Incoming traffic on a TCP service can also be authorized using a `TrafficTarget` and a `TCPRoute`.
+Incoming traffic on a TCP service can also be authorized using a `TCPRoute` and a `TrafficTarget`.
 
 ```yaml
----
-kind: TrafficTarget
-apiVersion: access.smi-spec.io/v1alpha2
-metadata:
-  name: api-service-target
-  namespace: default
-spec:
-  destination:
-    kind: ServiceAccount
-    name: api-service
-    namespace: default
-  rules:
-    - kind: TCPRoute
-      name: my-tcp-route
-  sources:
-    - kind: ServiceAccount
-      name: my-other-service
-      namespace: default
-
 ---
 apiVersion: specs.smi-spec.io/v1alpha3
 kind: TCPRoute
 metadata:
   name: my-tcp-route
+  namespace: whoami
 spec: {}
+
+---
+apiVersion: access.smi-spec.io/v1alpha2
+kind: TrafficTarget
+metadata:
+  name: api-service-target
+  namespace: whoami
+spec:
+  destination:
+    kind: ServiceAccount
+    name: whoami-server
+    namespace: whoami
+  rules:
+    - kind: TCPRoute
+      name: my-tcp-route
+  sources:
+    - kind: ServiceAccount
+      name: whoami-client
+      namespace: whoami
 ```
