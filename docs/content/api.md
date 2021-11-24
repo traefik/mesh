@@ -5,7 +5,7 @@ This can be useful when Traefik Mesh is not working as intended.
 The API is accessed via the controller pod, and for security reasons is not exposed via service.
 The API can be accessed by making a `GET` request to `http://<control pod IP>:9000` combined with one of the following paths:
 
-## `/api/configuration`
+## `/api/configuration/current`
 
 This endpoint provides raw json of the current configuration built by the controller.
 
