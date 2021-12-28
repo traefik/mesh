@@ -7,7 +7,6 @@ on:
       - v*
 
 jobs:
-
   docs:
     name: Doc Process
     runs-on: ubuntu-latest
@@ -17,7 +16,6 @@ jobs:
       MIXTUS_VERSION: v0.4.1
 
     steps:
-
       - name: Check out code
         uses: actions/checkout@v2
         with:
