@@ -7,7 +7,9 @@ import (
 	stdlog "log"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -67,7 +69,8 @@ func main() {
 }
 
 func traefikMeshCommand(config *cmd.TraefikMeshConfiguration) error {
-	ctx := cmd.ContextWithSignal(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
 	log, err := cmd.NewLogger(config.LogFormat, config.LogLevel, config.Debug)
 	if err != nil {

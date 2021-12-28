@@ -224,11 +224,13 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			ctx := context.Background()
 
 			log := logrus.New()
-
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
@@ -361,11 +363,13 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			ctx := context.Background()
 
 			log := logrus.New()
-
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
@@ -440,7 +444,6 @@ func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
 	namespace := "bar"
 
 	log := logrus.New()
-
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
@@ -482,9 +485,11 @@ func TestShadowServiceManager_getHTTPPort(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
-			log := logrus.New()
+			t.Parallel()
 
+			log := logrus.New()
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
@@ -563,7 +568,10 @@ func TestShadowServiceManager_isPortSuitable(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			result := isPortSuitable(test.trafficType, corev1.ServicePort{
 				Protocol: test.portProtocol,
 			})
@@ -612,7 +620,10 @@ func TestShadowServiceManager_containsPort(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			result := containsPort(test.ports, test.port)
 
 			assert.Equal(t, test.expectedResult, result)
@@ -667,7 +678,10 @@ func TestShadowServiceManager_needsCleanup(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			result := needsCleanup(test.ports, test.port)
 
 			assert.Equal(t, test.expectedResult, result)

@@ -2,6 +2,8 @@ package version
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"runtime"
 
 	"github.com/traefik/mesh/pkg/version"
@@ -24,14 +26,13 @@ func NewCmd() *cli.Command {
 		Description:   `Shows the current Traefik Mesh version.`,
 		Configuration: nil,
 		Run: func(_ []string) error {
-			printVersion()
-			return nil
+			return printVersion(os.Stdout)
 		},
 	}
 }
 
-func printVersion() {
-	fmt.Printf(
+func printVersion(w io.Writer) error {
+	_, err := io.WriteString(w, fmt.Sprintf(
 		versionFormat,
 		version.Version,
 		version.Commit,
@@ -40,5 +41,7 @@ func printVersion() {
 		runtime.Compiler,
 		runtime.GOOS,
 		runtime.GOARCH,
-	)
+	))
+
+	return err
 }
