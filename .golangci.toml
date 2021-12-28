@@ -25,6 +25,18 @@
   [linters-settings.misspell]
     locale = "US"
 
+  [linters-settings.stylecheck]
+    checks = ["all", "-ST1000"]
+
+  [linters-settings.gomoddirectives]
+    replace-allow-list = [
+     "github.com/abbot/go-http-auth",
+     "github.com/go-check/check",
+     "github.com/gorilla/mux",
+     "github.com/mailgun/minheap",
+     "github.com/mailgun/multibuf",
+    ]
+
 [linters]
   enable-all = true
   disable = [
@@ -49,6 +61,13 @@
     "wrapcheck",
     "exhaustivestruct",
     "tparallel",
+    "interfacer", # Deprecated
+    "golint", # Deprecated
+    "ireturn", # Not relevant
+    "varnamelen", # Not relevant
+    "nilnil", # Not relevant
+    "paralleltest", # Not relevant
+    "cyclop", # Duplicate of gocyclo
   ]
 
 [issues]
