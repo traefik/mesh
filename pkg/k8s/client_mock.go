@@ -55,14 +55,16 @@ type ClientMock struct {
 }
 
 // NewClientMock create a new client mock.
-func NewClientMock(testingT *testing.T, path string) *ClientMock {
+func NewClientMock(t *testing.T, path string) *ClientMock {
+	t.Helper()
+
 	yamlContent, err := os.ReadFile(filepath.FromSlash("./testdata/" + path))
 	if err != nil {
 		panic(err)
 	}
 
 	k8sObjects := MustParseYaml(yamlContent)
-	c := &ClientMock{testingT: testingT}
+	c := &ClientMock{testingT: t}
 
 	c.kubeClient = fakekubeclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, CoreObjectKinds)...)
 	c.splitClient = fakesplitclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SplitObjectKinds)...)
