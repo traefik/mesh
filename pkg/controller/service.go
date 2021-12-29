@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/traefik/mesh/pkg/annotations"
 	corev1 "k8s.io/api/core/v1"
@@ -15,8 +14,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	listers "k8s.io/client-go/listers/core/v1"
 )
-
-var versionTopologyKeys = version.Must(version.NewVersion("1.17"))
 
 // PortMapper is capable of storing and retrieving a port mapping for a given service.
 type PortMapper interface {
@@ -89,21 +86,6 @@ func (s *ShadowServiceManager) CreateOrUpdate(ctx context.Context, svc *corev1.S
 		},
 	}
 
-	// If the kubernetes server version is 1.17+, then use the topology key.
-	serverVersion, err := getServerVersion(s.kubeClient)
-	if err != nil {
-		s.logger.Errorf("Unable to get server version: %v", err)
-	}
-
-	if err == nil && serverVersion.GreaterThanOrEqual(versionTopologyKeys) {
-		newShadowSvc.Spec.TopologyKeys = []string{
-			"kubernetes.io/hostname",
-			"topology.kubernetes.io/zone",
-			"topology.kubernetes.io/region",
-			"*",
-		}
-	}
-
 	if shadowSvc == nil {
 		return s.kubeClient.CoreV1().Services(s.namespace).Create(ctx, newShadowSvc, metav1.CreateOptions{})
 	}
@@ -114,7 +96,6 @@ func (s *ShadowServiceManager) CreateOrUpdate(ctx context.Context, svc *corev1.S
 
 	shadowSvc = shadowSvc.DeepCopy()
 	shadowSvc.Spec.Ports = newShadowSvc.Spec.Ports
-	shadowSvc.Spec.TopologyKeys = newShadowSvc.Spec.TopologyKeys
 
 	return s.kubeClient.CoreV1().Services(s.namespace).Update(ctx, shadowSvc, metav1.UpdateOptions{})
 }
@@ -283,17 +264,6 @@ func isPortSuitable(trafficType string, sp corev1.ServicePort) bool {
 	}
 
 	return false
-}
-
-// getServerVersion returns the parsed version of the Kubernetes server semver.
-// see https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/component-base/version/base.go#L58
-func getServerVersion(kubeClient kubernetes.Interface) (*version.Version, error) {
-	serverVersion, err := kubeClient.Discovery().ServerVersion()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get server version: %w", err)
-	}
-
-	return version.NewVersion(serverVersion.GitVersion)
 }
 
 // containsPort returns true if a service port with the same port and protocol value exist in the given port list, false otherwise.
