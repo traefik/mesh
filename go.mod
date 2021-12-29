@@ -14,9 +14,9 @@ require (
 	github.com/traefik/paerser v0.1.4
 	github.com/traefik/traefik/v2 v2.4.13
 	github.com/vdemeester/shakers v0.1.0
-	k8s.io/api v0.20.2
-	k8s.io/apimachinery v0.20.2
-	k8s.io/client-go v0.20.2
+	k8s.io/api v0.22.5
+	k8s.io/apimachinery v0.22.5
+	k8s.io/client-go v0.22.5
 )
 
 replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.20200204220554-5f6d6f3f2203
