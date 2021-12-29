@@ -27,7 +27,7 @@ global_job_config:
 blocks:
   - name: Build
     run:
-      when: "branch =~ '.*' OR pull_request =~'.*'"
+      when: "branch =~ '.*' OR pull_request =~ '.*'"
     task:
       jobs:
         - name: Cache Go dependencies
@@ -46,7 +46,7 @@ blocks:
 
   - name: Unit Tests
     run:
-      when: "branch =~ '.*' OR pull_request =~'.*'"
+      when: "branch =~ '.*' OR pull_request =~ '.*'"
     task:
       prologue:
         commands:
@@ -58,7 +58,7 @@ blocks:
 
   - name: Integration Tests
     run:
-      when: "branch =~ '.*' OR pull_request =~'.*'"
+      when: "branch =~ '.*' OR pull_request =~ '.*'"
     task:
       prologue:
         commands:
