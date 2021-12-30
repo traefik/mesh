@@ -15,9 +15,6 @@
   [linters-settings.gocognit]
     min-complexity = 15.0
 
-  [linters-settings.maligned]
-    suggest-new = true
-
   [linters-settings.goconst]
     min-len = 3.0
     min-occurrences = 3.0
@@ -40,34 +37,33 @@
 [linters]
   enable-all = true
   disable = [
+    "interfacer", # Deprecated
+    "golint", # Deprecated
+    "maligned", # Deprecated
+    "scopelint", # Deprecated
+    "cyclop", # Duplicate of gocyclo
     "lll", # Long lines are ok.
-    "dupl",
-    "prealloc",
-    "maligned",
-    "gochecknoinits",
-    "gochecknoglobals",
+    "dupl", # Not relevant
+    "prealloc", # Not relevant
+    "gochecknoinits", # Too strict
+    "gochecknoglobals", # Too strict
     "gomnd", # Does not allow for any config or time values
     "gosec", # Does not allow exec.Command with variable
-    "scopelint",
-    "funlen",
     "bodyclose", # Too many false positives
-    "godox",
     "goconst", # Too many false positives
-    "testpackage", # Does not allow testing private funcs
+    "wrapcheck", # Too strict
     "goerr113", # Forces wrapping all errors
     "noctx", # Too strict
     "exhaustive", # Too strict
+    "exhaustivestruct", # Too strict
     "nlreturn", # Too strict
-    "wrapcheck",
-    "exhaustivestruct",
-    "tparallel",
-    "interfacer", # Deprecated
-    "golint", # Deprecated
     "ireturn", # Not relevant
     "varnamelen", # Not relevant
     "nilnil", # Not relevant
+    "testpackage", # Does not allow testing private funcs
+    "tparallel", # Not relevant
     "paralleltest", # Not relevant
-    "cyclop", # Duplicate of gocyclo
+    "funlen",
   ]
 
 [issues]
