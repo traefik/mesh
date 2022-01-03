@@ -20,14 +20,14 @@ global_job_config:
   prologue:
     commands:
       - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
-      - sudo semgo go1.17
+      - sudo semgo go1.16
       - echo "${DOCKERHUB_PASSWORD}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
       - checkout
 
 blocks:
   - name: Build
     run:
-      when: "branch =~ '.*' OR pull_request =~ '.*'"
+      when: "branch =~ '.*' OR pull_request =~'.*'"
     task:
       jobs:
         - name: Cache Go dependencies
@@ -46,7 +46,7 @@ blocks:
 
   - name: Unit Tests
     run:
-      when: "branch =~ '.*' OR pull_request =~ '.*'"
+      when: "branch =~ '.*' OR pull_request =~'.*'"
     task:
       prologue:
         commands:
@@ -58,7 +58,7 @@ blocks:
 
   - name: Integration Tests
     run:
-      when: "branch =~ '.*' OR pull_request =~ '.*'"
+      when: "branch =~ '.*' OR pull_request =~'.*'"
     task:
       prologue:
         commands:
