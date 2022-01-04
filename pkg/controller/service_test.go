@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	goversion "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -277,13 +276,6 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 
 			for i, port := range test.expectedShadowSvc.Spec.Ports {
 				assert.Equal(t, port, shadowSvc.Spec.Ports[i])
-			}
-
-			serverVersion, err := goversion.NewVersion(serverVersionStr)
-			require.NoError(t, err)
-
-			if serverVersion.GreaterThanOrEqual(versionTopologyKeys) {
-				assert.True(t, len(shadowSvc.Spec.TopologyKeys) > 0)
 			}
 		})
 	}

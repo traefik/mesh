@@ -2,9 +2,9 @@
 
 Traefik Mesh supports, [similar to Kubernetes](https://kubernetes.io/docs/setup/release/version-skew-policy/#supported-versions), at least the latest three minor versions of Kubernetes, therefore currently:
 
-* 1.17
-* 1.18
-* 1.19
+* 1.21
+* 1.22
+* 1.23
 
 General functionality cannot be guaranted for versions older than that. However, we expect it to work with Kubernetes down to 1.11 currently.
 
@@ -13,10 +13,15 @@ General functionality cannot be guaranted for versions older than that. However,
 Some of Traefik Mesh's features are only supported on certain Kubernetes versions. 
 Please see the table below.
 
-| Features              | K8s 1.17 | K8s 1.18 | K8s 1.19 |
+| Features              | K8s 1.21 | K8s 1.22 | K8s 1.23 |
 |-----------------------|----------|----------|----------|
 | General functionality | ✔        | ✔        | ✔        |
-| Service Topology      | ✔        | ✔        | ✔        |
+| Service Topology      | ✔        | -        | -        |
+
+!!! warning "Service Topology"
+
+    In Kubernetes `v1.22`, the experimental Service Topology feature was removed.
+    Therefore, starting from Traefik Mesh `v1.4.5`, the support of this feature has been removed.
 
 ## SMI Specification support
 
