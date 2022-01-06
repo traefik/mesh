@@ -2,7 +2,6 @@
 <img src="docs/content/assets/img/traefik-mesh.png" alt="Traefik Mesh" title="Traefik Mesh" />
 </p>
 
-
 [![Travis CI Build Status](https://travis-ci.com/traefik/mesh.svg?branch=master)](https://travis-ci.com/traefik/mesh)
 [![Semaphore CI Build Status](https://traefik.semaphoreci.com/badges/mesh/branches/master.svg?style=shields)](https://traefik.semaphoreci.com/projects/mesh)
 [![Docs](https://img.shields.io/badge/docs-current-brightgreen.svg)](https://doc.traefik.io/traefik-mesh)
@@ -13,9 +12,9 @@
 
 ## Traefik Mesh: Simpler Service Mesh
 
-Traefik Mesh is a simple, yet full-featured service mesh. 
-It is container-native and fits as your de-facto service mesh in your Kubernetes cluster. 
-It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io) that facilitates integration with pre-existing solution. 
+Traefik Mesh is a simple, yet full-featured service mesh.
+It is container-native and fits as your de-facto service mesh in your Kubernetes cluster.
+It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io) that facilitates integration with pre-existing solution.
 Moreover, Traefik Mesh is opt-in by default, which means that your existing services are unaffected until you decide to add them to the mesh.
 
 <p align="center">
@@ -25,10 +24,10 @@ Moreover, Traefik Mesh is opt-in by default, which means that your existing serv
 
 ## Non-Invasive Service Mesh
 
-Traefik Mesh does not use any sidecar container but handles routing through proxy endpoints running on each node. 
-The mesh controller runs in a dedicated pod and handles all the configuration parsing and deployment to the proxy nodes. 
-Traefik Mesh supports multiple configuration options: annotations on user service objects, and SMI objects. 
-Not using sidecars means that Traefik Mesh does not modify your Kubernetes objects, and does not modify your traffic without your knowledge. 
+Traefik Mesh does not use any sidecar container but handles routing through proxy endpoints running on each node.
+The mesh controller runs in a dedicated pod and handles all the configuration parsing and deployment to the proxy nodes.
+Traefik Mesh supports multiple configuration options: annotations on user service objects, and SMI objects.
+Not using sidecars means that Traefik Mesh does not modify your Kubernetes objects, and does not modify your traffic without your knowledge.
 Using the Traefik Mesh endpoints is all that is required.
 
 <p align="center">
