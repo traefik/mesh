@@ -3,6 +3,8 @@ package prepare
 import (
 	"context"
 	"fmt"
+	"os/signal"
+	"syscall"
 
 	"github.com/traefik/mesh/cmd"
 	"github.com/traefik/mesh/pkg/dns"
@@ -25,7 +27,8 @@ func NewCmd(pConfig *cmd.PrepareConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func prepareCommand(pConfig *cmd.PrepareConfiguration) error {
-	ctx := cmd.ContextWithSignal(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
 	log, err := cmd.NewLogger(pConfig.LogFormat, pConfig.LogLevel, pConfig.Debug)
 	if err != nil {

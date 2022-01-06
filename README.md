@@ -3,7 +3,6 @@
 </p>
 
 
-[![Travis CI Build Status](https://travis-ci.com/traefik/mesh.svg?branch=master)](https://travis-ci.com/traefik/mesh)
 [![Semaphore CI Build Status](https://traefik.semaphoreci.com/badges/mesh/branches/master.svg?style=shields)](https://traefik.semaphoreci.com/projects/mesh)
 [![Docs](https://img.shields.io/badge/docs-current-brightgreen.svg)](https://doc.traefik.io/traefik-mesh)
 [![Go Report Card](https://goreportcard.com/badge/github.com/traefik/mesh)](https://goreportcard.com/report/github.com/traefik/mesh)
