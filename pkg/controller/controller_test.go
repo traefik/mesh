@@ -30,8 +30,8 @@ func (a *storeMock) SetReadiness(isReady bool)            {}
 func TestController_NewMeshController(t *testing.T) {
 	store := &storeMock{}
 	clientMock := k8s.NewClientMock(t, "mock.yaml")
-	log := logrus.New()
 
+	log := logrus.New()
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
@@ -55,8 +55,8 @@ func TestController_NewMeshController(t *testing.T) {
 func TestController_NewMeshControllerWithSMI(t *testing.T) {
 	store := &storeMock{}
 	clientMock := k8s.NewClientMock(t, "mock.yaml")
-	log := logrus.New()
 
+	log := logrus.New()
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
