@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine AS base-image
+FROM golang:1.17-alpine AS base-image
 
 # Package dependencies
 RUN apk --no-cache --no-progress add \
@@ -21,7 +21,7 @@ WORKDIR /go/src/github.com/traefik/mesh
 RUN curl -sfL https://gist.githubusercontent.com/traefiker/6d7ac019c11d011e4f131bb2cca8900e/raw/goreleaser.sh | sh
 
 # Download golangci-lint binary to bin folder in $GOPATH
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $GOPATH/bin v1.32.0
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $GOPATH/bin v1.43.0
 
 ENV GO111MODULE on
 COPY go.mod go.sum ./
