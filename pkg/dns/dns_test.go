@@ -72,7 +72,7 @@ func TestCheckDNSProvider(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
 			log.SetOutput(os.Stdout)
@@ -191,7 +191,7 @@ func TestConfigureCoreDNS(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
 			log.SetOutput(os.Stdout)
@@ -269,7 +269,7 @@ func TestConfigureKubeDNS(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
 			log.SetOutput(os.Stdout)
@@ -332,7 +332,7 @@ func TestRestoreCoreDNS(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
 			log.SetOutput(os.Stdout)
@@ -388,7 +388,7 @@ func TestRestoreKubeDNS(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
 			log.SetOutput(os.Stdout)

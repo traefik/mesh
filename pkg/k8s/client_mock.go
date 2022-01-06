@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"testing"
 
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha2"
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
@@ -46,8 +45,6 @@ func init() {
 
 // ClientMock holds mock client.
 type ClientMock struct {
-	testingT *testing.T
-
 	kubeClient   *fakekubeclient.Clientset
 	accessClient *fakeaccessclient.Clientset
 	specsClient  *fakespecsclient.Clientset
@@ -55,22 +52,19 @@ type ClientMock struct {
 }
 
 // NewClientMock create a new client mock.
-func NewClientMock(t *testing.T, path string) *ClientMock {
-	t.Helper()
-
+func NewClientMock(path string) *ClientMock {
 	yamlContent, err := os.ReadFile(filepath.FromSlash("./testdata/" + path))
 	if err != nil {
 		panic(err)
 	}
 
 	k8sObjects := MustParseYaml(yamlContent)
-	c := &ClientMock{testingT: t}
 
-	c.kubeClient = fakekubeclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, CoreObjectKinds)...)
-	c.splitClient = fakesplitclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SplitObjectKinds)...)
-	c.specsClient = fakespecsclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SpecsObjectKinds)...)
-
-	return c
+	return &ClientMock{
+		kubeClient:  fakekubeclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, CoreObjectKinds)...),
+		splitClient: fakesplitclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SplitObjectKinds)...),
+		specsClient: fakespecsclient.NewSimpleClientset(filterObjectsByKind(k8sObjects, SpecsObjectKinds)...),
+	}
 }
 
 // KubernetesClient is used to get the kubernetes clientset.

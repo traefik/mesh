@@ -142,7 +142,7 @@ func TestGetMeshNodes(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			clientMock := k8s.NewClientMock(t, test.mockFile)
+			clientMock := k8s.NewClientMock(test.mockFile)
 			api, err := NewAPI(log, 9000, localhost, clientMock.KubernetesClient(), "foo")
 
 			require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestGetMeshNodeConfiguration(t *testing.T) {
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			clientMock := k8s.NewClientMock(t, test.mockFile)
+			clientMock := k8s.NewClientMock(test.mockFile)
 			api, err := NewAPI(log, 9000, localhost, clientMock.KubernetesClient(), "foo")
 
 			require.NoError(t, err)
