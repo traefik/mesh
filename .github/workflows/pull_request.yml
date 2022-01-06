@@ -4,11 +4,13 @@ on:
   pull_request:
 
 jobs:
+
   docs:
     name: Doc package
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Check out code
         uses: actions/checkout@v2
         with:
