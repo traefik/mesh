@@ -13,7 +13,7 @@ import (
 )
 
 func TestCleanup_New(t *testing.T) {
-	clientMock := k8s.NewClientMock(t, "mock.yaml")
+	clientMock := k8s.NewClientMock("mock.yaml")
 	logger := logrus.New()
 
 	logger.SetOutput(os.Stdout)
@@ -24,7 +24,7 @@ func TestCleanup_New(t *testing.T) {
 }
 
 func TestCleanup_CleanShadowServices(t *testing.T) {
-	clientMock := k8s.NewClientMock(t, "mock.yaml")
+	clientMock := k8s.NewClientMock("mock.yaml")
 	logger := logrus.New()
 
 	logger.SetOutput(os.Stdout)

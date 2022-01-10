@@ -19,7 +19,6 @@ var localhost = "127.0.0.1"
 
 func TestEnableReadiness(t *testing.T) {
 	log := logrus.New()
-
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
@@ -56,8 +55,8 @@ func TestGetReadiness(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			log := logrus.New()
 
+			log := logrus.New()
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
@@ -84,7 +83,6 @@ func TestGetReadiness(t *testing.T) {
 
 func TestGetCurrentConfiguration(t *testing.T) {
 	log := logrus.New()
-
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logrus.DebugLevel)
 
@@ -139,12 +137,12 @@ func TestGetMeshNodes(t *testing.T) {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
-			log := logrus.New()
 
+			log := logrus.New()
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			clientMock := k8s.NewClientMock(t, test.mockFile)
+			clientMock := k8s.NewClientMock(test.mockFile)
 			api, err := NewAPI(log, 9000, localhost, clientMock.KubernetesClient(), "foo")
 
 			require.NoError(t, err)
@@ -193,11 +191,10 @@ func TestGetMeshNodeConfiguration(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.desc, func(t *testing.T) {
 			log := logrus.New()
-
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
-			clientMock := k8s.NewClientMock(t, test.mockFile)
+			clientMock := k8s.NewClientMock(test.mockFile)
 			api, err := NewAPI(log, 9000, localhost, clientMock.KubernetesClient(), "foo")
 
 			require.NoError(t, err)

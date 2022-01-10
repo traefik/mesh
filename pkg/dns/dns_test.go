@@ -65,14 +65,16 @@ func TestCheckDNSProvider(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
-
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
@@ -182,14 +184,16 @@ func TestConfigureCoreDNS(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
-
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
@@ -258,14 +262,16 @@ func TestConfigureKubeDNS(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
-
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
@@ -319,14 +325,16 @@ func TestRestoreCoreDNS(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
-
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 
@@ -373,14 +381,16 @@ func TestRestoreKubeDNS(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			k8sClient := k8s.NewClientMock(t, test.mockFile)
+			k8sClient := k8s.NewClientMock(test.mockFile)
 
 			log := logrus.New()
-
 			log.SetOutput(os.Stdout)
 			log.SetLevel(logrus.DebugLevel)
 

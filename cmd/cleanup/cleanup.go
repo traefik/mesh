@@ -3,6 +3,8 @@ package cleanup
 import (
 	"context"
 	"fmt"
+	"os/signal"
+	"syscall"
 
 	"github.com/traefik/mesh/cmd"
 	"github.com/traefik/mesh/pkg/cleanup"
@@ -24,7 +26,8 @@ func NewCmd(cConfig *cmd.CleanupConfiguration, loaders []cli.ResourceLoader) *cl
 }
 
 func cleanupCommand(cConfig *cmd.CleanupConfiguration) error {
-	ctx := cmd.ContextWithSignal(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
 	logger, err := cmd.NewLogger(cConfig.LogFormat, cConfig.LogLevel, false)
 	if err != nil {
