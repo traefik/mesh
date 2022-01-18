@@ -3,6 +3,8 @@ package dns
 import (
 	"context"
 	"fmt"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -29,7 +31,8 @@ func NewCmd(config *Configuration, loaders []cli.ResourceLoader) *cli.Command {
 }
 
 func dnsCommand(config *Configuration) error {
-	ctx := cmd.ContextWithSignal(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
 	logger, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
 	if err != nil {

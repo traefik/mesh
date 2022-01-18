@@ -13,7 +13,6 @@ import (
 
 func TestEnqueueWorkHandler_OnAdd(t *testing.T) {
 	logger := logrus.New()
-
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(logrus.DebugLevel)
 
@@ -31,7 +30,6 @@ func TestEnqueueWorkHandler_OnAdd(t *testing.T) {
 
 func TestEnqueueWorkHandler_OnDelete(t *testing.T) {
 	logger := logrus.New()
-
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(logrus.DebugLevel)
 
@@ -77,9 +75,11 @@ func TestEnqueueWorkHandler_OnUpdate(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
-			logger := logrus.New()
+			t.Parallel()
 
+			logger := logrus.New()
 			logger.SetOutput(os.Stdout)
 			logger.SetLevel(logrus.DebugLevel)
 
@@ -120,9 +120,11 @@ func TestEnqueueWorkHandler_enqueueWork(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
-			logger := logrus.New()
+			t.Parallel()
 
+			logger := logrus.New()
 			logger.SetOutput(os.Stdout)
 			logger.SetLevel(logrus.DebugLevel)
 

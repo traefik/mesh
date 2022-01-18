@@ -18,10 +18,10 @@ $ make
 Successfully tagged traefik/mesh:latest
 docker run --name=build -t "traefik/mesh:latest" version
 version:
- version     : b417901
- commit      : b417901
- build date  : 2020-09-01_09:27:55AM
- go version  : go1.15
+ version     : d6947526
+ commit      : d6947526
+ build date  : 2021-12-28_03:19:22PM
+ go version  : go1.17.5
  go compiler : gc
  platform    : linux/amd64
 #[...]
@@ -37,7 +37,7 @@ traefik-mesh
 
 Requirements:
 
-- `Go` v1.14+
+- `Go` v1.17+
 - Environment variable `GO111MODULE=on`
 
 One your Go environment is set up, you can build Traefik Mesh from the sources by using the `go build` command.
@@ -50,7 +50,7 @@ version:
  version     : dev
  commit      : I don't remember exactly
  build date  : I don't remember exactly
- go version  : go1.15
+ go version  : go1.17.5
  go compiler : gc
  platform    : linux/amd64
 ```

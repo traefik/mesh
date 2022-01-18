@@ -37,7 +37,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: traefik-mesh-proxy
-          image: "traefik:v2.3"
+          image: traefik:v2.5
           imagePullPolicy: IfNotPresent
           args:
             - "--entryPoints.readiness.address=:1081"

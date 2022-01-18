@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine AS builder
+FROM golang:1.17-alpine AS builder
 
 # Package dependencies
 RUN apk --no-cache --no-progress add \
@@ -18,7 +18,7 @@ RUN apk --no-cache --no-progress add \
 WORKDIR /go/src/github.com/traefik/mesh
 
 # Download goreleaser binary to bin folder in $GOPATH
-RUN curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
+RUN curl -sfL https://gist.githubusercontent.com/traefiker/6d7ac019c11d011e4f131bb2cca8900e/raw/goreleaser.sh | sh
 
 ENV GO111MODULE on
 COPY go.mod go.sum ./

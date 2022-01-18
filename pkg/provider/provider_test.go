@@ -171,7 +171,10 @@ func TestProvider_BuildConfig(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			logger := logrus.New()
 			logger.SetOutput(io.Discard)
 
@@ -224,6 +227,8 @@ func loadTopology(filename string) (*topology.Topology, error) {
 }
 
 func assertConfig(t *testing.T, filename string, got *dynamic.Configuration) {
+	t.Helper()
+
 	data, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
