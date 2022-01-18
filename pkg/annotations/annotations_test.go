@@ -52,7 +52,10 @@ func TestGetTrafficType(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			tt, err := GetTrafficType(test.annotations)
 			if test.errNotFound {
 				require.Equal(t, ErrNotFound, err)
@@ -112,7 +115,10 @@ func TestGetScheme(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			scheme, err := GetScheme(test.annotations)
 			if test.err {
 				require.Error(t, err)
@@ -156,7 +162,10 @@ func TestGetRetryAttempts(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			attempts, err := GetRetryAttempts(test.annotations)
 			if test.err {
 				require.Error(t, err)
@@ -194,7 +203,10 @@ func TestGetCircuitBreakerExpression(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			value, err := GetCircuitBreakerExpression(test.annotations)
 			if test.err {
 				require.Error(t, err)
@@ -239,7 +251,10 @@ func TestGetRateLimitBurst(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			value, err := GetRateLimitBurst(test.annotations)
 			if test.err {
 				require.Error(t, err)
@@ -284,7 +299,10 @@ func TestGetRateLimitAverage(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			value, err := GetRateLimitAverage(test.annotations)
 			if test.err {
 				require.Error(t, err)

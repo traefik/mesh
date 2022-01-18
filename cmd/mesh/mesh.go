@@ -7,7 +7,9 @@ import (
 	stdlog "log"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/traefik/mesh/v2/cmd"
@@ -66,7 +68,8 @@ func main() {
 }
 
 func traefikMeshCommand(config *Configuration) error {
-	ctx := cmd.ContextWithSignal(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
 	logger, err := cmd.NewLogger(config.LogFormat, config.LogLevel)
 	if err != nil {

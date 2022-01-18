@@ -29,9 +29,9 @@ func (a *storeMock) SetReadiness(_ bool)                       {}
 
 func TestController_NewMeshController(t *testing.T) {
 	store := &storeMock{}
-	clientMock := k8s.NewClientMock(t, "mock.yaml")
-	logger := logrus.New()
+	clientMock := k8s.NewClientMock("mock.yaml")
 
+	logger := logrus.New()
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(logrus.DebugLevel)
 
@@ -54,9 +54,9 @@ func TestController_NewMeshController(t *testing.T) {
 
 func TestController_NewMeshControllerWithACLEnabled(t *testing.T) {
 	store := &storeMock{}
-	clientMock := k8s.NewClientMock(t, "mock.yaml")
-	logger := logrus.New()
+	clientMock := k8s.NewClientMock("mock.yaml")
 
+	logger := logrus.New()
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(logrus.DebugLevel)
 

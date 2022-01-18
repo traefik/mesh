@@ -139,6 +139,8 @@ func TestShadowServiceResolver_parseNamespaceAndName(t *testing.T) {
 }
 
 func newFakeK8sClient(t *testing.T, objects ...runtime.Object) listers.ServiceLister {
+	t.Helper()
+
 	client := fake.NewSimpleClientset(objects...)
 
 	informerFactory := informers.NewSharedInformerFactory(client, 5*time.Minute)

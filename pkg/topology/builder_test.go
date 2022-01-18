@@ -920,6 +920,8 @@ func createServiceAccount(namespace, name string) *corev1.ServiceAccount {
 }
 
 func assertTopology(t *testing.T, filename string, got *Topology) {
+	t.Helper()
+
 	data, err := os.ReadFile(filename)
 	require.NoError(t, err)
 

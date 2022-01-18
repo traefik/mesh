@@ -26,23 +26,22 @@ func parseLogFormat(format string) (logrus.Formatter, error) {
 
 // NewLogger returns a new field logger with the provided format and level.
 func NewLogger(format, level string) (logrus.FieldLogger, error) {
-	log := logrus.New()
-
-	log.SetOutput(os.Stdout)
+	logger := logrus.New()
+	logger.SetOutput(os.Stdout)
 
 	logLevel, err := parseLogLevel(level)
 	if err != nil {
-		return log, err
+		return logger, err
 	}
 
-	log.SetLevel(logLevel)
+	logger.SetLevel(logLevel)
 
 	logFormat, err := parseLogFormat(format)
 	if err != nil {
-		return log, err
+		return logger, err
 	}
 
-	log.SetFormatter(logFormat)
+	logger.SetFormatter(logFormat)
 
-	return log, nil
+	return logger, nil
 }

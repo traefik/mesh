@@ -392,6 +392,8 @@ func newFakeService(name string, ports map[int]int, trafficType string) *corev1.
 }
 
 func newFakeShadowService(t *testing.T, svc *corev1.Service, ports map[int]int) *corev1.Service {
+	t.Helper()
+
 	var svcPorts []corev1.ServicePort
 
 	name, err := GetShadowServiceName(svc.Namespace, svc.Name)
@@ -441,6 +443,8 @@ func newFakeShadowService(t *testing.T, svc *corev1.Service, ports map[int]int) 
 }
 
 func newFakeK8sClient(t *testing.T, objects ...runtime.Object) (*fake.Clientset, listers.ServiceLister) {
+	t.Helper()
+
 	client := fake.NewSimpleClientset(objects...)
 
 	informerFactory := informers.NewSharedInformerFactory(client, 5*time.Minute)
@@ -506,7 +510,10 @@ func TestShadowServiceManager_isPortCompatible(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			result := isPortCompatible(test.trafficType, corev1.ServicePort{
 				Protocol: test.portProtocol,
 			})
