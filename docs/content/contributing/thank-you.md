@@ -1,3 +1,8 @@
+---
+title: "Traefik Mesh Feedback and Contributions"
+description: "Traefik Mesh is an open-source project, your feedback and contributions are needed and always welcome! Read the docs to learn how you can contribute."
+---
+
 # Thank You!
 
 Traefik Mesh is an [open-source project](https://github.com/traefik/mesh/), your feedback and contributions are needed and 
