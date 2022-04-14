@@ -1,3 +1,8 @@
+---
+title: Traefik Mesh: Simpler Service Mesh | Traefik Docs
+description: Traefik Mesh is a lightweight and simpler service mesh designed from the ground up to be straightforward, easy to install and use. Read the docs to learn more.
+---
+
 # Traefik Mesh: Simpler Service Mesh
 
 <p align="center">

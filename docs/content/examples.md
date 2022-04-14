@@ -1,3 +1,8 @@
+---
+title: Traefik Mesh Documentation | Traefik Docs
+description: View some simple and ACL examples for how to deploy Traefik Mesh, a simple and lightweight service mesh, in your cluster. Read the technical documentation.
+---
+
 # Examples
 
 Here are some examples on how to easily deploy Traefik Mesh on your cluster.

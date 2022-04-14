@@ -1,3 +1,8 @@
+---
+title: Traefik Mesh Compatibility | Traefik Docs
+description: Traefik Mesh supports, similar to Kubernetes, at least the latest three minor versions of Kubernetes. Read the documentation to learn more.
+---
+
 # Compatibility
 
 Traefik Mesh supports, [similar to Kubernetes](https://kubernetes.io/docs/setup/release/version-skew-policy/#supported-versions), at least the latest three minor versions of Kubernetes, therefore currently:

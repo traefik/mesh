@@ -57,6 +57,7 @@ markdown_extensions:
       encoding: utf-8
   - toc:
       permalink: true
+  - meta
 
 # Page tree
 nav:

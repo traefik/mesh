@@ -1,3 +1,8 @@
+---
+title: Submitting Pull Requests for Traefik Mesh | Traefik Docs
+description: This documentation article describes the process of submitting a pull request for Traefik Mesh.
+---
+
 # Submitting Pull Requests
 
 So you've decided to improve Traefik Mesh? Thank You! Now the last step is to submit your Pull Request in a way that makes sure 

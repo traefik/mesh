@@ -1,3 +1,8 @@
+---
+title: Submitting Issues in Traefik Mesh | Traefik Docs
+description: This documentation article describes the process of sorting and checking issues in Traefik Mesh.
+---
+
 # Submitting Issues
 
 We use the [GitHub issue tracker](https://github.com/traefik/mesh/issues) to keep track of Traefik Mesh issues. 
