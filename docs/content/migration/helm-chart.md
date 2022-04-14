@@ -1,3 +1,8 @@
+---
+title: Traefik Helm Chart Documentation | Traefik Docs
+description: Migrate to the latest version of Traefik Mesh, a simple and lightweight service mesh, in your cluster's Helm chart. Read the technical documentation
+---
+
 # Migrations
 
 Helm Chart
