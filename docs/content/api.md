@@ -1,3 +1,8 @@
+---
+title: Traefik Mesh API | Traefik Docs
+description: Traefik Mesh includes a built-in API that can be used for debugging purposes. read the documentation to learn more.
+---
+
 # API
 
 Traefik Mesh includes a built-in API that can be used for debugging purposes.
