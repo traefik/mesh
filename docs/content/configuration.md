@@ -1,3 +1,8 @@
+---
+title: "Traefik Mesh Configuration"
+description: "The configuration for Traefik Mesh is broken down into two parts: the static configuration, and the dynamic configuration. Read the docs to learn more."
+---
+
 # Configuration
 
 The configuration for Traefik Mesh is broken down into two parts: the static configuration, and the dynamic configuration.

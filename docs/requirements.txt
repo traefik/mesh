@@ -3,3 +3,4 @@ pymdown-extensions==7.0
 mkdocs-bootswatch==1.0
 mkdocs-traefiklabs>=100.0.7
 markdown-include==0.5.1
+Jinja2==3.0.0
