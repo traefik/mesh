@@ -1,3 +1,8 @@
+---
+title: "Traefik Mesh Documentation"
+description: "You've found something unclear in the documentation and want to give a try at explaining it better? Learn how you can do so in this article."
+---
+
 # Documentation
 
 You've found something unclear in the documentation and want to give a try at explaining it better?
