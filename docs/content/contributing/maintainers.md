@@ -1,3 +1,8 @@
+---
+title: "Traefik Mesh Maintainers"
+description: "In this article, you can find the list of Traefik Mesh maintainers."
+---
+
 # Maintainers
 
 - Daniel Tomcej [@dtomcej](https://github.com/dtomcej)
