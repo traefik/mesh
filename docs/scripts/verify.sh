@@ -21,7 +21,7 @@ find "${PATH_TO_SITE}" -type f -not -path "/app/site/theme/*" \
   --check_external_hash \
   --alt_ignore="/traefik-mesh-logo.svg/" \
   --http_status_ignore="0,500,501,503" \
-  --url_ignore="/fonts.gstatic.com/,/traefik-mesh/,/github.com\/traefik\/mesh\/edit*/,/pilot.traefik.io\/profile/,/traefik.io/,/doc.traefik.io/,/www.mkdocs.org/,/squidfunk.github.io/,/ietf.org/" \
+  --url_ignore="/fonts.gstatic.com/,/traefik-mesh/,/github.com\/traefik\/mesh\/edit*/,/pilot.traefik.io\/profile/,/traefik.io/,/doc.traefik.io/,/www.mkdocs.org/,/squidfunk.github.io/,/ietf.org/,/docs.github.com/" \
   '{}' 1>/dev/null
 ## HTML-proofer options at https://github.com/gjtorikian/html-proofer#configuration
 
