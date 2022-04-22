@@ -1,6 +1,6 @@
 ---
-title: "Treafik Mesh Building and Testing"
-description: "This documentation articles explains how you can build your own Traefik Mesh binary from the sources."
+title: "Traefik Mesh Building and Testing"
+description: "This documentation article explains how you can build your own Traefik Mesh binary from the sources."
 ---
 
 # Building and Testing

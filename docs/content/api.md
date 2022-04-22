@@ -1,6 +1,6 @@
 ---
 title: "Traefik Mesh API"
-description: "Traefik Mesh includes a built-in API that can be used for debugging purposes. read the documentation to learn more."
+description: "Traefik Mesh includes a built-in API that can be used for debugging purposes. Read the documentation to learn more."
 ---
 
 # API

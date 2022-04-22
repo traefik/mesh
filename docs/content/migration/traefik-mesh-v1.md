@@ -1,6 +1,6 @@
 ---
 title: "Traefik Mesh Migrations Documentation"
-description: "Traefik Mesh v1.4 introduced a few key changes. Learn what those changes and what actionable steps must be taken in the technical documentation."
+description: "Traefik Mesh v1.4 introduced a few key changes. Learn what those changes are and what actionable steps must be taken in the technical documentation."
 ---
 
 # Minor Migrations
