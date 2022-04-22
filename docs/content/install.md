@@ -1,3 +1,8 @@
+---
+title: "Traefik Mesh Installation Documentation"
+description: "There are different ways you can install Traefik Mesh, a simple and lightweight service mesh, in your cluster. Read the technical documentation."
+---
+
 # Installation
 
 To install Traefik Mesh, the installation method is quite simple:
