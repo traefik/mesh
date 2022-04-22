@@ -1,3 +1,8 @@
+---
+title: "Submitting Issues in Traefik Mesh"
+description: "This documentation article describes the process of sorting and checking issues in Traefik Mesh."
+---
+
 # Submitting Issues
 
 We use the [GitHub issue tracker](https://github.com/traefik/mesh/issues) to keep track of Traefik Mesh issues. 
@@ -22,7 +27,7 @@ Explain in which context you encountered the issue.
 Remain clear and concise.
 
 Take time to polish the format of your message so we'll enjoy reading it and working on it. Help the readers focus on 
-what matters, and help them understand the structure of your message (see the [Github Markdown Syntax](https://help.github.com/articles/github-flavored-markdown)).
+what matters, and help them understand the structure of your message (see the [GitHub Markdown Syntax](https://docs.github.com/en/get-started/writing-on-github)).
 
 ## Feature Request
 
