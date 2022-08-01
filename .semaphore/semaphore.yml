@@ -20,7 +20,7 @@ global_job_config:
   prologue:
     commands:
       - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
-      - sudo semgo go1.17
+      - sudo semgo go1.18
       - echo "${DOCKERHUB_PASSWORD}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
       - checkout
 
@@ -53,6 +53,9 @@ blocks:
           - cache restore
       jobs:
         - name: Unit Tests
+          matrix:
+            - env_var: ARCH
+              values: ["arm64","amd64"]
           commands:
             - make local-test
 
@@ -68,15 +71,27 @@ blocks:
           - docker load < traefik-mesh-img.tar
       jobs:
         - name: ACL Enabled Suite
+          matrix:
+            - env_var: ARCH
+              values: ["arm64","amd64"]
           commands:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f ACLEnabledSuite\""
         - name: ACL Disabled Suite
+          matrix:
+            - env_var: ARCH
+              values: ["arm64","amd64"]
           commands:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f ACLDisabledSuite\""
         - name: CoreDNS Suite
+          matrix:
+            - env_var: ARCH
+              values: ["arm64","amd64"]
           commands:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f CoreDNSSuite\""
         - name: KubeDNS Suite
+          matrix:
+            - env_var: ARCH
+              values: ["arm64","amd64"]
           commands:
             - "make test-integration-nobuild TESTFLAGS=\"-check.f KubeDNSSuite\""
 
