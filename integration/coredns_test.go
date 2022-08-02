@@ -32,6 +32,8 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 		{Name: "coredns/coredns:1.5.2"},
 		{Name: "coredns/coredns:1.6.3"},
 		{Name: "coredns/coredns:1.7.0"},
+		{Name: "coredns/coredns:1.8.0"},
+		{Name: "coredns/coredns:1.9.0"},
 		{Name: "giantswarm/tiny-tools:3.9"},
 	}
 
