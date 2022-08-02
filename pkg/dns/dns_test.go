@@ -51,12 +51,6 @@ func TestCheckDNSProvider(t *testing.T) {
 			expErr:      true,
 		},
 		{
-			desc:        "CoreDNS unsupported next version with suffix",
-			mockFile:    "checkdnsprovider_unsupported_version_suffix.yaml",
-			expProvider: UnknownDNS,
-			expErr:      true,
-		},
-		{
 			desc:        "No known DNS provider",
 			mockFile:    "checkdnsprovider_no_provider.yaml",
 			expProvider: UnknownDNS,
