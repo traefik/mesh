@@ -89,14 +89,29 @@ func (c *Client) CheckDNSProvider(ctx context.Context) (Provider, error) {
 func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 	c.logger.Debugf("Checking if CoreDNS is installed in namespace %q...", metav1.NamespaceSystem)
 
-	deployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
-	if kerrors.IsNotFound(err) {
-		c.logger.Debug("CoreDNS deployment not found")
-		return false, nil
+	// Most Kubernetes distributions deploy CoreDNS with the following label, so look for it first.
+	opts := metav1.ListOptions{
+		LabelSelector: "kubernetes.io/name=CoreDNS",
+	}
+	deployments, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).List(ctx, opts)
+	if err != nil {
+		return false, fmt.Errorf("unable to list CoreDNS deployments in namespace %q: %w", metav1.NamespaceSystem, err)
 	}
 
-	if err != nil {
-		return false, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", metav1.NamespaceSystem, err)
+	var deployment *appsv1.Deployment
+	if len(deployments.Items) == 1 {
+		deployment = &deployments.Items[0]
+	} else {
+		// If we did not find CoreDNS using the annotation (e.g.: with kubeadm), fall back to matching the name of the deployment.
+		deployment, err = c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
+		if kerrors.IsNotFound(err) {
+			c.logger.Debug("CoreDNS deployment not found")
+			return false, nil
+		}
+
+		if err != nil {
+			return false, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", metav1.NamespaceSystem, err)
+		}
 	}
 
 	version, err := c.getCoreDNSVersion(deployment)
