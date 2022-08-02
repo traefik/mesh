@@ -93,6 +93,7 @@ func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 	opts := metav1.ListOptions{
 		LabelSelector: "kubernetes.io/name=CoreDNS",
 	}
+
 	deployments, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).List(ctx, opts)
 	if err != nil {
 		return false, fmt.Errorf("unable to list CoreDNS deployments in namespace %q: %w", metav1.NamespaceSystem, err)
