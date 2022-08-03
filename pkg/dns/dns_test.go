@@ -27,6 +27,12 @@ func TestCheckDNSProvider(t *testing.T) {
 			expErr:      false,
 		},
 		{
+			desc:        "CoreDNS supported version using label",
+			mockFile:    "checkdnsprovider_coredns_using_label.yaml",
+			expProvider: CoreDNS,
+			expErr:      false,
+		},
+		{
 			desc:        "CoreDNS supported version with suffix",
 			mockFile:    "checkdnsprovider_supported_version_suffix.yaml",
 			expProvider: CoreDNS,
