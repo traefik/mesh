@@ -37,6 +37,7 @@
 [linters]
   enable-all = true
   disable = [
+    "ifshort", # Deprecated
     "interfacer", # Deprecated
     "golint", # Deprecated
     "maligned", # Deprecated
@@ -56,6 +57,7 @@
     "noctx", # Too strict
     "exhaustive", # Too strict
     "exhaustivestruct", # Too strict
+    "exhaustruct", # Duplicate of exhaustivestruct
     "nlreturn", # Too strict
     "ireturn", # Not relevant
     "varnamelen", # Not relevant
@@ -63,6 +65,8 @@
     "testpackage", # Does not allow testing private funcs
     "tparallel", # Not relevant
     "paralleltest", # Not relevant
+    "forcetypeassert", # Too strict
+    "nonamedreturns", # Not relevant
     "funlen",
   ]
 
