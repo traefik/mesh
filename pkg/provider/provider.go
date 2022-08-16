@@ -23,12 +23,12 @@ type PortFinder interface {
 
 // When multiple Traefik Routers listen to the same entrypoint and have the same Rule, the chosen router is the one
 // with the highest priority. There are a few cases where this priority is crucial when building the dynamic configuration:
-// - When a TrafficSplit is set on a k8s service, 2 Traefik Routers are created. One for accessing the k8s service
-//   endpoints and one for accessing the services endpoints mentioned in the TrafficSplit. They both have the same Rule
-//   but we should always prioritize the TrafficSplit. Therefore, TrafficSplit Routers should always have a higher priority.
-// - When a TrafficTarget Destination targets pods of a k8s service and a TrafficSplit is set on this service. This
-//   creates 2 Traefik Routers. One for the TrafficSplit and one for the TrafficTarget. We should always prioritize
-//   TrafficSplits Routers and TrafficSplit Routers should always have a higher priority than TrafficTarget Routers.
+//   - When a TrafficSplit is set on a k8s service, 2 Traefik Routers are created. One for accessing the k8s service
+//     endpoints and one for accessing the services endpoints mentioned in the TrafficSplit. They both have the same Rule
+//     but we should always prioritize the TrafficSplit. Therefore, TrafficSplit Routers should always have a higher priority.
+//   - When a TrafficTarget Destination targets pods of a k8s service and a TrafficSplit is set on this service. This
+//     creates 2 Traefik Routers. One for the TrafficSplit and one for the TrafficTarget. We should always prioritize
+//     TrafficSplits Routers and TrafficSplit Routers should always have a higher priority than TrafficTarget Routers.
 const (
 	priorityService = iota + 1
 	priorityTrafficTargetDirect

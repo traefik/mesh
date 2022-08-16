@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
@@ -203,7 +204,7 @@ func (a *API) getMeshNodeConfiguration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := http.Get(fmt.Sprintf("http://%s:8080/api/rawdata", pod.Status.PodIP))
+	resp, err := http.Get(fmt.Sprintf("http://%s/api/rawdata", net.JoinHostPort(pod.Status.PodIP, "8080")))
 	if err != nil {
 		a.log.Errorf("Unable to get configuration from pod %q: %v", pod.Name, err)
 		http.Error(w, "", http.StatusBadGateway)
