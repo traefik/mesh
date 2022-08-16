@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rke2-coredns-rke2-coredns
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: coredns
+          image: rancher/hardened-coredns:v1.9.3-build20220613
