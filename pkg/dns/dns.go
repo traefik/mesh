@@ -508,7 +508,7 @@ func (c *Client) findCoreDNSDeployment(ctx context.Context, namespace string) (*
 		return nil, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", namespace, err)
 	}
 
-	if deployment != nil {
+	if err == nil {
 		return deployment, nil
 	}
 
@@ -518,7 +518,11 @@ func (c *Client) findCoreDNSDeployment(ctx context.Context, namespace string) (*
 		return nil, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", namespace, err)
 	}
 
-	return deployment, nil
+	if err == nil {
+		return deployment, nil
+	}
+
+	return nil, nil
 }
 
 // getOrCreateConfigMap parses the deployment and returns the ConfigMap with the given name.
