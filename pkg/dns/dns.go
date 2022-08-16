@@ -492,17 +492,6 @@ func (c *Client) RestoreKubeDNS(ctx context.Context) error {
 
 // findCoreDNSDeployment returns the CoreDNS deployment in the given namespace, nil if not found.
 func (c *Client) findCoreDNSDeployment(ctx context.Context, namespace string) (*appsv1.Deployment, error) {
-	// Most Kubernetes distributions deploy CoreDNS with the following label, so look for it first.
-	deployments, err := c.kubeClient.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{LabelSelector: "kubernetes.io/name=CoreDNS"})
-	if err != nil {
-		return nil, fmt.Errorf("unable to list CoreDNS deployments in namespace %q: %w", namespace, err)
-	}
-
-	if len(deployments.Items) == 1 {
-		return &deployments.Items[0], nil
-	}
-
-	// If we did not find CoreDNS using the annotation (e.g.: with kubeadm), fall back to matching the name of the deployment.
 	deployment, err := c.kubeClient.AppsV1().Deployments(namespace).Get(ctx, "coredns", metav1.GetOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", namespace, err)
