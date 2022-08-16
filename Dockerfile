@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS base-image
+FROM golang:1.19-alpine AS base-image
 
 # Package dependencies
 RUN apk --no-cache --no-progress add \

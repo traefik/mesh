@@ -37,6 +37,8 @@
 [linters]
   enable-all = true
   disable = [
+    "sqlclosecheck", # Not relevant (SQL)
+    "rowserrcheck", # Not relevant (SQL)
     "ifshort", # Deprecated
     "interfacer", # Deprecated
     "golint", # Deprecated
@@ -67,6 +69,7 @@
     "paralleltest", # Not relevant
     "forcetypeassert", # Too strict
     "nonamedreturns", # Not relevant
+    "structcheck", # Duplicate of unused
     "funlen",
   ]
 
