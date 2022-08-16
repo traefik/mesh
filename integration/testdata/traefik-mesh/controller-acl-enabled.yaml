@@ -50,7 +50,6 @@ rules:
     resources:
       - deployments
     verbs:
-      - list
       - get
       - update
   - apiGroups:

@@ -33,12 +33,6 @@ func TestCheckDNSProvider(t *testing.T) {
 			expErr:      false,
 		},
 		{
-			desc:        "CoreDNS supported version with deployment label",
-			mockFile:    "checkdnsprovider_supported_version_with_label.yaml",
-			expProvider: CoreDNS,
-			expErr:      false,
-		},
-		{
 			desc:        "CoreDNS supported version on RKE",
 			mockFile:    "checkdnsprovider_supported_version_rke.yaml",
 			expProvider: CoreDNS,
