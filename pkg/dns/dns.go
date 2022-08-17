@@ -95,6 +95,7 @@ func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 	}
 
 	if deployment == nil {
+		c.logger.Debug("CoreDNS deployment not found")
 		return false, nil
 	}
 
@@ -221,7 +222,7 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		}
 
 		if coreDNSConfigMap == nil {
-			return nil, false, fmt.Errorf("unable to find CoreDNS configmap in namespace: %s", deployment.Namespace)
+			return nil, false, fmt.Errorf("unable to find CoreDNS configmap in namespace %q", deployment.Namespace)
 		}
 	}
 
@@ -418,7 +419,7 @@ func (c *Client) unpatchCoreDNSConfig(ctx context.Context, deployment *appsv1.De
 		}
 
 		if coreDNSConfigMap == nil {
-			return nil, fmt.Errorf("unable to find CoreDNS configmap in namespace: %s", deployment.Namespace)
+			return nil, fmt.Errorf("unable to find CoreDNS configmap in namespace %q", deployment.Namespace)
 		}
 	}
 
