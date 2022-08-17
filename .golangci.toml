@@ -31,7 +31,6 @@
      "github.com/go-check/check",
      "github.com/gorilla/mux",
      "github.com/mailgun/minheap",
-     "github.com/mailgun/multibuf",
     ]
 
 [linters]
