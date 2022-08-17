@@ -219,10 +219,10 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		if err != nil {
 			return nil, false, err
 		}
-	}
 
-	if coreDNSConfigMap == nil {
-		return nil, false, fmt.Errorf("unable to find CoreDNS configmap in namespace: %s", deployment.Namespace)
+		if coreDNSConfigMap == nil {
+			return nil, false, fmt.Errorf("unable to find CoreDNS configmap in namespace: %s", deployment.Namespace)
+		}
 	}
 
 	corefile, mChanged := addStubDomain(
@@ -416,10 +416,10 @@ func (c *Client) unpatchCoreDNSConfig(ctx context.Context, deployment *appsv1.De
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	if coreDNSConfigMap == nil {
-		return nil, fmt.Errorf("unable to find CoreDNS configmap in namespace: %s", deployment.Namespace)
+		if coreDNSConfigMap == nil {
+			return nil, fmt.Errorf("unable to find CoreDNS configmap in namespace: %s", deployment.Namespace)
+		}
 	}
 
 	corefile := removeStubDomain(
@@ -493,22 +493,22 @@ func (c *Client) RestoreKubeDNS(ctx context.Context) error {
 // findCoreDNSDeployment returns the CoreDNS deployment in the given namespace, nil if not found.
 func (c *Client) findCoreDNSDeployment(ctx context.Context, namespace string) (*appsv1.Deployment, error) {
 	deployment, err := c.kubeClient.AppsV1().Deployments(namespace).Get(ctx, "coredns", metav1.GetOptions{})
-	if err != nil && !kerrors.IsNotFound(err) {
-		return nil, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", namespace, err)
-	}
-
 	if err == nil {
 		return deployment, nil
+	}
+
+	if !kerrors.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", namespace, err)
 	}
 
 	// If we did not find a CoreDNS deployment with the name "coredns", we might be on RKE.
 	deployment, err = c.kubeClient.AppsV1().Deployments(namespace).Get(ctx, "rke2-coredns-rke2-coredns", metav1.GetOptions{})
-	if err != nil && !kerrors.IsNotFound(err) {
-		return nil, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", namespace, err)
-	}
-
 	if err == nil {
 		return deployment, nil
+	}
+
+	if !kerrors.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", namespace, err)
 	}
 
 	return nil, nil
