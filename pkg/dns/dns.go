@@ -89,30 +89,14 @@ func (c *Client) CheckDNSProvider(ctx context.Context) (Provider, error) {
 func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 	c.logger.Debugf("Checking if CoreDNS is installed in namespace %q...", metav1.NamespaceSystem)
 
-	// Most Kubernetes distributions deploy CoreDNS with the following label, so look for it first.
-	opts := metav1.ListOptions{
-		LabelSelector: "kubernetes.io/name=CoreDNS",
-	}
-
-	deployments, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).List(ctx, opts)
+	deployment, err := c.findCoreDNSDeployment(ctx, metav1.NamespaceSystem)
 	if err != nil {
-		return false, fmt.Errorf("unable to list CoreDNS deployments in namespace %q: %w", metav1.NamespaceSystem, err)
+		return false, err
 	}
 
-	var deployment *appsv1.Deployment
-	if len(deployments.Items) == 1 {
-		deployment = &deployments.Items[0]
-	} else {
-		// If we did not find CoreDNS using the annotation (e.g.: with kubeadm), fall back to matching the name of the deployment.
-		deployment, err = c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
-			c.logger.Debug("CoreDNS deployment not found")
-			return false, nil
-		}
-
-		if err != nil {
-			return false, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", metav1.NamespaceSystem, err)
-		}
+	if deployment == nil {
+		c.logger.Debug("CoreDNS deployment not found")
+		return false, nil
 	}
 
 	version, err := c.getCoreDNSVersion(deployment)
@@ -153,9 +137,13 @@ func (c *Client) kubeDNSMatch(ctx context.Context) (bool, error) {
 func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, clusterDomain, traefikMeshNamespace string) error {
 	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "coredns", coreDNSNamespace)
 
-	coreDNSDeployment, err := c.kubeClient.AppsV1().Deployments(coreDNSNamespace).Get(ctx, "coredns", metav1.GetOptions{})
+	coreDNSDeployment, err := c.findCoreDNSDeployment(ctx, coreDNSNamespace)
 	if err != nil {
 		return err
+	}
+
+	if coreDNSDeployment == nil {
+		return fmt.Errorf("unable to find CoreDNS deployment in namespace %q", coreDNSNamespace)
 	}
 
 	patchedConfigMap, changed, err := c.patchCoreDNSConfig(ctx, coreDNSDeployment, clusterDomain, traefikMeshNamespace)
@@ -165,7 +153,6 @@ func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, cluster
 
 	if !changed {
 		c.logger.Infof("CoreDNS ConfigMap %q in namespace %q has already been patched", patchedConfigMap.Name, patchedConfigMap.Namespace)
-
 		return nil
 	}
 
@@ -188,11 +175,14 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		return nil, false, err
 	}
 
-	customConfigMap, err := c.getConfigMap(ctx, deployment, "coredns-custom")
+	customConfigMap, err := c.findConfigMap(ctx, deployment, "coredns-custom")
+	if err != nil {
+		return nil, false, err
+	}
 
 	// For AKS the CoreDNS config have to be added to the coredns-custom ConfigMap.
 	// See https://docs.microsoft.com/en-us/azure/aks/coredns-custom
-	if err == nil {
+	if customConfigMap != nil {
 		// deprecated, will be removed in the next major release.
 		corefile, mChanged := addStubDomain(
 			customConfigMap.Data["maesh.server"],
@@ -219,9 +209,21 @@ func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Depl
 		return customConfigMap, mChanged || tChanged, nil
 	}
 
-	coreDNSConfigMap, err := c.getConfigMap(ctx, deployment, "coredns")
+	coreDNSConfigMap, err := c.findConfigMap(ctx, deployment, "coredns")
 	if err != nil {
 		return nil, false, err
+	}
+
+	// If we did not find a CoreDNS ConfigMap with the name "coredns", we might be on RKE.
+	if coreDNSConfigMap == nil {
+		coreDNSConfigMap, err = c.findConfigMap(ctx, deployment, "rke2-coredns-rke2-coredns")
+		if err != nil {
+			return nil, false, err
+		}
+
+		if coreDNSConfigMap == nil {
+			return nil, false, fmt.Errorf("unable to find CoreDNS configmap in namespace %q", deployment.Namespace)
+		}
 	}
 
 	corefile, mChanged := addStubDomain(
@@ -364,9 +366,13 @@ func (c *Client) restartPods(ctx context.Context, deployment *appsv1.Deployment)
 
 // RestoreCoreDNS restores the CoreDNS configuration to pre-install state.
 func (c *Client) RestoreCoreDNS(ctx context.Context) error {
-	coreDNSDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "coredns", metav1.GetOptions{})
+	coreDNSDeployment, err := c.findCoreDNSDeployment(ctx, metav1.NamespaceSystem)
 	if err != nil {
 		return err
+	}
+
+	if coreDNSDeployment == nil {
+		return fmt.Errorf("unable to find CoreDNS deployment in namespace %q", metav1.NamespaceSystem)
 	}
 
 	unpatchedConfigMap, err := c.unpatchCoreDNSConfig(ctx, coreDNSDeployment)
@@ -386,20 +392,35 @@ func (c *Client) RestoreCoreDNS(ctx context.Context) error {
 }
 
 func (c *Client) unpatchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
-	coreDNSConfigMap, err := c.getConfigMap(ctx, deployment, "coredns-custom")
+	coreDNSConfigMap, err := c.findConfigMap(ctx, deployment, "coredns-custom")
+	if err != nil {
+		return nil, err
+	}
 
 	// For AKS the CoreDNS config have to be removed from the coredns-custom ConfigMap.
 	// See https://docs.microsoft.com/en-us/azure/aks/coredns-custom
-	if err == nil {
+	if coreDNSConfigMap != nil {
 		delete(coreDNSConfigMap.Data, "maesh.server")
 		delete(coreDNSConfigMap.Data, "traefik.mesh.server")
 
 		return coreDNSConfigMap, nil
 	}
 
-	coreDNSConfigMap, err = c.getConfigMap(ctx, deployment, "coredns")
+	coreDNSConfigMap, err = c.findConfigMap(ctx, deployment, "coredns")
 	if err != nil {
 		return nil, err
+	}
+
+	// If we did not find a CoreDNS ConfigMap with the name "coredns", we might be on RKE.
+	if coreDNSConfigMap == nil {
+		coreDNSConfigMap, err = c.findConfigMap(ctx, deployment, "rke2-coredns-rke2-coredns")
+		if err != nil {
+			return nil, err
+		}
+
+		if coreDNSConfigMap == nil {
+			return nil, fmt.Errorf("unable to find CoreDNS configmap in namespace %q", deployment.Namespace)
+		}
 	}
 
 	corefile := removeStubDomain(
@@ -427,9 +448,13 @@ func (c *Client) RestoreKubeDNS(ctx context.Context) error {
 	}
 
 	// Get the currently loaded KubeDNS ConfigMap.
-	configMap, err := c.getConfigMap(ctx, kubeDNSDeployment, "kube-dns")
+	configMap, err := c.findConfigMap(ctx, kubeDNSDeployment, "kube-dns")
 	if err != nil {
 		return err
+	}
+
+	if configMap == nil {
+		return fmt.Errorf("configmap kube-dns cannot be found")
 	}
 
 	// Check if stubDomains are still defined.
@@ -466,17 +491,41 @@ func (c *Client) RestoreKubeDNS(ctx context.Context) error {
 	return nil
 }
 
-// getOrCreateConfigMap parses the deployment and returns the ConfigMap with the given name. This method will create the
-// corresponding ConfigMap if the associated volume is marked as optional and the ConfigMap is not found.
-func (c *Client) getOrCreateConfigMap(ctx context.Context, deployment *appsv1.Deployment, name string) (*corev1.ConfigMap, error) {
-	volumeSrc, err := getConfigMapVolumeSource(deployment, name)
-	if err != nil {
-		return nil, err
+// findCoreDNSDeployment returns the CoreDNS deployment in the given namespace, nil if not found.
+func (c *Client) findCoreDNSDeployment(ctx context.Context, namespace string) (*appsv1.Deployment, error) {
+	deployment, err := c.kubeClient.AppsV1().Deployments(namespace).Get(ctx, "coredns", metav1.GetOptions{})
+	if err == nil {
+		return deployment, nil
 	}
 
-	configMap, err := c.kubeClient.CoreV1().ConfigMaps(deployment.Namespace).Get(ctx, volumeSrc.Name, metav1.GetOptions{})
+	if !kerrors.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", namespace, err)
+	}
 
-	if kerrors.IsNotFound(err) && volumeSrc.Optional != nil && *volumeSrc.Optional {
+	// If we did not find a CoreDNS deployment with the name "coredns", we might be on RKE.
+	deployment, err = c.kubeClient.AppsV1().Deployments(namespace).Get(ctx, "rke2-coredns-rke2-coredns", metav1.GetOptions{})
+	if err == nil {
+		return deployment, nil
+	}
+
+	if !kerrors.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to get CoreDNS deployment in namespace %q: %w", namespace, err)
+	}
+
+	return nil, nil
+}
+
+// getOrCreateConfigMap parses the deployment and returns the ConfigMap with the given name.
+// This method will create the corresponding ConfigMap if the associated volume is marked as optional and the ConfigMap is not found.
+func (c *Client) getOrCreateConfigMap(ctx context.Context, deployment *appsv1.Deployment, name string) (*corev1.ConfigMap, error) {
+	volume := findConfigMapVolume(deployment, name)
+	if volume == nil {
+		return nil, fmt.Errorf("volume for configmap %q cannot be found", name)
+	}
+
+	configMap, err := c.kubeClient.CoreV1().ConfigMaps(deployment.Namespace).Get(ctx, volume.Name, metav1.GetOptions{})
+
+	if kerrors.IsNotFound(err) && volume.Optional != nil && *volume.Optional {
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -498,14 +547,18 @@ func (c *Client) getOrCreateConfigMap(ctx context.Context, deployment *appsv1.De
 	return configMap, err
 }
 
-// getConfigMap parses the deployment and returns the ConfigMap with the given name.
-func (c *Client) getConfigMap(ctx context.Context, deployment *appsv1.Deployment, name string) (*corev1.ConfigMap, error) {
-	volumeSrc, err := getConfigMapVolumeSource(deployment, name)
-	if err != nil {
-		return nil, err
+// findConfigMap returns the ConfigMap with the given name, nil if not found.
+// It parses the deployment to make sure that the ConfigMap is used by the given deployment.
+func (c *Client) findConfigMap(ctx context.Context, deployment *appsv1.Deployment, name string) (*corev1.ConfigMap, error) {
+	if volume := findConfigMapVolume(deployment, name); volume == nil {
+		return nil, nil
 	}
 
-	configMap, err := c.kubeClient.CoreV1().ConfigMaps(deployment.Namespace).Get(ctx, volumeSrc.Name, metav1.GetOptions{})
+	configMap, err := c.kubeClient.CoreV1().ConfigMaps(deployment.Namespace).Get(ctx, name, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		return nil, nil
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -517,21 +570,17 @@ func (c *Client) getConfigMap(ctx context.Context, deployment *appsv1.Deployment
 	return configMap, nil
 }
 
-// getConfigMapVolumeSource returns the ConfigMapVolumeSource corresponding to the ConfigMap with the given name.
-func getConfigMapVolumeSource(deployment *appsv1.Deployment, name string) (*corev1.ConfigMapVolumeSource, error) {
-	for _, volume := range deployment.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap == nil {
+// findConfigMapVolume returns the deployment volume configured for the given ConfigMap name.
+func findConfigMapVolume(deployment *appsv1.Deployment, name string) *corev1.ConfigMapVolumeSource {
+	for _, v := range deployment.Spec.Template.Spec.Volumes {
+		if v.ConfigMap == nil || v.ConfigMap.Name != name {
 			continue
 		}
 
-		if volume.ConfigMap.Name != name {
-			continue
-		}
-
-		return volume.ConfigMap, nil
+		return v.ConfigMap
 	}
 
-	return nil, fmt.Errorf("configmap %q cannot be found", name)
+	return nil
 }
 
 func getStubDomain(config, blockHeader, blockTrailer string) string {
