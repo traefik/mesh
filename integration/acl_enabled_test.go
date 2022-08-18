@@ -23,18 +23,21 @@ type ACLEnabledSuite struct {
 func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	var err error
 
-	requiredImages := []k3d.DockerImage{
-		{Name: "traefik/mesh:latest", Local: true},
-		{Name: "traefik:v2.8"},
-		{Name: "traefik/whoami:v1.8.0"},
-		{Name: "giantswarm/tiny-tools:3.9"},
+	s.logger = logrus.New()
+
+	opts := []k3d.ClusterOptionFunc{
+		k3d.WithoutTraefik(),
+		k3d.WithImages(k3d.DockerImage{Name: "traefik/mesh:latest", Local: true}),
+	}
+	if !*disableImport {
+		opts = append(opts, k3d.WithImages(
+			k3d.DockerImage{Name: "traefik:v2.8"},
+			k3d.DockerImage{Name: "traefik/whoami:v1.8.0"},
+			k3d.DockerImage{Name: "giantswarm/tiny-tools:3.9"},
+		))
 	}
 
-	s.logger = logrus.New()
-	s.cluster, err = k3d.NewCluster(s.logger, masterURL, k3dClusterName,
-		k3d.WithoutTraefik(),
-		k3d.WithImages(requiredImages...),
-	)
+	s.cluster, err = k3d.NewCluster(s.logger, masterURL, k3dClusterName, opts...)
 	c.Assert(err, checker.IsNil)
 
 	c.Assert(s.cluster.CreateNamespace(s.logger, traefikMeshNamespace), checker.IsNil)

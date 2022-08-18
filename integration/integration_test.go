@@ -15,6 +15,7 @@ import (
 var (
 	integration          = flag.Bool("integration", false, "run integration tests")
 	debug                = flag.Bool("debug", false, "debug log level")
+	disableImport        = flag.Bool("disable-import", false, "disable images import")
 	masterURL            = "https://localhost:8443"
 	k3dClusterName       = "traefik-mesh-integration"
 	traefikMeshNamespace = "traefik-mesh"
