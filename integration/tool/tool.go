@@ -93,7 +93,7 @@ func (t *Tool) Netcat(url string, port int, udp bool, conditions ...try.StringCo
 	if udp {
 		cmd = fmt.Sprintf("echo 'WHO' | nc -u -w 1 %s %d", url, port)
 	} else {
-		cmd = fmt.Sprintf("echo 'WHO' | nc -q 0 %s %d", url, port)
+		cmd = fmt.Sprintf("echo 'WHO' | nc -q 0 -w 1 %s %d", url, port)
 	}
 
 	output, err := t.exec([]string{"ash", "-c", cmd})
