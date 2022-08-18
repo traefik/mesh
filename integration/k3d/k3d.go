@@ -20,7 +20,7 @@ import (
 
 var (
 	k3sImage   = "rancher/k3s"
-	k3sVersion = "v1.18.20-k3s1"
+	k3sVersion = "v1.21.14-k3s1"
 )
 
 // DockerImage holds the configuration of a Docker image.
@@ -41,14 +41,14 @@ type ClusterOptionFunc func(opts *ClusterOptions)
 // WithoutTraefik tells k3d to not start a k3s cluster with Traefik already installed in.
 func WithoutTraefik() func(opts *ClusterOptions) {
 	return func(opts *ClusterOptions) {
-		opts.Cmd = append(opts.Cmd, "--k3s-server-arg", "--no-deploy=traefik")
+		opts.Cmd = append(opts.Cmd, "--k3s-arg", "--disable=traefik@server:0")
 	}
 }
 
 // WithoutCoreDNS tells k3d to not start a k3s cluster with CoreDNS already installed in.
 func WithoutCoreDNS() func(opts *ClusterOptions) {
 	return func(opts *ClusterOptions) {
-		opts.Cmd = append(opts.Cmd, "--k3s-server-arg", "--no-deploy=coredns")
+		opts.Cmd = append(opts.Cmd, "--k3s-arg", "--disable=coredns@server:0")
 	}
 }
 
