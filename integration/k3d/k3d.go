@@ -20,7 +20,7 @@ import (
 
 var (
 	k3sImage   = "rancher/k3s"
-	k3sVersion = "v1.18.20-k3s1"
+	k3sVersion = "v1.21.14-k3s1"
 )
 
 // DockerImage holds the configuration of a Docker image.
@@ -41,19 +41,19 @@ type ClusterOptionFunc func(opts *ClusterOptions)
 // WithoutTraefik tells k3d to not start a k3s cluster with Traefik already installed in.
 func WithoutTraefik() func(opts *ClusterOptions) {
 	return func(opts *ClusterOptions) {
-		opts.Cmd = append(opts.Cmd, "--k3s-server-arg", "--no-deploy=traefik")
+		opts.Cmd = append(opts.Cmd, "--k3s-arg", "--disable=traefik@server:0")
 	}
 }
 
 // WithoutCoreDNS tells k3d to not start a k3s cluster with CoreDNS already installed in.
 func WithoutCoreDNS() func(opts *ClusterOptions) {
 	return func(opts *ClusterOptions) {
-		opts.Cmd = append(opts.Cmd, "--k3s-server-arg", "--no-deploy=coredns")
+		opts.Cmd = append(opts.Cmd, "--k3s-arg", "--disable=coredns@server:0")
 	}
 }
 
-// WithImages tells k3d to import the given image. Images which are tagged a local won't be pull locally before being
-// imported.
+// WithImages tells k3d to import the given image.
+// Images which are tagged a local won't be pull locally before being imported.
 func WithImages(images ...DockerImage) func(opts *ClusterOptions) {
 	return func(opts *ClusterOptions) {
 		opts.Images = append(opts.Images, images...)
@@ -70,11 +70,7 @@ type Cluster struct {
 
 // NewCluster creates a new k3s cluster using the given configuration.
 func NewCluster(logger logrus.FieldLogger, masterURL string, name string, opts ...ClusterOptionFunc) (*Cluster, error) {
-	clusterOpts := ClusterOptions{
-		Images: []DockerImage{
-			{Name: "rancher/coredns-coredns:1.6.3"},
-		},
-	}
+	var clusterOpts ClusterOptions
 
 	for _, opt := range opts {
 		opt(&clusterOpts)
@@ -330,9 +326,11 @@ func pullDockerImages(logger logrus.FieldLogger, images []DockerImage) error {
 }
 
 func importDockerImages(logger logrus.FieldLogger, clusterName string, images []DockerImage) error {
-	args := []string{
-		"image", "import", "--cluster", clusterName,
+	if len(images) == 0 {
+		return nil
 	}
+
+	args := []string{"image", "import", "--cluster", clusterName}
 
 	for _, image := range images {
 		args = append(args, image.Name)

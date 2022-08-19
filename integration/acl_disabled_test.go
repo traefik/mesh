@@ -22,20 +22,23 @@ type ACLDisabledSuite struct {
 func (s *ACLDisabledSuite) SetUpSuite(c *check.C) {
 	var err error
 
-	requiredImages := []k3d.DockerImage{
-		{Name: "traefik/mesh:latest", Local: true},
-		{Name: "traefik:v2.8"},
-		{Name: "traefik/whoami:v1.6.0"},
-		{Name: "traefik/whoamitcp:v0.1.0"},
-		{Name: "traefik/whoamiudp:v0.1.0"},
-		{Name: "giantswarm/tiny-tools:3.9"},
+	s.logger = logrus.New()
+
+	opts := []k3d.ClusterOptionFunc{
+		k3d.WithoutTraefik(),
+		k3d.WithImages(k3d.DockerImage{Name: "traefik/mesh:latest", Local: true}),
+	}
+	if !*disableImport {
+		opts = append(opts, k3d.WithImages(
+			k3d.DockerImage{Name: "traefik:v2.8"},
+			k3d.DockerImage{Name: "traefik/whoami:v1.8.0"},
+			k3d.DockerImage{Name: "traefik/whoamitcp:v0.2.1"},
+			k3d.DockerImage{Name: "traefik/whoamiudp:v0.1.2"},
+			k3d.DockerImage{Name: "giantswarm/tiny-tools:3.9"},
+		))
 	}
 
-	s.logger = logrus.New()
-	s.cluster, err = k3d.NewCluster(s.logger, masterURL, k3dClusterName,
-		k3d.WithoutTraefik(),
-		k3d.WithImages(requiredImages...),
-	)
+	s.cluster, err = k3d.NewCluster(s.logger, masterURL, k3dClusterName, opts...)
 	c.Assert(err, checker.IsNil)
 
 	c.Assert(s.cluster.CreateNamespace(s.logger, traefikMeshNamespace), checker.IsNil)
@@ -79,7 +82,7 @@ func (s *ACLDisabledSuite) TestTCPService(c *check.C) {
 
 // TestUDPService deploys a UDP service "server" with one Pod called "server" and asserts this service is
 // reachable and that a connection has been established with this Pod.
-func (s *ACLDisabledSuite) TestUDPervice(c *check.C) {
+func (s *ACLDisabledSuite) TestUDPService(c *check.C) {
 	c.Assert(s.cluster.Apply(s.logger, "testdata/acl_disabled/udp"), checker.IsNil)
 	defer s.cluster.Delete(s.logger, "testdata/acl_disabled/udp")
 

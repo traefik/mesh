@@ -9,7 +9,7 @@ metadata:
 spec:
   containers:
     - name: server-v2
-      image: traefik/whoami:v1.6.0
+      image: traefik/whoami:v1.8.0
       imagePullPolicy: IfNotPresent
       readinessProbe:
         httpGet:
