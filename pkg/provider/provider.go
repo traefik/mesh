@@ -24,7 +24,7 @@ type PortFinder interface {
 // When multiple Traefik Routers listen to the same entrypoint and have the same Rule, the chosen router is the one
 // with the highest priority. There are a few cases where this priority is crucial when building the dynamic configuration:
 //   - When a TrafficSplit is set on a k8s service, 2 Traefik Routers are created. One for accessing the k8s service
-//     endpoints and one for accessing the services endpoints mentioned in the TrafficSplit. They both have the same Rule
+//     endpoints and one for accessing the services endpoints mentioned in the TrafficSplit. They both have the same Rule,
 //     but we should always prioritize the TrafficSplit. Therefore, TrafficSplit Routers should always have a higher priority.
 //   - When a TrafficTarget Destination targets pods of a k8s service and a TrafficSplit is set on this service. This
 //     creates 2 Traefik Routers. One for the TrafficSplit and one for the TrafficTarget. We should always prioritize
@@ -573,7 +573,7 @@ func (p *Provider) buildBlockAllRouters(cfg *dynamic.Configuration, svc *topolog
 	}
 }
 
-func (p Provider) buildHTTPEntrypoint(portID int) (string, error) {
+func (p *Provider) buildHTTPEntrypoint(portID int) (string, error) {
 	port := p.config.MinHTTPPort + int32(portID)
 	if port > p.config.MaxHTTPPort {
 		return "", errors.New("too many HTTP entrypoints")
@@ -582,7 +582,7 @@ func (p Provider) buildHTTPEntrypoint(portID int) (string, error) {
 	return fmt.Sprintf("http-%d", port), nil
 }
 
-func (p Provider) buildTCPEntrypoint(svc *topology.Service, port int32) (string, error) {
+func (p *Provider) buildTCPEntrypoint(svc *topology.Service, port int32) (string, error) {
 	meshPort, ok := p.tcpStateTable.Find(svc.Namespace, svc.Name, port)
 	if !ok {
 		return "", errors.New("port not found")
@@ -591,7 +591,7 @@ func (p Provider) buildTCPEntrypoint(svc *topology.Service, port int32) (string,
 	return fmt.Sprintf("tcp-%d", meshPort), nil
 }
 
-func (p Provider) buildUDPEntrypoint(svc *topology.Service, port int32) (string, error) {
+func (p *Provider) buildUDPEntrypoint(svc *topology.Service, port int32) (string, error) {
 	meshPort, ok := p.udpStateTable.Find(svc.Namespace, svc.Name, port)
 	if !ok {
 		return "", errors.New("port not found")

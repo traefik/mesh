@@ -234,7 +234,7 @@ func (c *Controller) Run() error {
 	return nil
 }
 
-// Shutdown shut downs the controller.
+// Shutdown shuts down the controller.
 func (c *Controller) Shutdown() {
 	c.mu.Lock()
 	defer c.mu.Unlock()

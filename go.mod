@@ -3,16 +3,16 @@ module github.com/traefik/mesh
 go 1.19
 
 require (
-	github.com/cenkalti/backoff/v4 v4.1.1
-	github.com/go-check/check v0.0.0-20180628173108-788fd7840127
+	github.com/cenkalti/backoff/v4 v4.1.3
+	github.com/go-check/check v0.0.0-20201130134442-10cb98267c6c
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
-	github.com/hashicorp/go-version v1.3.0
-	github.com/servicemeshinterface/smi-sdk-go v0.4.1
-	github.com/sirupsen/logrus v1.8.1
+	github.com/hashicorp/go-version v1.6.0
+	github.com/servicemeshinterface/smi-sdk-go v0.5.0
+	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
-	github.com/traefik/paerser v0.1.8
-	github.com/traefik/traefik/v2 v2.8.3
+	github.com/traefik/paerser v0.1.9
+	github.com/traefik/traefik/v2 v2.8.5
 	github.com/vdemeester/shakers v0.1.0
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
@@ -49,7 +49,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f // indirect
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
-	golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e // indirect
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
