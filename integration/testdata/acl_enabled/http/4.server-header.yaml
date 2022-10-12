@@ -10,7 +10,7 @@ spec:
   serviceAccountName: server-header
   containers:
     - name: server-http-header
-      image: traefik/whoami:v1.6.0
+      image: traefik/whoami:v1.8.0
       imagePullPolicy: IfNotPresent
       readinessProbe:
         httpGet:
