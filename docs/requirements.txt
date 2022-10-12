@@ -20,7 +20,7 @@ mergedeep==1.3.4
 mkdocs==1.2.2
 mkdocs-bootswatch==1.0
 mkdocs-material-extensions==1.0.3
-mkdocs-traefiklabs==100.0.10
+mkdocs-traefiklabs>=100.0.12
 msgpack==1.0.2
 ordered-set==4.0.2
 packaging==20.9
