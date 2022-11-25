@@ -12,9 +12,9 @@
 
 ## Traefik Mesh: Simpler Service Mesh
 
-Traefik Mesh is a simple, yet full-featured service mesh. 
-It is container-native and fits as your de-facto service mesh in your Kubernetes cluster. 
-It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io) that facilitates integration with pre-existing solution. 
+Traefik Mesh is a simple, yet full-featured service mesh.
+It is container-native and fits as your de-facto service mesh in your Kubernetes cluster.
+It supports the latest Service Mesh Interface specification [SMI](https://smi-spec.io) that facilitates integration with pre-existing solution.
 Moreover, Traefik Mesh is opt-in by default, which means that your existing services are unaffected until you decide to add them to the mesh.
 
 <p align="center">
@@ -24,10 +24,10 @@ Moreover, Traefik Mesh is opt-in by default, which means that your existing serv
 
 ## Non-Invasive Service Mesh
 
-Traefik Mesh does not use any sidecar container but handles routing through proxy endpoints running on each node. 
-The mesh controller runs in a dedicated pod and handles all the configuration parsing and deployment to the proxy nodes. 
-Traefik Mesh supports multiple configuration options: annotations on user service objects, and SMI objects. 
-Not using sidecars means that Traefik Mesh does not modify your Kubernetes objects, and does not modify your traffic without your knowledge. 
+Traefik Mesh does not use any sidecar container but handles routing through proxy endpoints running on each node.
+The mesh controller runs in a dedicated pod and handles all the configuration parsing and deployment to the proxy nodes.
+Traefik Mesh supports multiple configuration options: annotations on user service objects, and SMI objects.
+Not using sidecars means that Traefik Mesh does not modify your Kubernetes objects, and does not modify your traffic without your knowledge.
 Using the Traefik Mesh endpoints is all that is required.
 
 <p align="center">
@@ -46,9 +46,9 @@ To run this app, you require the following:
 ## Install (Helm v3 only)
 
 ```shell
-helm repo add traefik-mesh https://helm.traefik.io/mesh
+helm repo add traefik https://traefik.github.io/charts
 helm repo update
-helm install traefik-mesh traefik-mesh/traefik-mesh
+helm install traefik-mesh traefik/traefik-mesh
 ```
 
 You can find the complete documentation at https://doc.traefik.io/traefik-mesh.
