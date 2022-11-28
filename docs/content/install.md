@@ -8,7 +8,7 @@ description: "There are different ways you can install Traefik Mesh, a simple an
 To install Traefik Mesh, the installation method is quite simple:
 
 ```bash
-helm repo add traefik-mesh https://helm.traefik.io/mesh
+helm repo add traefik https://traefik.github.io/charts
 helm repo update
 ```
 
