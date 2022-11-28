@@ -32,9 +32,9 @@ If you used `kubeadm` to deploy your cluster, a fast way to allow the helm insta
 ## Installing Traefik Mesh
 
 ```bash tab="Command"
-helm repo add traefik-mesh https://helm.traefik.io/mesh
+helm repo add traefik https://traefik.github.io/charts
 helm repo update
-helm install traefik-mesh traefik-mesh/traefik-mesh
+helm install traefik-mesh traefik/traefik-mesh
 ```
 
 ```bash tab="Expected output"
