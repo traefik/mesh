@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'traefik/mesh'
     env:
-      STRUCTOR_VERSION: v1.11.2
+      STRUCTOR_VERSION: v1.12.0
       MIXTUS_VERSION: v0.4.1
 
     steps:
