@@ -15,7 +15,7 @@ helm repo update
 Install Traefik Mesh Helm Chart:
 
 ```bash
-helm install traefik-mesh traefik-mesh/traefik-mesh
+helm install traefik-mesh traefik/traefik-mesh
 ```
 
 ## Install from source
