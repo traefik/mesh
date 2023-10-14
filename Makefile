@@ -70,7 +70,7 @@ check: $(DIST_DIR)
       "$(DOCKER_IMAGE_NAME):check" golangci-lint run --config .golangci.toml
 
 publish-images: build
-	seihon publish -v "$(VERSION)" -v "latest" --image-name ${DOCKER_IMAGE_NAME} --dry-run=false --base-runtime-image=alpine:3.15
+	seihon publish -v "$(VERSION)" -v "latest" --image-name ${DOCKER_IMAGE_NAME} --dry-run=false --base-runtime-image=alpine:3.18
 
 ## Create packages for the release
 release-packages: vendor build

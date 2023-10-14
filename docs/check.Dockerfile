@@ -1,4 +1,4 @@
-FROM alpine:3.15
+FROM alpine:3.18
 
 # The "build-dependencies" virtual package provides build tools for html-proofer installation.
 # It compile ruby-nokogiri, because alpine native version is always out of date

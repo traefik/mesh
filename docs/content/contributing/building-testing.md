@@ -23,10 +23,10 @@ $ make
 Successfully tagged traefik/mesh:latest
 docker run --name=build -t "traefik/mesh:latest" version
 version:
- version     : d6947526
- commit      : d6947526
- build date  : 2022-03-16_03:19:22PM
- go version  : go1.19
+ version     : 019a39d
+ commit      : 019a39d
+ build date  : 2023-10-14_02:17:49PM
+ go version  : go1.21.3
  go compiler : gc
  platform    : linux/amd64
 #[...]
@@ -55,7 +55,7 @@ version:
  version     : dev
  commit      : I don't remember exactly
  build date  : I don't remember exactly
- go version  : go1.19
+ go version  : go1.21
  go compiler : gc
  platform    : linux/amd64
 ```
