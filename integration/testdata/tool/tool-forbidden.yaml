@@ -15,7 +15,7 @@ spec:
   serviceAccountName: tool-forbidden
   containers:
     - name: tool-forbidden
-      image: giantswarm/tiny-tools:3.9
+      image: giantswarm/tiny-tools:3.12
       command:
         - "sleep"
         - "36000"

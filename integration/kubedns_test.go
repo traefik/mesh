@@ -23,9 +23,9 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
-		{Name: "traefik/whoami:v1.6.0"},
+		{Name: "traefik/whoami:v1.10.1"},
 		{Name: "coredns/coredns:1.6.3"},
-		{Name: "giantswarm/tiny-tools:3.9"},
+		{Name: "giantswarm/tiny-tools:3.12"},
 		{Name: "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7"},
 		{Name: "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"},
 		{Name: "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7"},

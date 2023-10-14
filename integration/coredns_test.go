@@ -26,7 +26,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	var err error
 
 	requiredImages := []k3d.DockerImage{
-		{Name: "traefik/whoami:v1.6.0"},
+		{Name: "traefik/whoami:v1.10.1"},
 		{Name: "coredns/coredns:1.3.1"},
 		{Name: "coredns/coredns:1.4.0"},
 		{Name: "coredns/coredns:1.5.2"},
@@ -34,7 +34,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 		{Name: "coredns/coredns:1.7.0"},
 		{Name: "coredns/coredns:1.8.0"},
 		{Name: "coredns/coredns:1.9.0"},
-		{Name: "giantswarm/tiny-tools:3.9"},
+		{Name: "giantswarm/tiny-tools:3.12"},
 	}
 
 	s.logger = logrus.New()

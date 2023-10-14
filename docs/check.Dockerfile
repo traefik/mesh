@@ -14,7 +14,7 @@ RUN apk --no-cache --no-progress add \
     ruby-dev \
     build-base
 
-RUN gem install --no-document html-proofer -v 3.19.0 -- --use-system-libraries
+RUN gem install --no-document html-proofer -v 5.0.8 -- --use-system-libraries
 
 # After Ruby, some NodeJS YAY!
 RUN apk --no-cache --no-progress add \
@@ -22,12 +22,10 @@ RUN apk --no-cache --no-progress add \
     nodejs \
     npm
 
-# To handle 'not get uid/gid'
-RUN npm config set unsafe-perm true
-
-RUN npm install --global \
-    markdownlint@0.23.1 \
-    markdownlint-cli@0.28.1
+# unsafe-perm true to handle 'not get uid/gid'
+RUN npm install --global --unsafe-perm=true \
+    markdownlint@0.31.1 \
+    markdownlint-cli@0.37.0
 
 # Finally the shell tools we need for later
 # tini helps to terminate properly all the parallelized tasks when sending CTRL-C

@@ -55,7 +55,7 @@ spec:
       serviceAccount: whoami-server
       containers:
         - name: whoami
-          image: traefik/whoami:v1.6.0
+          image: traefik/whoami:v1.10.1
           imagePullPolicy: IfNotPresent
 
 ---
@@ -77,7 +77,7 @@ spec:
       serviceAccount: whoami-server
       containers:
         - name: whoami-tcp
-          image: traefik/whoamitcp:v0.1.0
+          image: traefik/whoamitcp:v0.3.0
           imagePullPolicy: IfNotPresent
 
 ---
@@ -122,7 +122,7 @@ spec:
   serviceAccountName: whoami-client
   containers:
     - name: whoami-client
-      image: giantswarm/tiny-tools:3.9
+      image: giantswarm/tiny-tools:3.12
       command:
         - "sleep"
         - "3600"
@@ -164,7 +164,7 @@ IP: 5.6.7.8
 RemoteAddr: 1.2.3.4:12345
 GET / HTTP/1.1
 Host: whoami.whoami.svc.cluster.local
-User-Agent: curl/7.64.0
+User-Agent: curl/7.69.1
 Accept: */*
 ```
 
@@ -239,7 +239,7 @@ IP: 5.6.7.8
 RemoteAddr: 1.2.3.4:12345
 GET / HTTP/1.1
 Host: whoami.whoami.traefik.mesh
-User-Agent: curl/7.64.0
+User-Agent: curl/7.69.1
 Accept: */*
 X-Forwarded-For: 3.4.5.6
 ```

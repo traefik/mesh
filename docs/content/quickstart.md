@@ -76,7 +76,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: traefik/whoami:v1.6.0
+          image: traefik/whoami:v1.10.1
           ports:
             - containerPort: 80
 ---
@@ -116,7 +116,7 @@ spec:
     spec:
       containers:
         - name: client
-          image: giantswarm/tiny-tools:3.9
+          image: giantswarm/tiny-tools:3.12
           imagePullPolicy: IfNotPresent
           command:
             - "sleep"

@@ -25,9 +25,9 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 
 	requiredImages := []k3d.DockerImage{
 		{Name: "traefik/mesh:latest", Local: true},
-		{Name: "traefik:v2.8"},
-		{Name: "traefik/whoami:v1.6.0"},
-		{Name: "giantswarm/tiny-tools:3.9"},
+		{Name: "traefik:v2.10"},
+		{Name: "traefik/whoami:v1.10.1"},
+		{Name: "giantswarm/tiny-tools:3.12"},
 	}
 
 	s.logger = logrus.New()
