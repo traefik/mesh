@@ -30,7 +30,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 	opts := []k3d.ClusterOptionFunc{k3d.WithoutTraefik()}
 	if !*disableImport {
 		opts = append(opts, k3d.WithImages(
-			k3d.DockerImage{Name: "traefik/whoami:v1.8.0"},
+			k3d.DockerImage{Name: "traefik/whoami:v1.10.1"},
 			k3d.DockerImage{Name: "coredns/coredns:1.3.1"},
 			k3d.DockerImage{Name: "coredns/coredns:1.4.0"},
 			k3d.DockerImage{Name: "coredns/coredns:1.5.2"},
@@ -38,7 +38,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 			k3d.DockerImage{Name: "coredns/coredns:1.7.0"},
 			k3d.DockerImage{Name: "coredns/coredns:1.8.0"},
 			k3d.DockerImage{Name: "coredns/coredns:1.9.0"},
-			k3d.DockerImage{Name: "giantswarm/tiny-tools:3.9"},
+			k3d.DockerImage{Name: "giantswarm/tiny-tools:3.12"},
 		))
 	}
 

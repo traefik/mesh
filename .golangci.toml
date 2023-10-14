@@ -77,7 +77,7 @@
   max-per-linter = 0
   max-same-issues = 0
   exclude = [
-    "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked",
+    "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv|\\(k8s\\.io/client-go/tools/cache\\.SharedInformer\\)\\.AddEventHandler). is not checked",
     "package-comments: should have a package comment",
     "import '[^']+' is not allowed from list 'Main'",
     "if-return: redundant if ...; err != nil check, just return error instead.",
