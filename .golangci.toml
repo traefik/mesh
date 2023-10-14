@@ -78,5 +78,9 @@
   max-same-issues = 0
   exclude = [
     "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked",
-    "should have a package comment, unless it's in another file for this package",
+    "package-comments: should have a package comment",
+    "import '[^']+' is not allowed from list 'Main'",
+    "if-return: redundant if ...; err != nil check, just return error instead.",
+    "unused-parameter: parameter '[^']+' seems to be unused, consider removing or renaming it as _",
+    "tag is not aligned, should be: description:",
   ]

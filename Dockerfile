@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine AS base-image
+FROM golang:1.21-alpine AS base-image
 
 # Package dependencies
 RUN apk --no-cache --no-progress add \
@@ -21,21 +21,21 @@ WORKDIR /go/src/github.com/traefik/mesh
 RUN curl -sfL https://gist.githubusercontent.com/traefiker/6d7ac019c11d011e4f131bb2cca8900e/raw/goreleaser.sh | sh
 
 # Download golangci-lint binary to bin folder in $GOPATH
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $GOPATH/bin v1.48.0
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$GOPATH/bin" v1.54.2
 
 ENV GO111MODULE on
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
-FROM base-image as maker
+FROM base-image AS maker
 
 ARG MAKE_TARGET=local-build
 
 RUN make ${MAKE_TARGET}
 
 ## IMAGE
-FROM alpine:3.15
+FROM alpine:3.18
 
 RUN addgroup -g 1000 -S app && \
     adduser -u 1000 -S app -G app
