@@ -33,6 +33,17 @@
      "github.com/mailgun/minheap",
     ]
 
+  [linters-settings.depguard]
+    [linters-settings.depguard.rules]
+      [linters-settings.depguard.rules.main]
+        [[linters-settings.depguard.rules.main.deny]]
+        pkg = "github.com/instana/testify"
+        desc = "not allowed"
+        
+        [[linters-settings.depguard.rules.main.deny]]
+        pkg = "github.com/pkg/errors"
+        desc = "Should be replaced by standard lib errors package"
+
 [linters]
   enable-all = true
   disable = [
@@ -79,8 +90,5 @@
   exclude = [
     "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv|\\(k8s\\.io/client-go/tools/cache\\.SharedInformer\\)\\.AddEventHandler). is not checked",
     "package-comments: should have a package comment",
-    "import '[^']+' is not allowed from list 'Main'",
-    "if-return: redundant if ...; err != nil check, just return error instead.",
     "unused-parameter: parameter '[^']+' seems to be unused, consider removing or renaming it as _",
-    "tag is not aligned, should be: description:",
   ]
