@@ -8,7 +8,7 @@ description: "In this article, you can find the list of Traefik Mesh maintainers
 - Daniel Tomcej [@dtomcej](https://github.com/dtomcej)
 - Manuel Zapf [@SantoDE](https://github.com/SantoDE)
 - Michaël Matur [@mmatur](https://github.com/mmatur)
-- Landry Benguigui [@LandryBe](https://github.com/LandryBe)
+- Landry Benguigui [@LandryBe](https://github.com/lbenguigui)
 - Harold Ozouf [@jspdown](https://github.com/jspdown)
 - Julien Levesy [@jlevesy](https://github.com/jlevesy)
 - Brendan Le Glaunec [@Ullaakut](https://github.com/Ullaakut)

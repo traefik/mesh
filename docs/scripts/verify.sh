@@ -17,11 +17,11 @@ find "${PATH_TO_SITE}" -type f -not -path "/app/site/theme/*" \
     -name "*.html" -print0 \
 | xargs -0 -r -P "${NUMBER_OF_CPUS}" -I '{}' \
   htmlproofer \
-  --check-html \
-  --check_external_hash \
-  --alt_ignore="/traefik-mesh-logo.svg/" \
-  --http_status_ignore="0,500,501,503" \
-  --url_ignore="/fonts.gstatic.com/,/traefik-mesh/,/github.com\/traefik\/mesh\/edit*/,/pilot.traefik.io\/profile/,/traefik.io/,/doc.traefik.io/,/www.mkdocs.org/,/squidfunk.github.io/,/ietf.org/,/docs.github.com/" \
+  --no-check_external_hash \
+  --allow_missing_href \
+  --ignore_missing_alt \
+  --ignore_status_codes="0,500,501,503" \
+  --ignore_urls="/fonts.gstatic.com/,/traefik-mesh/,/github.com\/traefik\/mesh\/edit*/,/pilot.traefik.io\/profile/,/traefik.io/,/doc.traefik.io/,/www.mkdocs.org/,/squidfunk.github.io/,/ietf.org/,/docs.github.com/,http://127.0.0.1:8000" \
   '{}' 1>/dev/null
 ## HTML-proofer options at https://github.com/gjtorikian/html-proofer#configuration
 

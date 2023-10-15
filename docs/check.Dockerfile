@@ -34,8 +34,7 @@ RUN apk --no-cache --no-progress add \
     curl \
     tini
 
-COPY ./scripts/verify.sh /verify.sh
-COPY ./scripts/lint.sh /lint.sh
+COPY ./scripts/verify.sh ./scripts/lint.sh /
 
 WORKDIR /app
 VOLUME ["/tmp","/app"]
