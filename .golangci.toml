@@ -44,6 +44,22 @@
         pkg = "github.com/pkg/errors"
         desc = "Should be replaced by standard lib errors package"
 
+  [linters-settings.tagalign]
+    align = false
+    sort = true
+    order = [
+      "description",
+      "json",
+      "toml",
+      "yaml",
+      "yml",
+      "label",
+      "label-slice-as-struct",
+      "file",
+      "kv",
+      "export"
+    ]
+
 [linters]
   enable-all = true
   disable = [
