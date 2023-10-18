@@ -35,14 +35,15 @@ INFO    -  Cleaning site directory
 
 ### With `MkDocs`
 
-First, make sure you have `python` and `pip` installed. MkDocs supports `python` versions `3.7` to `3.11`.
+First, make sure you have `python` and `pip` installed. MkDocs supports `python` versions `2.7.9+`, `3.4`, `3.5`, `3.6` 
+and `3.7`.
 
 ```bash
 $ python --version
-Python 3.11.6
+Python 2.7.14
 
 $ pip --version
-pip 23.1.2 from /usr/lib/python3.11/site-packages/pip (python 3.11)
+pip 19.3.1 from /usr/local/lib/python2.7/site-packages/pip (python 2.7)
 ```
 
 Then, install MkDocs with `pip`.

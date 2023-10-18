@@ -37,11 +37,7 @@ func (s *CoreDNSSuite) SetUpSuite(c *check.C) {
 			k3d.DockerImage{Name: "coredns/coredns:1.6.3"},
 			k3d.DockerImage{Name: "coredns/coredns:1.7.0"},
 			k3d.DockerImage{Name: "coredns/coredns:1.8.0"},
-			k3d.DockerImage{Name: "coredns/coredns:1.8.4"},
-			k3d.DockerImage{Name: "coredns/coredns:1.8.6"},
-			k3d.DockerImage{Name: "coredns/coredns:1.9.3"},
-			k3d.DockerImage{Name: "coredns/coredns:1.10.1"},
-			k3d.DockerImage{Name: "coredns/coredns:1.11.1"},
+			k3d.DockerImage{Name: "coredns/coredns:1.9.0"},
 			k3d.DockerImage{Name: "giantswarm/tiny-tools:3.12"},
 		))
 	}

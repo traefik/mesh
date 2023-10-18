@@ -10,7 +10,6 @@ RUN apk --no-cache --no-progress add \
     mercurial \
     curl \
     tar \
-    xz \
     ca-certificates \
     tzdata \
     && update-ca-certificates \
@@ -27,7 +26,6 @@ RUN go mod download
 COPY . .
 
 RUN GOARCH={{ .GoARCH }} GOARM={{ .GoARM }} make local-build
-RUN curl -sSfL https://github.com/upx/upx/releases/download/v4.1.0/upx-4.1.0-amd64_linux.tar.xz | tar xJvf - --strip-components 1 upx-4.1.0-amd64_linux/upx && ./upx -9 /go/src/github.com/traefik/mesh/dist/traefik-mesh
 
 ## IMAGE
 FROM {{ .RuntimeImage }}

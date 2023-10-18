@@ -10,7 +10,6 @@ RUN apk --no-cache --no-progress add \
     mercurial \
     curl \
     tar \
-    xz \
     ca-certificates \
     tzdata \
     && update-ca-certificates \
@@ -34,7 +33,6 @@ FROM base-image AS maker
 ARG MAKE_TARGET=local-build
 
 RUN make ${MAKE_TARGET}
-RUN if [ "$MAKE_TARGET" = "local-build" ]; then curl -sSfL https://github.com/upx/upx/releases/download/v4.1.0/upx-4.1.0-amd64_linux.tar.xz | tar xJvf - --strip-components 1 upx-4.1.0-amd64_linux/upx && ./upx -9 /go/src/github.com/traefik/mesh/dist/traefik-mesh ; fi
 
 ## IMAGE
 FROM alpine:3.18
