@@ -16,9 +16,9 @@ require (
 	github.com/traefik/paerser v0.2.0
 	github.com/traefik/traefik/v2 v2.10.5
 	github.com/vdemeester/shakers v0.1.0
-	k8s.io/api v0.26.9
-	k8s.io/apimachinery v0.26.9
-	k8s.io/client-go v0.26.9
+	k8s.io/api v0.26.10
+	k8s.io/apimachinery v0.26.10
+	k8s.io/client-go v0.26.10
 )
 
 require (

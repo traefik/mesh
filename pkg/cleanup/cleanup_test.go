@@ -40,7 +40,7 @@ func TestCleanup_CleanShadowServices(t *testing.T) {
 		LabelSelector: "app=maesh,type=shadow",
 	})
 	require.NoError(t, err)
-	assert.Len(t, serviceList.Items, 0)
+	assert.Empty(t, serviceList.Items)
 
 	serviceList, err = clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
 	require.NoError(t, err)
