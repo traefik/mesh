@@ -194,9 +194,9 @@ func TestResourceFilter_WatchNamespaces(t *testing.T) {
 	WatchNamespaces("ns-1", "ns-2")(filter)
 
 	assert.Equal(t, []string{"ns-1", "ns-2"}, filter.watchedNamespaces)
-	assert.Len(t, filter.ignoredNamespaces, 0)
-	assert.Len(t, filter.ignoredServices, 0)
-	assert.Len(t, filter.ignoredApps, 0)
+	assert.Empty(t, filter.ignoredNamespaces)
+	assert.Empty(t, filter.ignoredServices)
+	assert.Empty(t, filter.ignoredApps)
 }
 
 func TestResourceFilter_IgnoreNamespaces(t *testing.T) {
@@ -205,9 +205,9 @@ func TestResourceFilter_IgnoreNamespaces(t *testing.T) {
 	IgnoreNamespaces("ns-1", "ns-2")(filter)
 
 	assert.Equal(t, []string{"ns-1", "ns-2"}, filter.ignoredNamespaces)
-	assert.Len(t, filter.watchedNamespaces, 0)
-	assert.Len(t, filter.ignoredServices, 0)
-	assert.Len(t, filter.ignoredApps, 0)
+	assert.Empty(t, filter.watchedNamespaces)
+	assert.Empty(t, filter.ignoredServices)
+	assert.Empty(t, filter.ignoredApps)
 }
 
 func TestResourceFilter_IgnoreApps(t *testing.T) {
@@ -216,9 +216,9 @@ func TestResourceFilter_IgnoreApps(t *testing.T) {
 	IgnoreApps("app-1", "app-2")(filter)
 
 	assert.Equal(t, []string{"app-1", "app-2"}, filter.ignoredApps)
-	assert.Len(t, filter.ignoredNamespaces, 0)
-	assert.Len(t, filter.watchedNamespaces, 0)
-	assert.Len(t, filter.ignoredServices, 0)
+	assert.Empty(t, filter.ignoredNamespaces)
+	assert.Empty(t, filter.watchedNamespaces)
+	assert.Empty(t, filter.ignoredServices)
 }
 
 func TestResourceFilter_IgnoreService(t *testing.T) {
@@ -227,7 +227,7 @@ func TestResourceFilter_IgnoreService(t *testing.T) {
 	IgnoreService("ns-1", "svc-1")(filter)
 
 	assert.Equal(t, []namespaceName{{Namespace: "ns-1", Name: "svc-1"}}, filter.ignoredServices)
-	assert.Len(t, filter.ignoredNamespaces, 0)
-	assert.Len(t, filter.watchedNamespaces, 0)
-	assert.Len(t, filter.ignoredApps, 0)
+	assert.Empty(t, filter.ignoredNamespaces)
+	assert.Empty(t, filter.watchedNamespaces)
+	assert.Empty(t, filter.ignoredApps)
 }

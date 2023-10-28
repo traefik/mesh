@@ -412,8 +412,8 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 			require.NoError(t, err)
 
 			if test.currentShadowSvc == nil {
-				assert.Equal(t, 0, len(removedTCPPorts))
-				assert.Equal(t, 0, len(removedUDPPorts))
+				assert.Empty(t, removedTCPPorts)
+				assert.Empty(t, removedUDPPorts)
 				return
 			}
 
@@ -463,7 +463,7 @@ func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
 
 	shadowSvcName := shadowServiceManager.getShadowServiceName(namespace, name)
 
-	assert.Equal(t, shadowSvcName, "traefik-mesh-foo-6d61657368-bar")
+	assert.Equal(t, "traefik-mesh-foo-6d61657368-bar", shadowSvcName)
 }
 
 func TestShadowServiceManager_getHTTPPort(t *testing.T) {

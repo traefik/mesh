@@ -162,11 +162,7 @@ func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, cluster
 
 	c.logger.Infof("CoreDNS ConfigMap %q in namespace %q has successfully been patched", patchedConfigMap.Name, patchedConfigMap.Namespace)
 
-	if err := c.restartPods(ctx, coreDNSDeployment); err != nil {
-		return err
-	}
-
-	return nil
+	return c.restartPods(ctx, coreDNSDeployment)
 }
 
 func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment, clusterDomain, traefikMeshNamespace string) (*corev1.ConfigMap, bool, error) {
@@ -307,11 +303,7 @@ func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, traefikMes
 		return err
 	}
 
-	if err := c.restartPods(ctx, kubeDNSDeployment); err != nil {
-		return err
-	}
-
-	return nil
+	return c.restartPods(ctx, kubeDNSDeployment)
 }
 
 func (c *Client) patchKubeDNSConfig(ctx context.Context, deployment *appsv1.Deployment, coreDNSServiceIP string) error {
@@ -384,11 +376,7 @@ func (c *Client) RestoreCoreDNS(ctx context.Context) error {
 		return err
 	}
 
-	if err := c.restartPods(ctx, coreDNSDeployment); err != nil {
-		return err
-	}
-
-	return nil
+	return c.restartPods(ctx, coreDNSDeployment)
 }
 
 func (c *Client) unpatchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
@@ -484,11 +472,7 @@ func (c *Client) RestoreKubeDNS(ctx context.Context) error {
 		return err
 	}
 
-	if err := c.restartPods(ctx, kubeDNSDeployment); err != nil {
-		return err
-	}
-
-	return nil
+	return c.restartPods(ctx, kubeDNSDeployment)
 }
 
 // findCoreDNSDeployment returns the CoreDNS deployment in the given namespace, nil if not found.

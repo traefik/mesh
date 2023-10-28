@@ -26,11 +26,11 @@ func TestEnableReadiness(t *testing.T) {
 	api, err := NewAPI(log, 9000, localhost, client, "foo")
 
 	require.NoError(t, err)
-	assert.Equal(t, false, api.readiness.Get().(bool))
+	assert.False(t, api.readiness.Get().(bool))
 
 	api.SetReadiness(true)
 
-	assert.Equal(t, true, api.readiness.Get().(bool))
+	assert.True(t, api.readiness.Get().(bool))
 }
 
 func TestGetReadiness(t *testing.T) {

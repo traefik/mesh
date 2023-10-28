@@ -4,7 +4,7 @@ name: Traefik Mesh Pipeline
 agent:
   machine:
     type: e1-standard-4
-    os_image: ubuntu1804
+    os_image: ubuntu2004
 
 auto_cancel:
   running:
@@ -20,7 +20,7 @@ global_job_config:
   prologue:
     commands:
       - curl -sSfL https://raw.githubusercontent.com/ldez/semgo/master/godownloader.sh | sudo sh -s -- -b "/usr/local/bin"
-      - sudo semgo go1.19
+      - sudo semgo go1.21
       - echo "${DOCKERHUB_PASSWORD}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
       - checkout
 

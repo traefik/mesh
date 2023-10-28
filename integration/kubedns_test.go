@@ -27,9 +27,9 @@ func (s *KubeDNSSuite) SetUpSuite(c *check.C) {
 	opts := []k3d.ClusterOptionFunc{k3d.WithoutTraefik(), k3d.WithoutCoreDNS()}
 	if !*disableImport {
 		opts = append(opts, k3d.WithImages(
-			k3d.DockerImage{Name: "traefik/whoami:v1.8.0"},
+			k3d.DockerImage{Name: "traefik/whoami:v1.10.1"},
 			k3d.DockerImage{Name: "coredns/coredns:1.6.3"},
-			k3d.DockerImage{Name: "giantswarm/tiny-tools:3.9"},
+			k3d.DockerImage{Name: "giantswarm/tiny-tools:3.12"},
 			k3d.DockerImage{Name: "gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.15.13"},
 			k3d.DockerImage{Name: "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.15.13"},
 			k3d.DockerImage{Name: "gcr.io/google_containers/k8s-dns-sidecar-amd64:1.15.13"},

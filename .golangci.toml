@@ -33,6 +33,33 @@
      "github.com/mailgun/minheap",
     ]
 
+  [linters-settings.depguard]
+    [linters-settings.depguard.rules]
+      [linters-settings.depguard.rules.main]
+        [[linters-settings.depguard.rules.main.deny]]
+        pkg = "github.com/instana/testify"
+        desc = "not allowed"
+        
+        [[linters-settings.depguard.rules.main.deny]]
+        pkg = "github.com/pkg/errors"
+        desc = "Should be replaced by standard lib errors package"
+
+  [linters-settings.tagalign]
+    align = false
+    sort = true
+    order = [
+      "description",
+      "json",
+      "toml",
+      "yaml",
+      "yml",
+      "label",
+      "label-slice-as-struct",
+      "file",
+      "kv",
+      "export"
+    ]
+
 [linters]
   enable-all = true
   disable = [
@@ -77,6 +104,7 @@
   max-per-linter = 0
   max-same-issues = 0
   exclude = [
-    "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked",
-    "should have a package comment, unless it's in another file for this package",
+    "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv|\\(k8s\\.io/client-go/tools/cache\\.SharedInformer\\)\\.AddEventHandler). is not checked",
+    "package-comments: should have a package comment",
+    "unused-parameter: parameter '[^']+' seems to be unused, consider removing or renaming it as _",
   ]

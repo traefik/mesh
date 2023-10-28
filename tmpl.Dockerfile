@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # Package dependencies
 RUN apk --no-cache --no-progress add \
@@ -34,6 +34,7 @@ RUN addgroup -g 1000 -S app && \
     adduser -u 1000 -S app -G app
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /go/src/github.com/traefik/mesh/dist/traefik-mesh /app/
+COPY --from=builder --chown=1000:1000 /go/src/github.com/traefik/mesh/dist/traefik-mesh /app/
+USER app
 
 ENTRYPOINT ["/app/traefik-mesh"]
