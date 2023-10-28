@@ -7,7 +7,7 @@ toolchain go1.21.3
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/go-check/check v0.0.0-20201130134442-10cb98267c6c
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/servicemeshinterface/smi-sdk-go v0.5.0
