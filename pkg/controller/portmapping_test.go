@@ -188,7 +188,6 @@ func TestPortMapping_LoadState(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -235,7 +234,6 @@ func TestPortMapping_parseServiceNamespaceAndName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 

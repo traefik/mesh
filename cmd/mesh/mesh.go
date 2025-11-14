@@ -98,7 +98,7 @@ func traefikMeshCommand(config *cmd.TraefikMeshConfiguration) error {
 		return fmt.Errorf("unable to create the API server: %w", err)
 	}
 
-	ctr := controller.NewMeshController(clients, controller.Config{
+	ctr, err := controller.NewMeshController(clients, controller.Config{
 		ACLEnabled:       aclEnabled,
 		DefaultMode:      config.DefaultMode,
 		Namespace:        config.Namespace,
@@ -111,6 +111,9 @@ func traefikMeshCommand(config *cmd.TraefikMeshConfiguration) error {
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       getMaxPort(minUDPPort, config.LimitUDPPort),
 	}, apiServer, log)
+	if err != nil {
+		return fmt.Errorf("creating mesh controller: %w", err)
+	}
 
 	var wg sync.WaitGroup
 
@@ -168,6 +171,6 @@ func stopAPIServer(apiServer *api.API, log logrus.FieldLogger) {
 	}
 }
 
-func getMaxPort(min int32, limit int32) int32 {
+func getMaxPort(min, limit int32) int32 {
 	return min + limit - 1
 }

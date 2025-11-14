@@ -1,7 +1,7 @@
 package safe
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/cenkalti/backoff/v4"
@@ -31,7 +31,7 @@ func TestOperationWithRecoverPanic(t *testing.T) {
 
 func TestOperationWithRecoverError(t *testing.T) {
 	operation := func() error {
-		return fmt.Errorf("ERROR")
+		return errors.New("ERROR")
 	}
 
 	err := backoff.Retry(OperationWithRecover(operation), &backoff.StopBackOff{})

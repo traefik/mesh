@@ -116,9 +116,10 @@ func (s *CoreDNSSuite) setCoreDNSVersion(version string) error {
 			return err
 		}
 
-		deployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("coredns/coredns:%s", version)
+		deployment.Spec.Template.Spec.Containers[0].Image = "coredns/coredns:" + version
 
 		_, err = s.cluster.Client.KubernetesClient().AppsV1().Deployments(deployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+
 		return err
 	})
 }
@@ -137,6 +138,7 @@ func (s *CoreDNSSuite) removeCoreDNSReadinessProbe() error {
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
 
 		_, err = s.cluster.Client.KubernetesClient().AppsV1().Deployments(metav1.NamespaceSystem).Update(ctx, deployment, metav1.UpdateOptions{})
+
 		return err
 	})
 }
@@ -178,6 +180,7 @@ func (s *CoreDNSSuite) resetCoreDNSCorefile(ready bool) error {
 `, readyPlugin)
 
 		_, err = s.cluster.Client.KubernetesClient().CoreV1().ConfigMaps(metav1.NamespaceSystem).Update(ctx, configmap, metav1.UpdateOptions{})
+
 		return err
 	})
 }

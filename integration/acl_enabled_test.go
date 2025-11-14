@@ -31,7 +31,7 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	}
 	if !*disableImport {
 		opts = append(opts, k3d.WithImages(
-			k3d.DockerImage{Name: "traefik:v2.8"},
+			k3d.DockerImage{Name: "traefik:v2.11"},
 			k3d.DockerImage{Name: "traefik/whoami:v1.8.0"},
 			k3d.DockerImage{Name: "giantswarm/tiny-tools:3.9"},
 		))

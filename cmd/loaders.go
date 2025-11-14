@@ -78,7 +78,7 @@ func (f *FileLoader) Load(args []string, cmd *cli.Command) (bool, error) {
 		return false, err
 	}
 
-	configFileFlag := fmt.Sprintf("%s.configFile", parser.DefaultRootName)
+	configFileFlag := parser.DefaultRootName + ".configFile"
 
 	configFile, err := loadConfigFiles(ref[configFileFlag], cmd.Configuration)
 	if err != nil {

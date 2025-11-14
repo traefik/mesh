@@ -14,7 +14,7 @@ type enqueueWorkHandler struct {
 }
 
 // OnAdd is called when an object is added to the informers cache.
-func (h *enqueueWorkHandler) OnAdd(obj interface{}) {
+func (h *enqueueWorkHandler) OnAdd(obj interface{}, _ bool) {
 	h.enqueueWork(obj)
 }
 

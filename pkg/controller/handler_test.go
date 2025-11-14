@@ -19,7 +19,7 @@ func TestEnqueueWorkHandler_OnAdd(t *testing.T) {
 	workQueue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	handler := &enqueueWorkHandler{logger: log, workQueue: workQueue}
-	handler.OnAdd(&corev1.Pod{})
+	handler.OnAdd(&corev1.Pod{}, false)
 
 	assert.Equal(t, 1, workQueue.Len())
 
@@ -75,7 +75,6 @@ func TestEnqueueWorkHandler_OnUpdate(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -120,7 +119,6 @@ func TestEnqueueWorkHandler_enqueueWork(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
