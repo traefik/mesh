@@ -137,7 +137,7 @@ func (p *PortMapping) Remove(namespace, name string, port int32) (int32, error) 
 
 // parseServiceNamespaceAndName parses and returns the service namespace and shadowSvcName from the given shadow service shadowSvcName.
 func (p *PortMapping) parseServiceNamespaceAndName(shadowServiceName string) (namespace string, name string, err error) {
-	expr := fmt.Sprintf(`%s-(.*)-6d61657368-(.*)`, p.namespace)
+	expr := p.namespace + "-(.*)-6d61657368-(.*)"
 
 	regex, err := regexp.Compile(expr)
 	if err != nil {
@@ -146,7 +146,7 @@ func (p *PortMapping) parseServiceNamespaceAndName(shadowServiceName string) (na
 
 	parts := regex.FindStringSubmatch(shadowServiceName)
 	if len(parts) != 3 {
-		return "", "", fmt.Errorf("unable to parse service namespace and shadowSvcName")
+		return "", "", errors.New("unable to parse service namespace and shadowSvcName")
 	}
 
 	return parts[2], parts[1], nil

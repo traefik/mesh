@@ -150,8 +150,8 @@ func TestTopologyBuilder_HandleCircularReferenceOnTrafficSplit(t *testing.T) {
 	got, err := builder.Build(resourceFilter)
 	require.NoError(t, err)
 
-	assert.Len(t, got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits, 0)
-	assert.Len(t, got.Services[nn(svcC.Name, svcC.Namespace)].TrafficSplits, 0)
+	assert.Empty(t, got.Services[nn(svcB.Name, svcB.Namespace)].TrafficSplits)
+	assert.Empty(t, got.Services[nn(svcC.Name, svcC.Namespace)].TrafficSplits)
 }
 
 func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T) {
@@ -212,7 +212,7 @@ func TestTopologyBuilder_TrafficTargetSourcesForbiddenTrafficSplit(t *testing.T)
 	svcKey := nn(svcB.Name, svcB.Namespace)
 	tsKey := got.Services[svcKey].TrafficSplits[0]
 
-	assert.Equal(t, 0, len(got.TrafficSplits[tsKey].Incoming))
+	assert.Empty(t, got.TrafficSplits[tsKey].Incoming)
 }
 
 // TestTopologyBuilder_EvaluatesIncomingTrafficSplit makes sure a topology can be built with TrafficSplits. It also
@@ -572,7 +572,7 @@ func TestTopologyBuilder_EmptyTrafficTargetDestinationNamespace(t *testing.T) {
 	require.NoError(t, err)
 
 	actual, exists := res.TrafficTargets[Key{Name: "test", Namespace: namespace}]
-	assert.Equal(t, true, exists)
+	assert.True(t, exists)
 	assert.Equal(t, namespace, actual.Spec.Destination.Namespace)
 }
 

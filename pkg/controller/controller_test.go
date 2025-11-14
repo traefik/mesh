@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/traefik/mesh/pkg/k8s"
 	"github.com/traefik/mesh/pkg/topology"
 	"github.com/traefik/traefik/v2/pkg/config/dynamic"
@@ -36,7 +37,7 @@ func TestController_NewMeshController(t *testing.T) {
 	log.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with base HTTP mode.
-	controller := NewMeshController(clientMock, Config{
+	controller, err := NewMeshController(clientMock, Config{
 		ACLEnabled:       false,
 		DefaultMode:      "http",
 		Namespace:        traefikMeshNamespace,
@@ -48,6 +49,7 @@ func TestController_NewMeshController(t *testing.T) {
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       maxUDPPort,
 	}, store, log)
+	require.NoError(t, err)
 
 	assert.NotNil(t, controller)
 }
@@ -61,7 +63,7 @@ func TestController_NewMeshControllerWithSMI(t *testing.T) {
 	log.SetLevel(logrus.DebugLevel)
 
 	// Create a new controller with base HTTP mode, in SMI mode.
-	controller := NewMeshController(clientMock, Config{
+	controller, err := NewMeshController(clientMock, Config{
 		ACLEnabled:       true,
 		DefaultMode:      "http",
 		Namespace:        traefikMeshNamespace,
@@ -73,6 +75,7 @@ func TestController_NewMeshControllerWithSMI(t *testing.T) {
 		MinUDPPort:       minUDPPort,
 		MaxUDPPort:       maxUDPPort,
 	}, store, log)
+	require.NoError(t, err)
 
 	assert.NotNil(t, controller)
 }

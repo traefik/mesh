@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -80,7 +81,7 @@ func buildConfig(log logrus.FieldLogger, masterURL, kubeConfig string) (*rest.Co
 		return clientcmd.BuildConfigFromFlags(masterURL, kubeConfig)
 	}
 
-	return nil, fmt.Errorf("could not create client: missing masterURL or kubeConfig")
+	return nil, errors.New("could not create client: missing masterURL or kubeConfig")
 }
 
 // KubernetesClient is used to get the kubernetes clientset.

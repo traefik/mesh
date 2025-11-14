@@ -224,11 +224,10 @@ func TestShadowServiceManager_CreateOrUpdate(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			log := logrus.New()
 			log.SetOutput(os.Stdout)
@@ -363,11 +362,10 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			log := logrus.New()
 			log.SetOutput(os.Stdout)
@@ -412,8 +410,9 @@ func TestShadowServiceManager_Delete(t *testing.T) {
 			require.NoError(t, err)
 
 			if test.currentShadowSvc == nil {
-				assert.Equal(t, 0, len(removedTCPPorts))
-				assert.Equal(t, 0, len(removedUDPPorts))
+				assert.Empty(t, removedTCPPorts)
+				assert.Empty(t, removedUDPPorts)
+
 				return
 			}
 
@@ -463,7 +462,7 @@ func TestShadowServiceManager_getShadowServiceName(t *testing.T) {
 
 	shadowSvcName := shadowServiceManager.getShadowServiceName(namespace, name)
 
-	assert.Equal(t, shadowSvcName, "traefik-mesh-foo-6d61657368-bar")
+	assert.Equal(t, "traefik-mesh-foo-6d61657368-bar", shadowSvcName)
 }
 
 func TestShadowServiceManager_getHTTPPort(t *testing.T) {
@@ -485,7 +484,6 @@ func TestShadowServiceManager_getHTTPPort(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -568,7 +566,6 @@ func TestShadowServiceManager_isPortSuitable(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -620,7 +617,6 @@ func TestShadowServiceManager_containsPort(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -678,7 +674,6 @@ func TestShadowServiceManager_needsCleanup(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 

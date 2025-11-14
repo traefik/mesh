@@ -454,7 +454,7 @@ func (c *Client) RestoreKubeDNS(ctx context.Context) error {
 	}
 
 	if configMap == nil {
-		return fmt.Errorf("configmap kube-dns cannot be found")
+		return errors.New("configmap kube-dns cannot be found")
 	}
 
 	// Check if stubDomains are still defined.

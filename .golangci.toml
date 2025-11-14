@@ -38,26 +38,18 @@
   disable = [
     "sqlclosecheck", # Not relevant (SQL)
     "rowserrcheck", # Not relevant (SQL)
-    "ifshort", # Deprecated
-    "interfacer", # Deprecated
-    "golint", # Deprecated
-    "maligned", # Deprecated
-    "scopelint", # Deprecated
     "cyclop", # Duplicate of gocyclo
     "lll", # Long lines are ok.
     "dupl", # Not relevant
     "prealloc", # Not relevant
     "gochecknoinits", # Too strict
     "gochecknoglobals", # Too strict
-    "gomnd", # Does not allow for any config or time values
     "gosec", # Does not allow exec.Command with variable
     "bodyclose", # Too many false positives
     "goconst", # Too many false positives
     "wrapcheck", # Too strict
-    "goerr113", # Forces wrapping all errors
     "noctx", # Too strict
     "exhaustive", # Too strict
-    "exhaustivestruct", # Too strict
     "exhaustruct", # Duplicate of exhaustivestruct
     "nlreturn", # Too strict
     "ireturn", # Not relevant
@@ -68,8 +60,15 @@
     "paralleltest", # Not relevant
     "forcetypeassert", # Too strict
     "nonamedreturns", # Not relevant
-    "structcheck", # Duplicate of unused
     "funlen",
+    "revive",
+    "testifylint",
+    "mnd",
+    "depguard",
+    "musttag",
+    "err113",
+    "predeclared",
+    "recvcheck"
   ]
 
 [issues]
@@ -79,4 +78,7 @@
   exclude = [
     "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked",
     "should have a package comment, unless it's in another file for this package",
+    "SA1019: workqueue\\.NewRateLimitingQueue is deprecated: Use NewTypedRateLimitingQueue instead",
+    "SA1019: workqueue\\.RateLimitingInterface is deprecated: Use TypedRateLimitingInterface instead",
+    "SA1019: workqueue\\.DefaultControllerRateLimiter is deprecated: Use DefaultTypedControllerRateLimiter instead"
   ]
