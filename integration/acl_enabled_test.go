@@ -12,7 +12,7 @@ import (
 	checker "github.com/vdemeester/shakers"
 )
 
-// ACLEnabledSuite.
+// ACLEnabledSuite is a test suite for validating Access Control List (ACL) features in a Kubernetes cluster.
 type ACLEnabledSuite struct {
 	logger         logrus.FieldLogger
 	cluster        *k3d.Cluster

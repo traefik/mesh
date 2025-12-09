@@ -341,7 +341,7 @@ func (c *Controller) loadPortMappersState() error {
 }
 
 // isWatchedResource returns true if the given resource is not ignored, false otherwise.
-func (c *Controller) isWatchedResource(obj interface{}) bool {
+func (c *Controller) isWatchedResource(obj any) bool {
 	return !c.resourceFilter.IsIgnored(obj)
 }
 
@@ -413,7 +413,7 @@ func (c *Controller) syncShadowService(key string) error {
 }
 
 // handleErr re-queues the given work key only if the maximum number of attempts is not exceeded.
-func (c *Controller) handleErr(key interface{}, err error) {
+func (c *Controller) handleErr(key any, err error) {
 	if c.workQueue.NumRequeues(key) < maxRetries {
 		c.workQueue.AddRateLimited(key)
 		return

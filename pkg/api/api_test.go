@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -235,7 +236,10 @@ func startTestAPIServer(port string, statusCode int, bodyData []byte) (ts *httpt
 
 	ts = &httptest.Server{
 		Listener: listener,
-		Config:   &http.Server{Handler: handler},
+		Config:   &http.Server{
+			Handler: handler,
+			ReadHeaderTimeout: 10 * time.Second,
+		},
 	}
 	ts.Start()
 

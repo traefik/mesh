@@ -23,12 +23,15 @@ import (
 // Provider represents a DNS provider.
 type Provider int
 
-// Supported DNS providers.
+// UnknownDNS represents an unidentified or unsupported DNS provider in the system.
 const (
 	UnknownDNS Provider = iota
 	CoreDNS
 	KubeDNS
+)
 
+// Supported DNS providers.
+const (
 	// Maesh config is deprecated and will be removed in the next major release.
 	maeshDomain       = "maesh"
 	maeshBlockHeader  = "#### Begin Maesh Block"
@@ -86,6 +89,169 @@ func (c *Client) CheckDNSProvider(ctx context.Context) (Provider, error) {
 	return UnknownDNS, errors.New("no supported DNS service available for installing traefik mesh")
 }
 
+// ConfigureCoreDNS patches the CoreDNS configuration for Traefik Mesh.
+func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, clusterDomain, traefikMeshNamespace string) error {
+	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "coredns", coreDNSNamespace)
+
+	coreDNSDeployment, err := c.findCoreDNSDeployment(ctx, coreDNSNamespace)
+	if err != nil {
+		return err
+	}
+
+	if coreDNSDeployment == nil {
+		return fmt.Errorf("unable to find CoreDNS deployment in namespace %q", coreDNSNamespace)
+	}
+
+	patchedConfigMap, changed, err := c.patchCoreDNSConfig(ctx, coreDNSDeployment, clusterDomain, traefikMeshNamespace)
+	if err != nil {
+		return fmt.Errorf("unable to patch coredns config: %w", err)
+	}
+
+	if !changed {
+		c.logger.Infof("CoreDNS ConfigMap %q in namespace %q has already been patched", patchedConfigMap.Name, patchedConfigMap.Namespace)
+		return nil
+	}
+
+	if _, err = c.kubeClient.CoreV1().ConfigMaps(patchedConfigMap.Namespace).Update(ctx, patchedConfigMap, metav1.UpdateOptions{}); err != nil {
+		return err
+	}
+
+	c.logger.Infof("CoreDNS ConfigMap %q in namespace %q has successfully been patched", patchedConfigMap.Name, patchedConfigMap.Namespace)
+
+	if err := c.restartPods(ctx, coreDNSDeployment); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ConfigureKubeDNS patches the KubeDNS configuration for Traefik Mesh.
+func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, traefikMeshNamespace string) error {
+	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "kube-dns", traefikMeshNamespace)
+
+	kubeDNSDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "kube-dns", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	var coreDNSServiceIP string
+
+	c.logger.Debugf("Getting ClusterIP for Service %q in namespace %q", "coredns", traefikMeshNamespace)
+
+	operation := func() error {
+		svc, svcErr := c.kubeClient.CoreV1().Services(traefikMeshNamespace).Get(ctx, "coredns", metav1.GetOptions{})
+		if svcErr != nil {
+			return fmt.Errorf("unable to get CoreDNS service in namespace %q: %w", traefikMeshNamespace, err)
+		}
+
+		if svc.Spec.ClusterIP == "" {
+			return fmt.Errorf("coredns service in namespace %q has no ClusterIP", traefikMeshNamespace)
+		}
+
+		coreDNSServiceIP = svc.Spec.ClusterIP
+
+		return nil
+	}
+
+	if err = backoff.Retry(safe.OperationWithRecover(operation), backoff.WithMaxRetries(backoff.NewConstantBackOff(10*time.Second), 12)); err != nil {
+		return err
+	}
+
+	c.logger.Debugf("ClusterIP for Service %q in namespace %q is %q", "coredns", traefikMeshNamespace, coreDNSServiceIP)
+
+	if err := c.patchKubeDNSConfig(ctx, kubeDNSDeployment, coreDNSServiceIP); err != nil {
+		return err
+	}
+
+	if err := c.ConfigureCoreDNS(ctx, traefikMeshNamespace, clusterDomain, traefikMeshNamespace); err != nil {
+		return err
+	}
+
+	if err := c.restartPods(ctx, kubeDNSDeployment); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RestoreCoreDNS restores the CoreDNS configuration to pre-install state.
+func (c *Client) RestoreCoreDNS(ctx context.Context) error {
+	coreDNSDeployment, err := c.findCoreDNSDeployment(ctx, metav1.NamespaceSystem)
+	if err != nil {
+		return err
+	}
+
+	if coreDNSDeployment == nil {
+		return fmt.Errorf("unable to find CoreDNS deployment in namespace %q", metav1.NamespaceSystem)
+	}
+
+	unpatchedConfigMap, err := c.unpatchCoreDNSConfig(ctx, coreDNSDeployment)
+	if err != nil {
+		return fmt.Errorf("unable to unpatch coredns config: %w", err)
+	}
+
+	if _, err = c.kubeClient.CoreV1().ConfigMaps(unpatchedConfigMap.Namespace).Update(ctx, unpatchedConfigMap, metav1.UpdateOptions{}); err != nil {
+		return err
+	}
+
+	if err := c.restartPods(ctx, coreDNSDeployment); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RestoreKubeDNS restores the KubeDNS configuration to pre-install state.
+func (c *Client) RestoreKubeDNS(ctx context.Context) error {
+	kubeDNSDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "kube-dns", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// Get the currently loaded KubeDNS ConfigMap.
+	configMap, err := c.findConfigMap(ctx, kubeDNSDeployment, "kube-dns")
+	if err != nil {
+		return err
+	}
+
+	if configMap == nil {
+		return errors.New("configmap kube-dns cannot be found")
+	}
+
+	// Check if stubDomains are still defined.
+	stubDomainsStr := configMap.Data["stubDomains"]
+	if stubDomainsStr == "" {
+		return nil
+	}
+
+	stubDomains := make(map[string][]string)
+	if err = json.Unmarshal([]byte(stubDomainsStr), &stubDomains); err != nil {
+		return fmt.Errorf("unable to unmarshal stubdomains: %w", err)
+	}
+
+	// Delete our stubDomains.
+	// maesh stubDomain is deprecated and will be removed in the next major release.
+	delete(stubDomains, "maesh")
+	delete(stubDomains, "traefik.mesh")
+
+	configMapData, err := json.Marshal(stubDomains)
+	if err != nil {
+		return err
+	}
+
+	configMap.Data["stubDomains"] = string(configMapData)
+
+	if _, err := c.kubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(ctx, configMap, metav1.UpdateOptions{}); err != nil {
+		return err
+	}
+
+	if err := c.restartPods(ctx, kubeDNSDeployment); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) coreDNSMatch(ctx context.Context) (bool, error) {
 	c.logger.Debugf("Checking if CoreDNS is installed in namespace %q...", metav1.NamespaceSystem)
 
@@ -131,42 +297,6 @@ func (c *Client) kubeDNSMatch(ctx context.Context) (bool, error) {
 	c.logger.Debug("KubeDNS has been detected")
 
 	return true, nil
-}
-
-// ConfigureCoreDNS patches the CoreDNS configuration for Traefik Mesh.
-func (c *Client) ConfigureCoreDNS(ctx context.Context, coreDNSNamespace, clusterDomain, traefikMeshNamespace string) error {
-	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "coredns", coreDNSNamespace)
-
-	coreDNSDeployment, err := c.findCoreDNSDeployment(ctx, coreDNSNamespace)
-	if err != nil {
-		return err
-	}
-
-	if coreDNSDeployment == nil {
-		return fmt.Errorf("unable to find CoreDNS deployment in namespace %q", coreDNSNamespace)
-	}
-
-	patchedConfigMap, changed, err := c.patchCoreDNSConfig(ctx, coreDNSDeployment, clusterDomain, traefikMeshNamespace)
-	if err != nil {
-		return fmt.Errorf("unable to patch coredns config: %w", err)
-	}
-
-	if !changed {
-		c.logger.Infof("CoreDNS ConfigMap %q in namespace %q has already been patched", patchedConfigMap.Name, patchedConfigMap.Namespace)
-		return nil
-	}
-
-	if _, err = c.kubeClient.CoreV1().ConfigMaps(patchedConfigMap.Namespace).Update(ctx, patchedConfigMap, metav1.UpdateOptions{}); err != nil {
-		return err
-	}
-
-	c.logger.Infof("CoreDNS ConfigMap %q in namespace %q has successfully been patched", patchedConfigMap.Name, patchedConfigMap.Namespace)
-
-	if err := c.restartPods(ctx, coreDNSDeployment); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (c *Client) patchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment, clusterDomain, traefikMeshNamespace string) (*corev1.ConfigMap, bool, error) {
@@ -265,55 +395,6 @@ func (c *Client) getCoreDNSVersion(deployment *appsv1.Deployment) (*goversion.Ve
 	return nil, fmt.Errorf("unable to get CoreDNS container in deployment %q in namespace %q", deployment.Name, deployment.Namespace)
 }
 
-// ConfigureKubeDNS patches the KubeDNS configuration for Traefik Mesh.
-func (c *Client) ConfigureKubeDNS(ctx context.Context, clusterDomain, traefikMeshNamespace string) error {
-	c.logger.Debugf("Patching ConfigMap %q in namespace %q...", "kube-dns", traefikMeshNamespace)
-
-	kubeDNSDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "kube-dns", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	var coreDNSServiceIP string
-
-	c.logger.Debugf("Getting ClusterIP for Service %q in namespace %q", "coredns", traefikMeshNamespace)
-
-	operation := func() error {
-		svc, svcErr := c.kubeClient.CoreV1().Services(traefikMeshNamespace).Get(ctx, "coredns", metav1.GetOptions{})
-		if svcErr != nil {
-			return fmt.Errorf("unable to get CoreDNS service in namespace %q: %w", traefikMeshNamespace, err)
-		}
-
-		if svc.Spec.ClusterIP == "" {
-			return fmt.Errorf("coredns service in namespace %q has no ClusterIP", traefikMeshNamespace)
-		}
-
-		coreDNSServiceIP = svc.Spec.ClusterIP
-
-		return nil
-	}
-
-	if err = backoff.Retry(safe.OperationWithRecover(operation), backoff.WithMaxRetries(backoff.NewConstantBackOff(10*time.Second), 12)); err != nil {
-		return err
-	}
-
-	c.logger.Debugf("ClusterIP for Service %q in namespace %q is %q", "coredns", traefikMeshNamespace, coreDNSServiceIP)
-
-	if err := c.patchKubeDNSConfig(ctx, kubeDNSDeployment, coreDNSServiceIP); err != nil {
-		return err
-	}
-
-	if err := c.ConfigureCoreDNS(ctx, traefikMeshNamespace, clusterDomain, traefikMeshNamespace); err != nil {
-		return err
-	}
-
-	if err := c.restartPods(ctx, kubeDNSDeployment); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (c *Client) patchKubeDNSConfig(ctx context.Context, deployment *appsv1.Deployment, coreDNSServiceIP string) error {
 	configMap, err := c.getOrCreateConfigMap(ctx, deployment, "kube-dns")
 	if err != nil {
@@ -364,33 +445,6 @@ func (c *Client) restartPods(ctx context.Context, deployment *appsv1.Deployment)
 	return err
 }
 
-// RestoreCoreDNS restores the CoreDNS configuration to pre-install state.
-func (c *Client) RestoreCoreDNS(ctx context.Context) error {
-	coreDNSDeployment, err := c.findCoreDNSDeployment(ctx, metav1.NamespaceSystem)
-	if err != nil {
-		return err
-	}
-
-	if coreDNSDeployment == nil {
-		return fmt.Errorf("unable to find CoreDNS deployment in namespace %q", metav1.NamespaceSystem)
-	}
-
-	unpatchedConfigMap, err := c.unpatchCoreDNSConfig(ctx, coreDNSDeployment)
-	if err != nil {
-		return fmt.Errorf("unable to unpatch coredns config: %w", err)
-	}
-
-	if _, err = c.kubeClient.CoreV1().ConfigMaps(unpatchedConfigMap.Namespace).Update(ctx, unpatchedConfigMap, metav1.UpdateOptions{}); err != nil {
-		return err
-	}
-
-	if err := c.restartPods(ctx, coreDNSDeployment); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (c *Client) unpatchCoreDNSConfig(ctx context.Context, deployment *appsv1.Deployment) (*corev1.ConfigMap, error) {
 	coreDNSConfigMap, err := c.findConfigMap(ctx, deployment, "coredns-custom")
 	if err != nil {
@@ -438,57 +492,6 @@ func (c *Client) unpatchCoreDNSConfig(ctx context.Context, deployment *appsv1.De
 	coreDNSConfigMap.Data["Corefile"] = corefile
 
 	return coreDNSConfigMap, nil
-}
-
-// RestoreKubeDNS restores the KubeDNS configuration to pre-install state.
-func (c *Client) RestoreKubeDNS(ctx context.Context) error {
-	kubeDNSDeployment, err := c.kubeClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, "kube-dns", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	// Get the currently loaded KubeDNS ConfigMap.
-	configMap, err := c.findConfigMap(ctx, kubeDNSDeployment, "kube-dns")
-	if err != nil {
-		return err
-	}
-
-	if configMap == nil {
-		return errors.New("configmap kube-dns cannot be found")
-	}
-
-	// Check if stubDomains are still defined.
-	stubDomainsStr := configMap.Data["stubDomains"]
-	if stubDomainsStr == "" {
-		return nil
-	}
-
-	stubDomains := make(map[string][]string)
-	if err = json.Unmarshal([]byte(stubDomainsStr), &stubDomains); err != nil {
-		return fmt.Errorf("unable to unmarshal stubdomains: %w", err)
-	}
-
-	// Delete our stubDomains.
-	// maesh stubDomain is deprecated and will be removed in the next major release.
-	delete(stubDomains, "maesh")
-	delete(stubDomains, "traefik.mesh")
-
-	configMapData, err := json.Marshal(stubDomains)
-	if err != nil {
-		return err
-	}
-
-	configMap.Data["stubDomains"] = string(configMapData)
-
-	if _, err := c.kubeClient.CoreV1().ConfigMaps(configMap.Namespace).Update(ctx, configMap, metav1.UpdateOptions{}); err != nil {
-		return err
-	}
-
-	if err := c.restartPods(ctx, kubeDNSDeployment); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // findCoreDNSDeployment returns the CoreDNS deployment in the given namespace, nil if not found.

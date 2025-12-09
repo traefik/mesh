@@ -1,6 +1,8 @@
 package k8s
 
 import (
+	"slices"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 )
@@ -65,7 +67,7 @@ func NewResourceFilter(opts ...ResourceFilterOption) *ResourceFilter {
 }
 
 // IsIgnored returns true if the resource should be ignored.
-func (f *ResourceFilter) IsIgnored(obj interface{}) bool {
+func (f *ResourceFilter) IsIgnored(obj any) bool {
 	accessor, err := meta.Accessor(obj)
 	if err != nil {
 		return true
@@ -104,13 +106,7 @@ func (f *ResourceFilter) IsIgnored(obj interface{}) bool {
 }
 
 func contains(slice []string, str string) bool {
-	for _, item := range slice {
-		if item == str {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(slice, str)
 }
 
 func containsNamespaceName(slice []namespaceName, nn namespaceName) bool {

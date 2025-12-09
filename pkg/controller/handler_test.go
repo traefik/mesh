@@ -48,8 +48,8 @@ func TestEnqueueWorkHandler_OnDelete(t *testing.T) {
 func TestEnqueueWorkHandler_OnUpdate(t *testing.T) {
 	tests := []struct {
 		desc        string
-		oldObj      interface{}
-		newObj      interface{}
+		oldObj      any
+		newObj      any
 		expectedLen int
 	}{
 		{
@@ -95,7 +95,7 @@ func TestEnqueueWorkHandler_OnUpdate(t *testing.T) {
 func TestEnqueueWorkHandler_enqueueWork(t *testing.T) {
 	tests := []struct {
 		desc        string
-		obj         interface{}
+		obj         any
 		expectedLen int
 		expectedKey string
 	}{

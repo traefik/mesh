@@ -2,6 +2,7 @@ package topology
 
 import (
 	"fmt"
+	"maps"
 
 	access "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/access/v1alpha2"
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
@@ -835,10 +836,7 @@ func (r *resources) indexSMIResources(resourceFilter *mk8s.ResourceFilter, tts [
 
 func mapCopy(m map[Key]struct{}) map[Key]struct{} {
 	cpy := map[Key]struct{}{}
-
-	for k, b := range m {
-		cpy[k] = b
-	}
+	maps.Copy(cpy, m)
 
 	return cpy
 }

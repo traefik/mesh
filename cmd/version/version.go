@@ -32,7 +32,7 @@ func NewCmd() *cli.Command {
 }
 
 func printVersion(w io.Writer) error {
-	_, err := io.WriteString(w, fmt.Sprintf(
+	_, err := fmt.Fprintf(w,
 		versionFormat,
 		version.Version,
 		version.Commit,
@@ -41,7 +41,7 @@ func printVersion(w io.Writer) error {
 		runtime.Compiler,
 		runtime.GOOS,
 		runtime.GOARCH,
-	))
+	)
 
 	return err
 }

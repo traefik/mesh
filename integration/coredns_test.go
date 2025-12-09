@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-// CoreDNSSuite.
+// CoreDNSSuite is a struct containing utilities for managing and testing a CoreDNS deployment within a k3d cluster.
 type CoreDNSSuite struct {
 	logger  logrus.FieldLogger
 	cluster *k3d.Cluster

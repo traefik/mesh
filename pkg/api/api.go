@@ -38,9 +38,9 @@ type API struct {
 }
 
 type podInfo struct {
-	Name  string
-	IP    string
-	Ready bool
+	Name  string `json:"Name"`
+	IP    string `json:"IP"`
+	Ready bool   `json:"Ready"`
 }
 
 // NewAPI creates a new api.

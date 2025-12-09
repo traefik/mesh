@@ -171,6 +171,6 @@ func stopAPIServer(apiServer *api.API, log logrus.FieldLogger) {
 	}
 }
 
-func getMaxPort(min, limit int32) int32 {
-	return min + limit - 1
+func getMaxPort(minPort, limit int32) int32 {
+	return minPort + limit - 1
 }

@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
@@ -954,13 +953,13 @@ func assertTopology(t *testing.T, filename string, got *Topology) {
 
 func buildKeySorter(keys []Key) func(i, j int) bool {
 	return func(i, j int) bool {
-		return strings.Compare(keys[i].String(), keys[j].String()) < 0
+		return keys[i].String() < keys[j].String()
 	}
 }
 
 func buildServiceTrafficTargetKeySorter(keys []ServiceTrafficTargetKey) func(i, j int) bool {
 	return func(i, j int) bool {
-		return strings.Compare(keys[i].String(), keys[j].String()) < 0
+		return keys[i].String() < keys[j].String()
 	}
 }
 

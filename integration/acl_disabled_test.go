@@ -12,7 +12,7 @@ import (
 	checker "github.com/vdemeester/shakers"
 )
 
-// ACLDisabledSuite.
+// ACLDisabledSuite represents a test suite where access control lists (ACL) are explicitly disabled.
 type ACLDisabledSuite struct {
 	logger  logrus.FieldLogger
 	cluster *k3d.Cluster

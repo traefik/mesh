@@ -1,0 +1,111 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - contextcheck
+    - cyclop
+    - dupl
+    - err113
+    - exhaustive
+    - exhaustruct
+    - forcetypeassert
+    - gochecknoinits
+    - gochecknoglobals
+    - ireturn
+    - lll
+    - mnd
+    - nilnil
+    - nlreturn
+    - noctx
+    - nonamedreturns
+    - noinlineerr
+    - paralleltest
+    - prealloc
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - tagliatelle
+    - testpackage
+    - tparallel
+    - varnamelen
+    - wrapcheck
+    - wsl
+    - wsl_v5
+  settings:
+    gocognit:
+      min-complexity: 55
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/instana/testify
+              desc: not allowed
+            - pkg: github.com/pkg/errors
+              desc: Should be replaced by standard lib errors package
+    funlen:
+      lines: -1
+      statements: 52
+    goconst:
+      min-len: 5
+      min-occurrences: 3
+    gocritic:
+      disabled-checks:
+        - httpNoBody
+        - sloppyReassign
+        - hugeParam
+        - rangeValCopy
+        - octalLiteral
+        - paramTypeCombine
+        - unnamedResult
+        - whyNoLint
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+    gocyclo:
+      min-complexity: 20
+    godox:
+      keywords:
+        - FIXME
+    gomoddirectives:
+      toolchain-pattern: go1\.\d+\.\d+$
+      tool-forbidden: true
+      go-version-pattern: ^1\.\d+(\.0)?$
+      replace-allow-list:
+        - github.com/abbot/go-http-auth
+        - github.com/go-check/check
+        - github.com/gorilla/mux
+    gosec:
+      excludes:
+        - G304
+        - G307
+        - G203
+        - G204
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+    misspell:
+      locale: US
+    tagalign:
+      align: false
+      sort: true
+      order:
+        - description
+        - json
+        - toml
+        - yaml
+        - yml
+        - label
+        - label-slice-as-struct
+        - file
+        - kv
+        - export
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - std-error-handling
+    rules:
+      - path: pkg/controller/(controller|handler|handler_test).go
+        text: 'SA1019: workqueue.(.+)'

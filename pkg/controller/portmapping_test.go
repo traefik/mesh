@@ -67,7 +67,7 @@ func TestPortMapping_AddOverflow(t *testing.T) {
 	assert.Equal(t, int32(10001), port)
 
 	_, err = p.Add(wantSp.Namespace, wantSp.Name, wantSp.Port)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	gotSp := p.table[10000]
 	require.NotNil(t, gotSp)
@@ -120,7 +120,7 @@ func TestPortMapping_Remove(t *testing.T) {
 	assert.False(t, exists)
 
 	_, err = p.Remove("my-ns", "my-app", 9090)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = p.Remove("unknown-ns", "unknown-app", 8088)
 	assert.Error(t, err)
@@ -202,7 +202,7 @@ func TestPortMapping_LoadState(t *testing.T) {
 			err = portMapping.LoadState()
 
 			require.NoError(t, err)
-			assert.Equal(t, len(test.expPorts), len(portMapping.table))
+			assert.Len(t, portMapping.table, len(test.expPorts))
 
 			for _, port := range test.expPorts {
 				_, exists := portMapping.table[port]
