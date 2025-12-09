@@ -11,6 +11,8 @@ import (
 )
 
 // Key references a resource.
+//
+//nolint:recvcheck // MarshalText/String use value receiver for map key support, Unmarshal methods need pointer receiver
 type Key struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
@@ -53,6 +55,8 @@ func (k *Key) UnmarshalJSON(data []byte) error {
 }
 
 // ServiceTrafficTargetKey references a TrafficTarget applied on a Service.
+//
+//nolint:recvcheck // MarshalText/String use value receiver for map key support, Unmarshal methods need pointer receiver
 type ServiceTrafficTargetKey struct {
 	Service       Key
 	TrafficTarget Key

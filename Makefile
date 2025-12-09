@@ -67,7 +67,7 @@ check: $(DIST_DIR)
       -v $(CURDIR):/go/src/$(PROJECT) \
       -w /go/src/$(PROJECT) \
       -e GO111MODULE \
-      "$(DOCKER_IMAGE_NAME):check" golangci-lint run --config .golangci.toml
+      "$(DOCKER_IMAGE_NAME):check" golangci-lint run
 
 publish-images: build
 	seihon publish -v "$(VERSION)" -v "latest" --image-name ${DOCKER_IMAGE_NAME} --dry-run=false --base-runtime-image=alpine:3.15

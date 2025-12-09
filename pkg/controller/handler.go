@@ -14,12 +14,12 @@ type enqueueWorkHandler struct {
 }
 
 // OnAdd is called when an object is added to the informers cache.
-func (h *enqueueWorkHandler) OnAdd(obj interface{}) {
+func (h *enqueueWorkHandler) OnAdd(obj any, _ bool) {
 	h.enqueueWork(obj)
 }
 
 // OnUpdate is called when an object is updated in the informers cache.
-func (h *enqueueWorkHandler) OnUpdate(oldObj interface{}, newObj interface{}) {
+func (h *enqueueWorkHandler) OnUpdate(oldObj any, newObj any) {
 	oldObjMeta, okOld := oldObj.(metav1.Object)
 	newObjMeta, okNew := newObj.(metav1.Object)
 
@@ -32,11 +32,11 @@ func (h *enqueueWorkHandler) OnUpdate(oldObj interface{}, newObj interface{}) {
 }
 
 // OnDelete is called when an object is removed from the informers cache.
-func (h *enqueueWorkHandler) OnDelete(obj interface{}) {
+func (h *enqueueWorkHandler) OnDelete(obj any) {
 	h.enqueueWork(obj)
 }
 
-func (h *enqueueWorkHandler) enqueueWork(obj interface{}) {
+func (h *enqueueWorkHandler) enqueueWork(obj any) {
 	if _, isService := obj.(*corev1.Service); !isService {
 		h.workQueue.Add(configRefreshKey)
 		return

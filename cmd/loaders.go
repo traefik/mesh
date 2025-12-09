@@ -55,7 +55,7 @@ func (e *EnvLoader) Load(_ []string, cmd *cli.Command) (bool, error) {
 	return true, nil
 }
 
-func findAndNormalizePrefixedEnvVars(prefix string, config interface{}) []string {
+func findAndNormalizePrefixedEnvVars(prefix string, config any) []string {
 	vars := env.FindPrefixedEnvVars(os.Environ(), prefix, config)
 
 	for _, v := range vars {
@@ -78,7 +78,7 @@ func (f *FileLoader) Load(args []string, cmd *cli.Command) (bool, error) {
 		return false, err
 	}
 
-	configFileFlag := fmt.Sprintf("%s.configFile", parser.DefaultRootName)
+	configFileFlag := parser.DefaultRootName + ".configFile"
 
 	configFile, err := loadConfigFiles(ref[configFileFlag], cmd.Configuration)
 	if err != nil {
@@ -100,7 +100,7 @@ func (f *FileLoader) Load(args []string, cmd *cli.Command) (bool, error) {
 // loadConfigFiles tries to decode the given configuration file and all default locations for the configuration file.
 // It stops as soon as decoding one of them is successful.
 // The default maesh locations are deprecated and will be removed in a future major release.
-func loadConfigFiles(configFile string, element interface{}) (string, error) {
+func loadConfigFiles(configFile string, element any) (string, error) {
 	finder := cli.Finder{
 		BasePaths: []string{
 			"/etc/maesh/maesh", "$XDG_CONFIG_HOME/maesh", "$HOME/.config/maesh", "./maesh",
@@ -114,7 +114,7 @@ func loadConfigFiles(configFile string, element interface{}) (string, error) {
 		return "", err
 	}
 
-	if len(filePath) == 0 {
+	if filePath == "" {
 		return "", nil
 	}
 

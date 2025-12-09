@@ -1,7 +1,6 @@
 package cleanup
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -33,16 +32,16 @@ func TestCleanup_CleanShadowServices(t *testing.T) {
 	cleanup := NewCleanup(logger, clientMock.KubernetesClient(), "traefik-mesh")
 	require.NotNil(t, cleanup)
 
-	err := cleanup.CleanShadowServices(context.Background())
+	err := cleanup.CleanShadowServices(t.Context())
 	require.NoError(t, err)
 
-	serviceList, err := clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{
+	serviceList, err := clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(t.Context(), metav1.ListOptions{
 		LabelSelector: "app=maesh,type=shadow",
 	})
 	require.NoError(t, err)
-	assert.Len(t, serviceList.Items, 0)
+	assert.Empty(t, serviceList.Items)
 
-	serviceList, err = clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
+	serviceList, err = clientMock.KubernetesClient().CoreV1().Services(metav1.NamespaceAll).List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err)
 	assert.Len(t, serviceList.Items, 2)
 }

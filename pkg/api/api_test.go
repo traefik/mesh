@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -26,11 +27,11 @@ func TestEnableReadiness(t *testing.T) {
 	api, err := NewAPI(log, 9000, localhost, client, "foo")
 
 	require.NoError(t, err)
-	assert.Equal(t, false, api.readiness.Get().(bool))
+	assert.False(t, api.readiness.Get().(bool))
 
 	api.SetReadiness(true)
 
-	assert.Equal(t, true, api.readiness.Get().(bool))
+	assert.True(t, api.readiness.Get().(bool))
 }
 
 func TestGetReadiness(t *testing.T) {
@@ -52,7 +53,6 @@ func TestGetReadiness(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -134,7 +134,6 @@ func TestGetMeshNodes(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -237,7 +236,10 @@ func startTestAPIServer(port string, statusCode int, bodyData []byte) (ts *httpt
 
 	ts = &httptest.Server{
 		Listener: listener,
-		Config:   &http.Server{Handler: handler},
+		Config:   &http.Server{
+			Handler: handler,
+			ReadHeaderTimeout: 10 * time.Second,
+		},
 	}
 	ts.Start()
 

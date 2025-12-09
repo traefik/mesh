@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// KubeDNSSuite.
+// KubeDNSSuite represents a suite for testing DNS functionality within a Kubernetes cluster.
 type KubeDNSSuite struct {
 	logger  logrus.FieldLogger
 	cluster *k3d.Cluster

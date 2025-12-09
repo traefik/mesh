@@ -12,7 +12,7 @@ import (
 	checker "github.com/vdemeester/shakers"
 )
 
-// ACLEnabledSuite.
+// ACLEnabledSuite is a test suite for validating Access Control List (ACL) features in a Kubernetes cluster.
 type ACLEnabledSuite struct {
 	logger         logrus.FieldLogger
 	cluster        *k3d.Cluster
@@ -31,7 +31,7 @@ func (s *ACLEnabledSuite) SetUpSuite(c *check.C) {
 	}
 	if !*disableImport {
 		opts = append(opts, k3d.WithImages(
-			k3d.DockerImage{Name: "traefik:v2.8"},
+			k3d.DockerImage{Name: "traefik:v2.11"},
 			k3d.DockerImage{Name: "traefik/whoami:v1.8.0"},
 			k3d.DockerImage{Name: "giantswarm/tiny-tools:3.9"},
 		))

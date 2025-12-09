@@ -133,7 +133,6 @@ func TestProvider_BuildConfig(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -158,6 +157,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 				}
 
 				p, ok := test.tcpStateTable[servicePort{Namespace: namespace, Name: name, Port: port}]
+
 				return p, ok
 			}
 			udpStateTable := func(namespace, name string, port int32) (int32, bool) {
@@ -166,6 +166,7 @@ func TestProvider_BuildConfig(t *testing.T) {
 				}
 
 				p, ok := test.udpStateTable[servicePort{Namespace: namespace, Name: name, Port: port}]
+
 				return p, ok
 			}
 			middlewareBuilder := func(a map[string]string) (map[string]*dynamic.Middleware, error) {

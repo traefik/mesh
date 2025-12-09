@@ -2,16 +2,17 @@ package provider
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	specs "github.com/servicemeshinterface/smi-sdk-go/pkg/apis/specs/v1alpha3"
 	"github.com/traefik/mesh/pkg/topology"
 )
 
-func buildHTTPRuleFromTrafficSpecs(specs []topology.TrafficSpec) string {
+func buildHTTPRuleFromTrafficSpecs(spcs []topology.TrafficSpec) string {
 	var orRules []string
 
-	for _, spec := range specs {
+	for _, spec := range spcs {
 		for _, match := range spec.HTTPMatches {
 			var matchParts []string
 
@@ -45,10 +46,7 @@ func appendPathFilter(matchParts []string, match *specs.HTTPMatch) []string {
 		return matchParts
 	}
 
-	pathRegex := match.PathRegex
-	if strings.HasPrefix(match.PathRegex, "/") {
-		pathRegex = strings.TrimPrefix(match.PathRegex, "/")
-	}
+	pathRegex, _ := strings.CutPrefix(match.PathRegex, "/")
 
 	return append(matchParts, fmt.Sprintf("PathPrefix(`/{path:%s}`)", pathRegex))
 }
@@ -58,16 +56,7 @@ func appendMethodFilter(matchParts []string, match *specs.HTTPMatch) []string {
 		return matchParts
 	}
 
-	var matchAll bool
-
-	for _, m := range match.Methods {
-		if m == "*" {
-			matchAll = true
-			break
-		}
-	}
-
-	if !matchAll {
+	if !slices.Contains(match.Methods, "*") {
 		methods := strings.Join(match.Methods, "`,`")
 		return append(matchParts, fmt.Sprintf("Method(`%s`)", methods))
 	}

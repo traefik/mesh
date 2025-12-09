@@ -1,20 +1,19 @@
-FROM alpine:3.15
+FROM alpine:3.22
 
-# The "build-dependencies" virtual package provides build tools for html-proofer installation.
-# It compile ruby-nokogiri, because alpine native version is always out of date
-# This virtual package is cleaned at the end.
 RUN apk --no-cache --no-progress add \
+    build-base \
+    gcompat \
     libcurl \
+    libxml2-dev \
+    libxslt-dev \
     ruby \
     ruby-bigdecimal \
-    ruby-etc \
-    ruby-ffi \
-    ruby-json \
-    ruby-nokogiri \
     ruby-dev \
-    build-base
+    ruby-ffi \
+    zlib-dev
 
-RUN gem install --no-document html-proofer -v 3.19.0 -- --use-system-libraries
+RUN gem install nokogiri --version 1.18.6 --no-document -- --use-system-libraries
+RUN gem install html-proofer --version 5.0.10 --no-document -- --use-system-libraries
 
 # After Ruby, some NodeJS YAY!
 RUN apk --no-cache --no-progress add \
@@ -22,12 +21,9 @@ RUN apk --no-cache --no-progress add \
     nodejs \
     npm
 
-# To handle 'not get uid/gid'
-RUN npm config set unsafe-perm true
-
 RUN npm install --global \
-    markdownlint@0.23.1 \
-    markdownlint-cli@0.28.1
+    markdownlint@0.29.0 \
+    markdownlint-cli@0.35.0
 
 # Finally the shell tools we need for later
 # tini helps to terminate properly all the parallelized tasks when sending CTRL-C

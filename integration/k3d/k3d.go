@@ -228,6 +228,7 @@ func (c *Cluster) WaitReadyDaemonSet(name, namespace string, timeout time.Durati
 
 			return fmt.Errorf("unable get daemonset %q in namespace %q: %w", name, namespace, err)
 		}
+
 		if d.Status.NumberReady == d.Status.DesiredNumberScheduled {
 			return nil
 		}
@@ -377,7 +378,6 @@ func createK8sClient(logger logrus.FieldLogger, clusterName, masterURL string) (
 
 		return nil
 	}, 30*time.Second)
-
 	if err != nil {
 		return nil, fmt.Errorf("unable to create kubernetes client: %w", err)
 	}

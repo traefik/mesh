@@ -98,7 +98,7 @@ type Controller struct {
 
 // NewMeshController builds the informers and other required components of the mesh controller, and returns an
 // initialized mesh controller object.
-func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger logrus.FieldLogger) *Controller {
+func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger logrus.FieldLogger) (*Controller, error) {
 	c := &Controller{
 		logger:  logger,
 		cfg:     cfg,
@@ -135,11 +135,25 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 	c.httpRouteGroupLister = c.specsFactory.Specs().V1alpha3().HTTPRouteGroups().Lister()
 	c.tcpRouteLister = c.specsFactory.Specs().V1alpha3().TCPRoutes().Lister()
 
-	c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(handler)
-	c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(handler)
-	c.splitFactory.Split().V1alpha3().TrafficSplits().Informer().AddEventHandler(handler)
-	c.specsFactory.Specs().V1alpha3().HTTPRouteGroups().Informer().AddEventHandler(handler)
-	c.specsFactory.Specs().V1alpha3().TCPRoutes().Informer().AddEventHandler(handler)
+	if _, err := c.kubernetesFactory.Core().V1().Services().Informer().AddEventHandler(handler); err != nil {
+		return nil, fmt.Errorf("adding Services informer: %w", err)
+	}
+
+	if _, err := c.kubernetesFactory.Core().V1().Endpoints().Informer().AddEventHandler(handler); err != nil {
+		return nil, fmt.Errorf("adding Endpoints informer: %w", err)
+	}
+
+	if _, err := c.splitFactory.Split().V1alpha3().TrafficSplits().Informer().AddEventHandler(handler); err != nil {
+		return nil, fmt.Errorf("adding TrafficSplits informer: %w", err)
+	}
+
+	if _, err := c.specsFactory.Specs().V1alpha3().HTTPRouteGroups().Informer().AddEventHandler(handler); err != nil {
+		return nil, fmt.Errorf("adding HTTPRouteGroups informer: %w", err)
+	}
+
+	if _, err := c.specsFactory.Specs().V1alpha3().TCPRoutes().Informer().AddEventHandler(handler); err != nil {
+		return nil, fmt.Errorf("adding TCPRoutes informer: %w", err)
+	}
 
 	// Create SharedInformers, listers and register the event handler for ACL related resources.
 	if c.cfg.ACLEnabled {
@@ -147,8 +161,13 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 
 		c.trafficTargetLister = c.accessFactory.Access().V1alpha2().TrafficTargets().Lister()
 
-		c.accessFactory.Access().V1alpha2().TrafficTargets().Informer().AddEventHandler(handler)
-		c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(handler)
+		if _, err := c.accessFactory.Access().V1alpha2().TrafficTargets().Informer().AddEventHandler(handler); err != nil {
+			return nil, fmt.Errorf("adding TrafficTargets informer: %w", err)
+		}
+
+		if _, err := c.kubernetesFactory.Core().V1().Pods().Informer().AddEventHandler(handler); err != nil {
+			return nil, fmt.Errorf("adding Pods informer: %w", err)
+		}
 	}
 
 	c.tcpStateTable = NewPortMapping(c.cfg.Namespace, c.serviceLister, logger, c.cfg.MinTCPPort, c.cfg.MaxTCPPort)
@@ -187,7 +206,7 @@ func NewMeshController(clients k8s.Client, cfg Config, store SharedStore, logger
 
 	c.provider = provider.New(c.tcpStateTable, c.udpStateTable, annotations.BuildMiddlewares, providerCfg, c.logger)
 
-	return c
+	return c, nil
 }
 
 // Run is the main controller loop.
@@ -322,7 +341,7 @@ func (c *Controller) loadPortMappersState() error {
 }
 
 // isWatchedResource returns true if the given resource is not ignored, false otherwise.
-func (c *Controller) isWatchedResource(obj interface{}) bool {
+func (c *Controller) isWatchedResource(obj any) bool {
 	return !c.resourceFilter.IsIgnored(obj)
 }
 
@@ -394,7 +413,7 @@ func (c *Controller) syncShadowService(key string) error {
 }
 
 // handleErr re-queues the given work key only if the maximum number of attempts is not exceeded.
-func (c *Controller) handleErr(key interface{}, err error) {
+func (c *Controller) handleErr(key any, err error) {
 	if c.workQueue.NumRequeues(key) < maxRetries {
 		c.workQueue.AddRateLimited(key)
 		return
