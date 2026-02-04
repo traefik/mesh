@@ -247,7 +247,7 @@ X-Forwarded-For: 3.4.5.6
 ## ACL Example
 
 The [ACL mode](install.md#access-control-list) can be enabled when installing Traefik Mesh.
-Once activated, all traffic is forbidden unless explicitly authorized using the SMI [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/master/apis/traffic-access/v1alpha2/traffic-access.md#traffictarget) resource.
+Once activated, all traffic is forbidden unless explicitly authorized using the SMI [TrafficTarget](https://github.com/servicemeshinterface/smi-spec/blob/main/apis/traffic-access/v1alpha2/traffic-access.md#traffictarget) resource.
 This example will present the configuration required to allow the client pod to send traffic to the HTTP and TCP services defined in the previous example.
 
 Each `TrafficTarget` defines that a set of source `ServiceAccount` is capable of sending traffic to a destination `ServiceAccount`.
