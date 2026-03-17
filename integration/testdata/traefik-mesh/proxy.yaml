@@ -11,7 +11,7 @@ automountServiceAccountToken: false
 
 ---
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: traefik-mesh-proxy-role
   namespace: traefik-mesh
@@ -28,7 +28,7 @@ rules:
       - list
 ---
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: traefik-mesh-proxy
   namespace: traefik-mesh
