@@ -1,0 +1,88 @@
+name: Bug Report
+description: Create a report to help us improve Traefik Mesh.
+labels: ['status/0-needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **DO NOT FILE ISSUES FOR GENERAL SUPPORT QUESTIONS.**
+
+        The issue tracker is for reporting bugs and feature requests only.
+        For end-user related support questions, please use the [Traefik Mesh community forum](https://community.traefik.io/c/traefik-mesh).
+
+        ### How to write a good bug report?
+
+        - Respect the issue template as much as possible.
+        - The title should be short and descriptive.
+        - Explain the conditions which led you to report this issue: the context.
+        - The context should lead to something, an idea or a problem that you’re facing.
+        - Remain clear and concise.
+        - Format your messages to help the reader focus on what matters and understand the structure of your message, use [Markdown syntax](https://help.github.com/articles/github-flavored-markdown)
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Welcome!
+      options:
+        - label: Yes, I've searched similar issues on [GitHub](https://github.com/traefik/mesh/issues) and didn't find any.
+          required: true
+        - label: Yes, I've searched similar issues on the [Traefik Mesh community forum](https://community.traefik.io/c/traefik-mesh) and didn't find any.
+          required: true
+
+  - type: textarea
+    id: expect
+    attributes:
+      label: What did you expect to see?
+      description: Use [Markdown syntax](https://help.github.com/articles/github-flavored-markdown) if needed.
+      placeholder: What did you expect to see?
+    validations:
+      required: true
+
+  - type: textarea
+    id: instead
+    attributes:
+      label: What did you see instead?
+      description: Use [Markdown syntax](https://help.github.com/articles/github-flavored-markdown) if needed.
+      placeholder: What did you see instead?
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: What version of Traefik Mesh are you using?
+      description: |
+        `latest` is not considered as a valid version.
+        We need a release number!
+    validations:
+      required: true
+
+  - type: textarea
+    id: controller
+    attributes:
+      label: Output of controller log
+      placeholder: paste your output here
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: What is your environment & configuration?
+      description: |
+        arguments, YAML, TOML, provider, platform, etc.
+
+        Use [Markdown syntax](https://help.github.com/articles/github-flavored-markdown) if needed.
+      placeholder: Add information here.
+    validations:
+      required: true
+
+  - type: textarea
+    id: objects
+    attributes:
+      label: If applicable, please paste the yaml objects required to reproduce your issue
+      placeholder: Paste your objects here
+      render: shell
+    validations:
+      required: false

@@ -1,0 +1,49 @@
+name: Feature Request
+description: Propose a change to Traefik Mesh!
+labels: ['status/0-needs-triage']
+body:
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Welcome!
+      options:
+        - label: Yes, I've searched similar issues on [GitHub](https://github.com/traefik/mesh/issues) and didn't find any.
+          required: true
+        - label: Yes, I've searched similar issues on the [Traefik Mesh community forum](https://community.traefik.io/c/traefik-mesh) and didn't find any.
+          required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: |
+        Write your feature request in the form of a proposal to be considered for implementation.
+
+        Use [Markdown syntax](https://help.github.com/articles/github-flavored-markdown) if needed.
+      placeholder: Write your feature request in the form of a proposal to be considered for implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: Background
+      description: |
+        Describe the background problem or need that led to this feature request.
+
+        Use [Markdown syntax](https://help.github.com/articles/github-flavored-markdown) if needed.
+      placeholder: Describe the background problem or need that led to this feature request.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workarounds
+    attributes:
+      label: Workarounds
+      description: |
+        Are there any current workarounds that you're using that others in similar positions should know?
+
+        Use [Markdown syntax](https://help.github.com/articles/github-flavored-markdown) if needed.
+      placeholder: Are there any current workarounds that you're using that others in similar positions should know?
+    validations:
+      required: true
