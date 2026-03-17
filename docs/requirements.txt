@@ -1,7 +1,7 @@
 markdown-include==0.5.1
 mkdocs==1.2.4
 mkdocs-exclude==1.0.2
-mkdocs-traefiklabs>=100.0.7
+mkdocs-traefiklabs>=100.1.0
 mkdocs-redirects==1.2.2
 
 click==8.1.7
