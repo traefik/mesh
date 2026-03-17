@@ -40,7 +40,7 @@ blocks:
         - name: Build and check
           commands:
             - make check build
-            - cache store traefik-mesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID dist
+            - artifact push workflow dist -d traefik-mesh-dist
             - docker save traefik/mesh:latest > traefik-mesh-img.tar
             - artifact push workflow traefik-mesh-img.tar --force
             - artifact push workflow dist/traefik-mesh --force
@@ -63,8 +63,7 @@ blocks:
     task:
       prologue:
         commands:
-          - cache restore
-          - cache restore traefik-mesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
+          - artifact pull workflow traefik-mesh-dist -d dist
           - artifact pull workflow traefik-mesh-img.tar
           - docker load < traefik-mesh-img.tar
           - artifact pull workflow traefik-mesh --destination dist/traefik-mesh
