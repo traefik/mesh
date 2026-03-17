@@ -102,7 +102,7 @@ tidy:
 	go mod tidy
 
 k3d:
-	@command -v k3d >/dev/null 2>&1 || curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.7.5 bash
+	@command -v k3d >/dev/null 2>&1 || curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.8.3 bash
 
 docs-package:
 	mkdir -p $(CURDIR)/pages
