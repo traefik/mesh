@@ -3,8 +3,8 @@ name: Traefik Mesh Pipeline
 
 agent:
   machine:
-    type: e1-standard-4
-    os_image: ubuntu1804
+    type: e2-standard-4
+    os_image: ubuntu2204
 
 auto_cancel:
   running:
@@ -40,9 +40,9 @@ blocks:
         - name: Build and check
           commands:
             - make check build
-            - cache store traefik-mesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID dist
+            - artifact push workflow dist -d traefik-mesh-dist
             - docker save traefik/mesh:latest > traefik-mesh-img.tar
-            - cache store traefik-mesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID traefik-mesh-img.tar
+            - artifact push workflow traefik-mesh-img.tar
 
   - name: Unit Tests
     run:
@@ -62,9 +62,9 @@ blocks:
     task:
       prologue:
         commands:
-          - cache restore
-          - cache restore traefik-mesh-dist-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
-          - cache restore traefik-mesh-img-$SEMAPHORE_GIT_BRANCH-$SEMAPHORE_WORKFLOW_ID
+          - artifact pull workflow traefik-mesh-dist -d dist
+          - chmod +x dist/traefik-mesh
+          - artifact pull workflow traefik-mesh-img.tar
           - docker load < traefik-mesh-img.tar
       jobs:
         - name: ACL Enabled Suite
