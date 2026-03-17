@@ -64,6 +64,7 @@ blocks:
       prologue:
         commands:
           - artifact pull workflow traefik-mesh-dist -d dist
+          - chmod +x dist/traefik-mesh
           - artifact pull workflow traefik-mesh-img.tar
           - docker load < traefik-mesh-img.tar
           - artifact pull workflow traefik-mesh --destination dist/traefik-mesh
