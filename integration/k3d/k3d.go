@@ -20,7 +20,7 @@ import (
 
 var (
 	k3sImage   = "rancher/k3s"
-	k3sVersion = "v1.25.16-k3s4"
+	k3sVersion = "v1.32.13-k3s1"
 )
 
 // DockerImage holds the configuration of a Docker image.
