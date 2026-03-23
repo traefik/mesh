@@ -39,7 +39,7 @@ jobs:
         run: curl -sSfL https://raw.githubusercontent.com/traefik/mixtus/master/godownloader.sh | sh -s -- -b $HOME/bin ${MIXTUS_VERSION}
 
       - name: Build documentation
-        run: $HOME/bin/structor -o traefik -r mesh --dockerfile-url="https://raw.githubusercontent.com/traefik/mesh/master/docs/docs.Dockerfile" --menu.js-url="https://raw.githubusercontent.com/traefik/structor/master/traefik-menu.js.gotmpl" --rqts-url="https://raw.githubusercontent.com/traefik/structor/master/requirements-override.txt" --force-edit-url --exp-branch=master --debug
+        run: $HOME/bin/structor -o traefik -r mesh --dockerfile-url="https://raw.githubusercontent.com/traefik/mesh/master/docs/docs.Dockerfile" --menu.js-url="https://raw.githubusercontent.com/traefik/structor/master/traefik-menu.js.gotmpl" --rqts-url="https://raw.githubusercontent.com/traefik/structor/master/requirements-override.txt" --force-edit-url --exp-branch=master --exclude=v1.0 --exclude=v1.1 --exclude=v1.2 --exclude=v1.3 --debug
         env:
           STRUCTOR_LATEST_TAG: ${{ secrets.STRUCTOR_LATEST_TAG }}
 
